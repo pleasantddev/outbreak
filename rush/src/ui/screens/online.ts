@@ -13,6 +13,10 @@ import { fmtTime } from '../hud';
 import { garageScreen } from './garage';
 import { mainMenu } from './main';
 import { settleRace, rewardPanel, ordinal } from './raceflow';
+import { tierOf } from '../../shared/ranking';
+
+const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+let lookingRanked = false;
 
 function statusLine(app: App) {
   const n = app.net;
@@ -36,16 +40,19 @@ function live(app: App, screen: Screen, follow?: () => void): Screen {
 export function multiplayer(app: App): Screen {
   app.net.ensure();
   const p = app.profile;
+  const me = app.net.me;
+  const tier = me && me.races ? tierOf(me.rating) : null;
   const node = el(`<div class="screen">
     ${topbar('Multiplayer', 'Instanced races for up to 12 cars', app)}
     <div class="row" style="margin-bottom:12px">${statusLine(app)}</div>
     <div class="split">
       <div class="scroll" style="display:flex; flex-direction:column; gap:10px">
         <button class="card" data-act="quick" data-autofocus><div class="k">Quick match</div><div class="d">Jump into the next public race. Empty seats fill with AI.</div></button>
+        <button class="card" data-act="ranked"><div class="k">Ranked ${tier ? `<span class="tag" style="background:${tier.colour}; color:#0b0b0d; vertical-align:middle">${esc(tier.name)} . ${me!.rating}</span>` : '<span class="tag dark" style="vertical-align:middle">UNRANKED</span>'}</div><div class="d">Humans only, two laps of Rush, rules nobody can change. Win to climb from Learner to Lagos Legend.</div></button>
         <button class="card" data-act="create"><div class="k">Create room</div><div class="d">Pick the route and the rules, then send your crew the code.</div></button>
         <button class="card" data-act="join"><div class="k">Join with a code</div><div class="d">Got a LAGOS code or an invite link? Enter it here.</div></button>
         <button class="card" data-act="friends"><div class="k">Friends</div><div class="d">Your friend code and the people you raced recently.</div></button>
-        <button class="card" data-act="boards"><div class="k">Leaderboards</div><div class="d">Lap records on every route.</div></button>
+        <button class="card" data-act="boards"><div class="k">Leaderboards</div><div class="d">The ranked ladder and the fastest laps the server has timed.</div></button>
       </div>
       <div class="scroll panel" style="padding:16px; display:flex; flex-direction:column; gap:10px">
         <div class="h3">How rooms work</div>
@@ -57,7 +64,8 @@ export function multiplayer(app: App): Screen {
   </div>`);
   acts(node, {
     back: () => app.back(),
-    quick: () => { app.net.quickMatch(); app.go(matchmaking); },
+    quick: () => { lookingRanked = false; app.net.quickMatch(); app.go(matchmaking); },
+    ranked: () => { lookingRanked = true; app.net.quickMatch(true); app.go(matchmaking); },
     create: () => app.go(createRoom),
     join: () => app.go(joinRoom),
     friends: () => app.go(friendsScreen),
@@ -69,11 +77,11 @@ export function multiplayer(app: App): Screen {
 export function matchmaking(app: App): Screen {
   const room = app.net.room;
   const node = el(`<div class="screen">
-    ${topbar('Quick match')}
+    ${topbar(lookingRanked ? 'Ranked' : 'Quick match')}
     <div class="searching">
       <div class="spinner"></div>
-      <div class="h2">${room ? 'Race found' : 'Finding a race'}</div>
-      <div class="mute">${room ? `${room.players.length} in the room . ${esc(room.config.track)}` : app.net.status === 'online' ? 'Looking for an open room in Oshodi' : 'Connecting to the race server'}</div>
+      <div class="h2">${room ? 'Race found' : lookingRanked ? 'Finding a ranked race' : 'Finding a race'}</div>
+      <div class="mute">${room ? `${room.players.length} in the room . ${esc(room.config.track)}` : app.net.status === 'online' ? (lookingRanked ? 'Looking for drivers near your level' : 'Looking for an open room in Oshodi') : 'Connecting to the race server'}</div>
       <button class="btn ghost" data-act="cancel"><span>Cancel</span></button>
     </div>
   </div>`);
@@ -89,6 +97,7 @@ function configForm(app: App, c: RoomConfig) {
   return `
     <div class="field"><span class="lab">Route</span><div class="seg">${tracks.map((t) => `<button class="${t.id === c.track ? 'on' : ''}" data-act="cfg" data-k="track" data-v="${t.id}">${esc(t.name)}</button>`).join('')}</div></div>
     ${seg('Mode', MODES.filter((m) => m.id !== 'trial').map((m) => [m.id, m.name] as [string, string]), c.mode).replace(/data-act="seg"/g, 'data-act="cfg"').replace(/data-k="Mode"/g, 'data-k="mode"')}
+    ${c.mode === 'rush' ? seg('Power-ups', [['on', 'On'], ['off', 'Off']] as [string, string][], c.items === false ? 'off' : 'on').replace(/data-act="seg"/g, 'data-act="cfg"').replace(/data-k="Power-ups"/g, 'data-k="items"') : ''}
     ${seg('Laps', [1, 2, 3, 4, 5].map((n) => [n, String(n)] as [number, string]), c.laps).replace(/data-act="seg"/g, 'data-act="cfg"').replace(/data-k="Laps"/g, 'data-k="laps"')}
     ${seg('AI racers', [0, 3, 5, 7, 11].map((n) => [n, String(n)] as [number, string]), c.aiFill).replace(/data-act="seg"/g, 'data-act="cfg"').replace(/data-k="AI racers"/g, 'data-k="aiFill"')}
     ${seg('AI level', (Object.keys(AI_LEVELS) as AiLevel[]).map((k) => [k, AI_LEVELS[k].label] as [string, string]), c.aiLevel).replace(/data-act="seg"/g, 'data-act="cfg"').replace(/data-k="AI level"/g, 'data-k="aiLevel"')}
@@ -101,6 +110,7 @@ function configForm(app: App, c: RoomConfig) {
     <div class="toggle"><div class="t">Public room<small>Anyone in quick match can join</small></div><button class="switch ${c.isPublic ? 'on' : ''}" data-act="cfgPublic" role="switch" aria-checked="${c.isPublic}" aria-label="Public"></button></div>`;
 }
 function applyCfg(c: RoomConfig, k: string, v: string): Partial<RoomConfig> {
+  if (k === 'items') return { items: v === 'on' };
   const num = ['laps', 'aiFill', 'traffic', 'maxPlayers', 'races'];
   return { [k]: num.includes(k) ? +v : v } as Partial<RoomConfig>;
 }
@@ -153,7 +163,7 @@ export function lobby(app: App): Screen {
   const td = app.stage!.tracks.find((t) => t.id === room.config.track);
   const startsIn = room.startsIn !== null ? Math.ceil(room.startsIn / 1000) : null;
   const node = el(`<div class="screen">
-    ${topbar(room.quick ? 'Quick match room' : 'Room lobby', `${room.players.length}/${room.config.maxPlayers} players . race ${room.raceNo + (room.phase === 'waiting' ? 1 : 0)} of ${room.config.races}`)}
+    ${topbar(room.ranked ? 'Ranked room' : room.quick ? 'Quick match room' : 'Room lobby', `${room.players.length}/${room.config.maxPlayers} players . race ${room.raceNo + (room.phase === 'waiting' ? 1 : 0)} of ${room.config.races}`)}
     <div class="split">
       <div class="scroll" style="display:flex; flex-direction:column; gap:10px">
         <div class="panel" style="padding:14px">
@@ -165,24 +175,26 @@ export function lobby(app: App): Screen {
         </div>
         ${room.players.map((p) => `<div class="player-row">
           <div class="avatar" style="background:${p.card.color}; width:38px; height:38px; font-size:1em">${esc(p.card.name.slice(0, 2).toUpperCase())}</div>
-          <div style="flex:1; min-width:0"><div class="n">${esc(p.card.name)} ${p.host ? `<span class="pill host">HOST</span>` : ''}</div><div class="car">${esc(carById(p.card.carId).name)} . ${esc(p.card.crew)} . LVL ${p.card.level}${room.raceNo ? ` . ${p.points} pts` : ''}</div></div>
+          <div style="flex:1; min-width:0"><div class="n">${esc(p.card.name)} ${p.host && !room.ranked ? `<span class="pill host">HOST</span>` : ''}</div><div class="car">${esc(carById(p.card.carId).name)} . ${esc(p.card.crew)} . LVL ${p.card.level}${room.raceNo ? ` . ${p.points} pts` : ''}</div></div>
           ${!p.connected ? '<span class="pill wait">AWAY</span>' : p.spectating ? '<span class="pill wait">WATCHING</span>' : p.ready ? '<span class="pill ok">READY</span>' : '<span class="pill wait">NOT READY</span>'}
-          ${host && p.id !== app.net.you ? `<button class="btn ghost small" data-act="kick" data-id="${p.id}"><span>Kick</span></button>` : ''}
+          ${host && !room.ranked && p.id !== app.net.you ? `<button class="btn ghost small" data-act="kick" data-id="${p.id}"><span>Kick</span></button>` : ''}
         </div>`).join('')}
         ${room.config.aiFill ? `<div class="small mute">Up to ${room.config.aiFill} AI racers (${AI_LEVELS[room.config.aiLevel].label}) fill the empty grid slots.</div>` : ''}
+        ${room.ranked ? '<div class="small mute" style="line-height:1.5">Ranked: humans only and fixed rules, so the room has no host controls. Your rating moves with every race. Leave, or let an AI stand-in drive your car for a third of the race, and it counts as last.</div>' : ''}
       </div>
       <div class="scroll panel" style="padding:16px; display:flex; flex-direction:column; gap:12px">
-        <div class="row"><div class="h3">${esc(td?.name ?? room.config.track)}</div><span class="spacer"></span>${host && room.phase === 'waiting' ? '<button class="btn ghost small" data-act="edit"><span>Race settings</span></button>' : ''}</div>
-        <div class="row" style="flex-wrap:wrap; gap:6px"><span class="tag dark">${room.config.mode.toUpperCase()}</span><span class="tag dark">${laps(room.config.laps)}</span><span class="tag dark">${room.config.time.toUpperCase()}</span><span class="tag dark">${room.config.weather.toUpperCase()}</span><span class="tag dark">${room.config.carClass === 'any' ? 'ANY CAR' : room.config.carClass.toUpperCase() + ' CARS'}</span></div>
-        ${room.lastResults ? `<div><div class="h3" style="margin-bottom:4px">Last race</div><table class="list"><tbody>${room.lastResults.slice(0, 6).map((r) => `<tr class="${r.id === app.net.you ? 'me' : ''}"><td>${r.place}</td><td>${esc(r.name)}</td><td class="mono">${r.time ? fmtTime(r.time) : 'DNF'}</td><td>+${r.points}</td></tr>`).join('')}</tbody></table></div>` : ''}
+        <div class="row"><div class="h3">${esc(td?.name ?? room.config.track)}</div><span class="spacer"></span>${host && !room.ranked && room.phase === 'waiting' ? '<button class="btn ghost small" data-act="edit"><span>Race settings</span></button>' : ''}</div>
+        <div class="row" style="flex-wrap:wrap; gap:6px">${room.ranked ? '<span class="tag pink">RANKED</span>' : ''}<span class="tag dark">${room.config.mode.toUpperCase()}</span>${room.config.mode === 'rush' ? `<span class="tag dark">${room.config.items === false ? 'NO POWER-UPS' : 'POWER-UPS'}</span>` : ''}<span class="tag dark">${laps(room.config.laps)}</span><span class="tag dark">${room.config.time.toUpperCase()}</span><span class="tag dark">${room.config.weather.toUpperCase()}</span><span class="tag dark">${room.config.carClass === 'any' ? 'ANY CAR' : room.config.carClass.toUpperCase() + ' CARS'}</span></div>
+        ${room.lastResults ? `<div><div class="h3" style="margin-bottom:4px">Last race</div><table class="list"><tbody>${room.lastResults.slice(0, 6).map((r) => `<tr class="${r.id === app.net.you ? 'me' : ''}"><td>${r.place}</td><td>${esc(r.name)}</td><td class="mono">${r.time ? fmtTime(r.time) : 'DNF'}</td><td class="mono">${r.delta !== undefined ? signed(r.delta) : `+${r.points}`}</td></tr>`).join('')}</tbody></table></div>` : ''}
         <div class="h3">Quick chat</div>
         <div class="chat">${app.net.chat.slice(-6).map((c) => `<div class="m"><b>${esc(c.name)}</b>${esc(CHAT_PHRASES[c.phrase] ?? '')}</div>`).join('') || '<div class="mute small">Say hello.</div>'}</div>
         <div class="quick-chat">${CHAT_PHRASES.map((ph, i) => `<button class="btn ghost small" data-act="say" data-v="${i}"><span>${esc(ph)}</span></button>`).join('')}</div>
         <div class="bottombar" style="margin-top:auto">
+          ${room.waitingForRival ? '<span class="tag pink">WAITING FOR A RIVAL</span>' : ''}
           ${startsIn !== null ? `<span class="tag pink">${room.phase === 'countdown' ? 'STARTING' : 'STARTS IN'} ${startsIn}s</span>` : ''}
           <button class="btn ghost small" data-act="car"><span>Change car</span></button>
           ${room.phase === 'waiting' ? `<button class="btn ${me?.ready ? 'ghost' : ''}" data-act="ready" data-autofocus><span>${me?.ready ? 'Not ready' : 'Ready'}</span></button>` : `<span class="tag">${room.phase.toUpperCase()}</span>`}
-          ${host && room.phase === 'waiting' ? '<button class="btn pink" data-act="start"><span>Start now</span></button>' : ''}
+          ${host && !room.ranked && room.phase === 'waiting' ? '<button class="btn pink" data-act="start"><span>Start now</span></button>' : ''}
         </div>
       </div>
     </div>
@@ -250,19 +262,55 @@ export function friendsScreen(app: App): Screen {
   return { el: node, view: 'city' };
 }
 
+type BoardData = Awaited<ReturnType<App['net']['leaderboard']>>;
+const boards: { tab: 'ladder' | 'laps' | 'device'; track: string; data: BoardData | null; loadedFor: string; loading: boolean; error: string } = { tab: 'ladder', track: 'terminal', data: null, loadedFor: '', loading: false, error: '' };
+
+/** The ranked ladder and the fastest laps the server timed itself, plus this device's own bests. */
 export function leaderboards(app: App): Screen {
   const p = app.profile;
+  const routes = app.stage!.tracks.filter((t) => !t.custom);
+  if (!routes.some((t) => t.id === boards.track)) boards.track = routes[0].id;
+  const fetchBoards = () => {
+    if (boards.loading || boards.loadedFor === boards.track) return;
+    boards.loading = true; boards.error = '';
+    const want = boards.track;
+    app.net.leaderboard(want)
+      .then((d) => { boards.data = d; boards.loadedFor = want; })
+      .catch(() => { boards.error = 'Could not reach the race server. Your own records are under This device.'; boards.loadedFor = ''; })
+      .finally(() => { boards.loading = false; if (app.top?.screen === screen) app.refresh(); });
+  };
+  if (boards.tab !== 'device') fetchBoards();
+  const myPid = app.net.me?.pid;
+  const d = boards.data;
+  let body = '';
+  if (boards.tab === 'device') {
+    body = `<table class="list"><thead><tr><th>Route</th><th>Par</th><th>Your best</th><th></th></tr></thead><tbody>
+      ${app.stage!.tracks.map((t) => { const b = p.records[t.id]; return `<tr><td>${esc(t.name)}</td><td class="mono">${fmtTime(t.par)}</td><td class="mono">${b ? fmtTime(b) : '-'}</td><td>${b && b <= t.par ? '<span class="tag">GOLD</span>' : b && b <= t.par * 1.1 ? '<span class="tag dark">SILVER</span>' : b ? '<span class="tag dark">BRONZE</span>' : ''}</td></tr>`; }).join('')}
+      </tbody></table><div class="small mute" style="margin-top:12px">Gold is the par time for the route. These are your bests on this device, solo races included.</div>`;
+  } else if (boards.error) body = `<div class="mute">${esc(boards.error)}</div>`;
+  else if (!d) body = '<div class="mute">Loading the boards...</div>';
+  else if (boards.tab === 'ladder') {
+    body = d.ratings.length ? `<table class="list"><thead><tr><th>#</th><th>Driver</th><th>Tier</th><th>Rating</th><th class="hide-sm">Races</th><th class="hide-sm">Wins</th></tr></thead><tbody>
+      ${d.ratings.map((r) => { const t = tierOf(r.rating); return `<tr class="${r.pid === myPid ? 'me' : ''}"><td>${r.rank}</td><td>${esc(r.name)}</td><td><span class="tag" style="background:${t.colour}; color:#0b0b0d">${esc(t.name)}</span></td><td class="mono">${r.rating}</td><td class="mono hide-sm">${r.races}</td><td class="mono hide-sm">${r.wins}</td></tr>`; }).join('')}
+      </tbody></table>` : '<div class="mute">Nobody has raced ranked yet. Be the first name on the ladder.</div>';
+    if (app.net.me?.rank && !d.ratings.some((r) => r.pid === myPid)) body += `<div class="small mute" style="margin-top:10px">You are number ${app.net.me.rank} on ${app.net.me.rating}.</div>`;
+  } else {
+    body = `<div class="seg" style="margin-bottom:12px; flex-wrap:wrap">${routes.map((t) => `<button class="${t.id === boards.track ? 'on' : ''}" data-act="route" data-v="${t.id}">${esc(t.name)}</button>`).join('')}</div>
+      ${d.laps.length ? `<table class="list"><thead><tr><th>#</th><th>Driver</th><th>Lap</th><th class="hide-sm">Car</th></tr></thead><tbody>${d.laps.map((l) => `<tr class="${l.pid === myPid ? 'me' : ''}"><td>${l.rank}</td><td>${esc(l.name)}</td><td class="mono">${fmtTime(l.time)}</td><td class="hide-sm">${esc(carById(l.car).name)}</td></tr>`).join('')}</tbody></table>` : '<div class="mute">No online laps on this route yet.</div>'}
+      <div class="small mute" style="margin-top:12px">Only laps the race server timed itself in online races count, and only if the driver drove the whole lap.</div>`;
+  }
   const node = el(`<div class="screen">
-    ${topbar('Leaderboards', 'Lap records on every route')}
-    <div class="scroll panel" style="padding:16px; max-width:820px">
-      <table class="list"><thead><tr><th>Route</th><th>Par</th><th>Your best</th><th></th></tr></thead><tbody>
-        ${app.stage!.tracks.map((t) => { const b = p.records[t.id]; return `<tr><td>${esc(t.name)}</td><td class="mono">${fmtTime(t.par)}</td><td class="mono">${b ? fmtTime(b) : '-'}</td><td>${b && b <= t.par ? '<span class="tag">GOLD</span>' : b && b <= t.par * 1.1 ? '<span class="tag dark">SILVER</span>' : b ? '<span class="tag dark">BRONZE</span>' : ''}</td></tr>`; }).join('')}
-      </tbody></table>
-      <div class="small mute" style="margin-top:12px">Gold is the par time for the route. Online leaderboards arrive with the regional servers; for now records live on this device.</div>
-    </div>
+    ${topbar('Leaderboards', 'The ranked ladder and the fastest laps in Oshodi')}
+    <div class="seg" style="max-width:520px; margin-bottom:12px">${([['ladder', 'Ranked ladder'], ['laps', 'Fastest laps'], ['device', 'This device']] as const).map(([k, l]) => `<button class="${boards.tab === k ? 'on' : ''}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div>
+    <div class="scroll panel" style="padding:16px; max-width:820px">${body}</div>
   </div>`);
-  acts(node, { back: () => app.back() });
-  return { el: node, view: 'city' };
+  acts(node, {
+    back: () => app.back(),
+    tab: (t) => { boards.tab = t.dataset.v as typeof boards.tab; app.refresh(); },
+    route: (t) => { boards.track = t.dataset.v!; boards.data = null; app.refresh(); },
+  });
+  const screen: Screen = { el: node, view: 'city' };
+  return screen;
 }
 
 /** Back to the room after a race, with a sensible back stack under it. */
@@ -281,7 +329,15 @@ export function onlineResults(app: App): Screen {
   const me = r.standings.find((x) => x.idx === r.playerIdx)!;
   const { reward, levelUp, newRecord } = settleRace(app, r, true);
   const lead = rows.find((x) => x.time !== null);
-  const table = rows.map((x) => `<tr class="${x.id === app.net.you ? 'me' : ''}"><td>${x.place}</td><td>${esc(x.name)}${x.human ? '' : ' <span class="tag dark">AI</span>'}</td><td class="hide-sm">${esc(carById(x.carId).name)}</td><td class="mono">${x.time === null ? 'DNF' : x === lead ? fmtTime(x.time) : `+${(x.time - (lead?.time ?? 0)).toFixed(3)}`}</td><td class="mono">${x.bestLap ? fmtTime(x.bestLap) : '-'}</td><td class="mono">+${x.points}</td></tr>`).join('');
+  const rated = rows.some((x) => x.delta !== undefined);
+  const table = rows.map((x) => `<tr class="${x.id === app.net.you ? 'me' : ''}"><td>${x.place}</td><td>${esc(x.name)}${x.human ? '' : ' <span class="tag dark">AI</span>'}</td><td class="hide-sm">${esc(carById(x.carId).name)}</td><td class="mono">${x.time === null ? 'DNF' : x === lead ? fmtTime(x.time) : `+${(x.time - (lead?.time ?? 0)).toFixed(3)}`}</td><td class="mono">${x.bestLap ? fmtTime(x.bestLap) : '-'}</td><td class="mono">${rated ? (x.delta !== undefined ? `<span style="color:${x.delta >= 0 ? 'var(--hud-good)' : 'var(--hud-bad)'}">${signed(x.delta)}</span>` : '') : `+${x.points}`}</td></tr>`).join('');
+  const mine = rows.find((x) => x.id === app.net.you && x.rating !== undefined);
+  const myTier = mine ? tierOf(mine.rating!) : null;
+  const rankPanel = mine ? `<div class="panel" style="padding:14px">
+      <div class="row"><div class="h3">Ranked</div><span class="spacer"></span><span class="tag" style="background:${myTier!.colour}; color:#0b0b0d">${esc(myTier!.name)}</span></div>
+      <div class="row" style="align-items:baseline; gap:10px"><span class="h1 mono">${mine.rating}</span><span class="h3 mono" style="color:${mine.delta! >= 0 ? 'var(--hud-good)' : 'var(--hud-bad)'}">${signed(mine.delta!)}</span></div>
+      ${app.net.me?.rank ? `<div class="small mute">Number ${app.net.me.rank} on the ladder</div>` : ''}
+    </div>` : '';
   const series = room ? [...room.players].sort((a, b) => b.points - a.points) : [];
   const nextIn = room && room.phase === 'results' ? 'The room opens for the next race in a few seconds.' : room && room.phase === 'waiting' ? 'The room is open. Ready up for the next one.' : '';
   const node = el(`<div class="screen results">
@@ -291,11 +347,12 @@ export function onlineResults(app: App): Screen {
         <div class="podium-place">${me.finished ? ordinal(me.place) : 'DNF'}</div>
         <div class="h3">${me.place === 1 ? 'You took Oshodi. Everybody saw it.' : me.place <= 3 ? 'Podium. Run it back and take the top step.' : 'The room is waiting for a rematch.'}</div>
         <div class="panel" style="padding:12px 14px">
-          <table class="list"><thead><tr><th>#</th><th>Driver</th><th class="hide-sm">Car</th><th>Time</th><th>Best</th><th>Pts</th></tr></thead><tbody>${table}</tbody></table>
+          <table class="list"><thead><tr><th>#</th><th>Driver</th><th class="hide-sm">Car</th><th>Time</th><th>Best</th><th>${rated ? 'Rating' : 'Pts'}</th></tr></thead><tbody>${table}</tbody></table>
         </div>
       </div>
       <div class="scroll" style="display:flex; flex-direction:column; gap:12px; justify-self:end; width:min(420px,100%)">
-        ${room ? `<div class="panel" style="padding:14px">
+        ${rankPanel}
+        ${room && !room.ranked ? `<div class="panel" style="padding:14px">
           <div class="row"><div class="h3">${room.seriesOver ? 'Series final' : 'Series'}</div><span class="spacer"></span><span class="small mute">race ${room.raceNo} of ${room.config.races}</span></div>
           ${room.seriesOver && series[0] ? `<div class="tag pink" style="margin:6px 0">WINNER: ${esc(series[0].card.name)}</div>` : ''}
           ${series.map((p, i) => `<div class="reward-line"><span>${i + 1}. ${esc(p.card.name)}${p.id === app.net.you ? ' (you)' : ''}</span><span class="mono">${p.points} pts</span></div>`).join('')}

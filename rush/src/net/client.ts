@@ -1,7 +1,7 @@
 // The room client: one WebSocket, automatic reconnect with the same identity, clock sync, and a snapshot buffer that
 // lets other cars be drawn 100 ms in the past so they glide instead of jitter.
 import type { App } from '../app/app';
-import { PROTOCOL_VERSION, packState, unpackCar, unpackHazard, type ClientMsg, type ServerMsg, type RoomView, type RaceStart, type ResultRow, type RoomConfig, type PlayerCard, type SnapCar, type SnapHazard } from '../shared/protocol';
+import { PROTOCOL_VERSION, packState, unpackCar, unpackHazard, type ClientMsg, type ServerMsg, type RoomView, type RaceStart, type ResultRow, type RoomConfig, type PlayerCard, type SnapCar, type SnapHazard, type RankInfo } from '../shared/protocol';
 import type { NetLink } from '../game/session';
 import type { RaceEvent, RemoteSnap } from '../shared/race';
 import { currentCar, level } from '../app/profile';
@@ -20,6 +20,8 @@ export class NetClient {
   offset = 0; rtt = 0;
   race: RaceStart | null = null;
   results: ResultRow[] | null = null;
+  /** this player's place on the ranked ladder, once the server has said */
+  me: RankInfo | null = null;
   private snaps: Snap[] = [];
   private events: RaceEvent[] = [];
   private pingT = 0; private retry = 0; private retryT = 0; private wanted = false;
@@ -38,6 +40,13 @@ export class NetClient {
     return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
   }
   get serverNow() { return Date.now() + this.offset; }
+  /** The same server over HTTP, for the global boards. */
+  get httpBase() { return this.url.replace(/^ws/, 'http').replace(/\/ws$/, ''); }
+  async leaderboard(track?: string): Promise<{ ratings: { rank: number; pid: string; name: string; rating: number; tier: string; races: number; wins: number }[]; laps: { rank: number; pid: string; name: string; time: number; car: string }[] }> {
+    const r = await fetch(`${this.httpBase}/api/leaderboard${track ? `?track=${encodeURIComponent(track)}` : ''}`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
   onChange(fn: () => void) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
   // iterate a copy: listeners re-render screens, which subscribe again, and a live Set would visit those too
   private changed() { for (const l of [...this.listeners]) l(); }
@@ -61,7 +70,7 @@ export class NetClient {
     ws.onopen = () => {
       opened = true;
       const token = (() => { try { return localStorage.getItem('lagosrush.token') ?? undefined; } catch { return undefined; } })();
-      ws.send(JSON.stringify({ t: 'hello', v: PROTOCOL_VERSION, card: this.card(), token } satisfies ClientMsg));
+      ws.send(JSON.stringify({ t: 'hello', v: PROTOCOL_VERSION, card: this.card(), token, key: this.app.profile.key } satisfies ClientMsg));
     };
     ws.onmessage = (e) => { let m: ServerMsg; try { m = JSON.parse(e.data); } catch { return; } this.onMsg(m); };
     ws.onclose = () => {
@@ -91,7 +100,7 @@ export class NetClient {
         // forget the old room: if our seat survived, the server sends it again right after this message
         if (this.room) this.orphanSince = Date.now();
         this.room = null;
-        this.you = m.you; this.status = 'online'; this.retry = 0; this.online = m.online;
+        this.you = m.you; this.status = 'online'; this.retry = 0; this.online = m.online; this.me = m.me ?? null;
         try { localStorage.setItem('lagosrush.token', m.token); } catch { /* private mode */ }
         this.offset = m.now - Date.now();
         for (const p of this.pending.splice(0)) this.send(p);
@@ -114,6 +123,7 @@ export class NetClient {
       case 'chat': this.chat.push({ name: m.name, phrase: m.phrase, at: Date.now() }); if (this.chat.length > 30) this.chat.shift(); break;
       case 'error': this.lastError = m.msg; this.app.toast(m.msg); break;
       case 'queued': break;
+      case 'rank': this.me = m.me; break;
     }
     this.changed();
   }
@@ -175,7 +185,7 @@ export class NetClient {
   }
 
   // ------------------------------------------------------------------------------------------- room actions
-  quickMatch() { this.send({ t: 'quick' }); }
+  quickMatch(ranked = false) { this.send({ t: 'quick', ranked }); }
   createRoom(config: Partial<RoomConfig>) { this.send({ t: 'create', config }); }
   joinRoom(code: string) { this.send({ t: 'join', code }); }
   leave() { this.send({ t: 'leave' }); this.room = null; this.race = null; this.changed(); }

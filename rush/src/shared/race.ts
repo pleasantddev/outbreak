@@ -20,7 +20,11 @@ export interface RaceConfig {
   aiFinishGrace?: number;
   /** hard stop in race seconds, so a room can never be held hostage by a car that never finishes */
   maxTime?: number;
+  /** power-ups in a Rush race; off means no bags on the road at all */
+  items?: boolean;
 }
+/** Whether a race hands out items: Rush races, unless the room switched power-ups off. */
+export const itemsOn = (cfg: Pick<RaceConfig, 'mode' | 'items'>) => cfg.mode === 'rush' && cfg.items !== false;
 export const defaultRaceConfig = (track: string, laps: number): RaceConfig => ({
   track, laps, mode: 'rush', traffic: 1, aiLevel: 'normal', catchUp: true, seed: 1, weather: 'clear', time: 'dusk', stuntTime: 120, finishGrace: 30,
 });
@@ -124,7 +128,7 @@ export class RaceSim {
       const p = this.track.pointAt(h.s, h.d);
       this.hazards.push({ id: this.nextHazard++, kind: h.kind, owner: -1, x: p.x, y: p.y, z: p.z, h: p.h, s: h.s, d: h.d, vs: 0, target: -1, life: Infinity, armed: 0, perm: true });
     }
-    if (cfg.mode === 'rush') {
+    if (itemsOn(cfg)) {
       data.pickups.forEach((row, ri) => row.d.forEach((d) => {
         const p = this.track.pointAt(row.s, d);
         this.bags.push({ row: ri, s: row.s, d, x: p.x, y: p.y + 1.1, z: p.z, respawn: -99 });

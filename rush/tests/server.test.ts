@@ -12,7 +12,7 @@ let port = 0, close: () => Promise<void>, rooms: Rooms;
 
 beforeAll(async () => {
   Object.assign(TIMING, { countdownMs: 400, resultsMs: 300, reconnectMs: 1500, afkRaceMs: 500, quickStartMs: 600 });
-  const s = await createServer(0);
+  const s = await createServer(0, { dataFile: null });
   port = s.port; close = s.close; rooms = s.rooms;
 });
 afterAll(async () => { await close(); });
@@ -23,11 +23,12 @@ class Client {
   ws: WebSocket;
   msgs: ServerMsg[] = [];
   you = ''; token = '';
+  welcome: Msg<'welcome'> | null = null;
   private listeners: (() => void)[] = [];
-  constructor(public name: string, token?: string, version = PROTOCOL_VERSION) {
+  constructor(public name: string, token?: string, version = PROTOCOL_VERSION, key?: string) {
     this.ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
-    this.ws.on('message', (d) => { const m = JSON.parse(String(d)) as ServerMsg; this.msgs.push(m); if (m.t === 'welcome') { this.you = m.you; this.token = m.token; } for (const l of this.listeners) l(); });
-    this.ws.on('open', () => this.raw({ t: 'hello', v: version, token, card: { id: '', name, crew: 'Test Crew', color: '#39d0ff', level: 4, carId: 'tokunbo', livery: defaultLivery(carById('tokunbo')) } }));
+    this.ws.on('message', (d) => { const m = JSON.parse(String(d)) as ServerMsg; this.msgs.push(m); if (m.t === 'welcome') { this.you = m.you; this.token = m.token; this.welcome = m; } for (const l of this.listeners) l(); });
+    this.ws.on('open', () => this.raw({ t: 'hello', v: version, token, key, card: { id: '', name, crew: 'Test Crew', color: '#39d0ff', level: 4, carId: 'tokunbo', livery: defaultLivery(carById('tokunbo')) } }));
   }
   raw(m: unknown) { this.ws.send(JSON.stringify(m)); }
   send(m: ClientMsg) { this.raw(m); }
@@ -275,6 +276,69 @@ describe('room server', () => {
     const race = await a.wait('race', () => true, 0, 3000);
     expect(race.race.entrants.length).toBeGreaterThan(2);
     a.close(); b.close();
+  });
+
+  it('ranked: humans only, no host controls, ratings from the server result, and the ladder shows them', async () => {
+    const keyA = 'a1'.repeat(32), keyB = 'b2'.repeat(32);
+    const a = await new Client('Ranked Ada', undefined, PROTOCOL_VERSION, keyA).ready();
+    const b = await new Client('Ranked Bayo', undefined, PROTOCOL_VERSION, keyB).ready();
+    expect(a.welcome!.me).toMatchObject({ rating: 1000, races: 0, rank: null });
+    const ma = a.mark();
+    a.send({ t: 'quick', ranked: true });
+    const ra = await a.room(ma);
+    expect(ra.ranked).toBe(true);
+    expect(ra.waitingForRival).toBe(true);
+    expect(ra.startsIn).toBeNull();
+    expect(ra.config.aiFill).toBe(0);
+    // alone, the room waits past its clock for a rival
+    await sleep(800);
+    expect(rooms.rooms.get(ra.code)!.phase).toBe('waiting');
+    const mb = b.mark();
+    b.send({ t: 'quick', ranked: true });
+    expect((await b.room(mb)).code).toBe(ra.code);
+    // nobody sets up or starts a ranked room by hand
+    const mc = a.mark();
+    a.send({ t: 'config', patch: { laps: 5, aiFill: 7 } });
+    expect((await a.wait('error', () => true, mc)).code).toBe('not_host');
+    // it starts on its own, humans only
+    const race = (await a.wait('race', () => true, ma, 4000)).race;
+    expect(race.entrants).toHaveLength(2);
+    expect(race.entrants.every((e) => e.human)).toBe(true);
+    await a.room(ma, (r) => r.phase === 'racing');
+    // Ada takes the flag; Bayo never finishes. The server decides, and records Ada's lap.
+    const room = rooms.rooms.get(ra.code)!;
+    const sim = room.sim!;
+    const ia = race.entrants.findIndex((e) => e.id === a.you);
+    sim.cars[ia].c.finished = true; sim.cars[ia].c.finishTime = sim.time; sim.cars[ia].c.bestLap = 42.25;
+    sim.end();
+    const res = await a.wait('results', () => true, ma);
+    const rowA = res.rows.find((r) => r.id === a.you)!, rowB = res.rows.find((r) => r.id === b.you)!;
+    expect(rowA.delta).toBeGreaterThan(0);
+    expect(rowB.delta).toBe(-rowA.delta!);
+    expect(rowA.rating).toBe(1000 + rowA.delta!);
+    const rank = await a.wait('rank', () => true, ma);
+    expect(rank.me.rank).toBe(1);
+    // the ladder and the lap board over HTTP
+    const board = await (await fetch(`http://127.0.0.1:${port}/api/leaderboard?track=${race.cfg.track}`)).json();
+    expect(board.ratings[0].name).toBe('Ranked Ada');
+    expect(board.ratings[0].tier).toBe('Street Runner');
+    expect(board.laps[0]).toMatchObject({ name: 'Ranked Ada', time: 42.25 });
+    expect(JSON.stringify(board)).not.toContain(keyA);
+    a.close(); b.close();
+    // the same device key comes back to the same rating
+    const again = await new Client('Ranked Ada', undefined, PROTOCOL_VERSION, keyA).ready();
+    expect(again.welcome!.me!.rating).toBe(rowA.rating);
+    expect(again.welcome!.me!.races).toBe(1);
+    again.close();
+  });
+
+  it('ranked needs a device key', async () => {
+    const c = await new Client('No Key').ready();
+    expect(c.welcome!.me).toBeUndefined();
+    const mc = c.mark();
+    c.send({ t: 'quick', ranked: true });
+    expect((await c.wait('error', () => true, mc)).code).toBe('invalid');
+    c.close();
   });
 
   it('reports health', async () => {

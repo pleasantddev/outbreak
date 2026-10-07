@@ -6,8 +6,9 @@ import { carById, CARS, defaultLivery } from '../src/shared/cars';
 import { sanitiseConfig } from '../src/shared/roomConfig';
 import { DEFAULT_ROOM, packCar, packHazard, type PlayerCard, type RoomConfig, type RoomPhase, type RoomView, type RoomPlayer, type ServerMsg, type ResultRow, type RaceStart, type SnapCar } from '../src/shared/protocol';
 import { makePersonas } from '../src/shared/ai';
+import type { Store } from './store';
 
-export interface Conn { id: string; card: PlayerCard; send: (m: ServerMsg) => void; room: Room | null; token: string; alive: boolean; queued: boolean; lastState: number; violations: number; ping: number }
+export interface Conn { id: string; card: PlayerCard; send: (m: ServerMsg) => void; room: Room | null; token: string; alive: boolean; queued: boolean; lastState: number; violations: number; ping: number; pid?: string }
 
 /** Room clock settings. Mutable only so tests can run a whole race lifecycle in a second or two. */
 export const TIMING = {
@@ -39,8 +40,12 @@ export class Room {
   private pendingEvents: RaceEvent[] = [];
   quick: boolean;
   createdAt = Date.now();
+  /** humans in this race who have a ranked identity, by entrant id */
+  private racePids = new Map<string, { pid: string; name: string }>();
+  /** seconds each human's car spent under an AI stand-in this race */
+  private aiTime = new Map<string, number>();
 
-  constructor(code: string, config: Partial<RoomConfig>, private tracks: TrackData[], quick: boolean, private log: (m: string) => void) {
+  constructor(code: string, config: Partial<RoomConfig>, private tracks: TrackData[], quick: boolean, private log: (m: string) => void, public ranked = false, private store: Store | null = null) {
     this.code = code;
     this.quick = quick;
     this.config = sanitiseConfig(config, { ...DEFAULT_ROOM, isPublic: quick }, tracks.map((t) => t.id));
@@ -55,7 +60,8 @@ export class Room {
   view(): RoomView {
     return {
       code: this.code, phase: this.phase, config: this.config, host: this.host, raceNo: this.raceNo, quick: this.quick, seriesOver: this.seriesOver,
-      startsIn: this.phase === 'countdown' ? Math.max(0, this.startAt - Date.now()) : this.quick && this.phase === 'waiting' ? Math.max(0, this.phaseUntil - Date.now()) : null,
+      ranked: this.ranked, waitingForRival: this.ranked && this.phase === 'waiting' && this.connectedCount < 2,
+      startsIn: this.phase === 'countdown' ? Math.max(0, this.startAt - Date.now()) : this.quick && this.phase === 'waiting' && !(this.ranked && this.connectedCount < 2) ? Math.max(0, this.phaseUntil - Date.now()) : null,
       lastResults: this.lastResults,
       players: this.humans.map(({ conn, leftAt, ...p }) => { void conn; void leftAt; return p; }),
     };
@@ -126,14 +132,14 @@ export class Room {
     p.card = card; this.sync();
   }
   configure(id: string, patch: Partial<RoomConfig>) {
-    if (id !== this.host || this.phase !== 'waiting') return 'not_host';
+    if (id !== this.host || this.phase !== 'waiting' || this.ranked) return 'not_host';
     this.config = sanitiseConfig(patch, this.config, this.tracks.map((t) => t.id));
     for (const p of this.players.values()) p.ready = false;
     this.sync();
     return null;
   }
   kick(id: string, target: string) {
-    if (id !== this.host || target === id) return 'not_host';
+    if (id !== this.host || target === id || this.ranked) return 'not_host';
     const p = this.players.get(target); if (!p) return null;
     p.conn?.send({ t: 'left', reason: 'kicked' });
     this.remove(target);
@@ -145,7 +151,7 @@ export class Room {
     if (this.phase === 'waiting' && present.length && present.every((p) => p.ready) && (present.length >= 2 || !this.quick)) this.beginCountdown();
   }
   requestStart(id: string) {
-    if (id !== this.host) return 'not_host';
+    if (id !== this.host || (this.ranked && this.connectedCount < 2)) return 'not_host';
     if (this.phase !== 'waiting') return 'in_race';
     this.beginCountdown();
     return null;
@@ -171,7 +177,9 @@ export class Room {
     entrants.sort((a, b) => Number(a.human) - Number(b.human));
     this.entrantIdx = new Map(entrants.map((e, i) => [e.id, i]));
     // humans get 25 s after the first of them finishes, 90 s after an AI wins, and no race outlives three times par
-    const cfg = { ...defaultRaceConfig(td.id, this.config.laps), mode: this.config.mode, traffic: this.config.traffic, aiLevel: this.config.aiLevel, time: this.config.time, weather: this.config.weather, seed: this.seed, finishGrace: 25, aiFinishGrace: 90, maxTime: Math.round(td.par * this.config.laps * 3 + 90) };
+    const cfg = { ...defaultRaceConfig(td.id, this.config.laps), mode: this.config.mode, traffic: this.config.traffic, aiLevel: this.config.aiLevel, time: this.config.time, weather: this.config.weather, seed: this.seed, finishGrace: 25, aiFinishGrace: 90, maxTime: Math.round(td.par * this.config.laps * 3 + 90), items: this.config.items };
+    this.racePids = new Map(humans.filter((h) => h.conn?.pid).map((h) => [h.id, { pid: h.conn!.pid!, name: h.card.name }]));
+    this.aiTime.clear();
     this.sim = new RaceSim(td, cfg, entrants, { authority: true, local: [], countdown: TIMING.countdownMs / 1000 });
     this.startAt = Date.now() + TIMING.countdownMs;
     this.phase = 'countdown';
@@ -184,7 +192,7 @@ export class Room {
 
   private raceStart(): RaceStart {
     const sim = this.sim!;
-    return { startAt: this.startAt, seed: this.seed, raceNo: this.raceNo, cfg: { track: sim.cfg.track, laps: sim.cfg.laps, mode: sim.cfg.mode, traffic: sim.cfg.traffic, aiLevel: sim.cfg.aiLevel, time: sim.cfg.time, weather: sim.cfg.weather }, entrants: sim.cars.map((c) => ({ id: c.entrant.id, name: c.entrant.name, carId: c.entrant.carId, livery: c.entrant.livery, human: c.entrant.human, crew: c.entrant.crew })) };
+    return { startAt: this.startAt, seed: this.seed, raceNo: this.raceNo, cfg: { track: sim.cfg.track, laps: sim.cfg.laps, mode: sim.cfg.mode, traffic: sim.cfg.traffic, aiLevel: sim.cfg.aiLevel, time: sim.cfg.time, weather: sim.cfg.weather, items: sim.cfg.items }, entrants: sim.cars.map((c) => ({ id: c.entrant.id, name: c.entrant.name, carId: c.entrant.carId, livery: c.entrant.livery, human: c.entrant.human, crew: c.entrant.crew })) };
   }
 
   /** A client's report of its own car. Checked against the track and the laws of this game's physics. */
@@ -229,7 +237,11 @@ export class Room {
   /** Server tick: step the race, broadcast snapshots and events, run the lifecycle clock. */
   tick(dt: number) {
     const now = Date.now();
-    if (this.phase === 'waiting' && this.quick && now >= this.phaseUntil && this.connectedCount > 0) this.beginCountdown();
+    if (this.phase === 'waiting' && this.quick && now >= this.phaseUntil) {
+      // a ranked room needs two drivers; on its own it keeps waiting with a fresh clock
+      if (this.ranked && this.connectedCount < 2) this.phaseUntil = now + TIMING.quickStartMs;
+      else if (this.connectedCount > 0) this.beginCountdown();
+    }
     if (this.sim && (this.phase === 'countdown' || this.phase === 'racing' || this.phase === 'finishing')) {
       // keep the sim clock locked to the room clock
       const target = (now - this.startAt) / 1000;
@@ -244,6 +256,7 @@ export class Room {
         const idx = this.entrantIdx.get(pid);
         if (idx === undefined) continue;
         const rc = this.sim.cars[idx];
+        if (rc.control === 'ai' && this.phase !== 'countdown') this.aiTime.set(pid, (this.aiTime.get(pid) ?? 0) + dt);
         if (rc.control === 'remote' && now - at > TIMING.afkRaceMs && this.phase === 'racing') this.sim.takeOver(idx);
         else if (rc.control === 'ai' && now - at < 400 && this.players.get(pid)?.connected) { this.sim.release(idx); this.handBackUntil.set(pid, now + 2000); }
       }
@@ -277,10 +290,41 @@ export class Room {
     this.broadcast({ t: 'snap', st: Date.now(), rt: Math.round(sim.time * 1000) / 1000, c: cars.map(packCar), z: hz });
   }
 
+  /**
+   * Lap records from every online race, and ratings from ranked ones. Only what a driver did themselves counts:
+   * a car an AI stand-in drove for a third of the race, or one whose driver left or never came back, is a DNF
+   * for the rating, and a lap only counts if its driver was never replaced.
+   */
+  private record(rows: ResultRow[], raceTime: number) {
+    const store = this.store!;
+    const own = (id: string, share: number) => (this.aiTime.get(id) ?? 0) <= Math.max(0, raceTime) * share;
+    for (const r of rows) {
+      const who = this.racePids.get(r.id);
+      if (who && r.bestLap && own(r.id, 0.02)) store.lap(this.sim!.cfg.track, who.pid, who.name, r.bestLap, r.carId);
+    }
+    if (!this.ranked) return;
+    const rated = rows.filter((r) => r.human && this.racePids.has(r.id));
+    if (rated.length < 2) return;
+    const result = store.rate(rated.map((r) => {
+      const p = this.players.get(r.id);
+      const finished = r.time !== null && !!p?.connected && own(r.id, 0.3);
+      return { pid: this.racePids.get(r.id)!.pid, name: this.racePids.get(r.id)!.name, place: r.place, finished };
+    }));
+    for (const r of rated) {
+      const pid = this.racePids.get(r.id)!.pid;
+      const x = result.get(pid);
+      if (!x) continue;
+      r.rating = x.rating; r.delta = x.delta;
+      const rec = store.find(pid)!;
+      this.players.get(r.id)?.conn?.send({ t: 'rank', me: { pid, rating: rec.rating, races: rec.races, wins: rec.wins, rank: store.rankOf(pid) } });
+    }
+  }
+
   private finishRace() {
     const sim = this.sim!;
     const rows: ResultRow[] = sim.standings().map((s) => ({ id: s.id, name: s.name, human: s.human, place: s.place, time: s.time, bestLap: s.bestLap, carId: s.carId, points: POINTS[s.place - 1] ?? 0 }));
     for (const r of rows) { const p = this.players.get(r.id); if (p) p.points += r.points; }
+    if (this.store) this.record(rows, sim.time);
     this.lastResults = rows;
     this.seriesOver = this.raceNo >= this.config.races;
     this.broadcast({ t: 'results', rows });
@@ -295,24 +339,26 @@ export class Room {
 export class Rooms {
   rooms = new Map<string, Room>();
   queue: Conn[] = [];
-  constructor(public tracks: TrackData[], private log: (m: string) => void) {}
+  constructor(public tracks: TrackData[], private log: (m: string) => void, private store: Store | null = null) {}
 
   newCode() {
     for (let i = 0; i < 2000; i++) { const c = `LAGOS-${String(Math.floor(1000 + Math.random() * 9000))}`; if (!this.rooms.has(c)) return c; }
     throw new Error('no free room codes');
   }
-  create(conn: Conn, config: Partial<RoomConfig>, quick = false) {
-    const room = new Room(this.newCode(), config, this.tracks, quick, this.log);
+  create(conn: Conn, config: Partial<RoomConfig>, quick = false, ranked = false) {
+    const room = new Room(this.newCode(), config, this.tracks, quick, this.log, ranked, this.store);
     this.rooms.set(room.code, room);
     room.add(conn);
     return room;
   }
-  /** Quick match: the fullest public room still waiting, or a fresh one with AI fill. */
-  match(conn: Conn) {
-    const open = [...this.rooms.values()].filter((r) => r.quick && r.config.isPublic && r.phase === 'waiting' && r.joinable).sort((a, b) => b.players.size - a.players.size);
+  /** Quick match: the fullest public room still waiting, or a fresh one with AI fill. Ranked rooms are humans
+   *  only, on fixed rules nobody can change: two laps of Rush with power-ups, any car. */
+  match(conn: Conn, ranked = false) {
+    const open = [...this.rooms.values()].filter((r) => r.quick && r.ranked === ranked && r.config.isPublic && r.phase === 'waiting' && r.joinable).sort((a, b) => b.players.size - a.players.size);
     if (open[0]) { open[0].add(conn); return open[0]; }
     const tracks = this.tracks.filter((t) => !t.reverse || Math.random() < 0.3);
     const td = tracks[Math.floor(Math.random() * tracks.length)];
+    if (ranked) return this.create(conn, { track: td.id, laps: 2, isPublic: true, maxPlayers: 8, aiFill: 0, mode: 'rush', traffic: 1, aiLevel: 'normal', carClass: 'any', items: true, races: 1, time: 'dusk', weather: 'clear' }, true, true);
     return this.create(conn, { track: td.id, laps: Math.min(3, td.laps), isPublic: true, maxPlayers: 8, aiFill: 7, mode: 'rush' }, true);
   }
   tick(dt: number) {

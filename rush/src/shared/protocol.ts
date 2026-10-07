@@ -13,8 +13,10 @@ export interface PlayerCard { id: string; name: string; crew: string; color: str
 export interface RoomConfig {
   track: string; mode: RaceMode; laps: number; aiFill: number; aiLevel: AiLevel; traffic: number;
   time: TimeOfDay; weather: Weather; carClass: CarClass | 'any'; maxPlayers: number; isPublic: boolean; races: number;
+  /** power-ups: the Ghana Must Go bags and their items, in Rush races */
+  items: boolean;
 }
-export const DEFAULT_ROOM: RoomConfig = { track: 'terminal', mode: 'rush', laps: 3, aiFill: 7, aiLevel: 'normal', traffic: 1, time: 'dusk', weather: 'clear', carClass: 'any', maxPlayers: 8, isPublic: false, races: 3 };
+export const DEFAULT_ROOM: RoomConfig = { track: 'terminal', mode: 'rush', laps: 3, aiFill: 7, aiLevel: 'normal', traffic: 1, time: 'dusk', weather: 'clear', carClass: 'any', maxPlayers: 8, isPublic: false, races: 3, items: true };
 
 export type RoomPhase = 'waiting' | 'countdown' | 'racing' | 'finishing' | 'results' | 'closed';
 export interface RoomPlayer { id: string; card: PlayerCard; ready: boolean; host: boolean; connected: boolean; spectating: boolean; ping: number; points: number }
@@ -23,14 +25,20 @@ export interface RoomView {
   raceNo: number; startsIn: number | null; lastResults: ResultRow[] | null; quick: boolean;
   /** true while the results of the last race in a series are up; points reset when the room opens again */
   seriesOver: boolean;
+  /** a ranked room: humans only, fixed rules, results move ratings */
+  ranked?: boolean;
+  /** a ranked room with one driver in it waits for a rival before any countdown */
+  waitingForRival?: boolean;
 }
-export interface ResultRow { id: string; name: string; human: boolean; place: number; time: number | null; bestLap: number | null; carId: string; points: number }
+export interface ResultRow { id: string; name: string; human: boolean; place: number; time: number | null; bestLap: number | null; carId: string; points: number; rating?: number; delta?: number }
+/** A player's standing on the ranked ladder, as the server keeps it. */
+export interface RankInfo { pid: string; rating: number; races: number; wins: number; rank: number | null }
 
 export const CHAT_PHRASES = ['Oya, let us go!', 'No wahala', 'Good race!', 'Wetin dey happen?', 'One more!', 'Who get am?', 'Shine your eye', 'I dey come', 'Na you biko', 'Rematch?'];
 
 export type ClientMsg =
-  | { t: 'hello'; v: number; card: PlayerCard; token?: string }
-  | { t: 'quick' }
+  | { t: 'hello'; v: number; card: PlayerCard; token?: string; key?: string }
+  | { t: 'quick'; ranked?: boolean }
   | { t: 'cancelQueue' }
   | { t: 'create'; config: Partial<RoomConfig> }
   | { t: 'join'; code: string }
@@ -45,12 +53,13 @@ export type ClientMsg =
   | { t: 'useItem' }
   | { t: 'ping'; ct: number };
 
-export interface RaceStart { startAt: number; seed: number; cfg: { track: string; laps: number; mode: RaceMode; traffic: number; aiLevel: AiLevel; time: TimeOfDay; weather: Weather }; entrants: { id: string; name: string; carId: string; livery: Livery; human: boolean; crew?: string }[]; raceNo: number }
+export interface RaceStart { startAt: number; seed: number; cfg: { track: string; laps: number; mode: RaceMode; traffic: number; aiLevel: AiLevel; time: TimeOfDay; weather: Weather; items?: boolean }; entrants: { id: string; name: string; carId: string; livery: Livery; human: boolean; crew?: string }[]; raceNo: number }
 export interface SnapCar { i: number; s: RemoteSnap; lap: number; place: number; fin: boolean; rd: number }
 export interface SnapHazard { id: number; k: HazardKind; x: number; y: number; z: number; h: number; s: number; d: number }
 
 export type ServerMsg =
-  | { t: 'welcome'; you: string; token: string; version: number; now: number; online: { rooms: number; players: number } }
+  | { t: 'welcome'; you: string; token: string; version: number; now: number; online: { rooms: number; players: number }; me?: RankInfo }
+  | { t: 'rank'; me: RankInfo }
   | { t: 'queued'; position: number; players: number; eta: number }
   | { t: 'room'; room: RoomView }
   | { t: 'left'; reason: 'left' | 'kicked' | 'closed' }

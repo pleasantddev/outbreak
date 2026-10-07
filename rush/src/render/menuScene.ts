@@ -168,6 +168,7 @@ export class MenuScene {
       // nothing drives through the parked car
       for (const p of this.poses) { const dx = p.x - this.spot.x, dz = p.z - this.spot.z; if (dx * dx + dz * dz < 196) p.vis = 0; }
       this.trafficView.update(this.poses);
+      if (this.scen.trackView.bags) this.scen.trackView.bags.visible = true;
       this.scen.trackView.updateBags(this.t, () => true);
       this.scen.props.updateCrowd(this.t);
       st.landmarks?.update(this.t);

@@ -3,7 +3,7 @@
 // race seed and time, so the replay rebuilds it exactly instead of storing it.
 import * as THREE from 'three';
 import type { TrackData, Track } from '../shared/track';
-import type { Entrant } from '../shared/race';
+import { itemsOn, type Entrant } from '../shared/race';
 import type { CarState } from '../shared/car';
 import { carById, defaultLivery } from '../shared/cars';
 import { Traffic, type TrafficPose } from '../shared/traffic';
@@ -58,6 +58,7 @@ export class ReplayPlayer {
     const s = stage.engine.settings;
     this.scen = stage.sceneryFor(td);
     this.track = this.scen.track;
+    if (this.scen.trackView.bags) this.scen.trackView.bags.visible = itemsOn(result.cfg);
     stage.ensureLandmarks();
     stage.atmos.set(result.cfg.time, result.cfg.weather, s.drawDistance, s.reflections);
     this.frames = result.replay;

@@ -6,6 +6,7 @@ import { level, saveProfile, friendCode } from '../../app/profile';
 import { fmtTime } from '../hud';
 import { PRESET_LABEL } from '../../render/quality';
 import { UI_ICON } from '../icons';
+import { tierOf } from '../../shared/ranking';
 
 const COLORS = ['#f6c514', '#ff2d8a', '#39d0ff', '#39ff14', '#ff6a00', '#a678ff', '#ffffff', '#e5322d'];
 const CREWS = ['Oshodi Kings', 'Ikeja Night Runners', 'Mushin Motorworks', 'Isolo Drift Club', 'Ilupeju Iron', 'Agege Express', 'Surulere Sliders', 'Yaba Tech'];
@@ -37,7 +38,7 @@ export function profileScreen(app: App): Screen {
           <div class="row"><div class="h3">Level ${lv.level}</div><span class="spacer"></span><span class="mute small">${lv.into.toLocaleString()} / ${lv.need.toLocaleString()} XP</span></div>
           <div class="xpbar" style="width:100%; height:8px; margin-top:8px"><i style="width:${(lv.into / lv.need) * 100}%"></i></div>
           <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); margin-top:14px">
-            ${[['Races', p.stats.races], ['Wins', p.stats.wins], ['Podiums', p.stats.podiums], ['Drift time', `${Math.round(p.stats.drift)}s`], ['Near misses', p.stats.nearMiss], ['Clean tricks', p.stats.tricks], ['Shunts', p.stats.shunts], ['Distance', `${p.stats.km.toFixed(1)} km`], ['Wallet', naira(p.naira)]].map(([k, v]) => `<div><div class="small mute">${k}</div><div class="h3">${v}</div></div>`).join('')}
+            ${[['Ranked', app.net.me && app.net.me.races ? `${app.net.me.rating} . ${tierOf(app.net.me.rating).name}` : 'Unranked'], ['Races', p.stats.races], ['Wins', p.stats.wins], ['Podiums', p.stats.podiums], ['Drift time', `${Math.round(p.stats.drift)}s`], ['Near misses', p.stats.nearMiss], ['Clean tricks', p.stats.tricks], ['Shunts', p.stats.shunts], ['Distance', `${p.stats.km.toFixed(1)} km`], ['Wallet', naira(p.naira)]].map(([k, v]) => `<div><div class="small mute">${k}</div><div class="h3">${v}</div></div>`).join('')}
           </div>
         </div>
         <div class="panel" style="padding:16px"><div class="h3" style="margin-bottom:8px">Lap records</div>

@@ -1,7 +1,7 @@
 // One race on screen: builds the track's world, runs the RaceSim at a fixed 60 Hz, interpolates cars for rendering,
 // turns race events into sound, effects and callouts, and records a replay.
 import * as THREE from 'three';
-import { RaceSim, type Entrant, type RaceConfig, type RaceEvent, type RemoteSnap } from '../shared/race';
+import { RaceSim, itemsOn, type Entrant, type RaceConfig, type RaceEvent, type RemoteSnap } from '../shared/race';
 import type { ResultRow, SnapCar, SnapHazard } from '../shared/protocol';
 import type { Track, TrackData } from '../shared/track';
 import type { CarInput } from '../shared/car';
@@ -104,6 +104,8 @@ export class RaceSession {
     stage.ensureLandmarks();
     stage.atmos.set(opts.cfg.time, opts.cfg.weather, s.drawDistance, s.reflections);
     this.world = scen.world; this.trackView = scen.trackView; this.props = scen.props;
+    // no power-ups in this race, no bags on the road
+    if (this.trackView.bags) this.trackView.bags.visible = itemsOn(opts.cfg);
     this.trafficView = new TrafficView(this.sim.traffic.cars, shadows);
     this.fx = new Fx(s.particles);
     this.hazards = new HazardView(this.track, this.fx);
@@ -420,7 +422,7 @@ export class RaceSession {
     // traffic, hazards, bags
     this.trafficView.update(this.sim.trafficPoses);
     this.hazards.sync(this.sim.hazards, this.t, dt);
-    this.trackView.updateBags(this.t, (i) => (this.sim.bags[i] ? this.sim.bags[i].respawn <= this.sim.time : true));
+    this.trackView.updateBags(this.t, (i) => !!this.sim.bags[i] && this.sim.bags[i].respawn <= this.sim.time);
     this.props.updateCrowd(this.t);
     st.landmarks?.update(this.t);
     this.fx.update(dt);

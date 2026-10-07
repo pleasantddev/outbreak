@@ -8,7 +8,8 @@ import { randomBytes } from 'node:crypto';
 import zlib from 'node:zlib';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { Rooms, type Conn } from './rooms';
-import { PROTOCOL_VERSION, normaliseCode, validState, unpackState, type ClientMsg, type ServerMsg, type PlayerCard } from '../src/shared/protocol';
+import { Store } from './store';
+import { PROTOCOL_VERSION, normaliseCode, validState, unpackState, type ClientMsg, type ServerMsg, type PlayerCard, type RankInfo } from '../src/shared/protocol';
 import { CARS, carById } from '../src/shared/cars';
 import type { TrackData } from '../src/shared/track';
 
@@ -24,8 +25,14 @@ function loadTracks(): TrackData[] {
   throw new Error('tracks.json not found; run npm run gis:build');
 }
 
-export function createServer(port = PORT) {
-  const rooms = new Rooms(loadTracks(), log);
+/** dataFile: where ratings and lap records live. Undefined means the default under DATA_DIR; null keeps them in
+ *  memory only, which is what the tests use. */
+export function createServer(port = PORT, opts: { dataFile?: string | null } = {}) {
+  const dataFile = opts.dataFile === undefined ? path.join(process.env.DATA_DIR ?? path.join(root, 'data/server'), 'ranked.json') : opts.dataFile;
+  const store = new Store(dataFile, log);
+  const tracks = loadTracks();
+  const rooms = new Rooms(tracks, log, store);
+  const rankInfo = (pid: string): RankInfo => { const p = store.find(pid)!; return { pid, rating: p.rating, races: p.races, wins: p.wins, rank: store.rankOf(pid) }; };
   const tokens = new Map<string, string>(); // reconnect token -> player id
   const GZIP = new Set(['.html', '.js', '.css', '.json', '.svg']);
   const gzCache = new Map<string, { mtime: number; buf: Buffer }>();
@@ -33,6 +40,14 @@ export function createServer(port = PORT) {
 
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://x');
+    // the global boards: the ranked ladder and, for one route, the fastest laps the server timed itself
+    if (url.pathname === '/api/leaderboard') {
+      const track = url.searchParams.get('track');
+      const body = { ratings: store.board(50), laps: track && tracks.some((t) => t.id === track) ? store.laps(track) : [] };
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': '*' });
+      res.end(JSON.stringify(body));
+      return;
+    }
     if (url.pathname === '/health') {
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       res.end(JSON.stringify({ ok: true, version: PROTOCOL_VERSION, uptime: Math.round((Date.now() - started) / 1000), ...rooms.stats() }));
@@ -85,15 +100,18 @@ export function createServer(port = PORT) {
             const token = m.token && known ? m.token : randomBytes(16).toString('hex');
             tokens.set(token, id);
             conn = { id, card, send, room: null, token, alive: true, queued: false, lastState: 0, violations: 0, ping: 0 };
-            send({ t: 'welcome', you: id, token, version: PROTOCOL_VERSION, now: Date.now(), online: rooms.stats() });
+            // a device key makes this player known to the ranked ladder; the server keeps only its hash
+            if (Store.validKey(m.key)) { conn.pid = Store.pid(m.key); store.player(conn.pid, card.name); }
+            send({ t: 'welcome', you: id, token, version: PROTOCOL_VERSION, now: Date.now(), online: rooms.stats(), me: conn.pid ? rankInfo(conn.pid) : undefined });
             for (const r of rooms.rooms.values()) if (r.players.has(id)) { r.add(conn); break; }
             return;
           }
           case 'ping': send({ t: 'pong', ct: m.ct, st: Date.now() }); return;
           case 'quick': {
             if (--mgmt < 0) return err('rate', 'Slow down');
+            if (m.ranked && !conn!.pid) return err('invalid', 'Ranked needs this device to have a player key. Update the game.');
             if (conn!.room) conn!.room.remove(conn!.id);
-            rooms.match(conn!);
+            rooms.match(conn!, !!m.ranked);
             return;
           }
           case 'create': {
@@ -167,12 +185,14 @@ export function createServer(port = PORT) {
     return { id: '', name, crew: String(c.crew ?? '').slice(0, 24), color: hex(c.color, '#f6c514'), level: Math.min(99, Math.max(1, Math.round(Number(c.level ?? 1)))), carId: car.id, livery };
   }
 
-  return new Promise<{ port: number; close: () => Promise<void>; rooms: Rooms }>((resolve) => {
+  for (const sig of ['SIGINT', 'SIGTERM'] as const) process.once(sig, () => { store.flush(); process.exit(0); });
+
+  return new Promise<{ port: number; close: () => Promise<void>; rooms: Rooms; store: Store }>((resolve) => {
     server.listen(port, () => {
       const addr = server.address();
       const p = typeof addr === 'object' && addr ? addr.port : port;
       log(`Lagos Rush server on http://localhost:${p}  (ws /ws, health /health)`);
-      resolve({ port: p, rooms, close: () => new Promise((r) => { clearInterval(timer); wss.close(); server.close(() => r()); }) });
+      resolve({ port: p, rooms, store, close: () => new Promise((r) => { clearInterval(timer); store.flush(); wss.close(); server.close(() => r()); }) });
     });
   });
 }

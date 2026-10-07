@@ -29,6 +29,7 @@ export function sanitiseConfig(patch: Partial<RoomConfig>, base: RoomConfig = DE
   if ('maxPlayers' in patch) c.maxPlayers = int(patch.maxPlayers, 2, 12, base.maxPlayers);
   if ('isPublic' in patch) c.isPublic = !!patch.isPublic;
   if ('races' in patch) c.races = int(patch.races, 1, 10, base.races);
+  if ('items' in patch) c.items = patch.items !== false;
   // the grid caps at twelve; how many AI actually start is decided at race time from the humans present
   return c;
 }

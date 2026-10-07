@@ -1,6 +1,6 @@
 // The race HUD: position, laps and timer top left, minimap top right, speed, Fuel and the Gbedu meter bottom right,
 // the item slot bottom left, a standings ticker, and big callouts in the middle. DOM writes are throttled.
-import type { RaceSim } from '../shared/race';
+import { itemsOn, type RaceSim } from '../shared/race';
 import type { Track } from '../shared/track';
 import { ITEMS, type ItemId } from '../shared/items';
 import { ITEM_ICON } from './icons';
@@ -121,7 +121,7 @@ export class Hud {
     const it = c.item as ItemId | null;
     if (this.rollT > 0 && it) { const keys = Object.keys(ITEMS) as ItemId[]; const k = keys[Math.floor(now / 70) % keys.length]; this.item.innerHTML = ITEM_ICON[k]; this.itemName.textContent = '...'; this.item.parentElement!.className = 'hud-item rolling'; }
     else if (it) { this.item.innerHTML = ITEM_ICON[it]; this.itemName.textContent = ITEMS[it].short + (c.itemCharges > 1 ? ` x${c.itemCharges}` : ''); this.item.parentElement!.className = 'hud-item has'; }
-    else { this.item.innerHTML = ''; this.itemName.textContent = sim.cfg.mode === 'rush' ? 'NO ITEM' : sim.cfg.mode.toUpperCase(); this.item.parentElement!.className = 'hud-item'; }
+    else { this.item.innerHTML = ''; this.itemName.textContent = itemsOn(sim.cfg) ? 'NO ITEM' : sim.cfg.mode.toUpperCase(); this.item.parentElement!.className = 'hud-item'; }
     this.wrong.classList.toggle('show', c.wrongWayT > 1.2 && sim.racing);
     this.el.classList.toggle('blackout', c.blackoutT > 0);
     // standings: around the player, plus the leader
