@@ -272,10 +272,12 @@ export function placeAtSafe(c: CarState, track: Track, events: CarEvent[]) {
   events.push({ t: 'respawn', car: c.id });
 }
 
-/** Car versus car: two circles per car, mass weighted, with a bonk. */
-export function collideCars(a: CarState, b: CarState, ma: number, mb: number, out: { impact: number }[]) {
+/** Car versus car: two circles per car, mass weighted, with a bonk. A car flagged not to apply belongs to another
+ *  machine (a remote player), so only our side of the contact is resolved here. */
+export function collideCars(a: CarState, b: CarState, ma: number, mb: number, out: { impact: number }[], applyA = true, applyB = true) {
   if (a.respawnT > 0 || b.respawnT > 0 || a.ghostT > 0 || b.ghostT > 0) return 0;
   if (Math.abs(a.y - b.y) > 2.5) return 0;
+  if (Math.abs(a.x - b.x) > 6 || Math.abs(a.z - b.z) > 6) return 0;
   const R = 1.0, off = 1.05;
   let hit = 0;
   for (const sa of [-off, off]) for (const sb of [-off, off]) {
@@ -284,13 +286,17 @@ export function collideCars(a: CarState, b: CarState, ma: number, mb: number, ou
     const dx = bx - ax, dz = bz - az, d = Math.hypot(dx, dz);
     if (d >= R * 2 || d < 1e-4) continue;
     const nx = dx / d, nz = dz / d, pen = R * 2 - d;
-    // a danfo in Danfo Mode is effectively immovable
-    const wa = a.danfoT > 0 ? 0.02 : mb / (ma + mb), wb = b.danfoT > 0 ? 0.02 : ma / (ma + mb);
-    a.x -= nx * pen * wa; a.z -= nz * pen * wa; b.x += nx * pen * wb; b.z += nz * pen * wb;
+    // a car in Danfo Mode is effectively immovable; with one side remote, ours takes the whole correction
+    let wa = a.danfoT > 0 ? 0.02 : mb / (ma + mb), wb = b.danfoT > 0 ? 0.02 : ma / (ma + mb);
+    if (!applyB) wa = Math.min(1, wa + wb), wb = 0;
+    if (!applyA) wb = Math.min(1, wa + wb), wa = 0;
+    if (applyA) { a.x -= nx * pen * wa; a.z -= nz * pen * wa; }
+    if (applyB) { b.x += nx * pen * wb; b.z += nz * pen * wb; }
     const rv = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz;
     if (rv < 0) {
       const j = -(1 + 0.35) * rv / (1 / ma + 1 / mb);
-      a.vx -= (j / ma) * nx; a.vz -= (j / ma) * nz; b.vx += (j / mb) * nx; b.vz += (j / mb) * nz;
+      if (applyA) { a.vx -= (j / ma) * nx; a.vz -= (j / ma) * nz; }
+      if (applyB) { b.vx += (j / mb) * nx; b.vz += (j / mb) * nz; }
       hit = Math.max(hit, -rv);
     }
   }

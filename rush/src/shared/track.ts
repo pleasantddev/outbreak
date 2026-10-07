@@ -27,7 +27,10 @@ export interface TrackData {
   par: number;             // gold medal lap time in seconds
   reverse?: boolean;
   base?: string;           // id of the forward layout for reverse variants
+  traffic: TrafficSection[];
 }
+/** A stretch of the lap with civilian traffic. flow 1 runs with the race, -1 comes at you, 0 is a two way road. */
+export interface TrafficSection { s0: number; s1: number; flow: -1 | 0 | 1 }
 
 export interface TrackHint { path: number; i: number }
 export interface TrackQuery {
@@ -204,8 +207,8 @@ export class Track {
     return { h: 0, slope: 0, lip: -1 };
   }
 
-  /** World position at a main-loop distance and lateral offset. */
-  pointAt(s: number, d = 0, pi = 0) {
+  /** World position at a main-loop distance and lateral offset. Ramps are included unless asked otherwise. */
+  pointAt(s: number, d = 0, pi = 0, ramps = true) {
     const c = this.paths[pi];
     const L = c.len;
     let ss = c.closed ? ((s % L) + L) % L : clamp(s, 0, L);
@@ -219,9 +222,28 @@ export class Track {
     const z = c.z[i] + (c.z[j] - c.z[i]) * t + rz * d;
     const bank = c.bank[i] + (c.bank[j] - c.bank[i]) * t;
     let y = c.y[i] + (c.y[j] - c.y[i]) * t + Math.tan(bank) * d;
-    if (pi === 0) y += this.rampHeight(ss, d).h;
+    if (pi === 0 && ramps) y += this.rampHeight(ss, d).h;
     const hw = c.hw[i] + (c.hw[j] - c.hw[i]) * t;
     return { x, y, z, h: Math.atan2(tx, tz), hw, i, tx, tz, rx, rz };
+  }
+
+  /** Half width of the main loop at s. */
+  hwAt(s: number) {
+    const c = this.paths[0];
+    const ss = ((s % c.len) + c.len) % c.len;
+    let lo = 0, hi = c.n - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (c.s[mid] <= ss) lo = mid; else hi = mid - 1; }
+    const j = (lo + 1) % c.n, t = (ss - c.s[lo]) / ((c.s[lo + 1] - c.s[lo]) || 1);
+    return c.hw[lo] + (c.hw[j] - c.hw[lo]) * t;
+  }
+
+  /** Index of the main-loop sample at or before s. */
+  indexAt(s: number) {
+    const c = this.paths[0];
+    const ss = ((s % c.len) + c.len) % c.len;
+    let lo = 0, hi = c.n - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (c.s[mid] <= ss) lo = mid; else hi = mid - 1; }
+    return lo;
   }
 
   curvatureAt(s: number) {

@@ -33,7 +33,7 @@ export interface TrackDef {
   base?: string;
 }
 
-interface Pt { x: number; z: number; y: number; w: number }
+interface Pt { x: number; z: number; y: number; w: number; f: number } // f: traffic flow, 1 with the race, -1 oncoming, 0 two way, 2 none
 interface G { nodes: Map<number, GraphNode>; edges: (GraphEdge | null)[]; nextId: number; linkW: Map<number, number> }
 
 const SAMPLE = 2; // metres between centreline samples
@@ -244,8 +244,8 @@ function fillet(pts: Pt[], closed: boolean, radius: (p: Pt) => number): Pt[] {
     if (th < 0.03) { out.push(p); continue; }
     const t = Math.min(radius(p) * Math.tan(th / 2), lu * 0.5, lv * 0.5);
     const r = t / Math.tan(th / 2);
-    const p0: Pt = { x: p.x - dux * t, z: p.z - duz * t, y: lerp(p.y, a.y, t / lu), w: lerp(p.w, a.w, t / lu) };
-    const p1: Pt = { x: p.x + dvx * t, z: p.z + dvz * t, y: lerp(p.y, b.y, t / lv), w: lerp(p.w, b.w, t / lv) };
+    const p0: Pt = { x: p.x - dux * t, z: p.z - duz * t, y: lerp(p.y, a.y, t / lu), w: lerp(p.w, a.w, t / lu), f: p.f };
+    const p1: Pt = { x: p.x + dvx * t, z: p.z + dvz * t, y: lerp(p.y, b.y, t / lv), w: lerp(p.w, b.w, t / lv), f: b.f };
     let nx = -duz, nz = dux;
     if ((p1.x - p0.x) * nx + (p1.z - p0.z) * nz < 0) { nx = -nx; nz = -nz; }
     const cx = p0.x + nx * r, cz = p0.z + nz * r;
@@ -255,7 +255,7 @@ function fillet(pts: Pt[], closed: boolean, radius: (p: Pt) => number): Pt[] {
     const m = Math.max(1, Math.ceil((r * Math.abs(da)) / 1.5));
     for (let k = 0; k <= m; k++) {
       const f = k / m, ang = a0 + da * f;
-      out.push({ x: cx + Math.cos(ang) * r, z: cz + Math.sin(ang) * r, y: lerp(p0.y, p1.y, f), w: lerp(p0.w, p1.w, f) });
+      out.push({ x: cx + Math.cos(ang) * r, z: cz + Math.sin(ang) * r, y: lerp(p0.y, p1.y, f), w: lerp(p0.w, p1.w, f), f: f < 0.5 ? p0.f : p1.f });
     }
   }
   return out;
@@ -275,7 +275,7 @@ function resample(pts: Pt[], closed: boolean, step: number): Pt[] {
     while (seg < segs - 1 && cum[seg + 1] < s) seg++;
     const i = seg, j = (seg + 1) % n;
     const f = (s - cum[i]) / ((cum[i + 1] - cum[i]) || 1);
-    out.push({ x: lerp(pts[i].x, pts[j].x, f), z: lerp(pts[i].z, pts[j].z, f), y: lerp(pts[i].y, pts[j].y, f), w: lerp(pts[i].w, pts[j].w, f) });
+    out.push({ x: lerp(pts[i].x, pts[j].x, f), z: lerp(pts[i].z, pts[j].z, f), y: lerp(pts[i].y, pts[j].y, f), w: lerp(pts[i].w, pts[j].w, f), f: f < 0.5 ? pts[i].f : pts[j].f });
   }
   return out;
 }
@@ -364,7 +364,8 @@ export function buildTrack(world: WorldData, def: TrackDef): { data: TrackData; 
   for (const s of states) {
     const e = g.edges[s >> 1]!;
     const w = widthOf(e);
-    orientedPts(g, s).forEach((p, k) => { if (k === 0 && pts.length) return; pts.push({ x: p[0], z: p[1], y: p[2] ?? 0, w }); });
+    const f = e.road < 0 ? 2 : !e.oneway ? 0 : s & 1 ? -1 : 1;
+    orientedPts(g, s).forEach((p, k) => { if (k === 0 && pts.length) return; pts.push({ x: p[0], z: p[1], y: p[2] ?? 0, w, f }); });
   }
   if (pts.length > 1 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].z - pts[pts.length - 1].z) < 0.5) pts.pop();
   pts = despike(pts, true);
@@ -510,10 +511,11 @@ export function buildTrack(world: WorldData, def: TrackDef): { data: TrackData; 
   const cpN = Math.max(6, Math.round(L / 260));
   const checkpoints = Array.from({ length: cpN - 1 }, (_, i) => +((L * (i + 1)) / cpN).toFixed(1));
   const par = parTime(track);
+  const traffic = trafficSections(pts, L);
 
   const data: TrackData = {
     ...stubData(def, paths),
-    length: +L.toFixed(1), checkpoints, pickups, ramps, boosts, grid, intro, landmarks, par,
+    length: +L.toFixed(1), checkpoints, pickups, ramps, boosts, grid, intro, landmarks, par, traffic,
   };
   if (def.reverse) { data.reverse = true; data.base = def.base ?? def.id.replace(/-rev$/, ''); }
   return { data, warnings };
@@ -522,8 +524,34 @@ export function buildTrack(world: WorldData, def: TrackDef): { data: TrackData; 
 function stubData(def: TrackDef, paths: TrackPath[]): TrackData {
   return {
     id: def.id, name: def.name, tagline: def.tagline, district: def.district, laps: def.laps, length: 0,
-    paths, checkpoints: [], pickups: [], ramps: [], boosts: [], grid: [], intro: [], landmarks: [], surface: 'asphalt', par: 0,
+    paths, checkpoints: [], pickups: [], ramps: [], boosts: [], grid: [], intro: [], landmarks: [], surface: 'asphalt', par: 0, traffic: [],
   };
+}
+
+/** Runs of real traffic direction along the lap, from the OSM oneway tags of each road the route uses. The start
+ *  straight is closed to traffic, and hand made links carry none. */
+function trafficSections(pts: Pt[], L: number) {
+  const n = pts.length;
+  const runs: { s0: number; s1: number; flow: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const s = (i * L) / n, f = pts[i].f;
+    const last = runs[runs.length - 1];
+    if (last && last.flow === f) last.s1 = s + L / n; else runs.push({ s0: s, s1: s + L / n, flow: f });
+  }
+  // absorb short slivers of real road into the run before them; hand made links (flow 2) always stay traffic free
+  for (let i = runs.length - 1; i > 0; i--) if (runs[i].flow !== 2 && runs[i - 1].flow !== 2 && runs[i].s1 - runs[i].s0 < 60) { runs[i - 1].s1 = runs[i].s1; runs.splice(i, 1); }
+  const merged: typeof runs = [];
+  for (const r of runs) { const m = merged[merged.length - 1]; if (m && m.flow === r.flow) m.s1 = r.s1; else merged.push({ ...r }); }
+  // keep vehicles clear of the links and of the start straight, and skip stretches too short to read as a road
+  const out: { s0: number; s1: number; flow: -1 | 0 | 1 }[] = [];
+  merged.forEach((r, i) => {
+    if (r.flow === 2) return;
+    const prev = merged[(i - 1 + merged.length) % merged.length], next = merged[(i + 1) % merged.length];
+    const s0 = Math.max(r.s0 + (prev.flow === 2 ? 30 : 0), 70);
+    const s1 = Math.min(r.s1 - (next.flow === 2 ? 30 : 0), L - 110);
+    if (s1 - s0 >= 150) out.push({ s0: +s0.toFixed(1), s1: +s1.toFixed(1), flow: r.flow as -1 | 0 | 1 });
+  });
+  return out;
 }
 
 function nearestS(track: Track, x: number, z: number) {
@@ -580,7 +608,7 @@ function buildShortcut(g: G, main: Track, sc: TrackShortcutDef, mainEdges: Set<n
     if (leg.length) inState = leg[leg.length - 1];
   }
   let pts: Pt[] = [];
-  for (const s of states) orientedPts(g, s).forEach((p, k) => { if (k === 0 && pts.length) return; pts.push({ x: p[0], z: p[1], y: p[2] ?? 0, w: 8 }); });
+  for (const s of states) orientedPts(g, s).forEach((p, k) => { if (k === 0 && pts.length) return; pts.push({ x: p[0], z: p[1], y: p[2] ?? 0, w: 8, f: 2 }); });
   pts = despike(pts, false);
   pts = rdp(pts, 0.5);
   pts = fillet(pts, false, () => 9);
