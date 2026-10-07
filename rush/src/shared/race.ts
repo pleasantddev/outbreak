@@ -100,7 +100,9 @@ export class RaceSim {
       const def = carById(e.carId);
       const c = newCar(i, slot.x, slot.y, slot.z, slot.h, this.track);
       const control: RaceCar['control'] = opts.local.includes(e.id) ? 'local' : !e.human && this.authority ? 'ai' : e.human || !this.authority ? 'remote' : 'ai';
-      const persona = e.human ? null : { ...personas[i], name: e.name };
+      const persona = e.human ? null : { ...personas[i], name: e.name || personas[i].name };
+      if (!e.human && !e.name) e.name = persona!.name;
+      if (!e.crew && persona) e.crew = persona.crew;
       const rc: RaceCar = {
         idx: i, entrant: e, def, c, control, persona,
         ai: control === 'ai' ? new AiDriver(this.track, def, persona!, cfg.aiLevel, cfg.seed * 31 + i) : null,
@@ -182,7 +184,8 @@ export class RaceSim {
     this.slipstream(dt);
     this.progress();
     this.updatePlaces(false);
-    this.checkEnd();
+    // followers never end a race on their own view of it; the room's results do
+    if (this.authority) this.checkEnd();
   }
 
   private autopilotFor(rc: RaceCar) {
@@ -233,7 +236,8 @@ export class RaceSim {
 
   // ------------------------------------------------------------------------------------------- items
 
-  private useItem(rc: RaceCar) {
+  /** Fire the item this car holds. Only the authority calls this. */
+  useItem(rc: RaceCar) {
     const c = rc.c, id = c.item as ItemId, q = c.q!;
     rc.stats.itemsUsed++;
     this.events.push({ t: 'useItem', car: rc.idx, item: id });
@@ -580,6 +584,21 @@ export class RaceSim {
 
   // ------------------------------------------------------------------------------------------- network glue
 
+  /** An AI takes the wheel of a car whose driver left or went quiet (the authority only). */
+  takeOver(idx: number) {
+    const rc = this.cars[idx];
+    if (!rc || rc.control === 'ai' || rc.control === 'local') return;
+    rc.control = 'ai';
+    rc.ai = new AiDriver(this.track, rc.def, { name: rc.entrant.name, crew: rc.entrant.crew ?? '', pace: 0.97, aggression: 0.4, lane: 0, drifter: true }, this.cfg.aiLevel === 'easy' ? 'normal' : this.cfg.aiLevel, this.cfg.seed + idx * 13);
+    rc.prevS = rc.c.q?.sMain ?? rc.prevS;
+  }
+  /** The driver is back: hand the car to their machine again. */
+  release(idx: number) {
+    const rc = this.cars[idx];
+    if (!rc || rc.control !== 'ai' || !rc.entrant.human) return;
+    rc.control = 'remote'; rc.ai = null;
+  }
+
   /** Observe a remote car: state comes from its owner's machine (already validated or interpolated). */
   setRemote(idx: number, s: RemoteSnap) {
     const c = this.cars[idx].c;
@@ -600,7 +619,8 @@ export class RaceSim {
   applyAuthorityEvent(ev: RaceEvent) {
     switch (ev.t) {
       case 'item': { const rc = this.cars[ev.car]; if (rc) { rc.c.item = ev.item; rc.c.itemCharges = ITEMS[ev.item].charges; rc.c.itemRoll = 1.1; } break; }
-      case 'hit': { const rc = this.cars[ev.car]; if (rc && rc.control === 'local') this.applyHit(rc, ev.kind, ev.by); break; }
+      // Danfo contact is judged by each driver's own machine from what it sees, so the room's echo is skipped
+      case 'hit': { const rc = this.cars[ev.car]; if (rc && rc.control === 'local' && ev.kind !== 'danfo') this.applyHit(rc, ev.kind, ev.by); break; }
       case 'hazard': {
         if (this.hazards.some((h) => h.id === ev.id)) break;
         this.hazards.push({ id: ev.id, kind: ev.kind, owner: ev.owner, x: ev.x, y: ev.y, z: ev.z, h: 0, s: ev.s, d: ev.d, vs: 0, target: ev.target, life: 30, armed: 0 });
@@ -608,6 +628,7 @@ export class RaceSim {
       }
       case 'hazardGone': this.hazards = this.hazards.filter((h) => h.id !== ev.id); break;
       case 'pickup': { const b = this.bags[ev.bag]; if (b) b.respawn = this.time + 3.5; break; }
+      case 'useItem': { const rc = this.cars[ev.car]; if (rc && rc.control === 'local') { rc.c.itemCharges -= 1; if (rc.c.itemCharges <= 0) { rc.c.item = null; rc.c.itemCharges = 0; } if (ev.item === 'genboost') rc.c.boostT = Math.max(rc.c.boostT, 1.05); if (ev.item === 'danfo') rc.c.danfoT = 5.5; } break; }
       case 'blackout': for (const v of ev.victims) { const rc = this.cars[v]; if (rc && rc.control === 'local') rc.c.blackoutT = 3.6; } break;
     }
   }

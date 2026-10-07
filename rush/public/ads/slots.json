@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "note": "Ad inventory for the Lagos Rush world. The house creative fills any slot without a booking. Slots are placed per track at the end of the longest straight (giant) and along straights (standard). Swap a creative by id without shipping a new build.",
+  "slots": [
+    { "id": "giant-1", "size": "giant", "placement": "longest-straight-end", "creative": "house-advertise" },
+    { "id": "giant-2", "size": "giant", "placement": "second-straight-end", "creative": "house-advertise" }
+  ],
+  "creatives": {
+    "house-advertise": { "type": "house", "headline": "ADVERTISE WITH US", "sub": "Your brand on the biggest board in Oshodi. Seen by every racer, every lap.", "cta": "Book this space in the Lagos Rush app", "bg": "#f6c514", "fg": "#111111", "accent": "#d0141c" }
+  }
+}

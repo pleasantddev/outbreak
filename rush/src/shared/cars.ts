@@ -40,7 +40,7 @@ export const CARS: CarDef[] = [
     id: 'tokunbo', name: 'Tokunbo 1.8', maker: 'Oba Motors', cls: 'street', price: 0, unlockLevel: 1,
     blurb: 'Foreign used, freshly sprayed, will outlive its third owner. The car every Lagos racer starts in.',
     stats: { speed: 5, accel: 6, handling: 7, drift: 6, weight: 5 }, topSpeed: 52, accel: 15, steer: 2.35, grip: 9.5, driftGrip: 1.9, mass: 1.0, sound: 'turbo4',
-    shape: { length: 4.5, width: 1.78, height: 1.44, wheelbase: 2.7, track: 1.52, wheelR: 0.33, rideH: 0.15, cabin: 0.47, cabinLen: 0.46, roofH: 0.5, nose: 0.55, tail: 0.75, belt: 0.58, fender: 0.02, spoiler: 'lip', style: 'sedan', lights: 'slim' },
+    shape: { length: 4.5, width: 1.78, height: 1.44, wheelbase: 2.7, track: 1.52, wheelR: 0.33, rideH: 0.15, cabin: 0.54, cabinLen: 0.46, roofH: 0.5, nose: 0.55, tail: 0.75, belt: 0.58, fender: 0.02, spoiler: 'lip', style: 'sedan', lights: 'slim' },
     defaultPaint: '#c8ccd0',
   },
   {
@@ -61,14 +61,14 @@ export const CARS: CarDef[] = [
     id: 'spirit', name: 'Eko Spirit RS', maker: 'Oba Motors', cls: 'sport', price: 40000, unlockLevel: 4,
     blurb: 'A hot hatch built for Ikorodu Road at 2am. Light, eager and very happy sideways.',
     stats: { speed: 7, accel: 8, handling: 8, drift: 8, weight: 4 }, topSpeed: 60, accel: 18, steer: 2.5, grip: 10, driftGrip: 2.1, mass: 0.85, sound: 'turbo4',
-    shape: { length: 4.15, width: 1.82, height: 1.42, wheelbase: 2.6, track: 1.58, wheelR: 0.34, rideH: 0.12, cabin: 0.5, cabinLen: 0.5, roofH: 0.48, nose: 0.5, tail: 0.15, belt: 0.56, fender: 0.05, spoiler: 'duck', style: 'hatch', lights: 'bar' },
+    shape: { length: 4.15, width: 1.82, height: 1.42, wheelbase: 2.6, track: 1.58, wheelR: 0.34, rideH: 0.12, cabin: 0.56, cabinLen: 0.5, roofH: 0.48, nose: 0.5, tail: 0.15, belt: 0.56, fender: 0.05, spoiler: 'duck', style: 'hatch', lights: 'bar' },
     defaultPaint: '#d0141c',
   },
   {
     id: 'ajah', name: 'Ajah V8', maker: 'Lekki Iron', cls: 'sport', price: 60000, unlockLevel: 6,
     blurb: 'A long, low muscle saloon with a V8 you can hear from Ajah to Obalende. Straight lines are its love language.',
     stats: { speed: 8, accel: 7, handling: 5, drift: 9, weight: 7 }, topSpeed: 66, accel: 17, steer: 2.15, grip: 8.8, driftGrip: 1.5, mass: 1.35, sound: 'v8',
-    shape: { length: 4.95, width: 1.95, height: 1.38, wheelbase: 2.95, track: 1.65, wheelR: 0.36, rideH: 0.12, cabin: 0.55, cabinLen: 0.42, roofH: 0.44, nose: 0.7, tail: 0.8, belt: 0.6, fender: 0.08, spoiler: 'duck', style: 'muscle', lights: 'quad' },
+    shape: { length: 4.95, width: 1.95, height: 1.38, wheelbase: 2.95, track: 1.65, wheelR: 0.36, rideH: 0.12, cabin: 0.62, cabinLen: 0.42, roofH: 0.44, nose: 0.7, tail: 0.8, belt: 0.6, fender: 0.08, spoiler: 'duck', style: 'muscle', lights: 'quad' },
     defaultPaint: '#101418',
   },
   {
@@ -82,14 +82,14 @@ export const CARS: CarDef[] = [
     id: 'thirdmainland', name: 'Third Mainland R', maker: 'Lagoon Automobili', cls: 'super', price: 140000, unlockLevel: 9,
     blurb: 'A wedge of carbon named after the longest bridge in town. Mid engine, all attitude, no patience.',
     stats: { speed: 10, accel: 9, handling: 8, drift: 7, weight: 4 }, topSpeed: 76, accel: 21, steer: 2.45, grip: 11.5, driftGrip: 2.2, mass: 0.95, sound: 'v12',
-    shape: { length: 4.6, width: 2.02, height: 1.16, wheelbase: 2.7, track: 1.72, wheelR: 0.36, rideH: 0.09, cabin: 0.52, cabinLen: 0.4, roofH: 0.4, nose: 0.95, tail: 0.3, belt: 0.62, fender: 0.1, spoiler: 'wing', style: 'super', lights: 'slim' },
+    shape: { length: 4.6, width: 2.02, height: 1.16, wheelbase: 2.7, track: 1.72, wheelR: 0.36, rideH: 0.09, cabin: 0.5, cabinLen: 0.4, roofH: 0.4, nose: 0.95, tail: 0.3, belt: 0.62, fender: 0.1, spoiler: 'wing', style: 'super', lights: 'slim' },
     defaultPaint: '#1b8a3a',
   },
   {
     id: 'phantom', name: 'Banana Island Phantom', maker: 'Lagoon Automobili', cls: 'super', price: 180000, unlockLevel: 11,
     blurb: 'A grand tourer for people with a driver they no longer need. Silent electric shove, absurd top speed.',
     stats: { speed: 10, accel: 10, handling: 7, drift: 6, weight: 6 }, topSpeed: 78, accel: 22, steer: 2.3, grip: 11, driftGrip: 2.0, mass: 1.15, sound: 'electric',
-    shape: { length: 4.85, width: 2.0, height: 1.24, wheelbase: 2.9, track: 1.7, wheelR: 0.37, rideH: 0.1, cabin: 0.5, cabinLen: 0.46, roofH: 0.42, nose: 0.85, tail: 0.45, belt: 0.6, fender: 0.07, spoiler: 'lip', style: 'coupe', lights: 'bar' },
+    shape: { length: 4.85, width: 2.0, height: 1.24, wheelbase: 2.9, track: 1.7, wheelR: 0.37, rideH: 0.1, cabin: 0.57, cabinLen: 0.46, roofH: 0.42, nose: 0.85, tail: 0.45, belt: 0.6, fender: 0.07, spoiler: 'lip', style: 'coupe', lights: 'bar' },
     defaultPaint: '#e8e2d6',
   },
 ];
