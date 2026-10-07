@@ -7,6 +7,13 @@ import {
 } from 'postprocessing';
 import { DynamicResolution, type GraphicsSettings } from './quality';
 
+const nanGuardFrag = /* glsl */ `
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  vec3 c = inputColor.rgb;
+  bool ok = c.r >= 0.0 && c.r < 60000.0 && c.g >= 0.0 && c.g < 60000.0 && c.b >= 0.0 && c.b < 60000.0;
+  outputColor = ok ? inputColor : vec4(0.0, 0.0, 0.0, 1.0);
+}`;
+
 // Speed and story effects in one pass: radial streaks at speed, a NEPA blackout that leaves only the headlights,
 // a flash for hits, and a gentle warm grade.
 const fxFrag = /* glsl */ `
@@ -107,6 +114,8 @@ export class Engine {
       this.renderer.toneMapping = THREE.NoToneMapping;
       this.composer = new EffectComposer(this.renderer, { frameBufferType: THREE.HalfFloatType, multisampling: 0 });
       this.composer.addPass(new RenderPass(this.scene, this.camera));
+      // scrub NaN and Inf before anything blurs them: bloom would smear one bad pixel across the whole frame
+      if (s.bloom) this.composer.addPass(new EffectPass(this.camera, new Effect('NanGuard', nanGuardFrag)));
       const effects: Effect[] = [];
       if (s.smaa) effects.push(new SMAAEffect({ preset: SMAAPreset.MEDIUM }));
       if (s.bloom) { this.bloom = new BloomEffect({ intensity: 0.9, luminanceThreshold: 0.82, luminanceSmoothing: 0.2, mipmapBlur: true, radius: 0.72 }); effects.push(this.bloom); }

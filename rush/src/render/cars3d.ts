@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import type { CarDef, CarShape, Livery, RimStyle } from '../shared/cars';
 import { canvas, tex } from './textures';
+import { fixNormals } from './geom';
 
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -342,7 +343,7 @@ function loftBody(s: CarShape, p: Profile) {
     const l = Math.hypot(nx, ny, nz) || 1;
     nor.setXYZ(a, nx / l, ny / l, nz / l); nor.setXYZ(b, nx / l, ny / l, nz / l);
   }
-  return g;
+  return fixNormals(g);
 }
 
 // ------------------------------------------------------------------------------------------- wheels
@@ -403,7 +404,7 @@ export function mergeGeos(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
   out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   out.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   out.setIndex(idx);
-  return out;
+  return fixNormals(out);
 }
 
 // ------------------------------------------------------------------------------------------- assembly

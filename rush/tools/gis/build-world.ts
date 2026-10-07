@@ -78,7 +78,7 @@ for (const r of roads) {
   }
 }
 
-// elevation: bridges sit at 6.5 m per layer, and the height eases down along connected roads at a 6% grade
+// elevation: bridges sit at 6.5 m per layer, and the height eases down along connected roads at a 6.5% grade
 const BRIDGE_H = 6.5, GRADE = 0.065;
 const elev = new Map<number, number>();
 for (const r of roads) if (r.bridge) for (const id of r.nodes) elev.set(id, Math.max(elev.get(id) ?? 0, BRIDGE_H * Math.max(1, r.layer)));

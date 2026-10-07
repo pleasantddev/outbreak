@@ -6,6 +6,8 @@ A supernatural battle royale set in a dying Lagos. Twelve survivors drop into Os
 
 This repository holds the game bible and a playable browser vertical slice.
 
+> **Also here: [LAGOS RUSH](rush/README.md)**, an arcade street racer on the real roads of Oshodi, with room based multiplayer for up to twelve cars. Its design and technical docs are in `docs/rush`.
+
 ![Firefight on a wet Oshodi street](docs/screens/05_firefight.jpg)
 
 | | |

@@ -26,7 +26,9 @@ export class GeoBuilder {
   /** Quad a-b-c-d. Without a normal the winding decides which way it faces; with one, the winding is corrected to
    *  face that way, so callers never have to think about vertex order. */
   quad(a: number[], b: number[], c: number[], d: number[], uvs: number[][] = [[0, 0], [1, 0], [1, 1], [0, 1]], normal?: number[]) {
-    const fn = faceNormal(a, b, c);
+    // the cross product of the diagonals is the quad's normal even when three of its corners are in a line
+    const fn = diagonalNormal(a, b, c, d);
+    if (!normal && fn[0] === 0 && fn[1] === 0 && fn[2] === 0) return; // no area: emitting it would light as NaN
     const n = normal ?? fn;
     const flip = normal ? fn[0] * n[0] + fn[1] * n[1] + fn[2] * n[2] < 0 : false;
     const i0 = this.vertex(a[0], a[1], a[2], n[0], n[1], n[2], uvs[0][0], uvs[0][1]);
@@ -39,6 +41,7 @@ export class GeoBuilder {
 
   tri(a: number[], b: number[], c: number[], uvs: number[][] = [[0, 0], [1, 0], [0.5, 1]], normal?: number[]) {
     const fn = faceNormal(a, b, c);
+    if (!normal && fn[0] === 0 && fn[1] === 0 && fn[2] === 0) return;
     const n = normal ?? fn;
     const flip = normal ? fn[0] * n[0] + fn[1] * n[1] + fn[2] * n[2] < 0 : false;
     const i0 = this.vertex(a[0], a[1], a[2], n[0], n[1], n[2], uvs[0][0], uvs[0][1]);
@@ -100,6 +103,11 @@ export class GeoBuilder {
   }
 
   build(): THREE.BufferGeometry {
+    // last line of defence: a zero length normal becomes NaN in the lighting and bloom smears it over the frame
+    for (let i = 0; i < this.nor.length; i += 3) {
+      const x = this.nor[i], y = this.nor[i + 1], z = this.nor[i + 2];
+      if (!(x * x + y * y + z * z > 1e-12)) { this.nor[i] = 0; this.nor[i + 1] = 1; this.nor[i + 2] = 0; }
+    }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(this.nor, 3));
@@ -113,12 +121,23 @@ export class GeoBuilder {
   }
 }
 
+/** Unit normal of triangle a b c, or [0, 0, 0] when it has no area. */
 export function faceNormal(a: number[], b: number[], c: number[]) {
   const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
   const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
-  const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-  const l = Math.hypot(nx, ny, nz) || 1;
-  return [nx / l, ny / l, nz / l];
+  return unit(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+}
+
+/** Unit normal of quad a b c d from its diagonals, or [0, 0, 0] when it has no area. */
+export function diagonalNormal(a: number[], b: number[], c: number[], d: number[]) {
+  const ux = c[0] - a[0], uy = c[1] - a[1], uz = c[2] - a[2];
+  const vx = d[0] - b[0], vy = d[1] - b[1], vz = d[2] - b[2];
+  return unit(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+}
+
+function unit(nx: number, ny: number, nz: number) {
+  const l = Math.hypot(nx, ny, nz);
+  return l > 1e-10 ? [nx / l, ny / l, nz / l] : [0, 0, 0];
 }
 
 /** Offset a polyline sideways (x, z pairs) with mitred joins capped at a sensible length. */
@@ -138,4 +157,17 @@ export function offsetPolyline(pts: number[][], d: number, closed = false): numb
     out.push([b[0] + nx * s, b[1] + nz * s]);
   }
   return out;
+}
+
+/** Replace zero length or broken vertex normals with straight up, so lighting can never produce NaN. */
+export function fixNormals(g: THREE.BufferGeometry) {
+  const n = g.attributes.normal as THREE.BufferAttribute | undefined;
+  if (!n) return g;
+  let fixed = 0;
+  for (let i = 0; i < n.count; i++) {
+    const x = n.getX(i), y = n.getY(i), z = n.getZ(i);
+    if (!(x * x + y * y + z * z > 1e-12)) { n.setXYZ(i, 0, 1, 0); fixed++; }
+  }
+  if (fixed) n.needsUpdate = true;
+  return g;
 }

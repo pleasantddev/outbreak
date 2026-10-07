@@ -5,6 +5,16 @@ import * as T from './textures';
 
 export interface MatContext { aniso: number; night: number; wet: number }
 
+// three.js builds the normal map's tangent frame from screen space derivatives. On tiny, far away triangles the
+// determinant can be a subnormal, inversesqrt overflows, and Inf times zero gives a NaN normal. One NaN pixel then
+// spreads through bloom into a black or white frame. When the mapped normal is not a sane unit vector, use the
+// surface normal instead. (Comparisons with NaN are false, so the check catches NaN and Inf alike.)
+if (!THREE.ShaderChunk.normal_fragment_maps.includes('nonPerturbedNormal')) {
+  THREE.ShaderChunk.normal_fragment_maps += /* glsl */ `
+if ( !( abs( normal.x ) <= 1.001 && abs( normal.y ) <= 1.001 && abs( normal.z ) <= 1.001 ) ) normal = nonPerturbedNormal;
+`;
+}
+
 const uniformsShared = {
   uNight: { value: 0 },
   uWet: { value: 0 },

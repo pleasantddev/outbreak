@@ -25,6 +25,7 @@ export class NetClient {
   private pingT = 0; private retry = 0; private retryT = 0; private wanted = false;
   private pending: ClientMsg[] = [];
   lastError = '';
+  private orphanSince = 0;
   private listeners = new Set<() => void>();
 
   constructor(private app: App) {}
@@ -87,18 +88,18 @@ export class NetClient {
   private onMsg(m: ServerMsg) {
     switch (m.t) {
       case 'welcome':
+        // forget the old room: if our seat survived, the server sends it again right after this message
+        if (this.room) this.orphanSince = Date.now();
+        this.room = null;
         this.you = m.you; this.status = 'online'; this.retry = 0; this.online = m.online;
         try { localStorage.setItem('lagosrush.token', m.token); } catch { /* private mode */ }
         this.offset = m.now - Date.now();
         for (const p of this.pending.splice(0)) this.send(p);
         break;
       case 'pong': { const now = Date.now(); this.rtt = now - m.ct; const est = m.st + this.rtt / 2 - now; this.offset = this.offset * 0.8 + est * 0.2; break; }
-      case 'room': {
-        const prev = this.room?.phase;
-        this.room = m.room;
-        if (prev && prev !== 'waiting' && m.room.phase === 'waiting' && this.app.session && this.race) { /* next race opens after results */ }
+      case 'room':
+        this.room = m.room; this.orphanSince = 0;
         break;
-      }
       case 'left': this.room = null; this.race = null; if (m.reason === 'kicked') this.app.toast('The host removed you from the room'); break;
       case 'race':
         this.race = m.race; this.snaps = []; this.events = []; this.results = null;
@@ -120,6 +121,12 @@ export class NetClient {
   tick(dt: number) {
     if (this.wanted && !this.ws && this.status !== 'online') { this.retryT -= dt; if (this.retryT <= 0) this.connect(); }
     if (this.status !== 'online') return;
+    // back online but the room did not come back (the server restarted, or the seat timed out): leave cleanly
+    if (this.orphanSince && Date.now() - this.orphanSince > 3000) {
+      this.orphanSince = 0; this.race = null;
+      if (this.app.session?.online) { this.app.toast('That room has closed'); this.app.leaveOnline(); }
+      this.changed();
+    }
     this.pingT -= dt;
     if (this.pingT <= 0) { this.pingT = this.race ? 1 : 3; this.send({ t: 'ping', ct: Date.now() }); }
   }

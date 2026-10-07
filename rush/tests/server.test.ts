@@ -204,6 +204,16 @@ describe('room server', () => {
     a.close(); b2.close();
   });
 
+  it('strips markup from player names before anyone else sees them', async () => {
+    const a = await new Client('<img src=x onerror=alert(1)>').ready();
+    a.send({ t: 'create', config: {} });
+    const r = await a.room();
+    const name = r.players[0].card.name;
+    expect(name).not.toMatch(/[<>=()]/);
+    expect(name.length).toBeLessThanOrEqual(16);
+    a.close();
+  });
+
   it('lets the host kick, and kicked players are told', async () => {
     const { a, b } = await roomWithTwo();
     const mb = b.mark();

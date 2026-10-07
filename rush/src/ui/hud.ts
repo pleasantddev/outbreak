@@ -4,6 +4,7 @@ import type { RaceSim } from '../shared/race';
 import type { Track } from '../shared/track';
 import { ITEMS, type ItemId } from '../shared/items';
 import { ITEM_ICON } from './icons';
+import { esc } from './dom';
 
 const ORD = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH', 'ST', 'ND', 'RD'][n % 10] ?? 'TH');
 export const fmtTime = (t: number) => { if (!Number.isFinite(t) || t <= 0) return '--:--.---'; const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s.toFixed(3).padStart(6, '0')}`; };
@@ -130,7 +131,7 @@ export class Hud {
     this.board.innerHTML = [...rows].sort((a, b) => a - b).map((i) => {
       const r = order[i];
       const gap = i === 0 ? '' : r.c.finished ? fmtTime(r.c.finishTime) : `-${Math.max(0, order[0].c.raceDist - r.c.raceDist).toFixed(0)}m`;
-      return `<div class="row ${r.idx === this.player ? 'me' : ''} ${r.entrant.human ? 'human' : ''}"><b>${r.c.place}</b><span>${r.entrant.name}</span><em>${gap}</em></div>`;
+      return `<div class="row ${r.idx === this.player ? 'me' : ''} ${r.entrant.human ? 'human' : ''}"><b>${r.c.place}</b><span>${esc(r.entrant.name)}</span><em>${gap}</em></div>`;
     }).join('');
     this.drawMap(sim);
   }

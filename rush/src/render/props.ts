@@ -161,6 +161,8 @@ export class Props {
     this.group.add(m);
   }
   giantSpots: { x: number; z: number; face: number }[] = [];
+  /** where campaign fliers went up, with the outward direction of the barrier they sit on (for the dev viewer) */
+  flierSpots: { x: number; y: number; z: number; rx: number; rz: number }[] = [];
 
   // ------------------------------------------------------------------------------------------- signs
 
@@ -235,6 +237,7 @@ export class Props {
         // most fliers on the street are the campaign ones, as requested; the rest are local notices
         const pick = designs.length && this.rng.chance(0.72) ? this.rng.int(0, designs.length - 1) : designs.length + this.rng.int(0, street.length - 1);
         per[pick].push(this.dummy.matrix.clone());
+        if (pick < designs.length && this.flierSpots.length < 40) this.flierSpots.push({ x, y: this.dummy.position.y, z, rx: q.rx * side, rz: q.rz * side });
       }
     }
     // posters on building walls that face the track

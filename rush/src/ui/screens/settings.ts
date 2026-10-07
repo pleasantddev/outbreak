@@ -26,6 +26,7 @@ export function settingsScreen(app: App): Screen {
     <div class="small mute">Auto picks a preset from your GPU and a quick benchmark. Dynamic resolution then keeps the frame rate steady on busy laps.</div>
     <div class="row"><button class="btn ghost small" data-act="bench"><span>Run benchmark</span></button><span class="small mute" data-bench></span></div>
     <div class="h3" style="margin-top:8px">Advanced</div>
+    <div class="small mute">Shadows, building detail, props, crowd and draw distance rebuild the city, so they apply when you leave this screen.</div>
     ${slider('Render scale', 'renderScale', g.renderScale, 0.5, 1, 0.05, (v) => `${Math.round(v * 100)}%`)}
     ${toggle('Dynamic resolution', 'Lowers resolution briefly when the frame rate dips', g.dynamicRes, 'gfx', 'dynamicRes')}
     <div class="toggle"><div class="t">Target frame rate</div><div class="seg">${[30, 60, 120].map((f) => `<button class="${g.targetFps === f ? 'on' : ''}" data-act="fps" data-v="${f}">${f}</button>`).join('')}</div></div>
