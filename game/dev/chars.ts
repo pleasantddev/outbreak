@@ -1,0 +1,26 @@
+import * as THREE from 'three';
+import { CharacterAssets, CharacterView } from '../src/render/characters';
+import { OPERATORS } from '../src/data/cosmetics';
+const canvas = document.getElementById('c') as HTMLCanvasElement;
+const r = new THREE.WebGLRenderer({ canvas, antialias: true }); r.setSize(1400, 700); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping;
+r.shadowMap.enabled = true;
+const s = new THREE.Scene(); s.background = new THREE.Color(0x15100f);
+const cam = new THREE.PerspectiveCamera(30, 2, 0.1, 100); cam.position.set(0, 1.3, 9.5); cam.lookAt(0, 1.0, 0);
+s.add(new THREE.HemisphereLight(0xb0b8d0, 0x302020, 1.4));
+const d = new THREE.DirectionalLight(0xffe0c0, 2.5); d.position.set(3, 5, 6); d.castShadow = true; s.add(d);
+const fl = new THREE.Mesh(new THREE.PlaneGeometry(30, 30).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x302826 })); fl.receiveShadow = true; s.add(fl);
+const A = new CharacterAssets(); await A.load();
+const params = new URLSearchParams(location.search);
+const pose = params.get('pose') ?? 'aim';
+const list: CharacterView[] = [];
+const looks = [...OPERATORS.map(o => o.look), { ...OPERATORS[0].look, top: 'agbada', topPattern: 'kente', topColor: '#e8e0d0', topAccent: '#d9a441', head: 'fila', body: 'male' } as any];
+looks.forEach((l, i) => { const v = new CharacterView(A, l); v.root.position.x = -4 + i * 1.6; s.add(v.root); v.setWeapon(['ar', 'pistol', 'shotgun', 'smg', 'sniper'][i] as any, { skin: ['ankara', 'factory', 'blood', 'night', 'gold'][i] as any, optic: i === 0 ? 'reddot' : i === 4 ? 'scope4' : null, muzzle: i === 3 ? 'suppressor' : null }); list.push(v); });
+const zs: CharacterView[] = [];
+(['crawler', 'hollow', 'stalker'] as const).forEach((k, i) => { const v = new CharacterView(A, { ...OPERATORS[i].look, scars: 1, head: 'none' }, k); v.root.position.set(-2 + i * 2, 0, -3); s.add(v.root); zs.push(v); });
+let t = 0;
+for (let f = 0; f < 40; f++) { t += 1 / 30;
+  list.forEach((v, i) => v.update(1 / 30, { anim: 'idle', speed: 0, moveYaw: 0, aimYaw: 0, pitch: 0, aiming: pose === 'aim', armed: true, weapon: 'ar', firing: false, reloading: false, melee: false, dead: false, driving: false, shadow: 0, awaken: i === 4 && pose === 'awake' ? 1 : 0, hit: 0, cast: false, healing: false }, t));
+  zs.forEach((v, i) => v.update(1 / 30, { anim: ['run', 'walk', 'idle'][i], speed: 2, moveYaw: 0, aimYaw: 0, pitch: 0, aiming: false, armed: false, weapon: null, firing: false, reloading: false, melee: false, dead: false, driving: false, shadow: 0, awaken: 0, hit: 0, cast: false, healing: false }, t));
+}
+r.render(s, cam);
+(window as any).DONE = 1;
