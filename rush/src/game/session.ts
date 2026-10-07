@@ -21,10 +21,11 @@ import type { Stage } from './stage';
 import { disposeTree } from './stage';
 import type { Input } from './input';
 import type { AudioEngine } from '../audio/audio';
-import { ITEMS } from '../shared/items';
+import { ITEMS, type HazardKind } from '../shared/items';
 import { clamp, lerp, wrapAngle } from '../shared/math';
 
-export interface ReplayFrame { t: number; cars: Float32Array } // per car: x y z h pitch roll speed flags
+/** Per car: x y z h pitch roll speed flags. Hazards on the road at that moment, when there are any. */
+export interface ReplayFrame { t: number; cars: Float32Array; hz?: { id: number; kind: HazardKind; x: number; y: number; z: number; h: number; s: number }[] }
 export interface SessionResult { standings: ReturnType<RaceSim['standings']>; playerIdx: number; replay: ReplayFrame[]; trackId: string; bestLap: number; cfg: RaceConfig }
 
 /** What an online race needs from the room connection. The room server is the authority; this machine drives one car. */
@@ -311,7 +312,8 @@ export class RaceSession {
     const n = this.sim.cars.length;
     const a = new Float32Array(n * 8);
     this.sim.cars.forEach((rc, i) => { const c = rc.c; a.set([c.x, c.y, c.z, c.h, c.pitch, c.roll, c.vf, (c.drifting ? 1 : 0) | (c.boostT > 0 || c.nitroOn ? 2 : 0) | (c.danfoT > 0 ? 4 : 0) | (c.driftTier << 4)], i * 8); });
-    this.replay.push({ t: this.sim.time, cars: a });
+    const hz = this.sim.hazards.length ? this.sim.hazards.map((h) => ({ id: h.id, kind: h.kind, x: h.x, y: h.y, z: h.z, h: h.h, s: h.s })) : undefined;
+    this.replay.push({ t: this.sim.time, cars: a, hz });
     if (this.replay.length > 20 * 60 * 8) this.replay.shift();
   }
 

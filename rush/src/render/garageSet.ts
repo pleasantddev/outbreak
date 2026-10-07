@@ -143,7 +143,7 @@ export class GarageSet {
     // lights: warm key, cool rim, a low pink kicker for the paint
     const key = new THREE.PointLight(0xffe2c0, 160, 30, 2); key.position.set(5, 6.2, 5.5);
     const rim = new THREE.PointLight(0x9fd8ff, 110, 30, 2); rim.position.set(-6, 4.5, -5);
-    const kick = new THREE.PointLight(0xff4fa0, 40, 14, 2); kick.position.set(-3, 0.8, 4.5);
+    const kick = new THREE.PointLight(0xff4fa0, 14, 12, 2); kick.position.set(-6, 0.5, 6.5);
     this.lights.push(key, rim, kick);
     this.group.add(key, rim, kick);
   }

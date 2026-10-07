@@ -11,6 +11,8 @@ import { CarModel } from '../render/cars3d';
 import { TrafficView } from '../render/traffic3d';
 import { ChaseCam } from '../render/camera';
 import { Fx } from '../render/fx';
+import { HazardView } from '../render/hazards3d';
+import type { Hazard } from '../shared/items';
 import { setWorldUniforms } from '../render/materials';
 import type { Stage, Scenery } from './stage';
 import { disposeTree } from './stage';
@@ -32,6 +34,7 @@ export class ReplayPlayer {
   private models: CarModel[] = [];
   private danfos: (CarModel | null)[] = [];
   private fx: Fx;
+  private hazards: HazardView;
   private traffic: Traffic | null;
   private trafficView: TrafficView | null;
   private trafficPoses: TrafficPose[] = [];
@@ -74,7 +77,8 @@ export class ReplayPlayer {
     this.trafficView = this.traffic ? new TrafficView(this.traffic.cars, shadows) : null;
     if (this.trafficView) this.group.add(this.trafficView.group);
     this.fx = new Fx(s.particles);
-    this.group.add(this.fx.group);
+    this.hazards = new HazardView(this.track, this.fx);
+    this.group.add(this.fx.group, this.hazards.group);
     stage.engine.scene.add(this.group);
     this.chase = new ChaseCam(stage.engine.camera);
     this.chase.motion = false;
@@ -202,6 +206,8 @@ export class ReplayPlayer {
       if (dt > 0) this.effects(k, x, y, z, h, vf, drifting, tier, boosting);
     }
     if (this.traffic && this.trafficView) { this.traffic.poses(Math.max(0, t), this.trafficPoses); this.trafficView.update(this.trafficPoses); }
+    // hazards as they were in the frame we are in: sachets, potholes, rockets and the okada swarm
+    this.hazards.sync((A.hz ?? []) as unknown as Hazard[], this.wall, dt);
   }
 
   private effects(k: number, x: number, y: number, z: number, h: number, vf: number, drifting: boolean, tier: number, boosting: boolean) {

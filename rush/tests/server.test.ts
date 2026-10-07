@@ -214,6 +214,32 @@ describe('room server', () => {
     a.close();
   });
 
+  it('seats a late joiner as a spectator and puts them on the grid for the next race', async () => {
+    const { a, b, code } = await roomWithTwo({ aiFill: 1, races: 3 });
+    const room = rooms.rooms.get(code)!;
+    const ma = a.mark();
+    b.send({ t: 'ready', on: true });
+    a.send({ t: 'start' });
+    await a.room(ma, (r) => r.phase === 'racing');
+    const c = await new Client('Latecomer').ready();
+    const mc = c.mark();
+    c.send({ t: 'join', code });
+    const seen = await c.room(mc, (r) => r.players.some((p) => p.id === c.you));
+    expect(seen.players.find((p) => p.id === c.you)!.spectating).toBe(true);
+    expect(c.msgs.slice(mc).some((m) => m.t === 'race')).toBe(false);
+    // finish this race; when the room reopens, everyone readies and the latecomer is on the grid
+    room.sim!.end();
+    await a.room(ma, (r) => r.phase === 'waiting' && r.raceNo === 1);
+    const mr = c.mark();
+    b.send({ t: 'ready', on: true }); c.send({ t: 'ready', on: true });
+    await sleep(80);
+    a.send({ t: 'start' });
+    const next = await c.wait('race', () => true, mr);
+    expect(next.race.raceNo).toBe(2);
+    expect(next.race.entrants.some((e) => e.id === c.you)).toBe(true);
+    a.close(); b.close(); c.close();
+  });
+
   it('lets the host kick, and kicked players are told', async () => {
     const { a, b } = await roomWithTwo();
     const mb = b.mark();

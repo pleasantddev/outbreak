@@ -222,7 +222,7 @@ export class TrackView {
       this.group.add(pod);
     }
     // checkered line and grid boxes
-    const chk = new THREE.Mesh(new THREE.PlaneGeometry(hw * 2, 1.8), new THREE.MeshStandardMaterial({ map: checker(), roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -12 }));
+    const chk = new THREE.Mesh(new THREE.PlaneGeometry(hw * 2, 1.8), new THREE.MeshStandardMaterial({ map: checker(), roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -8 }));
     chk.rotation.x = -Math.PI / 2; chk.rotation.z = ang + Math.PI / 2;
     chk.position.set(p.x, p.y + 0.09, p.z);
     chk.receiveShadow = this.opts.shadows;
@@ -237,7 +237,7 @@ export class TrackView {
       l([front[0] - sx * 1.2, front[1], front[2] - sz * 1.2], sx, sz, 0.08, 1.4);
       marks.quad([front[0] - sx * 1.25, front[1], front[2] - sz * 1.25], [front[0] + sx * 1.25, front[1], front[2] + sz * 1.25], [front[0] + sx * 1.25 - fx * 0.16, front[1], front[2] + sz * 1.25 - fz * 0.16], [front[0] - sx * 1.25 - fx * 0.16, front[1], front[2] - sz * 1.25 - fz * 0.16], undefined, [0, 1, 0]);
     }
-    const mm = new THREE.Mesh(marks.build(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -12 }));
+    const mm = new THREE.Mesh(marks.build(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -8 }));
     this.group.add(mm);
   }
 

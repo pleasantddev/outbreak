@@ -144,7 +144,9 @@ export class Skids {
     g.setAttribute('alpha', new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage));
     g.setIndex(idx);
     const m = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -20,
+      // just enough offset to beat the race surface below: a bigger slope factor drags marks on a bridge deck
+      // through the deck when you drive underneath it
+      transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -8,
       vertexShader: 'attribute float alpha; varying float vA; void main(){ vA = alpha; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: 'varying float vA; void main(){ gl_FragColor = vec4(0.03,0.03,0.035, vA * 0.55); }',
     });

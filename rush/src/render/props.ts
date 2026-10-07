@@ -284,7 +284,7 @@ export class Props {
     heads.forEach((h, i) => this.lampHeads!.setMatrixAt(i, h));
     this.group.add(this.lampHeads);
     const poolTex = (() => { const c = canvas(128), g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,220,160,0.9)'); gr.addColorStop(1, 'rgba(255,200,140,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return tex(c, { repeat: false }); })();
-    this.lightPools = new THREE.InstancedMesh(new THREE.PlaneGeometry(13, 13), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -24 }), pools.length);
+    this.lightPools = new THREE.InstancedMesh(new THREE.PlaneGeometry(13, 13), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -8 }), pools.length);
     pools.forEach((h, i) => this.lightPools!.setMatrixAt(i, h));
     this.group.add(this.lightPools);
   }

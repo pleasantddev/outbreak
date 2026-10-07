@@ -30,7 +30,7 @@ export class HazardView {
   group = new THREE.Group();
   private objs = new Map<number, THREE.Object3D>();
   private sachetMat = new THREE.MeshStandardMaterial({ map: sachetTexture(), roughness: 0.2, metalness: 0.05, transparent: true });
-  private potholeMat = new THREE.MeshStandardMaterial({ map: potholeTexture(), transparent: true, depthWrite: false, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -14 });
+  private potholeMat = new THREE.MeshStandardMaterial({ map: potholeTexture(), transparent: true, depthWrite: false, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -8 });
   private rocketMat = new THREE.MeshStandardMaterial({ color: 0xd8a040, roughness: 0.5 });
   private wrapMat = new THREE.MeshStandardMaterial({ color: 0xd0141c, roughness: 0.4 });
 

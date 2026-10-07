@@ -76,7 +76,7 @@ Ramps sit on the approaches to bridges, on market stalls and on construction sit
 
 ### Recovery
 
-Fall off a bridge or leave the track and a tow truck crane lifts you back to the last checkpoint after a short fade. No race ending crashes.
+Fall off a bridge or leave the track and a tow truck crane lifts you back to the last stretch of road you were safely on. No race ending crashes.
 
 ## 4. Modes
 
