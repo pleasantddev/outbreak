@@ -101,13 +101,18 @@ async function solo() {
   await shot(p, '10-grid');
   // countdown, then race
   await p.waitForFunction(() => window.__app.session && window.__app.session.sim.time > -0.3, null, { timeout: 30000 });
-  const go = drive(p, 400, 'solo');
+  // drive with real key presses for a while, then let the autopilot bring the car home so results and the
+  // replay get tested every run
+  const go = drive(p, 45, 'solo');
   await p.waitForTimeout(9000); await shot(p, '11-racing');
   report.perf.push({ at: 'race', ...(await perf(p)) });
   await p.waitForTimeout(12000); await shot(p, '12-racing-later');
   const end = await go;
   report.soloEnd = end;
-  await p.waitForFunction(() => document.querySelector('.results'), null, { timeout: 180000 }).catch(() => {});
+  // software rendering in a container runs the race far below real time, so hand the car to the autopilot and
+  // fast forward; the replay still records every step
+  await p.evaluate(() => { const s = window.__app.session; if (s) { s.sim.cars[s.sim.cars.findIndex((c) => c.entrant.id === window.__app.profile.id)].autoDrive = true; s.warp = 12; } });
+  await p.waitForFunction(() => document.querySelector('.results'), null, { timeout: 600000 }).catch(() => {});
   await p.waitForTimeout(1500);
   await shot(p, '13-results');
   // replay

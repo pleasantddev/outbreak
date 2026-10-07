@@ -1,7 +1,7 @@
 // Multiplayer: quick match, create and join rooms by code, the room lobby with host controls and quick chat,
 // matchmaking, friends and leaderboards. Rooms are instanced races; the map is content, the race is the session.
 import type { App, Screen } from '../../app/app';
-import { el, acts, esc } from '../dom';
+import { el, acts, esc, laps } from '../dom';
 import { topbar } from './main';
 import { seg, MODES, TIMES, WEATHERS } from './raceflow';
 import { CHAT_PHRASES, DEFAULT_ROOM, normaliseCode, type RoomConfig } from '../../shared/protocol';
@@ -172,7 +172,7 @@ export function lobby(app: App): Screen {
       </div>
       <div class="scroll panel" style="padding:16px; display:flex; flex-direction:column; gap:12px">
         <div class="row"><div class="h3">${esc(td?.name ?? room.config.track)}</div><span class="spacer"></span>${host && room.phase === 'waiting' ? '<button class="btn ghost small" data-act="edit"><span>Race settings</span></button>' : ''}</div>
-        <div class="row" style="flex-wrap:wrap; gap:6px"><span class="tag dark">${room.config.mode.toUpperCase()}</span><span class="tag dark">${room.config.laps} LAPS</span><span class="tag dark">${room.config.time.toUpperCase()}</span><span class="tag dark">${room.config.weather.toUpperCase()}</span><span class="tag dark">${room.config.carClass === 'any' ? 'ANY CAR' : room.config.carClass.toUpperCase() + ' CARS'}</span></div>
+        <div class="row" style="flex-wrap:wrap; gap:6px"><span class="tag dark">${room.config.mode.toUpperCase()}</span><span class="tag dark">${laps(room.config.laps)}</span><span class="tag dark">${room.config.time.toUpperCase()}</span><span class="tag dark">${room.config.weather.toUpperCase()}</span><span class="tag dark">${room.config.carClass === 'any' ? 'ANY CAR' : room.config.carClass.toUpperCase() + ' CARS'}</span></div>
         ${room.lastResults ? `<div><div class="h3" style="margin-bottom:4px">Last race</div><table class="list"><tbody>${room.lastResults.slice(0, 6).map((r) => `<tr class="${r.id === app.net.you ? 'me' : ''}"><td>${r.place}</td><td>${esc(r.name)}</td><td class="mono">${r.time ? fmtTime(r.time) : 'DNF'}</td><td>+${r.points}</td></tr>`).join('')}</tbody></table></div>` : ''}
         <div class="h3">Quick chat</div>
         <div class="chat">${app.net.chat.slice(-6).map((c) => `<div class="m"><b>${esc(c.name)}</b>${esc(CHAT_PHRASES[c.phrase] ?? '')}</div>`).join('') || '<div class="mute small">Say hello.</div>'}</div>

@@ -13,7 +13,7 @@ import type { Props } from '../render/props';
 import { TrafficView } from '../render/traffic3d';
 import { HazardView } from '../render/hazards3d';
 import { Fx } from '../render/fx';
-import { CarModel } from '../render/cars3d';
+import { CarModel, seeThroughNear } from '../render/cars3d';
 import { ChaseCam } from '../render/camera';
 import { setWorldUniforms } from '../render/materials';
 import { Hud } from '../ui/hud';
@@ -73,6 +73,8 @@ export class RaceSession {
   private playerIdx: number;
   private input: CarInput = idleInput();
   paused = false;
+  /** Offline only: scripted playtests fast forward a race on slow test machines with this. */
+  warp = 1;
   private ended = false; private endT = 0;
   private replay: ReplayFrame[] = []; private recT = 0;
   private flash = 0; private flashCol = new THREE.Color();
@@ -114,6 +116,11 @@ export class RaceSession {
       this.models.push(m);
       this.danfos.push(null);
     }
+    // compile the see-through versions of the rivals' materials now, not the first time one slips under the camera
+    this.models.forEach((m, i) => { if (i !== this.playerIdx) m.fade(0.5); });
+    stage.engine.renderer.compile(stage.engine.scene, stage.engine.camera);
+    this.models.forEach((m) => m.fade(1));
+    stage.engine.renderer.compile(stage.engine.scene, stage.engine.camera);
     const n = this.sim.cars.length;
     this.prev = new Float32Array(n * 6); this.curr = new Float32Array(n * 6);
     this.capture(this.curr); this.prev.set(this.curr);
@@ -179,9 +186,10 @@ export class RaceSession {
     this.input = this.inp.read(dt, airborne, this.steerAssist());
     if (this.inp.pressed('camera')) { this.cam.mode = this.cam.mode === 'hood' ? 'chase' : this.cam.far ? 'hood' : 'chase'; if (this.cam.mode === 'chase') this.cam.far = !this.cam.far; }
     if (this.inp.pressed('respawn') && this.sim.racing && this.player.c.respawnT <= 0) { this.player.c.respawnT = 0.9; }
-    this.acc += dt;
+    this.acc += dt * this.warp;
+    const most = 5 * this.warp;
     let steps = 0;
-    while (this.acc >= STEP && steps < 5) {
+    while (this.acc >= STEP && steps < most) {
       this.prev.set(this.curr);
       this.sim.step(STEP, { [this.opts.localId]: this.input });
       this.capture(this.curr);
@@ -190,7 +198,7 @@ export class RaceSession {
       this.recT += STEP;
       if (this.recT >= 0.05) { this.recT = 0; this.record(); }
     }
-    if (steps === 5) this.acc = 0;
+    if (steps === most) this.acc = 0;
     if (this.sim.phase === 'racing' && this.phase === 'countdown') this.phase = 'race';
     this.render(dt, clamp(this.acc / STEP, 0, 1));
     if (this.ended) {
@@ -296,6 +304,7 @@ export class RaceSession {
     }).sort((a, b) => a.place - b.place);
     this.reported = true;
     this.phase = 'finished';
+    this.hud.show(false);
     if (!this.ended) { this.ended = true; this.cam.orbit(); }
     this.opts.onFinish({ standings, playerIdx: this.playerIdx, replay: this.replay, trackId: this.opts.track.id, bestLap: this.player.c.bestLap, cfg: this.opts.cfg });
   }
@@ -322,6 +331,8 @@ export class RaceSession {
     if (this.reported) return;
     this.reported = true;
     this.phase = 'finished';
+    // the results screen takes over; the orbiting car stays on screen behind it, the HUD does not
+    this.hud.show(false);
     this.opts.onFinish({ standings: this.sim.standings(), playerIdx: this.playerIdx, replay: this.replay, trackId: this.opts.track.id, bestLap: this.player.c.bestLap, cfg: this.opts.cfg });
   }
 
@@ -418,6 +429,7 @@ export class RaceSession {
     const boosting = me.boostT > 0 || me.nitroOn || me.danfoT > 0;
     if (this.phase !== 'intro') this.cam.update(dt, me, top, this.input.look, boosting);
     else this.cam.update(dt, me, top, false, false);
+    seeThroughNear(eng.camera, this.models.map((m, i) => (this.danfos[i]?.root.visible ? this.danfos[i]! : m)), this.playerIdx, this.cam.mode === 'chase');
     const sp = clamp(Math.hypot(me.vx, me.vz) / top, 0, 1.3);
     eng.fx.set('uSpeed', eng.settings.motionFx && this.phase !== 'intro' ? clamp((sp - 0.55) * 2.2, 0, 1) * (boosting ? 1 : 0.6) : 0);
     eng.fx.set('uBlackout', clamp(me.blackoutT / 0.5, 0, 1) * (me.blackoutT > 0 ? 1 : 0));

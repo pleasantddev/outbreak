@@ -59,6 +59,8 @@ What is this, why am I seeing it, what can I do, what happens next. Two examples
 
 DOM writes are throttled to about fifteen a second so the HUD never costs frame time on a slow phone. Callouts carry their own colour: green for good, red for bad, yellow for information.
 
+The HUD steps aside when the race reports its result, so the results screen sits over the orbiting car and nothing else. In the chase view a rival right under the camera turns see through until it pulls clear; off the grid that is the car behind you, and solid it would fill a third of the screen.
+
 ## Input
 
 All menus work with mouse, touch, keyboard and gamepad. Arrow keys, WASD, the D pad and the left stick move a focus ring between buttons by screen position; Enter or A clicks, Escape or B goes back.

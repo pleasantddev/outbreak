@@ -30,14 +30,16 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   vec3 c = inputColor.rgb;
   vec2 q = uv - vec2(0.5, 0.46);
   float r = length(q * vec2(1.6, 1.0));
-  // speed streaks: thin bright lines flowing out from the centre
+  // speed streaks: thin lines flowing out from the centre, bright at the head and fading behind it. The lanes are
+  // narrow and only the middle third of a lane lights, so a streak is a few pixels wide and a tenth of the screen long
   if (uSpeed > 0.01) {
-    float ang = atan(q.y, q.x);
-    float lane = floor(ang * 38.0);
+    float a = atan(q.y, q.x) * 90.0;
+    float lane = floor(a);
     float h = hash(vec2(lane, 3.7));
-    float flow = fract(r * 2.2 - uTime * (2.0 + h * 2.5) + h);
-    float streak = smoothstep(0.92, 1.0, flow) * step(0.55, h) * smoothstep(0.32, 0.75, r);
-    c += vec3(1.0, 0.97, 0.9) * streak * uSpeed * 0.32;
+    float across = abs(fract(a) - 0.5) * 2.0;
+    float flow = fract(r * 1.4 - uTime * (2.4 + h * 2.5) + h);
+    float streak = smoothstep(0.82, 1.0, flow) * smoothstep(0.4, 0.0, across) * step(0.9, h) * smoothstep(0.35, 0.8, r);
+    c += vec3(1.0, 0.97, 0.9) * streak * uSpeed * 0.45;
     c *= 1.0 - uSpeed * 0.18 * smoothstep(0.45, 1.1, r);
   }
   // blackout: the world goes dark except a headlight wedge in front of the car
@@ -82,7 +84,10 @@ export class Engine {
   perf: PerfSample = { fps: 60, ms: 16, calls: 0, tris: 0, scale: 1, w: 0, h: 0 };
   private last = performance.now();
   private fpsAcc = 0; private fpsN = 0; private fpsT = 0;
-  private onResize = () => this.resize();
+  // a canvas resize wipes its drawing buffer, so it waits for the start of the next frame and is drawn straight after;
+  // resizing after a frame is drawn hands the browser a blank canvas to show
+  private resizeDue = false;
+  private onResize = () => { this.resizeDue = true; };
   maxAniso: number;
 
   constructor(public canvas: HTMLCanvasElement, settings: GraphicsSettings) {
@@ -148,30 +153,41 @@ export class Engine {
   /** Render one frame and return the real elapsed seconds since the previous one. */
   frame(): number {
     const now = performance.now();
-    const dt = Math.min(0.1, (now - this.last) / 1000);
+    // the game never steps more than 0.1 s at once, but the frame counter reports what the player really gets
+    const raw = Math.min(2, (now - this.last) / 1000);
+    const dt = Math.min(0.1, raw);
     this.last = now;
     this.fx.set('uTime', now / 1000);
+    if (this.resizeDue) { this.resizeDue = false; this.resize(); }
     this.renderer.info.reset();
     if (this.composer) this.composer.render(dt); else this.renderer.render(this.scene, this.camera);
     const info = this.renderer.info.render;
     this.perf.calls = info.calls; this.perf.tris = info.triangles;
-    this.fpsAcc += dt; this.fpsN++; this.fpsT += dt;
+    this.fpsAcc += raw; this.fpsN++; this.fpsT += raw;
     if (this.fpsT > 0.5) { this.perf.fps = Math.round(this.fpsN / this.fpsAcc); this.perf.ms = (this.fpsAcc / this.fpsN) * 1000; this.fpsAcc = 0; this.fpsN = 0; this.fpsT = 0; }
-    if (this.settings.dynamicRes && this.dyn.update(dt * 1000, this.settings.targetFps)) this.resize();
+    if (this.settings.dynamicRes && this.dyn.update(dt * 1000, this.settings.targetFps)) this.resizeDue = true;
     return dt;
   }
 
-  /** Average frame time over n frames of the current scene, for the Auto preset. */
-  async benchmark(frames = 50): Promise<number> {
-    const t0 = performance.now();
-    for (let i = 0; i < frames; i++) {
-      if (this.composer) this.composer.render(1 / 60); else this.renderer.render(this.scene, this.camera);
-      // force the GPU to finish this frame so we time real work
-      const gl = this.renderer.getContext();
-      gl.finish();
-      if (i % 10 === 9) await new Promise((r) => setTimeout(r, 0));
+  /** Average frame time of the current scene, for the Auto preset and the Settings benchmark. Each frame is closed
+   *  with a one pixel read back: gl.finish() returns early in Chrome, a read back cannot return until the GPU has
+   *  drawn everything before it. Stops after maxMs of measured frames so a slow phone is not kept waiting. */
+  async benchmark(frames = 40, maxMs = 2500): Promise<number> {
+    const gl = this.renderer.getContext();
+    const px = new Uint8Array(4);
+    const sync = () => { this.renderer.setRenderTarget(null); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); };
+    const draw = () => { if (this.composer) this.composer.render(1 / 60); else this.renderer.render(this.scene, this.camera); };
+    // the first frame compiles shaders and uploads textures, which says nothing about steady play
+    draw(); sync();
+    let total = 0, n = 0;
+    while (n < frames && (n < 4 || total < maxMs)) {
+      sync(); // drain anything the app drew while we yielded
+      const t = performance.now();
+      draw(); sync();
+      total += performance.now() - t; n++;
+      if (n % 8 === 0) await new Promise((r) => setTimeout(r, 0));
     }
-    return (performance.now() - t0) / frames;
+    return total / n;
   }
 
   dispose() {

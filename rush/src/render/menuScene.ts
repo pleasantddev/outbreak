@@ -10,6 +10,7 @@ import { Traffic, type TrafficPose } from '../shared/traffic';
 import { TrafficView } from './traffic3d';
 import { setWorldUniforms } from './materials';
 import { GarageSet } from './garageSet';
+import { skyReflection } from './atmosphere';
 
 export type MenuView = 'city' | 'garage' | 'map';
 
@@ -92,12 +93,14 @@ export class MenuScene {
     this.car.root.rotation.y = this.carYaw;
   }
 
-  /** Switch between the street and the workshop. The cut hides behind a short fade. */
+  /** Switch between the street, the map and the workshop. Every switch is a cut behind a short fade; gliding between
+   *  the street and the map view 210 m up took the camera through bridge decks and left it mid air behind the next
+   *  screen. */
   private applyView(first = false) {
     const garage = this.inGarage;
-    if (!first && (this.shown === 'garage') === garage) { this.shown = this.view; return; }
-    this.shown = this.view;
     if (!first) { this.fade.classList.remove('go'); void this.fade.offsetWidth; this.fade.classList.add('go'); }
+    if (!first && (this.shown === 'garage') === garage) { this.shown = this.view; this.snapCamera(); return; }
+    this.shown = this.view;
     this.garage.group.visible = garage;
     // the city stays loaded but is not drawn while we are inside
     this.scen.group.visible = !garage;
@@ -105,11 +108,11 @@ export class MenuScene {
     this.trafficView.group.visible = !garage;
     const a = this.stage.atmos;
     if (garage) {
-      this.baseLight = { sun: a.sun.intensity, hemi: a.hemi.intensity, env: this.stage.engine.scene.environmentIntensity };
-      a.sun.intensity *= 0.25; a.hemi.intensity *= 0.35; this.stage.engine.scene.environmentIntensity = 0.6;
+      this.baseLight = { sun: a.sun.intensity, hemi: a.hemi.intensity, env: skyReflection.intensity };
+      a.sun.intensity *= 0.25; a.hemi.intensity *= 0.35; a.setReflection(0.6);
       this.carYaw = this.heading + 2.4;
     } else if (!first) {
-      a.sun.intensity = this.baseLight.sun; a.hemi.intensity = this.baseLight.hemi; this.stage.engine.scene.environmentIntensity = this.baseLight.env;
+      a.sun.intensity = this.baseLight.sun; a.hemi.intensity = this.baseLight.hemi; a.setReflection(this.baseLight.env);
       this.carYaw = this.heading + 0.35;
     }
     this.placeCar();
@@ -196,7 +199,7 @@ export class MenuScene {
     // the scenery is shared with races, so leave it visible and the lights as they were
     this.scen.group.visible = true;
     if (this.stage.landmarks) this.stage.landmarks.group.visible = true;
-    if (this.shown === 'garage') { const a = this.stage.atmos; a.sun.intensity = this.baseLight.sun; a.hemi.intensity = this.baseLight.hemi; this.stage.engine.scene.environmentIntensity = this.baseLight.env; }
+    if (this.shown === 'garage') { const a = this.stage.atmos; a.sun.intensity = this.baseLight.sun; a.hemi.intensity = this.baseLight.hemi; a.setReflection(this.baseLight.env); }
     this.stage.engine.scene.remove(this.group);
     if (this.car) this.car.dispose();
     this.garage.dispose();

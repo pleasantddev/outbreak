@@ -62,6 +62,8 @@ export interface RaceCar {
   stats: RaceStats;
   nearCool: Map<number, number>; trafficCool: number;
   lastHitBy: number; lastHitT: number; prevS: number; slipOn: boolean; brtOn: boolean;
+  /** a local car handed to the autopilot; the scripted playtests use it to reach results and replays */
+  autoDrive?: boolean;
 }
 interface Bag { row: number; s: number; d: number; x: number; y: number; z: number; respawn: number }
 
@@ -158,7 +160,7 @@ export class RaceSim {
         else if (rc.control === 'local') { if (inp.throttle > 0.5) { if (Number.isNaN(rc.launch)) rc.launch = t; } else rc.launch = NaN; }
       }
       // AI and autopilot (Danfo Mode, or the cool-down lap after the flag)
-      const pilot = rc.control === 'ai' ? rc.ai : c.danfoT > 0 || c.finished ? this.autopilotFor(rc) : null;
+      const pilot = rc.control === 'ai' ? rc.ai : c.danfoT > 0 || c.finished || rc.autoDrive ? this.autopilotFor(rc) : null;
       let wantItem = rc.control === 'local' ? inp.item : false;
       if (c.danfoT > 0) wantItem = false;
       if (pilot) {

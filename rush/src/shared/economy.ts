@@ -4,6 +4,7 @@ export interface RewardInput { place: number; count: number; mode: string; finis
 export interface Reward { naira: number; xp: number; lines: { label: string; naira: number; xp: number }[] }
 
 const PLACE_NAIRA = [5000, 3500, 2600, 2000, 1600, 1300, 1100, 950, 800, 700, 600, 500];
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export function raceReward(r: RewardInput): Reward {
   const lines: Reward['lines'] = [];
@@ -13,10 +14,10 @@ export function raceReward(r: RewardInput): Reward {
   const base = r.finished ? Math.round(PLACE_NAIRA[pl - 1] * scale * field) : 300;
   lines.push({ label: r.finished ? `Finished ${pl}${pl === 1 ? 'st' : pl === 2 ? 'nd' : pl === 3 ? 'rd' : 'th'}` : 'Did not finish', naira: base, xp: Math.round((r.count - pl + 1) * 40 * scale) + 60 });
   if (r.drift > 4) lines.push({ label: `Gbedu drift ${r.drift.toFixed(0)}s`, naira: Math.round(r.drift * 25), xp: Math.round(r.drift * 6) });
-  if (r.tricks > 0) lines.push({ label: `${r.tricks} clean tricks`, naira: r.tricks * 150, xp: r.tricks * 30 });
-  if (r.nearMiss > 0) lines.push({ label: `${r.nearMiss} near misses`, naira: r.nearMiss * 60, xp: r.nearMiss * 12 });
-  if (r.shunts > 0) lines.push({ label: `${r.shunts} shunts`, naira: r.shunts * 200, xp: r.shunts * 40 });
-  if (r.hits > 0) lines.push({ label: `${r.hits} item hits`, naira: r.hits * 80, xp: r.hits * 15 });
+  if (r.tricks > 0) lines.push({ label: count(r.tricks, 'clean trick', 'clean tricks'), naira: r.tricks * 150, xp: r.tricks * 30 });
+  if (r.nearMiss > 0) lines.push({ label: count(r.nearMiss, 'near miss', 'near misses'), naira: r.nearMiss * 60, xp: r.nearMiss * 12 });
+  if (r.shunts > 0) lines.push({ label: count(r.shunts, 'shunt', 'shunts'), naira: r.shunts * 200, xp: r.shunts * 40 });
+  if (r.hits > 0) lines.push({ label: count(r.hits, 'item hit', 'item hits'), naira: r.hits * 80, xp: r.hits * 15 });
   if (r.bestLapRecord) lines.push({ label: 'New lap record', naira: 750, xp: 120 });
   if (r.online) lines.push({ label: 'Online race bonus', naira: Math.round(base * 0.25), xp: 80 });
   return { naira: lines.reduce((a, l) => a + l.naira, 0), xp: lines.reduce((a, l) => a + l.xp, 0), lines };

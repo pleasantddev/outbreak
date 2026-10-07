@@ -17,7 +17,7 @@ export interface GraphicsSettings {
   buildingDetail: 0 | 1 | 2;
   props: number;            // 0..1 density of street furniture
   particles: number;        // 0..1
-  reflections: boolean;     // environment reflections on paint and glass
+  reflections: boolean;     // sky reflections on the whole city; cars always reflect
   anisotropy: number;
   crowd: boolean;
   showPerf: boolean;
@@ -25,7 +25,7 @@ export interface GraphicsSettings {
 
 export const PRESETS: Record<PresetId, Omit<GraphicsSettings, 'preset' | 'auto' | 'showPerf'>> = {
   potato: { renderScale: 0.6, pixelRatioCap: 1, dynamicRes: true, targetFps: 30, shadows: 0, bloom: false, smaa: false, motionFx: false, drawDistance: 380, buildingDetail: 0, props: 0.25, particles: 0.3, reflections: false, anisotropy: 1, crowd: false },
-  low: { renderScale: 0.75, pixelRatioCap: 1, dynamicRes: true, targetFps: 60, shadows: 0, bloom: false, smaa: false, motionFx: false, drawDistance: 520, buildingDetail: 1, props: 0.5, particles: 0.5, reflections: true, anisotropy: 2, crowd: false },
+  low: { renderScale: 0.75, pixelRatioCap: 1, dynamicRes: true, targetFps: 60, shadows: 0, bloom: false, smaa: false, motionFx: false, drawDistance: 520, buildingDetail: 1, props: 0.5, particles: 0.5, reflections: false, anisotropy: 2, crowd: false },
   medium: { renderScale: 0.9, pixelRatioCap: 1.5, dynamicRes: true, targetFps: 60, shadows: 1024, bloom: true, smaa: false, motionFx: true, drawDistance: 750, buildingDetail: 1, props: 0.8, particles: 0.75, reflections: true, anisotropy: 4, crowd: true },
   high: { renderScale: 1, pixelRatioCap: 2, dynamicRes: true, targetFps: 60, shadows: 2048, bloom: true, smaa: true, motionFx: true, drawDistance: 1000, buildingDetail: 2, props: 1, particles: 1, reflections: true, anisotropy: 8, crowd: true },
   ultra: { renderScale: 1, pixelRatioCap: 2.5, dynamicRes: false, targetFps: 120, shadows: 4096, bloom: true, smaa: true, motionFx: true, drawDistance: 1400, buildingDetail: 2, props: 1, particles: 1, reflections: true, anisotropy: 16, crowd: true },
@@ -77,6 +77,7 @@ export function guessPreset(d: DeviceInfo): PresetId {
 export function refineByBenchmark(p: PresetId, frameMs: number, target: number): PresetId {
   const i = PRESET_ORDER.indexOf(p);
   const budget = 1000 / target;
+  if (frameMs > budget * 3) return 'potato';
   if (frameMs > budget * 1.6) return PRESET_ORDER[Math.max(0, i - 2)];
   if (frameMs > budget * 1.1) return PRESET_ORDER[Math.max(0, i - 1)];
   if (frameMs < budget * 0.45 && i < PRESET_ORDER.length - 1) return PRESET_ORDER[i + 1];

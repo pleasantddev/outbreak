@@ -12,5 +12,7 @@ export function acts(root: HTMLElement, handlers: Record<string, (target: HTMLEl
     if (h) { e.preventDefault(); h(t, e); }
   });
 }
+/** "1 LAP", "3 LAPS" */
+export const laps = (n: number) => `${n} ${n === 1 ? 'LAP' : 'LAPS'}`;
 export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 export const naira = (n: number) => `<span class="naira">${Math.round(n).toLocaleString('en-NG')}</span>`;

@@ -7,7 +7,7 @@ import type { Entrant } from '../shared/race';
 import type { CarState } from '../shared/car';
 import { carById, defaultLivery } from '../shared/cars';
 import { Traffic, type TrafficPose } from '../shared/traffic';
-import { CarModel } from '../render/cars3d';
+import { CarModel, seeThroughNear } from '../render/cars3d';
 import { TrafficView } from '../render/traffic3d';
 import { ChaseCam } from '../render/camera';
 import { Fx } from '../render/fx';
@@ -314,6 +314,7 @@ export class ReplayPlayer {
     this.fx.update(step);
     if (st.atmos.wet > 0) this.fx.rain(this.fake.x, this.fake.y, this.fake.z, 1);
     this.updateCam(dt);
+    seeThroughNear(eng.camera, this.models.map((m, k) => (this.danfos[k]?.root.visible ? this.danfos[k]! : m)), this.focus, this.camKind === 'chase');
     st.atmos.follow(eng.camera.position.x, this.fake.y, eng.camera.position.z, 70, eng.settings.shadows, this.wall);
     this.scen.world.update(eng.camera.position.x, eng.camera.position.z);
     if ((this.wall * 10 | 0) % 2 === 0) this.syncUi();

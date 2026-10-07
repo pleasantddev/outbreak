@@ -54,9 +54,13 @@ Five presets from Potato to Ultra, an Auto mode that picks one from the GPU and 
 - EC-10 | Corrupt or old settings in storage | data | 2×1 | handling: profile loader fills missing fields with defaults | test: manual with an old profile
 - EC-11 | Reduce motion is on | accessibility | 2×1 | handling: motion effects forced off with it | test: manual toggle check
 - EC-12 | Many draw calls from detailed cars | performance | 3×2 | handling: body parts merged per material, brake discs and calipers only on the hero car | test: triangle probe counts draw calls per car
+- EC-13 | Chrome's gl.finish() returns before the GPU has drawn, so a benchmark timed with it reads a slow phone as fast | devices | 3×3 | handling: every benchmark frame ends with a one pixel read back, which cannot return early; a result over three times the budget goes straight to Potato | test: `tests/quality.test.ts` for the steps; synced timing probe per preset
+- EC-14 | Sky reflections on every wall and road dominate the frame on a weak GPU | performance | 3×2 | handling: Potato and Low reflect the sky on cars only; city reflections start at Medium | test: synced probe, Low menu frame from about 650 ms to 315 ms in software rendering
+- EC-16 | Dynamic resolution resizes the canvas, which wipes it; done after a frame is drawn, the browser shows a blank frame | rendering | 3×2 | handling: resizes wait for the start of the next frame and are drawn straight after | test: hero shot probe on High, no blank captures afterwards
+- EC-15 | A frame counter built on clamped frame time cannot show anything below 10 fps | observability | 2×2 | handling: the overlay and perf samples use real elapsed time; only the simulation step is clamped | test: playtest perf samples report 1 to 2 fps for High in software rendering
 
 ## 8. Requirements (minimum 10)
-- RQ-01 [F] | First boot picks a preset from the GPU, then a 24 frame benchmark moves it up or down at most two steps | EC-02, EC-03
+- RQ-01 [F] | First boot picks a preset from the GPU, then a benchmark of up to 24 frames (capped at 2.5 s) moves it up one, down one or two, or straight to Potato | EC-02, EC-03, EC-13
 - RQ-02 [F] | Players can choose Auto or any of five presets, and change any setting individually | SRC-04
 - RQ-03 [NF] | On Low, the city in the menu view stays under 150k triangles | EC-09
 - RQ-04 [NF] | A car costs about ten draw calls | EC-12
@@ -67,6 +71,9 @@ Five presets from Potato to Ultra, an Auto mode that picks one from the GPU and 
 - RQ-09 [NF] | Potato keeps every gameplay element visible: traffic, items, hazards, the HUD | none
 - RQ-10 [OP] | The chosen preset and benchmark time are logged to the console on first boot | none
 - RQ-11 [NF] | Changing a setting never requires a page reload | EC-08
+- RQ-12 [NF] | Benchmark frames are timed to GPU completion, not to command submission | EC-13
+- RQ-13 [F] | Cars reflect the sky on every preset; city reflections are their own setting | EC-14
+- RQ-14 [OP] | The performance overlay reports real frame time, however slow | EC-15
 
 ## 9. Implementation pathways (minimum 10)
 - PW-01 [main] | First boot: detect device, guess preset, load the city, benchmark the menu scene, step the preset, save
@@ -97,7 +104,7 @@ Five presets from Potato to Ultra, an Auto mode that picks one from the GPU and 
 - Pre mortem: players on cheap phones uninstall after a stuttering first race (Auto plus dynamic resolution); an unknown GPU gets Ultra (benchmark steps it down); a later art change silently doubles the triangle count (the probe in the QA plan catches it).
 
 ## 13. Test plan
-The triangle probe (Playwright) measures each preset's city and car cost; playtests run on Potato and High; the overlay is checked in every playtest. Real device tests on two Android phones are planned for the next milestone.
+The triangle probe (Playwright) measures each preset's city and car cost; a timing probe renders the menu view with a forced GPU sync on every preset; `tests/quality.test.ts` covers the GPU guesses, the benchmark steps and the dynamic resolution limits; playtests run on Potato and High; the overlay is checked in every playtest. Real device tests on two Android phones are planned for the next milestone.
 
 ## 14. Observability
 Console line with the benchmark result and chosen preset; the in game performance overlay.

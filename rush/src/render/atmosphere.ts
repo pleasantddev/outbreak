@@ -68,6 +68,11 @@ function weatherize(p: AtmosPreset, w: Weather): AtmosPreset {
   return o;
 }
 
+/** The sky the cars reflect. Paint and glass always get it, because a car covers few pixels and looks like plastic
+ *  without it; walls and roads only get it with city reflections on, since lighting the whole city with it is the
+ *  single biggest cost in a frame on a low end GPU. */
+export const skyReflection = { tex: null as THREE.Texture | null, intensity: 0.85 };
+
 export class Atmosphere {
   sky: THREE.Mesh;
   sun = new THREE.DirectionalLight(0xffffff, 2);
@@ -101,6 +106,9 @@ export class Atmosphere {
     this.pmrem = new THREE.PMREMGenerator(renderer);
   }
 
+  /** Scale every sky reflection, the city's and the cars'. */
+  setReflection(k: number) { this.scene.environmentIntensity = k; skyReflection.intensity = k; }
+
   set(time: TimeOfDay, weather: Weather, drawDistance: number, reflections: boolean) {
     this.time = time; this.weather = weather;
     const p = weatherize(TIMES[time], weather);
@@ -122,21 +130,23 @@ export class Atmosphere {
     this.buildEnv(reflections);
   }
 
-  private buildEnv(on: boolean) {
+  private buildEnv(city: boolean) {
     this.envRT?.dispose();
-    this.envRT = null;
-    if (!on) { this.scene.environment = null; return; }
     const envScene = new THREE.Scene();
     const sky = new THREE.Mesh(this.sky.geometry, this.skyMat);
     sky.scale.setScalar(100);
     envScene.add(sky);
     // a hint of a city skyline in the reflections so paint does not mirror an empty horizon
-    const ring = new THREE.Mesh(new THREE.CylinderGeometry(90, 90, 14, 48, 1, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(this.preset.fog).multiplyScalar(0.45), side: THREE.BackSide }));
+    const ringGeo = new THREE.CylinderGeometry(90, 90, 14, 48, 1, true);
+    const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(this.preset.fog).multiplyScalar(0.45), side: THREE.BackSide });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.position.y = 2;
     envScene.add(ring);
     this.envRT = this.pmrem.fromScene(envScene, 0.02);
-    this.scene.environment = this.envRT.texture;
-    this.scene.environmentIntensity = this.night > 0.9 ? 0.35 : 0.85;
+    ringGeo.dispose(); ringMat.dispose();
+    skyReflection.tex = this.envRT.texture;
+    this.scene.environment = city ? this.envRT.texture : null;
+    this.setReflection(this.night > 0.9 ? 0.35 : 0.85);
   }
 
   /** Keep the sun's shadow box centred on the action. */

@@ -38,7 +38,7 @@ export function settingsScreen(app: App): Screen {
     ${toggle('Bloom', 'Glow on lights and boosts', g.bloom, 'gfx', 'bloom')}
     ${toggle('Anti-aliasing', 'Smoother edges (SMAA)', g.smaa, 'gfx', 'smaa')}
     ${toggle('Speed effects', 'Streaks, colour fringe and camera shake at speed', g.motionFx, 'gfx', 'motionFx')}
-    ${toggle('Reflections', 'Sky reflections on paint and glass', g.reflections, 'gfx', 'reflections')}
+    ${toggle('City reflections', 'Sky reflections on buildings and roads. Cars always reflect', g.reflections, 'gfx', 'reflections')}
     ${toggle('Crowds', 'Spectators at the start and the hairpins', g.crowd, 'gfx', 'crowd')}
     ${toggle('Performance overlay', 'FPS, frame time, draw calls and resolution', g.showPerf, 'gfx', 'showPerf')}`;
   else if (tab === 'audio') body = `

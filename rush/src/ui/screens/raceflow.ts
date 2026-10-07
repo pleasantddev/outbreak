@@ -1,6 +1,6 @@
 // Quick race setup, the pause menu and the results screen.
 import type { App, Screen } from '../../app/app';
-import { el, acts, esc, naira } from '../dom';
+import { el, acts, esc, naira, laps } from '../dom';
 import { topbar } from './main';
 import { mainMenu } from './main';
 import { garageScreen } from './garage';
@@ -38,7 +38,7 @@ export function trackCards(app: App, selected: string, act = 'track', filter: (t
       <canvas class="mini" data-thumb="${t.id}"></canvas>
       <div class="k">${esc(t.name)}</div>
       <div class="d">${esc(t.tagline)}</div>
-      <div class="meta"><span class="tag dark">${(t.length / 1000).toFixed(2)} KM</span><span class="tag dark">${t.laps} LAPS</span>${t.reverse ? '<span class="tag pink">REVERSE</span>' : ''}<span class="tag dark">PAR ${t.par.toFixed(0)}s</span></div>
+      <div class="meta"><span class="tag dark">${(t.length / 1000).toFixed(2)} KM</span><span class="tag dark">${laps(t.laps)}</span>${t.reverse ? '<span class="tag pink">REVERSE</span>' : ''}<span class="tag dark">PAR ${t.par.toFixed(0)}s</span></div>
     </button>`).join('');
 }
 export function paintThumbs(app: App, root: HTMLElement) {
@@ -170,7 +170,7 @@ export function resultsScreen(app: App): Screen {
   const { reward, levelUp, newRecord } = settleRace(app, r, false);
   const stunt = r.cfg.mode === 'stunt';
   const lead = r.standings[0];
-  const rows = r.standings.map((s) => `<tr class="${s.idx === r.playerIdx ? 'me' : ''}"><td>${s.place}</td><td>${esc(s.name)}</td><td class="hide-sm">${esc(carById(s.carId).name)}</td><td class="mono">${stunt ? s.style.toLocaleString() : s.finished ? (s.idx === lead.idx ? fmtTime(s.time!) : `+${(s.time! - (lead.time ?? 0)).toFixed(3)}`) : `${((lead.dist - s.dist) / 1000).toFixed(2)} km`}</td><td class="mono hide-sm">${s.bestLap ? fmtTime(s.bestLap) : '-'}</td></tr>`).join('');
+  const rows = r.standings.map((s) => `<tr class="${s.idx === r.playerIdx ? 'me' : ''}"><td>${s.place}</td><td>${esc(s.name)}</td><td class="hide-sm">${esc(carById(s.carId).name)}</td><td class="mono">${stunt ? s.style.toLocaleString() : s.finished ? (s.idx === lead.idx ? fmtTime(s.time!) : `+${(s.time! - (lead.time ?? 0)).toFixed(3)}`) : `+${((lead.dist - s.dist) / 1000).toFixed(2)} km`}</td><td class="mono hide-sm">${s.bestLap ? fmtTime(s.bestLap) : '-'}</td></tr>`).join('');
   const node = el(`<div class="screen results">
     <div class="split results-split">
       <div class="scroll" style="display:flex; flex-direction:column; gap:14px">

@@ -1,7 +1,7 @@
 // Career: four cups from rookie to Lagos legend. The same rivals follow you through a cup, points add up across
 // the races, and a podium pays out.
 import type { App, Screen } from '../../app/app';
-import { el, acts, esc, naira } from '../dom';
+import { el, acts, esc, naira, laps } from '../dom';
 import { topbar } from './main';
 import { defaultRaceConfig, type RaceConfig, type TimeOfDay } from '../../shared/race';
 import type { AiLevel } from '../../shared/ai';
@@ -47,7 +47,7 @@ export function careerScreen(app: App): Screen {
       </div></div>
       <div class="scroll panel" style="padding:16px; display:flex; flex-direction:column; gap:14px">
         <div class="h2">${esc(cup.name)}</div>
-        <div class="cards">${cup.races.map((r, i) => { const td = app.stage!.tracks.find((t) => t.id === r.track)!; const done = st.results[i]; return `<div class="card ${i === st.results.length && !st.done ? 'sel' : ''}"><canvas class="mini" data-thumb="${td.id}"></canvas><div class="k">${i + 1}. ${esc(td.name)}</div><div class="meta"><span class="tag dark">${r.laps} LAPS</span>${done ? `<span class="tag ${done <= 3 ? 'green' : 'dark'}">${done}${['TH', 'ST', 'ND', 'RD'][done % 10] ?? 'TH'}</span>` : ''}</div></div>`; }).join('')}</div>
+        <div class="cards">${cup.races.map((r, i) => { const td = app.stage!.tracks.find((t) => t.id === r.track)!; const done = st.results[i]; return `<div class="card ${i === st.results.length && !st.done ? 'sel' : ''}"><canvas class="mini" data-thumb="${td.id}"></canvas><div class="k">${i + 1}. ${esc(td.name)}</div><div class="meta"><span class="tag dark">${laps(r.laps)}</span>${done ? `<span class="tag ${done <= 3 ? 'green' : 'dark'}">${done}${['TH', 'ST', 'ND', 'RD'][done % 10] ?? 'TH'}</span>` : ''}</div></div>`; }).join('')}</div>
         ${table.length ? `<div><div class="h3" style="margin-bottom:6px">Cup standings</div><table class="list"><tbody>${table.map(([id, pts], i) => `<tr class="${id === p.id ? 'me' : ''}"><td>${i + 1}</td><td>${esc(id === p.id ? p.name : personas[+id.replace('ai', '')]?.name ?? id)}</td><td class="mono">${pts} pts</td></tr>`).join('')}</tbody></table></div>` : ''}
         <div class="bottombar">
           ${st.results.length && !st.done ? '<button class="btn ghost small" data-act="reset"><span>Restart cup</span></button>' : ''}

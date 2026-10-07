@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { CarDef, CarShape, Livery, RimStyle } from '../shared/cars';
 import { canvas, tex } from './textures';
 import { fixNormals } from './geom';
+import { skyReflection } from './atmosphere';
 
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -409,6 +410,29 @@ export function mergeGeos(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
 
 // ------------------------------------------------------------------------------------------- assembly
 
+const fwdV = new THREE.Vector3();
+/** A car right under a chase camera fills the bottom third of the screen, which happens off the grid behind every
+ *  player: see through it until it pulls clear. Cars off to the side stay solid, and with `on` false every car does. */
+export function seeThroughNear(cam: THREE.Camera, cars: CarModel[], skip: number, on: boolean) {
+  cam.getWorldDirection(fwdV);
+  const f = fwdV, fl = Math.hypot(f.x, f.z) || 1;
+  const rx = f.z / fl, rz = -f.x / fl;
+  for (let i = 0; i < cars.length; i++) {
+    if (i === skip) continue;
+    const m = cars[i];
+    let k = 1;
+    if (on) {
+      const p = m.root.position, c = cam.position;
+      const dx = p.x - c.x, dy = p.y + 0.7 - c.y, dz = p.z - c.z;
+      const fwd = dx * f.x + dy * f.y + dz * f.z;
+      const side = Math.abs(dx * rx + dz * rz);
+      // 0.15 right under the lens, solid again 5.5 m out or 3.2 m to the side
+      if (fwd > -2.6 && fwd < 5.5 && side < 3.2) k = 0.15 + 0.85 * Math.max(Math.min(1, Math.max(0, (fwd - 1.5) / 4)), Math.min(1, Math.max(0, side - 2.2)));
+    }
+    m.fade(k);
+  }
+}
+
 export class CarModel {
   root = new THREE.Group();      // moved by the sim (position, heading)
   body = new THREE.Group();      // pitch, roll, bounce
@@ -593,8 +617,42 @@ export class CarModel {
     }
   }
 
+  private fadeK = 1; private fadeList: THREE.Material[] | null = null;
+  /** See through the whole car (1 is solid). Used for a rival right under the chase camera. */
+  fade(k: number) {
+    k = k > 0.98 ? 1 : Math.max(0, k);
+    if (k === this.fadeK) return;
+    if (!this.fadeList) {
+      const all = new Set<THREE.Material>();
+      this.root.traverse((o) => { const m = (o as THREE.Mesh).material; if (m && o !== this.headGlow) (Array.isArray(m) ? m : [m]).forEach((x) => all.add(x)); });
+      this.fadeList = [...all];
+      for (const m of this.fadeList) { m.userData.solidT = m.transparent; m.userData.solidO = m.opacity; }
+    }
+    const was = this.fadeK < 1, now = k < 1;
+    for (const m of this.fadeList) {
+      if (was !== now && !m.userData.solidT) { m.transparent = now; m.needsUpdate = true; }
+      m.opacity = m.userData.solidO * k;
+    }
+    this.fadeK = k;
+  }
+
+  private envTex: THREE.Texture | null = null; private envK = -1;
+  /** Follow the atmosphere's sky reflection; cheap to check every frame, rare to change. */
+  private reflect() {
+    const t = skyReflection.tex, k = skyReflection.intensity;
+    if (t === this.envTex && k === this.envK) return;
+    for (const m of Object.values(this.mats) as THREE.Material[]) {
+      if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+      if ((m.envMap === null) !== (t === null)) m.needsUpdate = true;
+      m.envMap = t;
+      m.envMapIntensity = (m.userData.envBase ??= m.envMapIntensity) * k;
+    }
+    this.envTex = t; this.envK = k;
+  }
+
   /** Per-frame pose: wheel spin and steer, body roll/pitch, lamps. */
   pose(dt: number, speed: number, steer: number, roll: number, pitch: number, braking: boolean, night: number, nitro: boolean) {
+    this.reflect();
     for (const w of this.wheels) {
       w.spin.rotation.x += (speed / w.r) * dt;
       if (w.front) w.steer.rotation.y = -steer * 0.42;
