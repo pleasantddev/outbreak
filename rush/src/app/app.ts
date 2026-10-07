@@ -7,7 +7,7 @@ import { MenuScene, type MenuView } from '../render/menuScene';
 import { AudioEngine } from '../audio/audio';
 import { Input, TouchControls } from '../game/input';
 import { loadProfile, saveProfile, type Profile, setPreset } from './profile';
-import { detectDevice, guessPreset, refineByBenchmark, PRESET_LABEL, type GraphicsSettings } from '../render/quality';
+import { detectDevice, guessPreset, refineByBenchmark, PRESET_LABEL, PRESETS, type GraphicsSettings, type PresetId } from '../render/quality';
 import { defaultRaceConfig, type Entrant, type RaceConfig } from '../shared/race';
 import { normaliseCode, type RaceStart, type ResultRow } from '../shared/protocol';
 import type { TrackData } from '../shared/track';
@@ -62,6 +62,9 @@ export class App {
 
   async boot() {
     this.show(splashScreen, true);
+    // ?gfx=potato|low|medium|high|ultra forces a preset: handy for support ("try ?gfx=low") and for testing
+    const forced = new URLSearchParams(location.search).get('gfx');
+    if (forced && forced in PRESETS) { setPreset(this.profile, forced as PresetId, false); this.profile.settings.deviceChecked = true; }
     const settings = this.profile.settings.graphics;
     if (!this.profile.settings.deviceChecked || settings.auto) {
       const dev = detectDevice();

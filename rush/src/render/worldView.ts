@@ -88,7 +88,7 @@ export class WorldView {
 
   private buildRoads() {
     const surface = new GeoBuilder({ lane: 4 });
-    const kerbs = new GeoBuilder(), walks = new GeoBuilder(), structure = new GeoBuilder(), rails = new GeoBuilder();
+    const kerbs = new GeoBuilder(), walks = new GeoBuilder(), structure = new GeoBuilder(), rails = new GeoBuilder(), soffits = new GeoBuilder();
     for (const r of this.world.roads) {
       if (r.cls === 'path' || r.pts.length < 2) continue;
       const hw = r.w / 2;
@@ -112,7 +112,7 @@ export class WorldView {
         surface.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
       }
       const elevated = pts.some((p) => p[2] > 0.4);
-      if (elevated) this.buildElevated(r, L, R, structure, rails);
+      if (elevated) this.buildElevated(r, L, R, structure, rails, soffits);
       if (!elevated && ['trunk', 'primary', 'secondary', 'tertiary'].includes(r.cls)) this.buildKerbs(r, L, R, kerbs, walks);
     }
     const sm = new THREE.Mesh(surface.build(), this.mats.road);
@@ -121,7 +121,8 @@ export class WorldView {
     const wm = new THREE.Mesh(walks.build(), this.mats.paving); wm.receiveShadow = this.opts.shadows;
     const st = new THREE.Mesh(structure.build(), this.mats.concrete); st.castShadow = this.opts.shadows; st.receiveShadow = this.opts.shadows;
     const rm = new THREE.Mesh(rails.build(), this.mats.meshRail);
-    this.group.add(sm, km, wm, st, rm);
+    const so = new THREE.Mesh(soffits.build(), this.mats.soffit); so.receiveShadow = this.opts.shadows;
+    this.group.add(sm, km, wm, st, rm, so);
   }
 
   /** Kerb stones and a paved walkway on both sides, cut back where another road crosses or the race corridor runs. */
@@ -164,7 +165,7 @@ export class WorldView {
   }
 
   /** Bridges stand on round columns with a deck slab; raised approaches get retaining walls. Both get parapets. */
-  private buildElevated(r: WorldRoad, L: number[][], R: number[][], st: GeoBuilder, rails: GeoBuilder) {
+  private buildElevated(r: WorldRoad, L: number[][], R: number[][], st: GeoBuilder, rails: GeoBuilder, soffits: GeoBuilder) {
     const pts = r.pts;
     let sinceCol = 0;
     for (let i = 0; i < pts.length - 1; i++) {
@@ -206,7 +207,7 @@ export class WorldView {
       // deck soffit, seen when you race underneath
       if (r.bridge) {
         const Ls = L[i], Le = L[i + 1], Rs = R[i], Re = R[i + 1];
-        st.quad([Ls[0], y0 - 1.3, Ls[1]], [Rs[0], y0 - 1.3, Rs[1]], [Re[0], y1 - 1.3, Re[1]], [Le[0], y1 - 1.3, Le[1]], [[0, 0], [r.w / 4, 0], [r.w / 4, segLen / 4], [0, segLen / 4]], [0, -1, 0]);
+        soffits.quad([Ls[0], y0 - 1.3, Ls[1]], [Rs[0], y0 - 1.3, Rs[1]], [Re[0], y1 - 1.3, Re[1]], [Le[0], y1 - 1.3, Le[1]], [[0, 0], [r.w / 4, 0], [r.w / 4, segLen / 4], [0, segLen / 4]], [0, -1, 0]);
       }
       // columns under bridge decks
       if (r.bridge) {
@@ -358,7 +359,8 @@ export class WorldView {
         const ordered = cr < 0 ? P : [P[0], P[2], P[1]];
         B.flat.tri(ordered[0], ordered[1], ordered[2], ordered.map((p) => [p[0] / 6, p[2] / 6]), [0, 1, 0]);
       }
-      if (detail >= 2) this.roofProps(B, pts, h, rnd, area);
+      // tanks and dishes only where a racer can see them: within a couple of hundred metres of the route
+      if (detail >= 2 && (!this.clearance.track || this.clearance.nearest(cx, cz, 220))) this.roofProps(B, pts, h, rnd, area);
     } else {
       this.hipRoof(B.tin, pts, h, tint, b.cat === 'shed' || b.cat === 'industrial' ? 0.12 : 0.32);
     }
@@ -395,7 +397,7 @@ export class WorldView {
 
   /** Black water tanks on steel stands, satellite dishes and solar panels: the Lagos skyline in miniature. */
   private roofProps(B: ChunkBuilders, pts: number[][], h: number, rnd: Rng, area: number) {
-    const count = Math.min(4, Math.floor(area / 160) + (rnd.chance(0.6) ? 1 : 0));
+    const count = Math.min(3, Math.floor(area / 200) + (rnd.chance(0.6) ? 1 : 0));
     const minX = Math.min(...pts.map((p) => p[0])), maxX = Math.max(...pts.map((p) => p[0]));
     const minZ = Math.min(...pts.map((p) => p[1])), maxZ = Math.max(...pts.map((p) => p[1]));
     for (let k = 0; k < count; k++) {
@@ -408,11 +410,11 @@ export class WorldView {
         for (const [ox, oz] of [[-0.6, -0.6], [0.6, -0.6], [0.6, 0.6], [-0.6, 0.6]]) B.props.box(x + ox, h, z + oz, 0.08, 1.4, 0.08);
         B.props.box(x, h + 1.4, z, 1.5, 0.08, 1.5);
         B.props.setColor(rnd.chance(0.75) ? [0.08, 0.08, 0.09] : [0.15, 0.3, 0.6]);
-        B.props.cylinder(x, h + 1.48, z, 0.62, 1.25, 12, true, 0.6);
+        B.props.cylinder(x, h + 1.48, z, 0.62, 1.25, 9, true, 0.6);
       } else if (kind < 0.8) {
         B.props.setColor([0.85, 0.85, 0.84]);
         B.props.box(x, h, z, 0.1, 0.9, 0.1);
-        B.props.cylinder(x, h + 0.9, z, 0.45, 0.12, 10, true, 0.05);
+        B.props.cylinder(x, h + 0.9, z, 0.45, 0.12, 8, true, 0.05);
       } else {
         B.props.setColor([0.12, 0.16, 0.3]);
         B.props.box(x, h + 0.3, z, 1.8, 0.06, 1.1, rnd.range(0, Math.PI));
@@ -436,12 +438,7 @@ export class WorldView {
             const a = offsetPolyline([c[i], c[i + 1]], g);
             rails.box((a[0][0] + a[1][0]) / 2, 0.14, (a[0][1] + a[1][1]) / 2, 0.08, 0.14, len, Math.atan2(c[i + 1][0] - c[i][0], c[i + 1][1] - c[i][1]));
           }
-          // concrete sleepers
-          const steps = Math.floor(len / 0.65);
-          for (let k = 0; k < steps; k += 1) {
-            const t = k / steps; const sx = c[i][0] + (c[i + 1][0] - c[i][0]) * t, sz = c[i][1] + (c[i + 1][1] - c[i][1]) * t;
-            if (this.opts.detail >= 1) bal.box(sx, 0.06, sz, 2.4, 0.09, 0.24, Math.atan2(c[i + 1][0] - c[i][0], c[i + 1][1] - c[i][1]));
-          }
+          // sleepers are painted into the ballast texture: a box each cost over a million triangles on this map
         }
       }
     }

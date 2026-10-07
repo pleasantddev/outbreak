@@ -43,6 +43,7 @@ export class Materials {
   meshRail!: THREE.MeshStandardMaterial;
   rail!: THREE.MeshStandardMaterial;
   ballast!: THREE.MeshStandardMaterial;
+  soffit!: THREE.MeshStandardMaterial;
   wood!: THREE.MeshStandardMaterial;
   vertexLit!: THREE.MeshStandardMaterial;
   emissive!: THREE.MeshBasicMaterial;
@@ -171,7 +172,9 @@ diffuseColor.rgb *= 1.0 - uWet * 0.35 - puddle * 0.2;`);
     const railTex = T.tex(T.meshPanel('#2a5ab8'), { aniso });
     this.meshRail = new THREE.MeshStandardMaterial({ map: railTex, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.5 });
     this.rail = new THREE.MeshStandardMaterial({ color: 0x8a8580, roughness: 0.3, metalness: 0.9 });
-    this.ballast = new THREE.MeshStandardMaterial({ map: A(T.concrete(256, 31, '#6a645c')), roughness: 1 });
+    this.ballast = new THREE.MeshStandardMaterial({ map: A(T.ballastSleepers()), roughness: 1 });
+    // a cool tint so the warm ground bounce light reads as shade under a deck, not as dirt
+    this.soffit = new THREE.MeshStandardMaterial({ map: A(T.soffit()), color: 0xa4acb6, roughness: 0.95 });
     this.wood = new THREE.MeshStandardMaterial({ color: 0x8a6440, roughness: 0.85 });
     this.vertexLit = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, metalness: 0.05, side: THREE.DoubleSide });
     this.emissive = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });

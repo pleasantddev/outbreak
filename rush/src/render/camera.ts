@@ -18,6 +18,8 @@ export class ChaseCam {
   private orbitA = 0;
   distance = 6.4; height = 2.15; baseFov = 64; motion = true;
   far = false; // the alternative "far chase" view
+  /** keeps the camera on the near side of walls and barriers; the session supplies it from the track */
+  clamp: ((c: CarState, p: THREE.Vector3) => void) | null = null;
 
   constructor(public cam: THREE.PerspectiveCamera) {}
 
@@ -84,6 +86,7 @@ export class ChaseCam {
     this.pos.x = expDecay(this.pos.x, want.x, k, dt); this.pos.z = expDecay(this.pos.z, want.z, k, dt);
     this.pos.y = expDecay(this.pos.y, want.y, c.grounded ? 9 : 4, dt);
     if (this.mode === 'hood') this.pos.copy(want);
+    else this.clamp?.(c, this.pos);
     const ahead = this.mode === 'hood' ? 20 : 3.5 + sp * 3;
     this.look.set(c.x + Math.sin(this.yaw) * ahead * dir, c.y + (this.mode === 'hood' ? 1.1 : 0.95), c.z + Math.cos(this.yaw) * ahead * dir);
     this.cam.position.copy(this.pos);

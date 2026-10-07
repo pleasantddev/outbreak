@@ -36,7 +36,8 @@ export function newProfile(touch: boolean): Profile {
   return {
     v: 1, id: rid(), name: `${NAMES[n]}${Math.floor(10 + Math.random() * 89)}`, crew: 'Oshodi Kings', color: COLORS[n % COLORS.length],
     xp: 0, naira: 12000,
-    garage: [{ carId: starter.id, livery: defaultLivery(starter, `LAG ${100 + Math.floor(Math.random() * 899)}`) }],
+    // the first car leaves the lot in green and white: a Lagos plate, a fresh respray and twin stripes
+    garage: [{ carId: starter.id, livery: { ...defaultLivery(starter, `LAG ${100 + Math.floor(Math.random() * 899)}`), paint: '#0b7a3e', wrap: 'stripes', wrapColor: '#f4f4f0' } }],
     current: starter.id,
     career: {}, stats: { races: 0, wins: 0, podiums: 0, drift: 0, nearMiss: 0, tricks: 0, shunts: 0, km: 0, online: 0 },
     records: {}, recent: [], friends: [],

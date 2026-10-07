@@ -55,7 +55,9 @@ export class Input {
     inp.brake = this.key('brake') ? 1 : 0;
     inp.drift = this.key('drift');
     inp.nitro = this.key('nitro');
-    inp.item = this.key('item');
+    // a tap shorter than one frame still counts on slow devices
+    inp.item = this.key('item') || this.pressedOnce.has('item');
+    this.pressedOnce.delete('item');
     inp.look = this.key('look');
     // gamepad
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];

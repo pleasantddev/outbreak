@@ -109,6 +109,45 @@ export function concrete(size = 512, seed = 2, base = '#a7a39b') {
   return c;
 }
 
+/** Track bed: gravel with five concrete sleepers per tile. One tile is 3 m of track, so sleepers sit 0.6 m apart
+ *  and cost no geometry at all. */
+export function ballastSleepers(size = 256, seed = 31) {
+  const rng = new Rng(seed);
+  const c = canvas(size), g = ctx2d(c);
+  g.fillStyle = '#5e5850'; g.fillRect(0, 0, size, size);
+  noiseLayers(c, rng, [[16, 0.35], [64, 0.35], [256, 0.3]]);
+  speckle(c, rng, 900, ['#3a3631', '#8a8378', '#6f685e', '#2c2925'], [1, 3]);
+  const x0 = size * 0.125, w = size * 0.75, th = size * 0.08;
+  for (let k = 0; k < 5; k++) {
+    const y = (k + 0.5) * (size / 5) - th / 2;
+    g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x0 + 2, y + 3, w, th);
+    g.fillStyle = '#8d877d'; g.fillRect(x0, y, w, th);
+    g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(x0, y, w, 2);
+    // rust stains where the rails sit
+    g.fillStyle = 'rgba(90,50,30,0.35)'; g.fillRect(size * 0.26, y, size * 0.06, th); g.fillRect(size * 0.68, y, size * 0.06, th);
+  }
+  return c;
+}
+
+/** Underside of a flyover deck: cool grey concrete with the shadows of two girders per tile (one tile is 4 m
+ *  across the deck) and water streaks from the joints. */
+export function soffit(size = 512, seed = 33) {
+  const rng = new Rng(seed);
+  const c = canvas(size), g = ctx2d(c);
+  g.fillStyle = '#8c8e90'; g.fillRect(0, 0, size, size);
+  noiseLayers(c, rng, [[8, 0.25], [32, 0.2], [128, 0.15]]);
+  for (const cx of [0.25, 0.75]) {
+    const x = cx * size, w = size * 0.14;
+    const gr = g.createLinearGradient(x - w, 0, x + w, 0);
+    gr.addColorStop(0, 'rgba(20,22,26,0)'); gr.addColorStop(0.3, 'rgba(20,22,26,0.55)'); gr.addColorStop(0.5, 'rgba(10,12,14,0.7)'); gr.addColorStop(0.7, 'rgba(20,22,26,0.55)'); gr.addColorStop(1, 'rgba(20,22,26,0)');
+    g.fillStyle = gr; g.fillRect(x - w, 0, w * 2, size);
+  }
+  for (let i = 0; i < 14; i++) { const x = rng.next() * size; g.fillStyle = `rgba(40,38,34,${rng.range(0.08, 0.2)})`; g.fillRect(x, 0, rng.range(2, 8), size); }
+  // expansion joint across the deck
+  g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(0, size * 0.5 - 2, size, 4);
+  return c;
+}
+
 export function laterite(size = 512, seed = 3) {
   const rng = new Rng(seed);
   const c = canvas(size), g = ctx2d(c);

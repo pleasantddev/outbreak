@@ -202,11 +202,14 @@ export class TrackView {
     for (const dy of [0, 1.4]) for (const dz of [-0.5, 0.5]) steel.strut([A[0] + p.tx * dz, A[1] + dy, A[2] + p.tz * dz], [B[0] + p.tx * dz, B[1] + dy, B[2] + p.tz * dz], 0.14);
     const gm = new THREE.Mesh(steel.build(), this.mats.steel); gm.castShadow = this.opts.shadows;
     this.group.add(gm);
-    // banner on both faces
-    const banner = new THREE.Mesh(new THREE.PlaneGeometry(hw * 2 + 1.6, 1.3), new THREE.MeshStandardMaterial({ map: bannerTexture('LAGOS RUSH', '#f6c514', '#111111', 'OSHODI STREET RACING'), side: THREE.DoubleSide, roughness: 0.6, emissive: new THREE.Color(0x221a00) }));
-    banner.position.set(p.x, p.y + H + 0.7, p.z);
-    banner.rotation.y = ang + Math.PI;
-    this.group.add(banner);
+    // banner on both faces: two single sided planes back to back, so the text reads correctly from either side
+    const bannerMat = new THREE.MeshStandardMaterial({ map: bannerTexture('LAGOS RUSH', '#f6c514', '#111111', 'OSHODI STREET RACING'), roughness: 0.6, emissive: new THREE.Color(0x221a00) });
+    for (const flip of [0, Math.PI]) {
+      const banner = new THREE.Mesh(new THREE.PlaneGeometry(hw * 2 + 1.6, 1.3), bannerMat);
+      banner.position.set(p.x, p.y + H + 0.7, p.z);
+      banner.rotation.y = ang + Math.PI + flip;
+      this.group.add(banner);
+    }
     // start lights: five pods on the beam, facing the grid
     for (let k = 0; k < 5; k++) {
       const d = (k - 2) * 1.1;

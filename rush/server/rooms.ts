@@ -9,11 +9,14 @@ import { makePersonas } from '../src/shared/ai';
 
 export interface Conn { id: string; card: PlayerCard; send: (m: ServerMsg) => void; room: Room | null; token: string; alive: boolean; queued: boolean; lastState: number; violations: number; ping: number }
 
-const COUNTDOWN_MS = 5200;      // lights and a beat of quiet before GO
-const RESULTS_MS = 12000;       // results stay up before the next race opens
-const RECONNECT_MS = 60000;     // a dropped driver can come back for this long
-const AFK_RACE_MS = 8000;       // no state for this long in a race and an AI takes over
-const QUICK_START_MS = 20000;   // quick match rooms wait this long for more people
+/** Room clock settings. Mutable only so tests can run a whole race lifecycle in a second or two. */
+export const TIMING = {
+  countdownMs: 5200,      // lights and a beat of quiet before GO
+  resultsMs: 12000,       // results stay up before the next race opens
+  reconnectMs: 60000,     // a dropped driver can come back for this long
+  afkRaceMs: 8000,        // no state for this long in a race and an AI takes over
+  quickStartMs: 20000,    // quick match rooms wait this long for more people
+};
 const POINTS = [15, 12, 10, 8, 6, 5, 4, 3, 2, 1, 0, 0];
 
 export class Room {
@@ -41,7 +44,7 @@ export class Room {
     this.code = code;
     this.quick = quick;
     this.config = sanitiseConfig(config, { ...DEFAULT_ROOM, isPublic: quick }, tracks.map((t) => t.id));
-    if (quick) this.phaseUntil = Date.now() + QUICK_START_MS;
+    if (quick) this.phaseUntil = Date.now() + TIMING.quickStartMs;
   }
 
   get humans() { return [...this.players.values()]; }
@@ -168,11 +171,11 @@ export class Room {
     entrants.sort((a, b) => Number(a.human) - Number(b.human));
     this.entrantIdx = new Map(entrants.map((e, i) => [e.id, i]));
     const cfg = { ...defaultRaceConfig(td.id, this.config.laps), mode: this.config.mode, traffic: this.config.traffic, aiLevel: this.config.aiLevel, time: this.config.time, weather: this.config.weather, seed: this.seed, finishGrace: 25 };
-    this.sim = new RaceSim(td, cfg, entrants, { authority: true, local: [], countdown: COUNTDOWN_MS / 1000 });
-    this.startAt = Date.now() + COUNTDOWN_MS;
+    this.sim = new RaceSim(td, cfg, entrants, { authority: true, local: [], countdown: TIMING.countdownMs / 1000 });
+    this.startAt = Date.now() + TIMING.countdownMs;
     this.phase = 'countdown';
     this.lastStateAt.clear();
-    for (const h of humans) this.lastStateAt.set(h.id, Date.now() + COUNTDOWN_MS);
+    for (const h of humans) this.lastStateAt.set(h.id, Date.now() + TIMING.countdownMs);
     this.broadcast({ t: 'race', race: this.raceStart() });
     this.sync();
     this.log(`room ${this.code}: race ${this.raceNo} on ${td.id} with ${humans.length} humans, ${aiCount} AI`);
@@ -240,7 +243,7 @@ export class Room {
         const idx = this.entrantIdx.get(pid);
         if (idx === undefined) continue;
         const rc = this.sim.cars[idx];
-        if (rc.control === 'remote' && now - at > AFK_RACE_MS && this.phase === 'racing') this.sim.takeOver(idx);
+        if (rc.control === 'remote' && now - at > TIMING.afkRaceMs && this.phase === 'racing') this.sim.takeOver(idx);
         else if (rc.control === 'ai' && now - at < 400 && this.players.get(pid)?.connected) { this.sim.release(idx); this.handBackUntil.set(pid, now + 2000); }
       }
       this.snapAcc += dt;
@@ -254,11 +257,11 @@ export class Room {
       for (const p of this.humans) { p.ready = false; p.spectating = false; }
       // a finished series starts over: race 1, everyone on zero points
       if (this.seriesOver) { this.seriesOver = false; this.raceNo = 0; for (const p of this.humans) p.points = 0; }
-      if (this.quick) this.phaseUntil = now + QUICK_START_MS;
+      if (this.quick) this.phaseUntil = now + TIMING.quickStartMs;
       this.sync();
     }
     // seats of drivers who never came back
-    for (const p of this.humans) if (!p.connected && p.leftAt && now - p.leftAt > RECONNECT_MS) this.remove(p.id);
+    for (const p of this.humans) if (!p.connected && p.leftAt && now - p.leftAt > TIMING.reconnectMs) this.remove(p.id);
   }
 
   private collect(evs: RaceEvent[]) {
@@ -281,7 +284,7 @@ export class Room {
     this.seriesOver = this.raceNo >= this.config.races;
     this.broadcast({ t: 'results', rows });
     this.phase = 'results';
-    this.phaseUntil = Date.now() + RESULTS_MS;
+    this.phaseUntil = Date.now() + TIMING.resultsMs;
     this.sim = null;
     this.sync();
     this.log(`room ${this.code}: race ${this.raceNo} done, winner ${rows[0]?.name}`);

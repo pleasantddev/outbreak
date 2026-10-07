@@ -201,16 +201,23 @@ for (const w of ways) if (w.tags.amenity && ['fuel', 'bank', 'school', 'place_of
 const box = (() => { const a = project(PROJ, prov.area.north, prov.area.west), b = project(PROJ, prov.area.south, prov.area.east); return { minX: r1(a.x), maxX: r1(b.x), minZ: r1(a.z), maxZ: r1(b.z) }; })();
 const M = 150;
 const inBox = (p: number[]) => p[0] > box.minX - M && p[0] < box.maxX + M && p[1] > box.minZ - M && p[1] < box.maxZ + M;
-const clippedRoads: WorldRoad[] = [];
-for (const r of roads) {
-  let run: number[][] = [];
-  const flush = () => { if (run.length > 1) clippedRoads.push({ ...r, pts: run, nodes: [] }); run = []; };
-  r.pts.forEach((p, i) => {
-    const keep = inBox(p) || (i > 0 && inBox(r.pts[i - 1])) || (i < r.pts.length - 1 && inBox(r.pts[i + 1]));
-    if (keep) run.push(p); else flush();
-  });
-  flush();
+/** Cut polylines to the box, keeping one point past the edge so lines run cleanly off the map. */
+function clipLines<T extends { pts: number[][] }>(items: T[], fix: (t: T, pts: number[][]) => T): T[] {
+  const out: T[] = [];
+  for (const r of items) {
+    let run: number[][] = [];
+    const flush = () => { if (run.length > 1) out.push(fix(r, run)); run = []; };
+    r.pts.forEach((p, i) => {
+      const keep = inBox(p) || (i > 0 && inBox(r.pts[i - 1])) || (i < r.pts.length - 1 && inBox(r.pts[i + 1]));
+      if (keep) run.push(p); else flush();
+    });
+    flush();
+  }
+  return out;
 }
+const clippedRoads = clipLines(roads, (r, pts) => ({ ...r, pts, nodes: [] }));
+// the railway runs for kilometres beyond Oshodi; only the stretch on the map is drawn
+const clippedRails = clipLines(rails, (r, pts) => ({ ...r, pts }));
 const { minX, maxX, minZ, maxZ } = box;
 
 const world: WorldData = {
@@ -223,7 +230,7 @@ const world: WorldData = {
   graph: { nodes: [...gNodes.values()], edges: gEdges },
 };
 // tracks are routed on the full graph; the client only needs what it draws
-const published: WorldData = { ...world, roads: clippedRoads.map(({ nodes, ...r }) => ({ ...r, nodes: [] })), graph: { nodes: [], edges: [] } };
+const published: WorldData = { ...world, roads: clippedRoads.map(({ nodes, ...r }) => ({ ...r, nodes: [] })), rails: clippedRails, graph: { nodes: [], edges: [] } };
 
 fs.mkdirSync(path.join(root, 'public/world'), { recursive: true });
 fs.writeFileSync(path.join(root, 'public/world/oshodi.json'), JSON.stringify(published));

@@ -105,7 +105,7 @@ input, select { font: inherit; color: var(--text); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); gap: 12px; }
 .card { position: relative; text-align: left; padding: 14px; background: var(--ink2); border: 1px solid var(--line); border-radius: var(--radius); transition: transform .12s, border-color .12s, background .12s; overflow: hidden; min-height: 92px; }
 .card:hover, .card:focus-visible { border-color: var(--yellow); transform: translateY(-2px); outline: none; }
-.card.sel { border-color: var(--yellow); background: linear-gradient(135deg, rgba(246,197,20,0.16), rgba(246,197,20,0.02)); box-shadow: inset 4px 0 0 var(--yellow); }
+.card.sel { border-color: var(--yellow); background: linear-gradient(135deg, rgba(246,197,20,0.16), rgba(246,197,20,0.02)), var(--ink2); box-shadow: inset 4px 0 0 var(--yellow); }
 .card.locked { opacity: 0.55; }
 .card .k { font: 800 italic 1.35em/1 var(--font-d); text-transform: uppercase; }
 .card .d { margin-top: 6px; font-size: 0.82em; color: var(--mute); line-height: 1.35; }
@@ -280,3 +280,8 @@ table.list tr.me td { background: rgba(246,197,20,0.12); color: var(--yellow); f
 .replay-bar input[type=range] { flex: 1; accent-color: var(--yellow); }
 .replay-tag { position: absolute; left: max(16px, env(safe-area-inset-left)); top: max(16px, env(safe-area-inset-top)); font: 800 italic 1.6em var(--font-d); color: var(--red); letter-spacing: 0.08em; }
 .replay-tag::before { content: ''; display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--red); margin-right: 8px; animation: pulse 1s infinite; }
+
+/* cut between the street and the garage */
+.scene-fade { position: fixed; inset: 0; background: #050506; opacity: 0; pointer-events: none; }
+.scene-fade.go { animation: sceneCut .5s ease-out; }
+@keyframes sceneCut { 0%, 25% { opacity: 1 } 100% { opacity: 0 } }

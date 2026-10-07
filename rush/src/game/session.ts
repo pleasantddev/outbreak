@@ -118,6 +118,22 @@ export class RaceSession {
     this.capture(this.curr); this.prev.set(this.curr);
     this.cam = new ChaseCam(stage.engine.camera);
     this.cam.motion = s.motionFx;
+    // never film through a barrier: pull the camera in along the line to the car until it is back over the road
+    let hint: { path: number; i: number } | undefined;
+    this.cam.clamp = (c, p) => {
+      const limit = Math.max(0.6, (c.q?.outside ?? 0) + 1);
+      const q = this.track.query(p.x, p.y, p.z, hint);
+      hint = { path: q.path, i: q.i };
+      if (q.outside <= limit) return;
+      let lo = 0, hi = 1;
+      for (let k = 0; k < 6; k++) {
+        const m = (lo + hi) / 2;
+        const qq = this.track.query(c.x + (p.x - c.x) * m, p.y, c.z + (p.z - c.z) * m, hint);
+        if (qq.outside <= limit) lo = m; else hi = m;
+      }
+      p.x = c.x + (p.x - c.x) * lo; p.z = c.z + (p.z - c.z) * lo;
+      p.y = Math.max(p.y, c.y + 1.4 + (1 - lo) * 1.6);
+    };
     const pc = this.sim.cars[this.playerIdx].c;
     this.cam.snapTo(pc);
     this.hud = new Hud(ui, this.track, this.playerIdx, opts.units ?? 'kmh');
@@ -203,7 +219,8 @@ export class RaceSession {
     if (this.input.item && !this.itemWas && me.item && me.itemRoll <= 0 && this.sim.racing && !me.finished && me.danfoT <= 0 && this.itemSentT <= 0) { net.useItem(); this.itemSentT = 0.35; }
     this.itemWas = this.input.item;
     let steps = 0;
-    while (this.sim.time + STEP <= target + 1e-6 && steps < 6) {
+    // up to 0.2 s of catch-up per frame so slow devices stay on the room clock instead of resyncing
+    while (this.sim.time + STEP <= target + 1e-6 && steps < 12) {
       this.prev.set(this.curr);
       for (const [i, snap] of net.remoteAt(this.sim.time - INTERP, this.playerIdx)) if (this.sim.cars[i]?.control === 'remote') this.sim.setRemote(i, snap);
       this.sim.step(STEP, { [this.opts.localId]: this.input });

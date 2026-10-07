@@ -71,10 +71,20 @@ function halfWidthAt(p: Profile, z: number, s: CarShape) {
 
 export interface CarMaterials { paint: THREE.MeshPhysicalMaterial; glass: THREE.MeshPhysicalMaterial; trim: THREE.MeshStandardMaterial; chrome: THREE.MeshStandardMaterial; lampF: THREE.MeshStandardMaterial; lampR: THREE.MeshStandardMaterial; rubber: THREE.MeshStandardMaterial; rim: THREE.MeshStandardMaterial; caliper: THREE.MeshStandardMaterial; plate: THREE.MeshStandardMaterial; glow: THREE.MeshBasicMaterial; }
 
-/** Paint texture: base coat with the wrap drawn over it. u runs nose to tail, v goes round the section. */
-export function liveryCanvas(l: Livery, def: CarDef) {
-  const W = 512, H = 512;
+/** Paint texture: base coat, the wrap, then the panel work (shut lines, seams, character line, pillar blackout,
+ *  fuel cap, sill shading) drawn into the same map so the detail costs no geometry. u runs nose to tail; v runs
+ *  from the sill (0 and 1) to the roof centre line (0.5), mirrored left and right. */
+export function liveryCanvas(l: Livery, def: CarDef, size = 1024) {
+  const W = size, H = size;
   const c = canvas(W, H), g = c.getContext('2d')!;
+  g.save(); g.scale(W / 512, H / 512);
+  liveryWrap(g, l, 512, 512);
+  g.restore();
+  if (def.shape.style !== 'keke') panelWork(g, def, W, H);
+  return c;
+}
+
+function liveryWrap(g: CanvasRenderingContext2D, l: Livery, W: number, H: number) {
   g.fillStyle = l.paint; g.fillRect(0, 0, W, H);
   const band = (v0: number, v1: number, col: string) => { g.fillStyle = col; g.fillRect(0, v0 * H, W, (v1 - v0) * H); g.fillRect(0, (1 - v1) * H, W, (v1 - v0) * H); };
   const wc = l.wrapColor;
@@ -112,8 +122,80 @@ export function liveryCanvas(l: Livery, def: CarDef) {
       break;
     }
   }
-  void def;
-  return c;
+}
+
+/** Shut lines and trim drawn in texture space. The loft spaces its stations unevenly, so z is mapped to u by
+ *  inverting the same easing the loft uses. */
+function panelWork(g: CanvasRenderingContext2D, def: CarDef, W: number, H: number) {
+  const s = def.shape, p = profileOf(s);
+  const ease = (t: number) => lerp(t, 0.5 - 0.5 * Math.cos(t * Math.PI), 0.55);
+  const X = (z: number) => {
+    const f = (z - p.zR) / (p.zF - p.zR);
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (ease(m) < f) lo = m; else hi = m; }
+    return (1 - (lo + hi) / 2) * W;
+  };
+  // ring point index (0 sill centre .. 12 roof centre) to canvas y on each side
+  const Y = (h: number, right: boolean) => (right ? h / 24 : 1 - h / 24) * H;
+  const both = (fn: (right: boolean) => void) => { fn(false); fn(true); };
+  const px = W / 1024;
+  const line = (x0: number, y0: number, x1: number, y1: number, w = 2.2, col = 'rgba(0,0,0,0.6)') => { g.strokeStyle = col; g.lineWidth = w * px; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); };
+  const box = s.style === 'van' || s.style === 'suv';
+  const twoDoor = s.style === 'hatch' || s.style === 'coupe' || s.style === 'super';
+  const zA = p.zWs - 0.04, zB = (p.zRf + p.zRr) / 2, zC = box ? p.zRr + 0.55 : p.zRr + 0.05;
+  const doors: [number, number][] = s.style === 'van' ? [[zA, zA - 0.95], [zB + 0.2, zB - 0.75]] : twoDoor ? [[zA, zB - 0.25]] : [[zA, zB + 0.02], [zB - 0.02, zC]];
+  // sill and wheel arch shading, then a little road dust on the cars that have done a few Lagos years
+  both((r) => {
+    const gr = g.createLinearGradient(0, Y(0, r), 0, Y(2.2, r));
+    gr.addColorStop(0, 'rgba(0,0,0,0.42)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0, Math.min(Y(0, r), Y(2.2, r)), W, Math.abs(Y(2.2, r) - Y(0, r)));
+  });
+  if (def.id === 'tokunbo' || def.id === 'danfo') {
+    for (let i = 0; i < 1400; i++) {
+      const r = i % 2 === 0, h = Math.pow(Math.random(), 1.8) * 2.6;
+      g.fillStyle = `rgba(${120 + Math.random() * 40},${96 + Math.random() * 30},${70},${0.05 + Math.random() * 0.08})`;
+      g.fillRect(Math.random() * W, Y(h, r), (1 + Math.random() * 3) * px, (1 + Math.random() * 2) * px);
+    }
+  }
+  // sculpted character line along the flank: a highlight over a shadow
+  both((r) => {
+    const yl = Y(4.15, r), dir = r ? 1 : -1;
+    line(X(p.zF - 0.35), yl, X(p.zR + 0.3), yl, 2.6, 'rgba(255,255,255,0.22)');
+    line(X(p.zF - 0.35), yl - dir * 3 * px, X(p.zR + 0.3), yl - dir * 3 * px, 2.6, 'rgba(0,0,0,0.2)');
+  });
+  // door shut lines: front and rear edges up to the belt, and the sill line along the bottom
+  both((r) => {
+    for (const [zf, zr] of doors) {
+      line(X(zf), Y(1.3, r), X(zf), Y(5.9, r));
+      line(X(zr), Y(1.3, r), X(zr), Y(5.9, r));
+      line(X(zf), Y(1.3, r), X(zr), Y(1.3, r), 1.8);
+    }
+  });
+  // bonnet shut line and the boot or tailgate line, straight across the top surfaces of both halves
+  const hood = p.zWs + Math.min(0.12, (p.zF - p.zWs) * 0.15);
+  line(X(hood), Y(9.3, true), X(hood), Y(9.3, false), 2.4);
+  if (!box) { const boot = p.zDk - 0.02; line(X(boot), Y(9, true), X(boot), Y(9, false), 2.4); }
+  else line(X(p.zR + 0.06), Y(2.4, true), X(p.zR + 0.06), Y(2.4, false), 2.4);
+  // bonnet edges run forward to the nose on each side
+  both((r) => { line(X(hood), Y(9.3, r), X(p.zF - 0.08), Y(8.6, r), 2); });
+  // blacked-out pillar between the side windows
+  if (s.style !== 'van') both((r) => {
+    g.fillStyle = '#0b0c0e';
+    const x0 = X(zB + 0.06), x1 = X(zB - 0.06);
+    g.fillRect(Math.min(x0, x1), Math.min(Y(5.9, r), Y(8.4, r)), Math.abs(x1 - x0), Math.abs(Y(8.4, r) - Y(5.9, r)));
+  });
+  // window surround: a thin dark seal just under the glass line
+  both((r) => { line(X(p.zWs - 0.02), Y(5.95, r), X(box ? p.zR + 0.25 : p.zDk + 0.05), Y(5.95, r), 2.8, 'rgba(10,10,12,0.75)'); });
+  // fuel filler on the right rear quarter
+  const fz = (box ? p.zR + 0.9 : p.zRr - 0.1), fy = Y(5.1, true), fx = X(fz);
+  g.strokeStyle = 'rgba(0,0,0,0.65)'; g.lineWidth = 2 * px;
+  g.beginPath(); g.roundRect(fx - 11 * px, fy - 10 * px, 22 * px, 20 * px, 5 * px); g.stroke();
+  // black lower bumper lips at both ends
+  g.fillStyle = 'rgba(16,17,19,0.9)';
+  for (const [z0, z1] of [[p.zF - 0.02, p.zF - 0.2], [p.zR + 0.2, p.zR + 0.02]]) both((r) => {
+    const x0 = X(z0), x1 = X(z1);
+    g.fillRect(Math.min(x0, x1), Math.min(Y(0, r), Y(1.1, r)), Math.abs(x1 - x0), Math.abs(Y(1.1, r) - Y(0, r)));
+  });
 }
 
 function plateCanvas(text: string) {
@@ -133,8 +215,8 @@ const glowTex = (() => { let t: THREE.Texture | null = null; return () => {
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
   t = tex(c, { repeat: false }); return t; }; })();
 
-export function makeCarMaterials(l: Livery, def: CarDef): CarMaterials {
-  const map = tex(liveryCanvas(l, def), { repeat: false });
+export function makeCarMaterials(l: Livery, def: CarDef, mapSize = 1024): CarMaterials {
+  const map = tex(liveryCanvas(l, def, mapSize), { repeat: false, aniso: 8 });
   const finish = l.finish;
   const paint = new THREE.MeshPhysicalMaterial({
     map, roughness: finish === 'matte' ? 0.62 : finish === 'chrome' ? 0.06 : 0.32,
@@ -337,13 +419,17 @@ export class CarModel {
   nitroFlames: THREE.Mesh[] = [];
   shape: CarShape;
 
+  private detail: number;
+
   constructor(public def: CarDef, livery: Livery, opts: { shadows: boolean; detail: number }) {
     const s = this.shape = def.shape;
-    this.mats = makeCarMaterials(livery, def);
+    this.detail = opts.detail;
+    this.mats = makeCarMaterials(livery, def, opts.detail >= 2 ? 1024 : 512);
     const m = this.mats;
     this.root.add(this.body);
     if (s.style === 'keke') this.buildKeke(s);
     else this.buildCar(s, opts.detail);
+    this.mergeBody();
     // headlight pool on the road for night driving
     this.headGlow = new THREE.Mesh(new THREE.PlaneGeometry(6, 13), new THREE.MeshBasicMaterial({ map: glowTex(), color: 0xfff0d0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     this.headGlow.rotation.x = -Math.PI / 2;
@@ -428,6 +514,28 @@ export class CarModel {
     }
   }
 
+  /** Fold every static body part that shares a material into one mesh: a car drops from ~50 draw calls to ~10. */
+  private mergeBody() {
+    const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>();
+    for (const o of [...this.body.children]) {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || Array.isArray(mesh.material)) continue; // the lofted shell keeps its paint and glass groups
+      mesh.updateMatrix();
+      const g = mesh.geometry.clone().applyMatrix4(mesh.matrix);
+      const mat = mesh.material as THREE.Material;
+      const list = byMat.get(mat) ?? [];
+      list.push(g); byMat.set(mat, list);
+      this.body.remove(mesh); mesh.geometry.dispose();
+    }
+    this.brakeLights = [];
+    for (const [mat, list] of byMat) {
+      const merged = new THREE.Mesh(mergeGeos(list), mat);
+      for (const g of list) g.dispose();
+      this.body.add(merged);
+      if (mat === this.mats.lampR) this.brakeLights.push(merged);
+    }
+  }
+
   private addWheel(x: number, z: number, r: number, w: number, front: boolean, side: number) {
     const m = this.mats;
     const steer = new THREE.Group(); steer.position.set(x, r, z);
@@ -438,12 +546,15 @@ export class CarModel {
     const rim = new THREE.Mesh(rimGeometry(this.rimStyle, r * 0.7, w), m.rim);
     rim.scale.x = side; // face outward on both sides
     spin.add(rim);
-    const disc = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.55, r * 0.55, 0.03, 20), m.chrome);
-    disc.rotation.z = Math.PI / 2; disc.position.x = side * w * 0.05;
-    spin.add(disc);
-    const cal = new THREE.Mesh(new THREE.BoxGeometry(0.08, r * 0.38, r * 0.3), m.caliper);
-    cal.position.set(side * w * 0.12, r * 0.38, 0);
-    steer.add(cal);
+    // brake disc and caliper behind the spokes: only on close-up cars, where you can see through the rim
+    if (this.detail >= 2) {
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.55, r * 0.55, 0.03, 20), m.chrome);
+      disc.rotation.z = Math.PI / 2; disc.position.x = side * w * 0.05;
+      spin.add(disc);
+      const cal = new THREE.Mesh(new THREE.BoxGeometry(0.08, r * 0.38, r * 0.3), m.caliper);
+      cal.position.set(side * w * 0.12, r * 0.38, 0);
+      steer.add(cal);
+    }
     this.body.parent!.add(steer);
     this.wheels.push({ spin, steer, front, r });
   }
@@ -492,11 +603,12 @@ export class CarModel {
     for (const b of this.brakeLights) (b.material as THREE.MeshStandardMaterial).emissiveIntensity = braking ? 3.2 : 0.6 + night * 0.8;
     (this.mats.lampF as THREE.MeshStandardMaterial).emissiveIntensity = 0.8 + night * 3;
     (this.headGlow.material as THREE.MeshBasicMaterial).opacity = night * 0.5;
+    this.headGlow.visible = night > 0.05;
     void nitro;
   }
 
   applyLivery(l: Livery) {
-    const map = tex(liveryCanvas(l, this.def), { repeat: false });
+    const map = tex(liveryCanvas(l, this.def, this.detail >= 2 ? 1024 : 512), { repeat: false, aniso: 8 });
     this.mats.paint.map?.dispose();
     this.mats.paint.map = map;
     const f = l.finish;
