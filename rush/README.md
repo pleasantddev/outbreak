@@ -74,6 +74,12 @@ node tools/playtest.mjs http://localhost:8787 out online 640 360 potato   # two 
 node tools/bandwidth.mjs ws://localhost:8787/ws            # what an online race costs a player
 ```
 
+## Design a route
+
+Open http://localhost:8787/?dev=designer for the race designer. Click anchors onto real Oshodi roads in driving order and the route rebuilds live with the same code the game, the room server and the tests use. Links join roads the real network does not join (a U-turn through a median, a cut through a motor park). Ramps, bag rows, BRT boost strips, potholes, water spills, checkpoints, traffic free stretches and closed roads are all one key away, and the panel shows the lap length, the gold lap time and anything that would make the route race badly.
+
+Save keeps a design in the browser. Test drive puts you on its grid against seven AI racers, and Edit route on the results screen takes you back. Designs race offline only; to make one an official route that rooms can use, export it, add it to `src/shared/trackDefs.ts` and run `npm run gis:build`.
+
 ## Rebuild the map
 
 ```bash
@@ -91,6 +97,7 @@ npm run gis:build   # project, clean and route it into public/world/*.json
 | `src/ui` | Screens, HUD, styles |
 | `src/net` | Room client |
 | `server` | Room server |
+| `src/dev` | The race designer (`?dev=designer`) and the world viewer (`?dev=world`) |
 | `tools` | GIS pipeline, playtest, bandwidth meter, screenshot helper |
 | `../docs/rush` | Design, UI, architecture, rights, graphics, the future regulated module note, asset registry, QA |
 

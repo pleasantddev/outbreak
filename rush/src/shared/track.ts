@@ -28,7 +28,11 @@ export interface TrackData {
   reverse?: boolean;
   base?: string;           // id of the forward layout for reverse variants
   traffic: TrafficSection[];
+  hazards?: TrackHazard[];  // potholes and spills the route designer left in the road, there all race
+  custom?: boolean;         // built in this browser from a player's own design: offline only, never in rooms
 }
+/** A permanent road hazard on the main loop: s along the lap, d across it (positive is right of the centre line). */
+export interface TrackHazard { kind: 'pothole' | 'purewater'; s: number; d: number }
 /** A stretch of the lap with civilian traffic. flow 1 runs with the race, -1 comes at you, 0 is a two way road. */
 export interface TrafficSection { s0: number; s1: number; flow: -1 | 0 | 1 }
 

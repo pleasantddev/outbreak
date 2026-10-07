@@ -15,6 +15,7 @@ import { currentCar, saveProfile, level } from '../../app/profile';
 import { raceReward, levelFromXp, type Reward } from '../../shared/economy';
 import type { SessionResult } from '../../game/session';
 import { fmtTime } from '../hud';
+import { designIdOf } from '../../app/designs';
 import type { TrackData } from '../../shared/track';
 
 export const MODES: { id: RaceMode; name: string; d: string }[] = [
@@ -38,7 +39,7 @@ export function trackCards(app: App, selected: string, act = 'track', filter: (t
       <canvas class="mini" data-thumb="${t.id}"></canvas>
       <div class="k">${esc(t.name)}</div>
       <div class="d">${esc(t.tagline)}</div>
-      <div class="meta"><span class="tag dark">${(t.length / 1000).toFixed(2)} KM</span><span class="tag dark">${laps(t.laps)}</span>${t.reverse ? '<span class="tag pink">REVERSE</span>' : ''}<span class="tag dark">PAR ${t.par.toFixed(0)}s</span></div>
+      <div class="meta"><span class="tag dark">${(t.length / 1000).toFixed(2)} KM</span><span class="tag dark">${laps(t.laps)}</span>${t.reverse ? '<span class="tag pink">REVERSE</span>' : ''}${t.custom ? '<span class="tag green">YOUR DESIGN</span>' : ''}<span class="tag dark">PAR ${t.par.toFixed(0)}s</span></div>
     </button>`).join('');
 }
 export function paintThumbs(app: App, root: HTMLElement) {
@@ -85,6 +86,14 @@ export function quickRace(app: App): Screen {
     start: () => launchQuick(app),
   });
   return { el: node, view: 'city' };
+}
+
+/** Straight onto the grid of a route from the designer, with a full field so the route gets a proper test. */
+export function testDrive(app: App, trackId: string) {
+  const td = app.stage!.tracks.find((t) => t.id === trackId);
+  if (!td) return;
+  qs = { track: td.id, mode: 'rush', laps: Math.min(td.laps, 2), opponents: 7, ai: 'normal', traffic: 1, time: 'dusk', weather: 'clear' };
+  launchQuick(app);
 }
 
 export function launchQuick(app: App) {
@@ -185,11 +194,12 @@ export function resultsScreen(app: App): Screen {
         ${rewardPanel(app, reward, levelUp, newRecord, r.bestLap)}
         <button class="btn" data-act="rematch" data-autofocus><span>Rematch</span></button>
         <button class="btn ghost" data-act="replay"><span>Watch replay</span></button>
-        <div class="row"><button class="btn ghost small" data-act="garage"><span>Garage</span></button><button class="btn ghost small" data-act="menu"><span>Main menu</span></button></div>
+        <div class="row"><button class="btn ghost small" data-act="garage"><span>Garage</span></button><button class="btn ghost small" data-act="menu"><span>Main menu</span></button>${designIdOf(td.id) ? '<button class="btn ghost small" data-act="designer"><span>Edit route</span></button>' : ''}</div>
       </div>
     </div>
   </div>`);
   acts(node, {
+    designer: () => { location.href = `/?dev=designer&design=${encodeURIComponent(designIdOf(td.id)!)}`; },
     rematch: () => { const lr = app.lastRace!; app.session?.dispose(); app.session = null; app.startRace(lr.track, { ...lr.cfg, seed: Math.floor(Math.random() * 1e9) }, lr.entrants, app.onRaceEnd ?? (() => {})); },
     replay: () => { app.watchReplay(); for (const s of [node]) s.remove(); },
     garage: () => { app.leaveRace(); app.show(mainMenu, true); app.show(garageScreen); },

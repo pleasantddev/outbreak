@@ -119,6 +119,11 @@ export class RaceSim {
       };
       this.cars.push(rc);
     });
+    // potholes and spills the route designer left in the road: there for the whole race, in every mode
+    for (const h of data.hazards ?? []) {
+      const p = this.track.pointAt(h.s, h.d);
+      this.hazards.push({ id: this.nextHazard++, kind: h.kind, owner: -1, x: p.x, y: p.y, z: p.z, h: p.h, s: h.s, d: h.d, vs: 0, target: -1, life: Infinity, armed: 0, perm: true });
+    }
     if (cfg.mode === 'rush') {
       data.pickups.forEach((row, ri) => row.d.forEach((d) => {
         const p = this.track.pointAt(row.s, d);
@@ -262,7 +267,7 @@ export class RaceSim {
           this.applyHit(o, 'horn', rc.idx, dx / (d || 1), dz / (d || 1));
         }
         this.hazards = this.hazards.filter((h) => {
-          const near = Math.hypot(h.x - c.x, h.z - c.z) < 11 && h.kind !== 'okada';
+          const near = Math.hypot(h.x - c.x, h.z - c.z) < 11 && h.kind !== 'okada' && !h.perm;
           if (near) this.events.push({ t: 'hazardGone', id: h.id, burst: true, x: h.x, y: h.y, z: h.z });
           return !near;
         });
@@ -340,7 +345,7 @@ export class RaceSim {
         }
         const p = this.track.pointAt(hz.s, hz.d);
         hz.x = p.x; hz.y = p.y; hz.z = p.z; hz.h = p.h;
-      } else if (!gone) {
+      } else if (!gone && !(hz.perm && hz.armed > 0)) {
         for (const rc of this.cars) {
           if (rc.idx === hz.owner && hz.armed > 0) continue;
           const c = rc.c;
@@ -352,7 +357,11 @@ export class RaceSim {
           }
           const dx = c.x - hz.x, dz = c.z - hz.z;
           if (dx * dx + dz * dz > (HAZARD_R[hz.kind] + 0.6) ** 2 || Math.abs(c.y - hz.y) > 1.6 || !c.grounded) continue;
-          if (this.applyHit(rc, hz.kind, hz.owner)) { if (hz.kind === 'purewater') { gone = true; burst = true; } else { hz.armed = 99; hz.life = Math.min(hz.life, 6); } }
+          if (this.applyHit(rc, hz.kind, hz.owner)) {
+            // a road pothole stays put and rests a moment, so the car that hit it is not hit again on the way out
+            if (hz.perm) { hz.armed = 0.9; break; }
+            if (hz.kind === 'purewater') { gone = true; burst = true; } else { hz.armed = 99; hz.life = Math.min(hz.life, 6); }
+          }
         }
       }
       if (gone) this.events.push({ t: 'hazardGone', id: hz.id, burst, x: hz.x, y: hz.y, z: hz.z });

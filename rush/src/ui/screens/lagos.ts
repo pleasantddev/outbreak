@@ -18,7 +18,7 @@ const LANDMARKS: { name: string; x: number; z: number; d: string }[] = [
 ];
 
 export function lagosMap(app: App): Screen {
-  const tracks = app.stage!.tracks.filter((t) => !t.reverse);
+  const tracks = app.stage!.tracks.filter((t) => !t.reverse && !t.custom);
   const td = app.stage!.tracks.find((t) => t.id === selTrack) ?? tracks[0];
   const node = el(`<div class="screen">
     ${topbar('Lagos', 'Oshodi, built from real map data')}

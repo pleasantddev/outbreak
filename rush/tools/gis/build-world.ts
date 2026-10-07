@@ -234,6 +234,19 @@ const published: WorldData = { ...world, roads: clippedRoads.map(({ nodes, ...r 
 
 fs.mkdirSync(path.join(root, 'public/world'), { recursive: true });
 fs.writeFileSync(path.join(root, 'public/world/oshodi.json'), JSON.stringify(published));
+
+// the road graph for the race designer and for players' own routes: every road with at least one end on the map,
+// so roads crossing the edge stay whole (the designer warns if a route wanders off the map). Edge ids are their
+// positions, so the kept edges are numbered again.
+const onMap = (id: number) => { const n = gNodes.get(id)!; return inBox([n.x, n.z]); };
+const keptEdges = gEdges.filter((e) => onMap(e.a) || onMap(e.b));
+const newId = new Map(keptEdges.map((e, i) => [e.id, i]));
+const designerGraph = {
+  nodes: [...gNodes.values()].filter((n) => n.edges.some((ei) => newId.has(ei))).map((n) => ({ ...n, edges: n.edges.filter((ei) => newId.has(ei)).map((ei) => newId.get(ei)!) })),
+  edges: keptEdges.map((e, i) => ({ ...e, id: i, pts: e.pts.map((q) => q.map(r1)) })),
+};
+fs.writeFileSync(path.join(root, 'public/world/graph.json'), JSON.stringify(designerGraph));
+console.log(`designer graph: ${designerGraph.nodes.length} nodes / ${designerGraph.edges.length} edges`);
 console.log(`world: ${clippedRoads.length} road pieces, ${buildings.length} buildings, ${terminals.length} terminals, ${footbridges.length} footbridges, ${rails.length} rails, ${areas.length} areas, ${points.length} points, graph ${gNodes.size} nodes / ${gEdges.length} edges`);
 
 // ---------------------------------------------------------------- tracks
@@ -248,7 +261,7 @@ fs.writeFileSync(path.join(root, 'public/world/tracks.json'), JSON.stringify(tra
 // provenance for the derivative database
 const provOut = {
   ...prov,
-  derivedFiles: ['public/world/oshodi.json', 'public/world/tracks.json'],
+  derivedFiles: ['public/world/oshodi.json', 'public/world/tracks.json', 'public/world/graph.json'],
   processing: [
     'Projected WGS84 to local metres (equirectangular, origin at the Oshodi Interchange, OSM node 1475182754).',
     'Classified highways into game road classes; widths from lanes where tagged.',
@@ -256,6 +269,7 @@ const provOut = {
     'Simplified building footprints, dropped footprints under 14 m², assigned categories and heights from tags, size and proximity to major roads.',
     'Extracted the three Oshodi Transport Interchange terminal footprints for hand-authored landmark treatment.',
     'Routed race tracks over the road graph between designer anchors, then smoothed, widened and decorated them for gameplay.',
+    'Published the road graph inside the map box for the race designer and for routes players design themselves.',
   ],
   generated: new Date().toISOString(),
 };

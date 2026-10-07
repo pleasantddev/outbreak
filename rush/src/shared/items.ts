@@ -51,7 +51,8 @@ export interface Hazard {
   vs: number;                     // rocket: speed along the track
   target: number;                 // rocket and okada: target car index, -1 none
   life: number;                   // seconds left
-  armed: number;                  // seconds until it can hit its own owner
+  armed: number;                  // seconds until it can hit its own owner; for a permanent hazard, anyone
+  perm?: boolean;                 // part of the road: never wears out, a horn cannot clear it
 }
 
 export const HAZARD_R: Record<HazardKind, number> = { purewater: 1.5, pothole: 1.9, rocket: 1.6, okada: 3.2 };

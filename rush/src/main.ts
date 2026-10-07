@@ -7,7 +7,9 @@ import '@fontsource/inter/600.css';
 import '@fontsource/jetbrains-mono/500.css';
 
 const params = new URLSearchParams(location.search);
-if (params.get('dev')) {
+if (params.get('dev') === 'designer') {
+  import('./dev/designer').then((m) => m.runDesigner(params));
+} else if (params.get('dev')) {
   import('./dev/viewer').then((m) => m.runViewer(params));
 } else {
   import('./app/app').then((m) => m.boot());

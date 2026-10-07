@@ -13,6 +13,8 @@ export type XZ = [number, number];
 export interface TrackLink { a: XZ; b: XZ; via?: XZ[]; w?: number; roadA?: number; roadB?: number }
 export interface TrackRampDef { at: XZ; side?: 'full' | 'left' | 'right'; h?: number; len?: number }
 export interface TrackShortcutDef { name: string; route: XZ[]; hw?: number }
+export interface TrackBoostDef { at: XZ; side?: 'left' | 'right' }
+export interface TrackHazardDef { at: XZ; kind?: 'pothole' | 'purewater' }
 export interface TrackDef {
   id: string; name: string; tagline: string; district: string; laps: number;
   /** Waypoints in driving order. Each snaps to the nearest road junction; the loop closes back to the first. */
@@ -28,6 +30,16 @@ export interface TrackDef {
   autoRamps?: number;
   pickupRows?: number;
   brtLanes?: number;
+  /** Designer placed pickup rows. When given they replace the automatic rows. */
+  pickups?: XZ[];
+  /** Designer placed BRT boost strips. When given they replace the automatic ones. */
+  boosts?: TrackBoostDef[];
+  /** Potholes and spills left in the road for the whole race. */
+  hazards?: TrackHazardDef[];
+  /** Designer placed checkpoints. When given they replace the evenly spaced ones. */
+  checkpoints?: XZ[];
+  /** Stretches closed to civilian traffic, each from one point to another in driving order. */
+  noTraffic?: [XZ, XZ][];
   avoid?: number[];
   reverse?: boolean;
   base?: string;
@@ -440,9 +452,21 @@ export function buildTrack(world: WorldData, def: TrackDef): { data: TrackData; 
   }
   ramps.sort((a, b) => a.s0 - b.s0);
 
-  // pickup rows on straights, away from the start and the ramps
-  const rows = def.pickupRows ?? clamp(Math.round(L / 520), 3, 6);
+  // pickup rows: designer placed, or on straights away from the start and the ramps
   const pickups: PickupRow[] = [];
+  const rowAt = (at: number) => {
+    const p = track.pointAt(at);
+    const count = p.hw > 7.6 ? 5 : 4;
+    const span2 = p.hw - 2.2;
+    pickups.push({ s: +at.toFixed(1), d: Array.from({ length: count }, (_, i) => +(-span2 + (2 * span2 * i) / (count - 1)).toFixed(2)) });
+  };
+  for (const at of def.pickups ?? []) {
+    const ps = nearestS(track, at[0], at[1]);
+    if (ps < 40 || ps > L - 20) { warnings.push(`pickup row at ${at} is on the start straight`); continue; }
+    rowAt(ps);
+  }
+  pickups.sort((a, b) => a.s - b.s);
+  const rows = def.pickups?.length ? 0 : def.pickupRows ?? clamp(Math.round(L / 520), 3, 6);
   for (let k = 0; k < rows; k++) {
     const target = (L * (k + 0.55)) / rows, span = L / (rows * 3);
     let bestS = target, bestC = Infinity;
@@ -453,15 +477,18 @@ export function buildTrack(world: WorldData, def: TrackDef): { data: TrackData; 
       const c = curvAbs(ss) + curvAbs(ss + 20) + curvAbs(ss - 20);
       if (c < bestC) { bestC = c; bestS = ss; }
     }
-    const p = track.pointAt(bestS);
-    const count = p.hw > 7.6 ? 5 : 4;
-    const span2 = p.hw - 2.2;
-    pickups.push({ s: +bestS.toFixed(1), d: Array.from({ length: count }, (_, i) => +(-span2 + (2 * span2 * i) / (count - 1)).toFixed(2)) });
+    rowAt(bestS);
   }
 
-  // BRT lane boost strips along the kerb on straights
+  // BRT lane boost strips along the kerb: designer placed, or on straights
   const boosts: BoostPad[] = [];
-  const lanes = def.brtLanes ?? 2;
+  for (const b of def.boosts ?? []) {
+    const bs = nearestS(track, b.at[0], b.at[1]);
+    const p = track.pointAt(bs);
+    const side = b.side ? (b.side === 'left' ? -1 : 1) : Math.sign((b.at[0] - p.x) * p.rx + (b.at[1] - p.z) * p.rz) || 1;
+    boosts.push({ s: +bs.toFixed(1), d: +(side * (p.hw - 2.0)).toFixed(2), len: 44, w: 3.2 });
+  }
+  const lanes = def.boosts?.length ? 0 : def.brtLanes ?? 2;
   for (let k = 0; k < lanes; k++) {
     let bestS = -1, bestScore = -Infinity;
     for (let s = 80; s < L - 80; s += 6) {
@@ -507,16 +534,34 @@ export function buildTrack(world: WorldData, def: TrackDef): { data: TrackData; 
   }
   intro.sort((a, b) => a[3] - b[3]);
 
-  // checkpoints and the par time from a simple speed profile
-  const cpN = Math.max(6, Math.round(L / 260));
-  const checkpoints = Array.from({ length: cpN - 1 }, (_, i) => +((L * (i + 1)) / cpN).toFixed(1));
+  // checkpoints: designer placed, or evenly spaced; then the par time from a simple speed profile
+  let checkpoints: number[];
+  if (def.checkpoints?.length) {
+    checkpoints = def.checkpoints.map((at) => nearestS(track, at[0], at[1])).filter((cs) => cs > 20 && cs < L - 20).sort((a, b) => a - b)
+      .filter((cs, i, all) => i === 0 || cs - all[i - 1] > 30).map((cs) => +cs.toFixed(1));
+    if (checkpoints.length < 2) warnings.push('fewer than two checkpoints: laps can be cut');
+  } else {
+    const cpN = Math.max(6, Math.round(L / 260));
+    checkpoints = Array.from({ length: cpN - 1 }, (_, i) => +((L * (i + 1)) / cpN).toFixed(1));
+  }
   const par = parTime(track);
-  const traffic = trafficSections(pts, L);
+  let traffic = trafficSections(pts, L);
+  for (const [a, b] of def.noTraffic ?? []) traffic = cutTraffic(traffic, nearestS(track, a[0], a[1]), nearestS(track, b[0], b[1]), L);
+
+  // potholes and spills: across the road where the designer put them, kept off the kerbs
+  const hazards = (def.hazards ?? []).map((h) => {
+    const hs = nearestS(track, h.at[0], h.at[1]);
+    const p = track.pointAt(hs);
+    const d = clamp((h.at[0] - p.x) * p.rx + (h.at[1] - p.z) * p.rz, -(p.hw - 1.2), p.hw - 1.2);
+    if (hs < 30 || hs > L - 30) warnings.push(`hazard at ${h.at} is on the start straight`);
+    return { kind: h.kind ?? 'pothole', s: +hs.toFixed(1), d: +d.toFixed(2) };
+  });
 
   const data: TrackData = {
     ...stubData(def, paths),
     length: +L.toFixed(1), checkpoints, pickups, ramps, boosts, grid, intro, landmarks, par, traffic,
   };
+  if (hazards.length) data.hazards = hazards;
   if (def.reverse) { data.reverse = true; data.base = def.base ?? def.id.replace(/-rev$/, ''); }
   return { data, warnings };
 }
@@ -554,7 +599,23 @@ function trafficSections(pts: Pt[], L: number) {
   return out;
 }
 
-function nearestS(track: Track, x: number, z: number) {
+/** Remove the stretch from s0 to s1 (in driving order, may wrap past the line) from the traffic sections. */
+function cutTraffic(secs: TrackData['traffic'], s0: number, s1: number, L: number): TrackData['traffic'] {
+  const cuts = s1 >= s0 ? [[s0, s1]] : [[s0, L], [0, s1]];
+  let out = secs;
+  for (const [c0, c1] of cuts) {
+    const next: TrackData['traffic'] = [];
+    for (const t of out) {
+      if (t.s1 <= c0 || t.s0 >= c1) { next.push(t); continue; }
+      if (t.s0 < c0) next.push({ ...t, s1: +c0.toFixed(1) });
+      if (t.s1 > c1) next.push({ ...t, s0: +c1.toFixed(1) });
+    }
+    out = next;
+  }
+  return out.filter((t) => t.s1 - t.s0 >= 150);
+}
+
+export function nearestS(track: Track, x: number, z: number) {
   const c = track.paths[0];
   let bi = 0, bd = Infinity;
   for (let i = 0; i < c.n; i++) { const d = (c.x[i] - x) ** 2 + (c.z[i] - z) ** 2; if (d < bd) { bd = d; bi = i; } }

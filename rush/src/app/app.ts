@@ -13,7 +13,8 @@ import { normaliseCode, type RaceStart, type ResultRow } from '../shared/protoco
 import type { TrackData } from '../shared/track';
 import { splashScreen } from '../ui/screens/splash';
 import { mainMenu } from '../ui/screens/main';
-import { resultsScreen, pauseScreen } from '../ui/screens/raceflow';
+import { resultsScreen, pauseScreen, testDrive } from '../ui/screens/raceflow';
+import { buildDesigns, designTrackId } from './designs';
 import { onlineResults, multiplayer, joinRoom } from '../ui/screens/online';
 import { ReplayPlayer } from '../game/replay';
 import { NetClient } from '../net/client';
@@ -78,6 +79,8 @@ export class App {
       console.error(err);
       return;
     }
+    // routes drawn in the race designer race offline next to the official ones
+    try { this.stage.tracks.push(...(await buildDesigns(this.stage.world))); } catch (err) { console.warn('designs not loaded', err); }
     this.emitProgress(0.96, 'Warming up');
     this.menu = new MenuScene(this.stage, this.stage.tracks[0]);
     const car = this.profile.garage.find((g) => g.carId === this.profile.current) ?? this.profile.garage[0];
@@ -95,6 +98,13 @@ export class App {
     this.emitProgress(1, 'Ready');
     (window as unknown as { __rushReady: boolean }).__rushReady = true;
     this.loop();
+    // ?test=<design> comes from the designer's Test drive button: straight onto the grid
+    const test = new URLSearchParams(location.search).get('test');
+    if (test) {
+      const id = designTrackId(test);
+      if (this.stage.tracks.some((t) => t.id === id)) testDrive(this, id);
+      else this.toast('That design does not build. Open it in the designer to see why.');
+    }
   }
 
   private emitProgress(f: number, label: string) { window.dispatchEvent(new CustomEvent('rush-progress', { detail: { f, label } })); }

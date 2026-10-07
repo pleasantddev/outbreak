@@ -30,13 +30,15 @@
     "Built a road graph from shared OSM nodes; assigned bridge heights of 6.5 m per layer and eased approaches at a 6.5% grade.",
     "Simplified building footprints, dropped footprints under 14 m², assigned categories and heights from tags, size and proximity to major roads.",
     "Extracted the three Oshodi Transport Interchange terminal footprints for hand-authored landmark treatment.",
-    "Routed race tracks over the road graph between designer anchors, then smoothed, widened and decorated them for gameplay."
+    "Routed race tracks over the road graph between designer anchors, then smoothed, widened and decorated them for gameplay.",
+    "Published the road graph inside the map box for the race designer and for routes players design themselves."
   ],
   "createsDerivativeDatabase": true,
   "derivativeDatabaseNote": "public/world/oshodi.json is a Derivative Database of OSM and is distributed under the ODbL 1.0.",
   "derivedFiles": [
     "public/world/oshodi.json",
-    "public/world/tracks.json"
+    "public/world/tracks.json",
+    "public/world/graph.json"
   ],
-  "generated": "2026-10-07T20:36:43.923Z"
+  "generated": "2026-10-07T23:19:26.454Z"
 }

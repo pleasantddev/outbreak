@@ -84,7 +84,8 @@ export function matchmaking(app: App): Screen {
 
 let draft: RoomConfig = { ...DEFAULT_ROOM };
 function configForm(app: App, c: RoomConfig) {
-  const tracks = app.stage!.tracks;
+  // rooms only race routes the server ships; designs stay offline
+  const tracks = app.stage!.tracks.filter((t) => !t.custom);
   return `
     <div class="field"><span class="lab">Route</span><div class="seg">${tracks.map((t) => `<button class="${t.id === c.track ? 'on' : ''}" data-act="cfg" data-k="track" data-v="${t.id}">${esc(t.name)}</button>`).join('')}</div></div>
     ${seg('Mode', MODES.filter((m) => m.id !== 'trial').map((m) => [m.id, m.name] as [string, string]), c.mode).replace(/data-act="seg"/g, 'data-act="cfg"').replace(/data-k="Mode"/g, 'data-k="mode"')}
