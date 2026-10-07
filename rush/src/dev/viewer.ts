@@ -13,6 +13,7 @@ import { Track, type TrackData } from '../shared/track';
 import type { WorldData } from '../shared/world';
 import { CARS, defaultLivery } from '../shared/cars';
 import { Props, type AdConfig } from '../render/props';
+import { loadFonts } from '../game/stage';
 
 export async function runViewer(params: URLSearchParams) {
   const canvas = document.getElementById('gl') as HTMLCanvasElement;
@@ -24,7 +25,7 @@ export async function runViewer(params: URLSearchParams) {
   const [world, tracks]: [WorldData, TrackData[]] = await Promise.all([fetch('/world/oshodi.json').then((r) => r.json()), fetch('/world/tracks.json').then((r) => r.json())]);
   const td = tracks.find((t) => t.id === (params.get('track') ?? 'terminal')) ?? tracks[0];
   const track = new Track(td);
-  await document.fonts.ready;
+  await loadFonts();
   const mats = new Materials();
   mats.build(Math.min(engine.maxAniso, settings.anisotropy));
   const atmos = new Atmosphere(engine.scene, engine.renderer);
@@ -88,5 +89,6 @@ export async function runViewer(params: URLSearchParams) {
   (window as any).__scene = engine.scene;
   (window as any).__engine = engine;
   (window as any).__THREE = THREE;
+  (window as any).__track = track;
   (window as any).__spots = () => ({ giant: props?.giantSpots ?? [], fliers: props?.flierSpots ?? [] });
 }

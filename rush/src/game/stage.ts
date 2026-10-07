@@ -36,7 +36,7 @@ export class Stage {
       fetch('ads/slots.json').then((r) => r.json()).catch(() => null) as Promise<AdConfig | null>,
     ]);
     progress(0.55, 'Painting the streets');
-    await document.fonts.ready;
+    await loadFonts();
     await new Promise((r) => setTimeout(r, 0));
     const stage = new Stage(engine, world, tracks, ads);
     progress(0.75, 'Raising the terminals');
@@ -82,6 +82,14 @@ export class Stage {
     this.engine.scene.add(this.landmarks.group);
     return this.landmarks;
   }
+}
+
+/** Billboards, plates and signs are drawn on canvases, which use whatever font is loaded at that moment. Fonts
+ *  only load when something asks for them, so ask explicitly before drawing anything. */
+export async function loadFonts() {
+  const faces = ['800 100px "Barlow Condensed"', '700 100px "Barlow Condensed"', '600 100px "Barlow Condensed"', '500 100px "Barlow Condensed"', '400 100px "Inter"', '600 100px "Inter"'];
+  try { await Promise.all(faces.map((f) => document.fonts.load(f))); } catch { /* fall back to system fonts */ }
+  await document.fonts.ready;
 }
 
 export function disposeTree(o: THREE.Object3D) {

@@ -130,14 +130,22 @@ export function creativeTexture(c: Creative, W = 1024, H = 384) {
 }
 
 export interface HouseCreative { headline: string; sub: string; cta: string; bg: string; fg: string; accent: string }
+/** Set the font, shrinking it until the text fits the width: an advertiser's headline can be any length. */
+function fitFont(g: CanvasRenderingContext2D, text: string, weight: number, size: number, maxW: number) {
+  g.font = F(weight, size);
+  const w = g.measureText(text).width;
+  if (w > maxW) g.font = F(weight, Math.floor(size * (maxW / w)));
+}
+
 export function houseTexture(h: HouseCreative, W = 2048, H = 768) {
   const cv = canvas(W, H), g = cv.getContext('2d')!;
   g.fillStyle = h.bg; g.fillRect(0, 0, W, H);
   g.fillStyle = h.accent; g.fillRect(0, 0, W, H * 0.06); g.fillRect(0, H * 0.94, W, H * 0.06);
-  g.fillStyle = h.fg; g.font = F(800, H * 0.3); g.textAlign = 'center';
+  g.fillStyle = h.fg; g.textAlign = 'center';
+  fitFont(g, h.headline, 800, H * 0.3, W * 0.92);
   g.fillText(h.headline, W / 2, H * 0.42);
   g.font = F(600, H * 0.085); wrapText(g, h.sub, W / 2, H * 0.6, W * 0.85, H * 0.1);
-  g.fillStyle = h.accent; g.font = F(700, H * 0.07); g.fillText(h.cta.toUpperCase(), W / 2, H * 0.84);
+  g.fillStyle = h.accent; fitFont(g, h.cta.toUpperCase(), 700, H * 0.07, W * 0.9); g.fillText(h.cta.toUpperCase(), W / 2, H * 0.84);
   return tex(cv, { repeat: false });
 }
 

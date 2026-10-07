@@ -44,7 +44,8 @@ export class Props {
   lightPools: THREE.InstancedMesh | null = null;
   billboardLights: THREE.MeshStandardMaterial[] = [];
   crowd: THREE.InstancedMesh | null = null;
-  private crowdBase: { x: number; y: number; z: number; h: number; ph: number }[] = [];
+  private crowdBase: { x: number; y: number; z: number; h: number; ph: number; s: number }[] = [];
+  private crowdBody: THREE.InstancedMesh | null = null;
   private rng: Rng;
   private bgrid: BuildingGrid;
   private dummy = new THREE.Object3D();
@@ -53,8 +54,9 @@ export class Props {
     this.rng = new Rng(track.data.id.length * 131 + 7);
     this.bgrid = new BuildingGrid(buildings);
     this.group.name = 'props';
-    this.billboards();
+    // the giant boards claim their spots first so no ordinary billboard ends up in front of them
     this.giantBoards();
+    this.billboards();
     this.roadSigns();
     this.posters();
     this.streetLights();
@@ -113,7 +115,8 @@ export class Props {
       // place facing back down the road toward approaching racers, angled toward the track
       for (let attempt = 0; attempt < 4; attempt++) {
         const b = this.beside(s, side, this.rng.range(6, 11));
-        if (this.bgrid.blocked(b.x, b.z, 2.5) || this.trackNear(b.x, b.z, 3)) { side = -side; continue; }
+        const nearGiant = this.giantSpots.some((g) => Math.hypot(g.x - b.x, g.z - b.z) < 45);
+        if (nearGiant || this.bgrid.blocked(b.x, b.z, 2.5) || this.trackNear(b.x, b.z, 3)) { side = -side; continue; }
         const face = b.h + Math.PI + side * 0.42;
         this.billboardAt(b.x, b.y, b.z, face, 12, 4.5, 8 + this.rng.range(0, 3), mats[ci % mats.length], steel);
         ci++;
@@ -228,8 +231,10 @@ export class Props {
         const ss = s + (k - n / 2) * this.rng.range(0.55, 0.75);
         const q = tr.pointAt(ss, 0, 0, false);
         const d = (q.hw + 0.35 - 0.06) * side;
-        const x = q.x + q.rx * d, z = q.z + q.rz * d;
-        this.dummy.position.set(x, q.y + 0.42 + this.rng.range(-0.04, 0.05), z);
+        // the barrier follows the road's banking, so take the height at the barrier, not at the centreline
+        const atBarrier = tr.pointAt(ss, d, 0, false);
+        const x = atBarrier.x, z = atBarrier.z;
+        this.dummy.position.set(x, atBarrier.y + 0.42 + this.rng.range(-0.04, 0.05), z);
         this.dummy.rotation.set(0, Math.atan2(-q.rx * side, -q.rz * side), this.rng.range(-0.08, 0.08));
         this.dummy.rotateX(-0.28); // the jersey face leans back
         this.dummy.scale.setScalar(0.62);
@@ -436,15 +441,25 @@ export class Props {
     const spots: number[] = [];
     for (let s = L - 70; s < L + 50; s += 1.6) spots.push(s % L);
     for (let s = 0; s < L; s += 4) if (Math.abs(tr.curvatureAt(s)) > 0.06) for (let k = 0; k < 4; k++) spots.push(s + k);
-    const people = new GeoBuilder();
-    // one person: legs, torso, head; colours vary per instance through instanceColor
-    people.setColor([0.15, 0.15, 0.2]); people.box(0, 0, 0, 0.32, 0.85, 0.2);
-    people.setColor([1, 1, 1]); people.box(0, 0.85, 0, 0.44, 0.62, 0.26);
-    people.setColor([0.32, 0.2, 0.13]); people.box(0, 1.5, 0, 0.22, 0.24, 0.22);
-    const geo = people.build();
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
+    // one person in two meshes sharing the same instances: clothes take a colour per instance, while skin, trousers
+    // and shoes keep their own, so a red shirt never tints a face
+    const clothesG = new GeoBuilder(), bodyG = new GeoBuilder();
+    clothesG.setColor([1, 1, 1]);
+    clothesG.cylinder(0, 0.86, 0, 0.19, 0.6, 8, true, 0.23);                       // torso, wider at the shoulders
+    for (const sd of [-1, 1]) clothesG.strut([sd * 0.25, 1.4, 0], [sd * 0.4, 1.78, 0.06], 0.1);  // sleeves, arms up
+    bodyG.setColor([0.12, 0.12, 0.16]);
+    for (const sd of [-1, 1]) bodyG.box(sd * 0.09, 0.06, 0, 0.13, 0.82, 0.15);     // trousers
+    bodyG.setColor([0.05, 0.05, 0.05]);
+    for (const sd of [-1, 1]) bodyG.box(sd * 0.09, 0, 0.03, 0.14, 0.07, 0.24);     // shoes
+    bodyG.setColor([0.36, 0.22, 0.14]);
+    bodyG.sphere(0, 1.6, 0, 0.12, 8, 6);                                           // head
+    for (const sd of [-1, 1]) bodyG.sphere(sd * 0.41, 1.81, 0.06, 0.05, 6, 4);     // hands
+    bodyG.cylinder(0, 1.44, 0, 0.05, 0.06, 6, false);                               // neck
+    const clothesMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: THREE.DoubleSide });
+    const bodyMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 });
     const max = Math.min(900, Math.round(spots.length * 2 * this.opts.density));
-    const im = new THREE.InstancedMesh(geo, mat, max);
+    const im = new THREE.InstancedMesh(clothesG.build(), clothesMat, max);
+    this.crowdBody = new THREE.InstancedMesh(bodyG.build(), bodyMat, max);
     const clothes = [0xd0141c, 0xf2c200, 0x1d4fb8, 0x2a9d4a, 0xff6a00, 0xffffff, 0x8a2ad6, 0x0a7a3c, 0xff2d8a, 0x111111];
     let n = 0;
     for (const s of spots) {
@@ -453,24 +468,26 @@ export class Props {
       const b = this.beside(s, side, this.rng.range(1.1, 3.2));
       if (b.y > 1.5 || this.bgrid.blocked(b.x, b.z, 0.3) || this.trackNear(b.x, b.z, 0.6)) continue;
       const h = Math.atan2(-b.rx * side, -b.rz * side) + this.rng.range(-0.5, 0.5);
-      this.crowdBase.push({ x: b.x, y: 0, z: b.z, h, ph: this.rng.next() * 6.28 });
+      this.crowdBase.push({ x: b.x, y: 0, z: b.z, h, ph: this.rng.next() * 6.28, s: this.rng.range(0.92, 1.08) });
       im.setColorAt(n, new THREE.Color(clothes[this.rng.int(0, clothes.length - 1)]));
       n++;
     }
-    im.count = n;
+    im.count = n; this.crowdBody.count = n;
     this.crowd = im;
     this.updateCrowd(0);
-    this.group.add(im);
+    this.group.add(im, this.crowdBody);
   }
 
   updateCrowd(t: number) {
-    if (!this.crowd) return;
+    if (!this.crowd || !this.crowdBody) return;
     this.crowdBase.forEach((p, i) => {
       const jump = Math.max(0, Math.sin(t * 6 + p.ph)) * 0.18;
-      this.dummy.position.set(p.x, p.y + jump, p.z); this.dummy.rotation.set(0, p.h, 0); this.dummy.scale.setScalar(1); this.dummy.updateMatrix();
+      this.dummy.position.set(p.x, p.y + jump, p.z); this.dummy.rotation.set(0, p.h, 0); this.dummy.scale.setScalar(p.s); this.dummy.updateMatrix();
       this.crowd!.setMatrixAt(i, this.dummy.matrix);
+      this.crowdBody!.setMatrixAt(i, this.dummy.matrix);
     });
     this.crowd.instanceMatrix.needsUpdate = true;
+    this.crowdBody.instanceMatrix.needsUpdate = true;
   }
 
   /** Danfos and BRT buses waiting at the terminals. */

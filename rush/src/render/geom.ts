@@ -82,6 +82,24 @@ export class GeoBuilder {
     }
   }
 
+  /** Low poly UV sphere centred at (x, y, z). */
+  sphere(x: number, y: number, z: number, r: number, wSeg = 8, hSeg = 6) {
+    const base = this.count;
+    for (let j = 0; j <= hSeg; j++) {
+      const v = j / hSeg, ph = v * Math.PI;
+      for (let i = 0; i <= wSeg; i++) {
+        const u = i / wSeg, th = u * Math.PI * 2;
+        const nx = Math.sin(ph) * Math.cos(th), ny = Math.cos(ph), nz = Math.sin(ph) * Math.sin(th);
+        this.vertex(x + nx * r, y + ny * r, z + nz * r, nx, ny, nz, u, v);
+      }
+    }
+    for (let j = 0; j < hSeg; j++) for (let i = 0; i < wSeg; i++) {
+      const a = base + j * (wSeg + 1) + i, b = a + wSeg + 1;
+      if (j > 0) this.idx.push(a, a + 1, b);
+      if (j < hSeg - 1) this.idx.push(a + 1, b + 1, b);
+    }
+  }
+
   /** A thin strut between two points (square section), for trusses, space frames and pylons. */
   strut(a: number[], b: number[], t: number) {
     const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
