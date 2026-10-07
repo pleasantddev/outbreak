@@ -6,6 +6,16 @@ A supernatural battle royale set in a dying Lagos. Twelve survivors drop into Os
 
 This repository holds the game bible and a playable browser vertical slice.
 
+![Firefight on a wet Oshodi street](docs/screens/05_firefight.jpg)
+
+| | |
+|---|---|
+| ![Lobby](docs/screens/01_lobby.jpg) | ![Operator customization](docs/screens/02_operators.jpg) |
+| ![Creatures in the rain](docs/screens/06_creatures.jpg) | ![The Heart wakes](docs/screens/11_heart_wakes.jpg) |
+| ![Rooftop](docs/screens/08_rooftop.jpg) | ![Awakened](docs/screens/12_awakened.jpg) |
+
+More in `docs/screens`. These were captured with software rendering in a headless browser, so a real GPU looks sharper.
+
 ## Play it
 
 ```bash
