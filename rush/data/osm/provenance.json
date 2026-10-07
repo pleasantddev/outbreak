@@ -1,0 +1,30 @@
+{
+  "source": "OpenStreetMap via Overpass API",
+  "endpoint": "https://overpass-api.de/api/interpreter",
+  "query": "[out:json][timeout:120];\n(\n  way[\"highway\"](6.5455,3.3395,6.5665,3.3625);\n  way[\"building\"](6.5455,3.3395,6.5665,3.3625);\n  way[\"building:part\"](6.5455,3.3395,6.5665,3.3625);\n  way[\"railway\"](6.5455,3.3395,6.5665,3.3625);\n  way[\"waterway\"](6.5455,3.3395,6.5665,3.3625);\n  way[\"natural\"=\"water\"](6.5455,3.3395,6.5665,3.3625);\n  way[\"landuse\"](6.5455,3.3395,6.5665,3.3625);\n  way[\"leisure\"](6.5455,3.3395,6.5665,3.3625);\n  way[\"amenity\"](6.5455,3.3395,6.5665,3.3625);\n  way[\"man_made\"=\"bridge\"](6.5455,3.3395,6.5665,3.3625);\n  relation[\"building\"](6.5455,3.3395,6.5665,3.3625);\n  node[\"highway\"=\"traffic_signals\"](6.5455,3.3395,6.5665,3.3625);\n  node[\"highway\"=\"bus_stop\"](6.5455,3.3395,6.5665,3.3625);\n  node[\"amenity\"](6.5455,3.3395,6.5665,3.3625);\n);\nout body geom qt;",
+  "area": {
+    "name": "Oshodi, Lagos",
+    "south": 6.5455,
+    "west": 3.3395,
+    "north": 6.5665,
+    "east": 3.3625
+  },
+  "acquired": "2026-10-07T18:24:03.694Z",
+  "osmBaseTimestamp": "2026-10-07T18:22:06Z",
+  "license": "ODbL-1.0",
+  "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "attribution": "© OpenStreetMap contributors. Available under the Open Database License.",
+  "attributionUrl": "https://www.openstreetmap.org/copyright",
+  "coverage": "Bounding box around the Oshodi Transport Interchange, Lagos, Nigeria",
+  "elementCounts": {
+    "node": 26,
+    "railway": 5,
+    "highway": 649,
+    "landuse": 27,
+    "building": 6916,
+    "way": 30
+  },
+  "processing": "Raw extract. See tools/gis/build-world.ts for the transformation into the game world database.",
+  "createsDerivativeDatabase": true,
+  "derivativeDatabaseNote": "public/world/oshodi.json is a Derivative Database of OSM and is distributed under the ODbL 1.0."
+}
