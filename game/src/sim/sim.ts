@@ -127,11 +127,20 @@ export class Sim {
       inv.addStack('ammo_light', 36);
       inv.addStack('bandage', 2);
       inv.abilities[0] = { id: arch.ability, rank: 0, cd: 0 };
+      // loadout archetype: land with its signature weapon and a light reserve
+      let startSlot: 0 | 1 = 1;
+      if (arch.primary !== 'pistol') {
+        const w: WeaponItem = { kind: 'weapon', id: arch.primary, mag: 0, att: bot ? {} : { ...this.attFromArmory(arch.primary) }, skin: skinOf(arch.primary) };
+        w.mag = weaponStats(w).mag;
+        inv.primary = w; startSlot = 0;
+        const st = AMMO_STACK[WEAPONS[arch.primary].ammo]!;
+        inv.addStack(st, st === 'ammo_shells' ? 8 : st === 'ammo_sniper' ? 5 : 30);
+      }
       if (arch.startArmor) inv.armor = { kind: 'armor', level: 1, hp: arch.startArmor };
       const a: Actor = {
         id: i, name: bot ? BOT_NAMES[(i * 7 + this.opts.seed) % BOT_NAMES.length] : this.opts.name, bot, alive: true, look, archetype,
         pos, vy: 0, yaw: this.rng.range(0, Math.PI * 2), pitch: 0, ext: v3(), body, collider,
-        hp: PLAYER.hp, maxHp: PLAYER.hp, inv, slot: 1, fireCd: 0, reloadT: 0, reloadTotal: 0, healT: 0, healKind: null,
+        hp: PLAYER.hp, maxHp: PLAYER.hp, inv, slot: startSlot, fireCd: 0, reloadT: 0, reloadTotal: 0, healT: 0, healKind: null,
         crouch: false, sprinting: false, aiming: false, grounded: true, swimming: false, mantleT: 0,
         vehicle: null, seat: -1, shadowT: 0, awakenT: 0, heart: false, flashlight: true,
         lastHurt: -99, lastShot: -99, lastStep: 0, lastPing: 0, anim: 'idle', speed: 0, recoil: 0,

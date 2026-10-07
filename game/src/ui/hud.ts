@@ -82,6 +82,8 @@ export class Hud {
       <div class="weapon"><div class="wname" data-e="wname"></div><div class="ammo" data-e="ammo"></div><div class="atts" data-e="atts"></div>
         <div class="slots" data-e="slots"></div><div class="abilities" data-e="abs"></div><div class="items" data-e="items"></div></div>
       <div class="fps hidden" data-e="fps"></div>
+      <div class="lockhint hidden" data-e="lock">Click to take control</div>
+      <div class="ctrlhint" data-e="ctrl">${touch ? 'Left stick to move / drag right side to look / Use to loot and drive' : 'WASD move / Shift sprint / Space jump and vault / C crouch / E loot, drive, take the Heart / Q X abilities / G frag / H heal / L light / M map / Tab bag'}</div>
       <div data-e="overlay"></div>
       ${touch ? this.touchHtml() : ''}`;
     root.querySelectorAll('[data-e]').forEach((e) => (this.els[(e as HTMLElement).dataset.e!] = e as HTMLElement));
@@ -141,8 +143,10 @@ export class Hud {
     while (this.els.toasts.children.length > 5) this.els.toasts.firstChild?.remove();
   }
 
-  update(dt: number, camYaw: number, scoped: boolean) {
+  update(dt: number, camYaw: number, scoped: boolean, locked = true) {
     const s = this.sim, me = s.local;
+    this.els.lock.classList.toggle('hidden', locked || this.touch || this.overlay !== 'none' || !me.alive);
+    if (s.time > 14 && !this.els.ctrl.classList.contains('gone')) this.els.ctrl.classList.add('gone');
     this.camYaw = camYaw;
     this.frames++; this.fpsT += dt; if (this.fpsT > 0.5) { this.fps = this.frames / this.fpsT; this.frames = 0; this.fpsT = 0; }
     this.els.fps.classList.toggle('hidden', !this.showFps);

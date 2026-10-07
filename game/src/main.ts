@@ -205,7 +205,7 @@ class Match {
     audio.setListener(this.view.engine.camera.position, this.view.cam.yaw);
     audio.tick(dt, me.alive ? Math.max(0, 1 - me.hp / 35) : 0, this.sim.heart.active);
     audio.generators(this.sim.city.props.filter((p) => p.type === 'generator' && Math.hypot(p.p[0] - me.pos.x, p.p[2] - me.pos.z) < 40).slice(0, 3).map((p) => ({ x: p.p[0], y: 1, z: p.p[2] })));
-    this.hud.update(dt, this.view.cam.yaw, camInfo.scoped);
+    this.hud.update(dt, this.view.cam.yaw, camInfo.scoped, this.input.locked);
     if ((!me.alive || me.won || this.sim.ended) && !this.deadShown) { this.deadShown = true; setTimeout(() => this.hud.showEnd(), me.won || this.sim.ended ? 2500 : 1800); this.input.releasePointer(); }
   }
   dispose() { this.input.dispose(); audio.stopAll(); this.view.dispose(); disposeMaterials(); $('hud').innerHTML = ''; }
