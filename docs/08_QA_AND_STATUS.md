@@ -29,7 +29,7 @@ Headless software rendering runs at about 10 frames per second, so these runs ch
 | Vehicles: okada, danfo, SUV, part damage, hijack, run overs | PARTIALLY TESTED (danfo drive test) |
 | Bots: loot, navigate buildings, fight, chase the Heart, extract | PARTIALLY TESTED (bot debug run and match test) |
 | Creatures: Crawler, Hollow, Stalker, flashlight freeze | PARTIALLY TESTED (spawned and fought in browser) |
-| Characters: clothing shader, prints, gear, hair, layered animation | TESTED (lineup render) |
+| Characters: clothing shader, prints, gear, hair, layered animation, rifle IK | TESTED (lineup render and match screenshots) |
 | Weapons with skins and visible attachments | TESTED (armory render) |
 | Lobby, Operators, Armory, Dossier, Settings, drop map | TESTED (browser run) |
 | HUD, minimap, map, inventory, pause, end screen | PARTIALLY TESTED (HUD in every match screenshot) |
@@ -40,7 +40,7 @@ Headless software rendering runs at about 10 frames per second, so these runs ch
 
 ## Known issues
 
-* Rifles use the pistol aim pose, so rifles are held two handed close to the chest rather than shouldered. Shouldered rifle animations are the next animation task.
+* Long guns are shouldered with procedural two bone arm IK on top of the pistol upper body clips. It reads well in third person, but the off hand grip is approximate on very steep aim angles.
 * Strafing plays forward walk cycles with the body turned toward the aim, and backpedalling reverses them. There are no dedicated strafe clips yet.
 * Bots never drive.
 * The JavaScript bundle is about 5.3 MB raw (2 MB gzipped), mostly Rapier's embedded WASM.

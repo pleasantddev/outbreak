@@ -8,6 +8,38 @@ import type { CreatureKind, WeaponId } from '../data/balance';
 import type { WeaponLoadout } from '../data/cosmetics';
 import { buildWeapon, type WeaponModel } from './weapons3d';
 
+const LONG_GUNS = new Set<WeaponId>(['ar', 'smg', 'shotgun', 'sniper']);
+const FOREGRIP: Partial<Record<WeaponId, number>> = { smg: 0.24, ar: 0.42, shotgun: 0.42, sniper: 0.46 };
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+
+function rotateBoneWorld(bone: THREE.Object3D, from: THREE.Vector3, to: THREE.Vector3) {
+  const q = new THREE.Quaternion().setFromUnitVectors(from, to);
+  const pq = bone.parent!.getWorldQuaternion(new THREE.Quaternion());
+  bone.quaternion.premultiply(pq.clone().invert().multiply(q).multiply(pq));
+  bone.updateMatrixWorld(true);
+}
+function setWorldQuat(bone: THREE.Object3D, q: THREE.Quaternion) {
+  const pq = bone.parent!.getWorldQuaternion(new THREE.Quaternion());
+  bone.quaternion.copy(pq.invert().multiply(q));
+  bone.updateMatrixWorld(true);
+}
+/** Analytic two-bone IK in world space with a pole hint for the elbow. */
+export function twoBoneIK(a: THREE.Object3D, b: THREE.Object3D, c: THREE.Object3D, target: THREE.Vector3, pole: THREE.Vector3) {
+  const pa = a.getWorldPosition(V()), pb = b.getWorldPosition(V()), pc = c.getWorldPosition(V());
+  const la = pa.distanceTo(pb), lb = pb.distanceTo(pc);
+  const toT = target.clone().sub(pa);
+  const d = THREE.MathUtils.clamp(toT.length(), 0.02, la + lb - 0.002);
+  const dirT = toT.normalize();
+  const n = V().crossVectors(dirT, pole.clone().sub(pa)).normalize();
+  if (n.lengthSq() < 1e-6) return;
+  const bend = V().crossVectors(n, dirT).normalize();
+  const cosA = THREE.MathUtils.clamp((la * la + d * d - lb * lb) / (2 * la * d), -1, 1);
+  const mid = pa.clone().addScaledVector(dirT, cosA * la).addScaledVector(bend, Math.sqrt(1 - cosA * cosA) * la);
+  rotateBoneWorld(a, pb.clone().sub(pa).normalize(), mid.clone().sub(pa).normalize());
+  const pb2 = b.getWorldPosition(V()), pc2 = c.getWorldPosition(V());
+  rotateBoneWorld(b, pc2.clone().sub(pb2).normalize(), target.clone().sub(pb2).normalize());
+}
+
 const UPPER = /^(spine_0[1-3]|neck_01|Head|clavicle_|upperarm_|lowerarm_|hand_|index_|middle_|pinky_|ring_|thumb_)/;
 
 export class CharacterAssets {
@@ -248,6 +280,8 @@ export class CharacterView {
   private eyeMat: THREE.MeshStandardMaterial | null = null;
   bodyMesh: THREE.SkinnedMesh | null = null;
   baseMat: THREE.MeshStandardMaterial | null = null;
+  private gunInHand = new THREE.Matrix4();
+  private kick = 0;
 
   constructor(assets: CharacterAssets, look: CharacterLook, creature: CreatureKind | null = null, seed = Math.random() * 100) {
     this.assets = assets;
@@ -326,6 +360,7 @@ export class CharacterView {
     desired.setPosition(hand.x - 0.075, hand.y - 0.035, hand.z + 0.02);
     const local = new THREE.Matrix4().copy(this.handR.matrixWorld).invert().multiply(desired);
     local.decompose(w.root.position, w.root.quaternion, w.root.scale);
+    this.gunInHand = local.clone();
     restore();
     this.model.scale.copy(sc); this.model.quaternion.copy(prevQ);
     this.handR.add(w.root);
@@ -419,6 +454,8 @@ export class CharacterView {
     if (this.weapon) this.weapon.root.visible = s.armed && s.awaken <= 0 && !s.driving;
     if (s.driving && this.weapon) this.weapon.root.visible = false;
 
+    if (s.firing && !s.melee) this.kick = Math.min(1, this.kick + 0.6);
+    this.kick = Math.max(0, this.kick - dt * 9);
     // aim pitch: bend the spine toward the crosshair
     if (armedUpper && (s.aiming || s.firing)) {
       this.model.updateMatrixWorld(true);
@@ -431,6 +468,32 @@ export class CharacterView {
         b.updateMatrixWorld(true);
       }
     }
+    if (armedUpper && s.weapon && LONG_GUNS.has(s.weapon) && this.weapon) this.shoulderRifle(s);
+  }
+
+  /** Long guns: place the gun at the shoulder along the aim and pull both hands onto it with two-bone IK. */
+  private shoulderRifle(s: CharState) {
+    const B = (n: string) => this.bones.get(n)!;
+    const chestB = B('spine_03'), ua = B('upperarm_r'), la = B('lowerarm_r'), ha = B('hand_r'), ub = B('upperarm_l'), lb = B('lowerarm_l'), hb = B('hand_l');
+    if (!chestB || !ua || !la || !ha || !ub || !lb || !hb) return;
+    this.model.updateMatrixWorld(true);
+    const up = V(0, 1, 0);
+    const aimed = s.aiming || s.firing;
+    const pitch = aimed ? s.pitch : -0.55;
+    const yaw = this.yaw + (aimed ? 0 : 0.35);
+    const dir = V(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+    const right = V(-Math.cos(this.yaw), 0, Math.sin(this.yaw));
+    const chest = chestB.getWorldPosition(V());
+    const pos = chest.clone().addScaledVector(up, aimed ? 0.15 : -0.02).addScaledVector(right, aimed ? 0.15 : 0.12).addScaledVector(dir, (aimed ? 0.2 : 0.28) - this.kick * 0.05);
+    const x = V().crossVectors(up, dir).normalize(), y = V().crossVectors(dir, x);
+    const G = new THREE.Matrix4().makeBasis(x, y, dir).setPosition(pos);
+    const H = G.clone().multiply(new THREE.Matrix4().copy(this.gunInHand).invert());
+    const handPos = V().setFromMatrixPosition(H), handQ = new THREE.Quaternion().setFromRotationMatrix(H);
+    twoBoneIK(ua, la, ha, handPos, chest.clone().addScaledVector(right, 0.5).addScaledVector(up, -0.6).addScaledVector(dir, -0.1));
+    setWorldQuat(ha, handQ);
+    const fore = FOREGRIP[s.weapon!] ?? 0.35;
+    const leftT = V(0, -0.02, fore).applyMatrix4(G).addScaledVector(right, 0.02);
+    twoBoneIK(ub, lb, hb, leftT, chest.clone().addScaledVector(right, -0.45).addScaledVector(up, -0.7).addScaledVector(dir, 0.15));
   }
 
   private updateCreature(s: CharState) {

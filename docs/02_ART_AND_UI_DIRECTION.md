@@ -43,7 +43,7 @@ ACES tone mapping, mipmap bloom, a custom split tone grade with crushed blacks a
 ## Characters
 
 * **Bodies.** Quaternius Universal Base Characters (CC0), masculine and feminine, rigged to the Universal Animation Library skeleton.
-* **Animation.** Universal Animation Library 1 and 2 (CC0): locomotion, crouch, sprint, jump, swim, drive, pistol aim and shoot and reload, melee, spell cast, climb, death, hit reactions and zombie walk, idle and scratch. The upper and lower body play separately so a survivor can aim while running.
+* **Animation.** Universal Animation Library 1 and 2 (CC0): locomotion, crouch, sprint, jump, swim, drive, pistol aim and shoot and reload, melee, spell cast, climb, death, hit reactions and zombie walk, idle and scratch. The upper and lower body play separately so a survivor can aim while running. Long guns are shouldered with two bone arm IK: the gun sits at the shoulder along the aim and both hands are pulled onto the grip and foregrip, with a procedural recoil kick.
 * **Clothing shader.** Clothing regions are worked out from the bind pose skeleton (sleeve length, waist, ankles, neckline) and painted procedurally with fabric weave, grime at the hems, mud on the legs and blood driven by a wear slider. Clothing sits slightly proud of the skin so silhouettes read.
 * **Prints with Lagos identity.** Ankara Sunburst, Ankara Lagoon Wave, Adire Indigo, Strip Weave, Urban Camo, Night Camo and Danfo Stripe.
 * **Tops.** Street Tee, Hoodie with kangaroo pocket, Bomber Jacket with zip and cuffs, Tactical Shirt with chest pockets, and a Short Agbada with an embroidered neckline that falls to the knee.

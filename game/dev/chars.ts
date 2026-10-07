@@ -12,6 +12,7 @@ const fl = new THREE.Mesh(new THREE.PlaneGeometry(30, 30).rotateX(-Math.PI / 2),
 const A = new CharacterAssets(); await A.load();
 const params = new URLSearchParams(location.search);
 const pose = params.get('pose') ?? 'aim';
+const firing = params.get('fire') === '1';
 const list: CharacterView[] = [];
 const looks = [...OPERATORS.map(o => o.look), { ...OPERATORS[0].look, top: 'agbada', topPattern: 'kente', topColor: '#e8e0d0', topAccent: '#d9a441', head: 'fila', body: 'male' } as any];
 looks.forEach((l, i) => { const v = new CharacterView(A, l); v.root.position.x = -4 + i * 1.6; s.add(v.root); v.setWeapon(['ar', 'pistol', 'shotgun', 'smg', 'sniper'][i] as any, { skin: ['ankara', 'factory', 'blood', 'night', 'gold'][i] as any, optic: i === 0 ? 'reddot' : i === 4 ? 'scope4' : null, muzzle: i === 3 ? 'suppressor' : null }); list.push(v); });
