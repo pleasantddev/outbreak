@@ -1,7 +1,7 @@
 // The room client: one WebSocket, automatic reconnect with the same identity, clock sync, and a snapshot buffer that
 // lets other cars be drawn 100 ms in the past so they glide instead of jitter.
 import type { App } from '../app/app';
-import { PROTOCOL_VERSION, type ClientMsg, type ServerMsg, type RoomView, type RaceStart, type ResultRow, type RoomConfig, type PlayerCard, type SnapCar, type SnapHazard } from '../shared/protocol';
+import { PROTOCOL_VERSION, packState, unpackCar, unpackHazard, type ClientMsg, type ServerMsg, type RoomView, type RaceStart, type ResultRow, type RoomConfig, type PlayerCard, type SnapCar, type SnapHazard } from '../shared/protocol';
 import type { NetLink } from '../game/session';
 import type { RaceEvent, RemoteSnap } from '../shared/race';
 import { currentCar, level } from '../app/profile';
@@ -38,40 +38,50 @@ export class NetClient {
   }
   get serverNow() { return Date.now() + this.offset; }
   onChange(fn: () => void) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
-  private changed() { for (const l of this.listeners) l(); }
+  // iterate a copy: listeners re-render screens, which subscribe again, and a live Set would visit those too
+  private changed() { for (const l of [...this.listeners]) l(); }
 
   card(): PlayerCard {
     const p = this.app.profile, car = currentCar(p);
     return { id: p.id, name: p.name, crew: p.crew, color: p.color, level: level(p).level, carId: car.carId, livery: car.livery };
   }
 
+  /** Screens call this: start connecting unless a socket is already open or we are waiting out a retry. */
+  ensure() { this.wanted = true; if (!this.ws && this.retryT <= 0) this.connect(); }
+
   connect() {
     this.wanted = true;
-    if (this.ws && (this.status === 'online' || this.status === 'connecting')) return;
-    this.status = 'connecting'; this.changed();
+    if (this.ws) return; // open or opening; also stops re-entry from listeners that render and call back in
     let ws: WebSocket;
-    try { ws = new WebSocket(this.url); } catch { this.status = 'error'; this.lastError = 'Could not reach the race server'; this.changed(); return; }
+    try { ws = new WebSocket(this.url); } catch { this.status = 'error'; this.lastError = 'Could not reach the race server'; this.retry++; this.retryT = Math.min(8, 0.5 * 2 ** this.retry); queueMicrotask(() => this.changed()); return; }
     this.ws = ws;
+    let opened = false;
+    this.status = 'connecting';
     ws.onopen = () => {
+      opened = true;
       const token = (() => { try { return localStorage.getItem('lagosrush.token') ?? undefined; } catch { return undefined; } })();
       ws.send(JSON.stringify({ t: 'hello', v: PROTOCOL_VERSION, card: this.card(), token } satisfies ClientMsg));
     };
     ws.onmessage = (e) => { let m: ServerMsg; try { m = JSON.parse(e.data); } catch { return; } this.onMsg(m); };
     ws.onclose = () => {
+      if (this.ws !== ws) return;
       const was = this.status;
       this.ws = null;
-      this.status = this.wanted ? 'connecting' : 'offline';
-      if (was === 'online' && this.app.session && this.race) this.app.toast('Connection lost. Reconnecting...');
       if (this.wanted) { this.retry++; this.retryT = Math.min(8, 0.5 * 2 ** this.retry); }
+      this.status = !this.wanted ? 'offline' : opened ? 'connecting' : 'error';
+      if (!opened && this.wanted) this.lastError = `Could not reach the race server. Trying again in ${Math.ceil(this.retryT)}s`;
+      if (was === 'online' && this.app.session && this.race) this.app.toast('Connection lost. Reconnecting...');
       this.changed();
     };
     ws.onerror = () => { this.lastError = 'Could not reach the race server'; };
+    // never notify synchronously: connect() is called from inside screen renders
+    queueMicrotask(() => this.changed());
   }
-  disconnect() { this.wanted = false; this.ws?.close(); this.ws = null; this.status = 'offline'; this.room = null; this.changed(); }
+  disconnect() { this.wanted = false; const ws = this.ws; this.ws = null; ws?.close(); this.status = 'offline'; this.room = null; this.changed(); }
 
   send(m: ClientMsg) {
     if (this.ws && this.status === 'online' && this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(m));
-    else if (m.t !== 'state' && m.t !== 'ping') { this.pending.push(m); this.connect(); }
+    else if (m.t !== 'state' && m.t !== 'ping') { this.pending.push(m); this.ensure(); }
   }
 
   private onMsg(m: ServerMsg) {
@@ -95,7 +105,7 @@ export class NetClient {
         this.app.startOnline(m.race);
         break;
       case 'snap':
-        this.snaps.push({ rt: m.rt, cars: m.cars, hz: m.hz });
+        this.snaps.push({ rt: m.rt, cars: m.c.map(unpackCar), hz: m.z.map(unpackHazard) });
         if (this.snaps.length > 40) this.snaps.shift();
         break;
       case 'ev': this.events.push(...m.events); break;
@@ -151,7 +161,7 @@ export class NetClient {
       hazards: () => this.latestHazards(),
       drain: () => this.drainEvents(),
       self: (idx) => this.selfSnap(idx),
-      sendState: (rt, s) => this.send({ t: 'state', rt: Math.round(rt * 1000) / 1000, s }),
+      sendState: (rt, s) => this.send({ t: 'state', rt: Math.round(rt * 1000) / 1000, s: packState(s) }),
       useItem: () => this.send({ t: 'useItem' }),
       online: () => this.status === 'online',
     };

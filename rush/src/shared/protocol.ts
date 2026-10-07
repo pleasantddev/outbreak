@@ -2,11 +2,11 @@
 // the room creator configures races but can never touch results, physics or rewards.
 import type { Livery } from './cars';
 import type { RaceMode, TimeOfDay, Weather, RaceEvent, RemoteSnap } from './race';
-import type { HazardKind } from './items';
+import { HAZARD_KINDS, type HazardKind } from './items';
 import type { AiLevel } from './ai';
 import type { CarClass } from './cars';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export interface PlayerCard { id: string; name: string; crew: string; color: string; level: number; carId: string; livery: Livery }
 
@@ -41,7 +41,7 @@ export type ClientMsg =
   | { t: 'kick'; id: string }
   | { t: 'chat'; phrase: number }
   | { t: 'start' }
-  | { t: 'state'; rt: number; s: RemoteSnap }
+  | { t: 'state'; rt: number; s: number[] }
   | { t: 'useItem' }
   | { t: 'ping'; ct: number };
 
@@ -55,7 +55,7 @@ export type ServerMsg =
   | { t: 'room'; room: RoomView }
   | { t: 'left'; reason: 'left' | 'kicked' | 'closed' }
   | { t: 'race'; race: RaceStart }
-  | { t: 'snap'; st: number; rt: number; cars: SnapCar[]; hz: SnapHazard[] }
+  | { t: 'snap'; st: number; rt: number; c: number[][]; z: number[][] }
   | { t: 'ev'; events: RaceEvent[] }
   | { t: 'results'; rows: ResultRow[] }
   | { t: 'chat'; from: string; name: string; phrase: number }
@@ -69,3 +69,32 @@ export function normaliseCode(raw: string) {
   const digits = raw.toUpperCase().replace(/[^0-9]/g, '').slice(-4);
   return digits.length === 4 ? `LAGOS-${digits}` : '';
 }
+
+// ------------------------------------------------------------------------------------------- packing
+// Snapshots go out twenty times a second to every player, so they travel as rounded number arrays, not objects:
+// about 90 bytes a car instead of 450, before the socket's own compression. Centimetres and milliradians are far
+// finer than anyone can see at 100 ms of interpolation.
+
+const r2 = (v: number) => Math.round(v * 100) / 100;
+const r3 = (v: number) => Math.round(v * 1000) / 1000;
+
+/** A car's state: x y z h vx vy vz pitch roll flags driftTier boostT spinT danfoT. */
+export function packState(s: RemoteSnap): number[] {
+  const flags = (s.drifting ? 1 : 0) | (s.nitro ? 2 : 0) | (s.grounded ? 4 : 0);
+  return [r2(s.x), r2(s.y), r2(s.z), r3(s.h), r2(s.vx), r2(s.vy), r2(s.vz), r3(s.pitch), r3(s.roll), flags, s.driftTier | 0, r2(s.boostT), r2(s.spinT), r2(s.danfoT)];
+}
+export const STATE_LEN = 14;
+export function unpackState(a: number[], o = 0): RemoteSnap {
+  const f = a[o + 9] | 0;
+  return { x: a[o], y: a[o + 1], z: a[o + 2], h: a[o + 3], vx: a[o + 4], vy: a[o + 5], vz: a[o + 6], pitch: a[o + 7], roll: a[o + 8], drifting: !!(f & 1), nitro: !!(f & 2), grounded: !!(f & 4), driftTier: a[o + 10], boostT: a[o + 11], spinT: a[o + 12], danfoT: a[o + 13] };
+}
+/** A state array from a client is only accepted if it is the right length and every entry is a finite number. */
+export function validState(a: unknown): a is number[] {
+  return Array.isArray(a) && a.length === STATE_LEN && a.every((v) => typeof v === 'number' && Number.isFinite(v));
+}
+
+/** Snapshot car: i, the state, then lap place fin raceDist. */
+export function packCar(c: SnapCar): number[] { return [c.i, ...packState(c.s), c.lap, c.place, c.fin ? 1 : 0, Math.round(c.rd * 10) / 10]; }
+export function unpackCar(a: number[]): SnapCar { const o = 1 + STATE_LEN; return { i: a[0], s: unpackState(a, 1), lap: a[o], place: a[o + 1], fin: a[o + 2] === 1, rd: a[o + 3] }; }
+export function packHazard(h: SnapHazard): number[] { return [h.id, HAZARD_KINDS.indexOf(h.k), r2(h.x), r2(h.y), r2(h.z), r3(h.h), r2(h.s), r2(h.d)]; }
+export function unpackHazard(a: number[]): SnapHazard { return { id: a[0], k: HAZARD_KINDS[a[1]] ?? 'pothole', x: a[2], y: a[3], z: a[4], h: a[5], s: a[6], d: a[7] }; }

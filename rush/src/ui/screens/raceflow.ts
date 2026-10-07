@@ -172,7 +172,7 @@ export function resultsScreen(app: App): Screen {
   const lead = r.standings[0];
   const rows = r.standings.map((s) => `<tr class="${s.idx === r.playerIdx ? 'me' : ''}"><td>${s.place}</td><td>${esc(s.name)}</td><td class="hide-sm">${esc(carById(s.carId).name)}</td><td class="mono">${stunt ? s.style.toLocaleString() : s.finished ? (s.idx === lead.idx ? fmtTime(s.time!) : `+${(s.time! - (lead.time ?? 0)).toFixed(3)}`) : `${((lead.dist - s.dist) / 1000).toFixed(2)} km`}</td><td class="mono hide-sm">${s.bestLap ? fmtTime(s.bestLap) : '-'}</td></tr>`).join('');
   const node = el(`<div class="screen results">
-    <div class="split" style="grid-template-columns: minmax(300px, 520px) 1fr">
+    <div class="split results-split">
       <div class="scroll" style="display:flex; flex-direction:column; gap:14px">
         <div><span class="tag">${esc(td.name)}</span> <span class="tag dark">${esc(r.cfg.mode.toUpperCase())}</span></div>
         <div class="podium-place">${me.finished || stunt ? ordinal(me.place) : 'DNF'}</div>

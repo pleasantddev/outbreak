@@ -4,7 +4,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import WebSocket from 'ws';
 import { createServer } from '../server/index';
 import { TIMING, type Rooms } from '../server/rooms';
-import { PROTOCOL_VERSION, type ClientMsg, type ServerMsg, type RoomView, type RaceStart } from '../src/shared/protocol';
+import { PROTOCOL_VERSION, packState, unpackCar, type ClientMsg, type ServerMsg, type RoomView, type RaceStart } from '../src/shared/protocol';
 import { defaultLivery, carById } from '../src/shared/cars';
 
 process.env.QUIET = '1';
@@ -125,20 +125,24 @@ describe('room server', () => {
     // wait for GO and a snapshot that shows our car
     await a.room(ma, (r) => r.phase === 'racing');
     const snap = await a.wait('snap', (m) => m.rt > 0.1, ma);
-    const mine = snap.cars.find((c) => c.i === ia)!;
+    const mine = snap.c.map(unpackCar).find((c) => c.i === ia)!;
     expect(mine).toBeTruthy();
+    // snapshots travel packed: well under 120 bytes of JSON per car before socket compression
+    expect(JSON.stringify(snap).length / snap.c.length).toBeLessThan(120);
     // a legal nudge forward is accepted and shows up for the other player
     const fx = Math.sin(mine.s.h), fz = Math.cos(mine.s.h);
     const moved = { ...mine.s, x: mine.s.x + fx * 1.5, z: mine.s.z + fz * 1.5, vx: fx * 20, vz: fz * 20 };
     await sleep(60);
-    a.send({ t: 'state', rt: snap.rt + 0.1, s: moved });
-    const seen = await b.wait('snap', (m) => { const c = m.cars.find((x) => x.i === ia); return !!c && Math.abs(c.s.x - moved.x) < 0.01 && Math.abs(c.s.z - moved.z) < 0.01; }, mb);
+    a.send({ t: 'state', rt: snap.rt + 0.1, s: packState(moved) });
+    const seen = await b.wait('snap', (m) => { const c = m.c.map(unpackCar).find((x) => x.i === ia); return !!c && Math.abs(c.s.x - moved.x) < 0.011 && Math.abs(c.s.z - moved.z) < 0.011; }, mb);
     expect(seen).toBeTruthy();
     // teleports, impossible speeds and garbage are ignored
     const before = { x: room.sim!.cars[ia].c.x, z: room.sim!.cars[ia].c.z };
-    a.send({ t: 'state', rt: snap.rt + 0.2, s: { ...moved, x: moved.x + 400 } });
-    a.send({ t: 'state', rt: snap.rt + 0.3, s: { ...moved, vx: 900 } });
-    a.raw({ t: 'state', rt: 1, s: { ...moved, x: 'boom' } });
+    a.send({ t: 'state', rt: snap.rt + 0.2, s: packState({ ...moved, x: moved.x + 400 }) });
+    a.send({ t: 'state', rt: snap.rt + 0.3, s: packState({ ...moved, vx: 900 }) });
+    a.raw({ t: 'state', rt: 1, s: [...packState(moved).slice(0, 13), 'boom'] });
+    a.raw({ t: 'state', rt: 1, s: packState(moved).slice(0, 9) });
+    a.raw({ t: 'state', rt: 1, s: { x: 1 } });
     await sleep(150);
     expect(room.sim!.cars[ia].c.x).toBeCloseTo(before.x, 5);
     expect(room.sim!.cars[ia].c.z).toBeCloseTo(before.z, 5);
@@ -173,8 +177,8 @@ describe('room server', () => {
     expect(room.sim!.cars[ib].control).toBe('ai');
     // b speaks up with its car where the room has it: control comes back
     const snap = await b.wait('snap', (m) => m.rt > 0, b.mark());
-    const cb = snap.cars.find((c) => c.i === ib)!;
-    b.send({ t: 'state', rt: snap.rt, s: cb.s });
+    const cb = snap.c.map(unpackCar).find((c) => c.i === ib)!;
+    b.send({ t: 'state', rt: snap.rt, s: packState(cb.s) });
     await sleep(200);
     expect(room.sim!.cars[ib].control).toBe('remote');
     a.close(); b.close();

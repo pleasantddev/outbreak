@@ -23,14 +23,18 @@ function statusLine(app: App) {
 
 /** Keep a screen in sync with the network: re-render when room state changes. */
 function live(app: App, screen: Screen, follow?: () => void): Screen {
-  const off = app.net.onChange(() => { follow?.(); if (app.top?.screen === screen) app.refresh(); });
+  // refresh() swaps screens without onLeave, so a replaced screen drops its own subscription
+  const off = app.net.onChange(() => {
+    if (app.top?.screen !== screen && !screen.el.isConnected) { off(); return; }
+    follow?.(); if (app.top?.screen === screen) app.refresh();
+  });
   const prevLeave = screen.onLeave;
   screen.onLeave = () => { off(); prevLeave?.(); };
   return screen;
 }
 
 export function multiplayer(app: App): Screen {
-  app.net.connect();
+  app.net.ensure();
   const p = app.profile;
   const node = el(`<div class="screen">
     ${topbar('Multiplayer', 'Instanced races for up to 12 cars', app)}
@@ -101,7 +105,7 @@ function applyCfg(c: RoomConfig, k: string, v: string): Partial<RoomConfig> {
 }
 
 export function createRoom(app: App): Screen {
-  app.net.connect();
+  app.net.ensure();
   const node = el(`<div class="screen">
     ${topbar('Create room', 'You are the host. Set the race up.')}
     <div class="scroll panel" style="padding:16px; display:flex; flex-direction:column; gap:12px; flex:1; max-width:880px">${configForm(app, draft)}</div>
@@ -118,7 +122,7 @@ export function createRoom(app: App): Screen {
 }
 
 export function joinRoom(app: App): Screen {
-  app.net.connect();
+  app.net.ensure();
   const node = el(`<div class="screen">
     ${topbar('Join a room')}
     <div class="panel" style="padding:20px; display:flex; flex-direction:column; gap:14px; max-width:520px">
@@ -280,7 +284,7 @@ export function onlineResults(app: App): Screen {
   const series = room ? [...room.players].sort((a, b) => b.points - a.points) : [];
   const nextIn = room && room.phase === 'results' ? 'The room opens for the next race in a few seconds.' : room && room.phase === 'waiting' ? 'The room is open. Ready up for the next one.' : '';
   const node = el(`<div class="screen results">
-    <div class="split" style="grid-template-columns: minmax(300px, 560px) 1fr">
+    <div class="split results-split">
       <div class="scroll" style="display:flex; flex-direction:column; gap:14px">
         <div><span class="tag">${esc(td.name)}</span> <span class="tag dark">ONLINE ${esc(r.cfg.mode.toUpperCase())}</span>${room ? ` <span class="tag dark">${room.code}</span>` : ''}</div>
         <div class="podium-place">${me.finished ? ordinal(me.place) : 'DNF'}</div>

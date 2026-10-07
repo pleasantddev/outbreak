@@ -99,7 +99,7 @@ export class Hud {
     const rc = sim.cars[this.player];
     const c = rc.c;
     this.calloutT -= dt;
-    if (this.calloutT <= 0) this.callout.classList.remove('show');
+    if (this.calloutT <= 0 && this.callout.classList.contains('show')) { this.callout.classList.remove('show'); this.sub.textContent = ''; }
     this.rollT = Math.max(0, this.rollT - dt);
     const now = performance.now();
     if (now - this.lastWrite < 66) return;

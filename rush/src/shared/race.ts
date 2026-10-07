@@ -16,6 +16,10 @@ export type TimeOfDay = 'morning' | 'noon' | 'dusk' | 'night';
 export interface RaceConfig {
   track: string; laps: number; mode: RaceMode; traffic: number; aiLevel: AiLevel; catchUp: boolean;
   seed: number; weather: Weather; time: TimeOfDay; stuntTime: number; finishGrace: number;
+  /** online: how long humans get after an AI takes the flag first (unset offline, where the race waits for you) */
+  aiFinishGrace?: number;
+  /** hard stop in race seconds, so a room can never be held hostage by a car that never finishes */
+  maxTime?: number;
 }
 export const defaultRaceConfig = (track: string, laps: number): RaceConfig => ({
   track, laps, mode: 'rush', traffic: 1, aiLevel: 'normal', catchUp: true, seed: 1, weather: 'clear', time: 'dusk', stuntTime: 120, finishGrace: 30,
@@ -555,15 +559,16 @@ export class RaceSim {
       if (this.time >= this.cfg.stuntTime) this.end();
       return;
     }
-    // the race waits for the people in it: grace starts when the first of them finishes, not when an AI does
+    // the race waits for the people in it: grace starts when the first of them finishes, not when an AI does.
+    // Online, an AI winner starts a longer clock too, and a hard cap stops a race that would never end.
     const humans = this.cars.filter((c) => c.entrant.human);
     const pool = humans.length ? humans : this.cars;
-    if (pool.every((c) => c.c.finished)) { this.doneAt = Math.min(this.doneAt, this.time + 2.5); }
-    else if (this.doneAt === Infinity) {
-      const first = pool.filter((c) => c.c.finished).sort((a, b) => a.c.finishTime - b.c.finishTime)[0];
-      if (first) this.doneAt = first.c.finishTime + this.cfg.finishGrace;
-    }
-    if (this.time >= this.doneAt) this.end();
+    if (pool.every((c) => c.c.finished)) this.doneAt = Math.min(this.doneAt, this.time + 2.5);
+    let firstHuman = Infinity;
+    for (const c of pool) if (c.c.finished) firstHuman = Math.min(firstHuman, c.c.finishTime);
+    if (firstHuman < Infinity) this.doneAt = Math.min(this.doneAt, firstHuman + this.cfg.finishGrace);
+    if (this.cfg.aiFinishGrace !== undefined && this.finishOrder.length) this.doneAt = Math.min(this.doneAt, this.cars[this.finishOrder[0]].c.finishTime + this.cfg.aiFinishGrace);
+    if (this.time >= this.doneAt || (this.cfg.maxTime !== undefined && this.time >= this.cfg.maxTime)) this.end();
   }
 
   end() {

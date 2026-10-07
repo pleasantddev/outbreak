@@ -5,9 +5,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
+import zlib from 'node:zlib';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { Rooms, type Conn } from './rooms';
-import { PROTOCOL_VERSION, normaliseCode, type ClientMsg, type ServerMsg, type PlayerCard } from '../src/shared/protocol';
+import { PROTOCOL_VERSION, normaliseCode, validState, unpackState, type ClientMsg, type ServerMsg, type PlayerCard } from '../src/shared/protocol';
 import { CARS, carById } from '../src/shared/cars';
 import type { TrackData } from '../src/shared/track';
 
@@ -26,6 +27,8 @@ function loadTracks(): TrackData[] {
 export function createServer(port = PORT) {
   const rooms = new Rooms(loadTracks(), log);
   const tokens = new Map<string, string>(); // reconnect token -> player id
+  const GZIP = new Set(['.html', '.js', '.css', '.json', '.svg']);
+  const gzCache = new Map<string, { mtime: number; buf: Buffer }>();
   const MIME: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ico': 'image/x-icon' };
 
   const server = http.createServer((req, res) => {
@@ -41,11 +44,22 @@ export function createServer(port = PORT) {
     if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(DIST, 'index.html');
     if (!fs.existsSync(file)) { res.writeHead(404, { 'content-type': 'text/plain' }); res.end('Build the client first: npm run build'); return; }
     const ext = path.extname(file);
-    res.writeHead(200, { 'content-type': MIME[ext] ?? 'application/octet-stream', 'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=86400' });
+    const headers: Record<string, string> = { 'content-type': MIME[ext] ?? 'application/octet-stream', 'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=86400', vary: 'accept-encoding' };
+    // text compresses four to one (the city file goes from 1.1 MB to 250 KB), which matters on Nigerian mobile data
+    if (GZIP.has(ext) && /\bgzip\b/.test(String(req.headers['accept-encoding'] ?? ''))) {
+      const st = fs.statSync(file);
+      let hit = gzCache.get(file);
+      if (!hit || hit.mtime !== st.mtimeMs) { hit = { mtime: st.mtimeMs, buf: zlib.gzipSync(fs.readFileSync(file), { level: 9 }) }; gzCache.set(file, hit); }
+      res.writeHead(200, { ...headers, 'content-encoding': 'gzip', 'content-length': String(hit.buf.length) });
+      res.end(hit.buf);
+      return;
+    }
+    res.writeHead(200, headers);
     fs.createReadStream(file).pipe(res);
   });
 
-  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8 * 1024 });
+  // permessage-deflate: snapshots repeat most of their bytes, so the socket's own compression cuts them again
+  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8 * 1024, perMessageDeflate: { threshold: 128, zlibDeflateOptions: { level: 3 } } });
   wss.on('connection', (ws: WebSocket) => {
     let conn: Conn | null = null;
     // rate limiting: a token bucket per socket, plus slower buckets for room management and chat
@@ -115,7 +129,7 @@ export function createServer(port = PORT) {
           }
           case 'state': {
             const r = conn!.room; if (!r) return;
-            const ok = r.state(conn!.id, Number(m.rt), m.s);
+            const ok = validState(m.s) && r.state(conn!.id, Number(m.rt), unpackState(m.s));
             if (!ok && ++conn!.violations > 40) { err('invalid', 'Too many invalid updates'); r.remove(conn!.id); }
             if (ok && conn!.violations > 0) conn!.violations -= 0.05;
             return;

@@ -43,6 +43,7 @@ export function rollItem(place: number, count: number, seed: number, car: number
 }
 
 export type HazardKind = 'purewater' | 'pothole' | 'rocket' | 'okada';
+export const HAZARD_KINDS: HazardKind[] = ['purewater', 'pothole', 'rocket', 'okada'];
 export interface Hazard {
   id: number; kind: HazardKind; owner: number;
   x: number; y: number; z: number; h: number;

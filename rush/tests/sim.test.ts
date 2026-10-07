@@ -95,6 +95,45 @@ describe('race sim', () => {
   });
 });
 
+describe('race end rules', () => {
+  const human = (id: string): Entrant => ({ id, name: id, carId: 'tokunbo', livery: defaultLivery(carById('tokunbo')), human: true });
+  const until = (sim: RaceSim, maxT: number) => { while (sim.phase !== 'done' && sim.time < maxT) { sim.step(1 / 30); sim.drainEvents(); } };
+
+  it('online, an AI winner starts a clock so a stalled human cannot hold the room', () => {
+    const td = byId('terminal');
+    // a human whose state never arrives stays where it is on the authority's sim
+    const sim = new RaceSim(td, { ...defaultRaceConfig(td.id, 1), aiFinishGrace: 10 }, [...field(3), human('stalled')], { authority: true, local: [] });
+    until(sim, 300);
+    expect(sim.phase).toBe('done');
+    const first = sim.cars[sim.finishOrder[0]].c.finishTime;
+    expect(sim.time).toBeLessThan(first + 10.5);
+    expect(sim.standings().find((r) => r.id === 'stalled')!.finished).toBe(false);
+  }, 30000);
+
+  it('a hard cap ends a race nobody finishes', () => {
+    const td = byId('terminal');
+    const sim = new RaceSim(td, { ...defaultRaceConfig(td.id, 3), maxTime: 20 }, [human('a'), human('b')], { authority: true, local: [] });
+    until(sim, 60);
+    expect(sim.phase).toBe('done');
+    expect(sim.time).toBeLessThan(20.1);
+  });
+
+  it('offline, the race still waits for the player after an AI wins', () => {
+    const td = byId('terminal');
+    const sim = new RaceSim(td, { ...defaultRaceConfig(td.id, 1) }, [...field(3), human('me')], { authority: true, local: ['me'] });
+    until(sim, 240);
+    expect(sim.finishOrder.length).toBeGreaterThan(0);
+    expect(sim.phase).not.toBe('done');
+  }, 30000);
+
+  it('followers never end a race on their own view of it', () => {
+    const td = byId('terminal');
+    const sim = new RaceSim(td, { ...defaultRaceConfig(td.id, 1), maxTime: 5 }, [human('me'), human('them')], { authority: false, local: ['me'] });
+    until(sim, 30);
+    expect(sim.phase).not.toBe('done');
+  });
+});
+
 describe('items and traffic', () => {
   it('item odds favour defence at the front and comebacks at the back', () => {
     const lead = itemOdds(1, 12), last = itemOdds(12, 12);

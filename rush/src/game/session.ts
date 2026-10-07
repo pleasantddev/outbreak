@@ -206,8 +206,11 @@ export class RaceSession {
     const net = this.net!;
     this.t += dt;
     const target = (net.serverNow() - net.startAt) / 1000;
-    // a long gap (hidden tab, frozen device) is skipped, not simulated, and our car is put back where the room has it
-    if (target - this.sim.time > 0.75) { this.sim.time = target - STEP; this.needSync = true; }
+    // a gap is skipped, not simulated. Our car stays ours unless the gap was long enough for the room's AI stand-in
+    // to take over (it does after 8 s of silence); then we pick the car up from where the room has it.
+    const behind = target - this.sim.time;
+    if (behind > 6) { this.sim.time = target - STEP; this.needSync = true; }
+    else if (behind > 0.75) this.sim.time = target - STEP;
     if (this.needSync && !this.trySync()) { this.render(dt, 1); return; }
     const airborne = !this.player.c.grounded;
     this.input = this.inp.read(dt, airborne, this.steerAssist());
@@ -219,8 +222,8 @@ export class RaceSession {
     if (this.input.item && !this.itemWas && me.item && me.itemRoll <= 0 && this.sim.racing && !me.finished && me.danfoT <= 0 && this.itemSentT <= 0) { net.useItem(); this.itemSentT = 0.35; }
     this.itemWas = this.input.item;
     let steps = 0;
-    // up to 0.2 s of catch-up per frame so slow devices stay on the room clock instead of resyncing
-    while (this.sim.time + STEP <= target + 1e-6 && steps < 12) {
+    // up to half a second of catch-up per frame: the sim is cheap, so even a slow phone stays on the room clock
+    while (this.sim.time + STEP <= target + 1e-6 && steps < 30) {
       this.prev.set(this.curr);
       for (const [i, snap] of net.remoteAt(this.sim.time - INTERP, this.playerIdx)) if (this.sim.cars[i]?.control === 'remote') this.sim.setRemote(i, snap);
       this.sim.step(STEP, { [this.opts.localId]: this.input });

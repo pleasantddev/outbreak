@@ -4,7 +4,7 @@ import { RaceSim, defaultRaceConfig, type Entrant, type RaceEvent, type RemoteSn
 import type { TrackData } from '../src/shared/track';
 import { carById, CARS, defaultLivery } from '../src/shared/cars';
 import { sanitiseConfig } from '../src/shared/roomConfig';
-import { DEFAULT_ROOM, type PlayerCard, type RoomConfig, type RoomPhase, type RoomView, type RoomPlayer, type ServerMsg, type ResultRow, type RaceStart, type SnapCar } from '../src/shared/protocol';
+import { DEFAULT_ROOM, packCar, packHazard, type PlayerCard, type RoomConfig, type RoomPhase, type RoomView, type RoomPlayer, type ServerMsg, type ResultRow, type RaceStart, type SnapCar } from '../src/shared/protocol';
 import { makePersonas } from '../src/shared/ai';
 
 export interface Conn { id: string; card: PlayerCard; send: (m: ServerMsg) => void; room: Room | null; token: string; alive: boolean; queued: boolean; lastState: number; violations: number; ping: number }
@@ -170,7 +170,8 @@ export class Room {
     // humans start at the back half of the grid, AI fill the front: the fun is in the overtaking
     entrants.sort((a, b) => Number(a.human) - Number(b.human));
     this.entrantIdx = new Map(entrants.map((e, i) => [e.id, i]));
-    const cfg = { ...defaultRaceConfig(td.id, this.config.laps), mode: this.config.mode, traffic: this.config.traffic, aiLevel: this.config.aiLevel, time: this.config.time, weather: this.config.weather, seed: this.seed, finishGrace: 25 };
+    // humans get 25 s after the first of them finishes, 90 s after an AI wins, and no race outlives three times par
+    const cfg = { ...defaultRaceConfig(td.id, this.config.laps), mode: this.config.mode, traffic: this.config.traffic, aiLevel: this.config.aiLevel, time: this.config.time, weather: this.config.weather, seed: this.seed, finishGrace: 25, aiFinishGrace: 90, maxTime: Math.round(td.par * this.config.laps * 3 + 90) };
     this.sim = new RaceSim(td, cfg, entrants, { authority: true, local: [], countdown: TIMING.countdownMs / 1000 });
     this.startAt = Date.now() + TIMING.countdownMs;
     this.phase = 'countdown';
@@ -272,8 +273,8 @@ export class Room {
   private snapshot() {
     const sim = this.sim!;
     const cars: SnapCar[] = sim.cars.map((rc, i) => ({ i, s: sim.snapOf(i), lap: rc.c.lap, place: rc.c.place, fin: rc.c.finished, rd: Math.round(rc.c.raceDist * 100) / 100 }));
-    const hz = sim.hazards.map((h) => ({ id: h.id, k: h.kind, x: h.x, y: h.y, z: h.z, h: h.h, s: h.s, d: h.d }));
-    this.broadcast({ t: 'snap', st: Date.now(), rt: sim.time, cars, hz });
+    const hz = sim.hazards.map((h) => packHazard({ id: h.id, k: h.kind, x: h.x, y: h.y, z: h.z, h: h.h, s: h.s, d: h.d }));
+    this.broadcast({ t: 'snap', st: Date.now(), rt: Math.round(sim.time * 1000) / 1000, c: cars.map(packCar), z: hz });
   }
 
   private finishRace() {
