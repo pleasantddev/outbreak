@@ -55,9 +55,9 @@ function posterTexture(i: number) {
   const c = canvas(512, 768), g = c.getContext('2d')!;
   const sets = [
     { bg: '#0d4fa8', fg: '#ffffff', ac: '#f6c514', a: 'OBA MOTORS', b: 'TOKUNBO 1.8', c: 'BUILT FOR LAGOS ROADS' },
-    { bg: '#111111', fg: '#f6c514', ac: '#ff2d8a', a: 'AJALA WORKS', b: 'KEKE TURBO', c: 'THREE WHEELS. NO FEAR.' },
-    { bg: '#d0141c', fg: '#ffffff', ac: '#111111', a: 'EKO COACHWORKS', b: 'DANFO GT', c: 'FOURTEEN SEATS OF SPEED' },
-    { bg: '#1b8a3a', fg: '#ffffff', ac: '#f6c514', a: 'LEKKI IRON', b: 'AJAH V8', c: 'BIG ENGINE. BIGGER NOISE.' },
+    { bg: '#111111', fg: '#f6c514', ac: '#ff2d8a', a: 'UGO MOTORS', b: 'ODOGWU GT', c: 'FOR THE ONE WHO HAS ARRIVED' },
+    { bg: '#d0141c', fg: '#ffffff', ac: '#111111', a: 'DAWAKI', b: 'ZAKI V12', c: 'IT ROARS LIKE ONE' },
+    { bg: '#1b8a3a', fg: '#ffffff', ac: '#f6c514', a: 'JAPA MOTORS', b: 'SHARP SHARP', c: 'GONE BEFORE YOU BLINK' },
   ];
   const s = sets[i % sets.length];
   g.fillStyle = s.bg; g.fillRect(0, 0, 512, 768);

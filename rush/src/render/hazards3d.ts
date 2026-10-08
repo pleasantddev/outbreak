@@ -1,4 +1,4 @@
-// What the items look like in the world: burst Pure Water sachets, potholes, Gala rockets with a smoke trail, and
+// What the items look like in the world: burst Pure Water sachets, potholes, Knockout bangers with a smoke trail, and
 // the okada swarm cutting across the road.
 import * as THREE from 'three';
 import type { Hazard } from '../shared/items';

@@ -14,10 +14,10 @@ import { makePersonas } from '../../shared/ai';
 
 export interface Cup { id: string; name: string; blurb: string; unlock: number; ai: AiLevel; traffic: number; time: TimeOfDay; races: { track: string; laps: number }[]; prize: number }
 export const CUPS: Cup[] = [
-  { id: 'rookie', name: 'Oshodi Rookie Cup', blurb: 'Three easy races to learn the roads around the interchange.', unlock: 1, ai: 'easy', traffic: 1, time: 'morning', races: [{ track: 'oshodi', laps: 2 }, { track: 'terminal', laps: 3 }, { track: 'expressway', laps: 2 }], prize: 8000 },
-  { id: 'interchange', name: 'Interchange Cup', blurb: 'Every route run backwards. The corners come at you from the other side.', unlock: 3, ai: 'normal', traffic: 1, time: 'dusk', races: [{ track: 'terminal-rev', laps: 3 }, { track: 'oshodi-rev', laps: 2 }, { track: 'expressway-rev', laps: 3 }], prize: 15000 },
-  { id: 'masters', name: 'Expressway Masters', blurb: 'Rush hour traffic and rivals who brake late.', unlock: 6, ai: 'hard', traffic: 2, time: 'noon', races: [{ track: 'expressway', laps: 3 }, { track: 'grand', laps: 2 }, { track: 'terminal', laps: 4 }], prize: 30000 },
-  { id: 'legend', name: 'Lagos Legend Cup', blurb: 'Night racing against the best drivers in the city. Four races, no mercy.', unlock: 9, ai: 'lagos', traffic: 2, time: 'night', races: [{ track: 'grand', laps: 2 }, { track: 'oshodi', laps: 3 }, { track: 'terminal-rev', laps: 4 }, { track: 'expressway-rev', laps: 3 }], prize: 60000 },
+  { id: 'rookie', name: 'Oshodi Rookie Cup', blurb: 'Three easy races to learn the roads around the interchange.', unlock: 1, ai: 'easy', traffic: 1, time: 'morning', races: [{ track: 'oshodi', laps: 1 }, { track: 'terminal', laps: 2 }, { track: 'expressway', laps: 1 }], prize: 8000 },
+  { id: 'interchange', name: 'Interchange Cup', blurb: 'Every route run backwards. The corners come at you from the other side.', unlock: 3, ai: 'normal', traffic: 1, time: 'dusk', races: [{ track: 'terminal-rev', laps: 2 }, { track: 'oshodi-rev', laps: 1 }, { track: 'expressway-rev', laps: 2 }], prize: 15000 },
+  { id: 'masters', name: 'Expressway Masters', blurb: 'Rush hour traffic and rivals who brake late.', unlock: 6, ai: 'hard', traffic: 2, time: 'noon', races: [{ track: 'expressway', laps: 2 }, { track: 'grand', laps: 1 }, { track: 'terminal', laps: 3 }], prize: 30000 },
+  { id: 'legend', name: 'Lagos Legend Cup', blurb: 'Night racing against the best drivers in the city. Four races, no mercy.', unlock: 9, ai: 'lagos', traffic: 2, time: 'night', races: [{ track: 'grand', laps: 1 }, { track: 'oshodi', laps: 2 }, { track: 'terminal-rev', laps: 3 }, { track: 'expressway-rev', laps: 2 }], prize: 60000 },
 ];
 const POINTS = [15, 12, 10, 8, 6, 5, 4, 3, 2, 1, 0, 0];
 let selected = 'rookie';

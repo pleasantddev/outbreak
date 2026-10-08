@@ -15,6 +15,7 @@ import { CARS, defaultLivery } from '../shared/cars';
 import { Props, type AdConfig } from '../render/props';
 import { loadFonts } from '../game/stage';
 import { routeBlocker } from '../render/clearance';
+import { preloadCarAssets } from '../render/carAssets';
 
 export async function runViewer(params: URLSearchParams) {
   const canvas = document.getElementById('gl') as HTMLCanvasElement;
@@ -26,7 +27,7 @@ export async function runViewer(params: URLSearchParams) {
   const [world, tracks]: [WorldData, TrackData[]] = await Promise.all([fetch('world/oshodi.json').then((r) => r.json()), fetch('world/tracks.json').then((r) => r.json())]);
   const td = tracks.find((t) => t.id === (params.get('track') ?? 'terminal')) ?? tracks[0];
   const track = new Track(td);
-  await loadFonts();
+  await Promise.all([loadFonts(), preloadCarAssets(CARS.flatMap((c) => (c.model ? [c.model] : [])))]);
   const mats = new Materials();
   mats.build(Math.min(engine.maxAniso, settings.anisotropy));
   const atmos = new Atmosphere(engine.scene, engine.renderer);
@@ -46,7 +47,7 @@ export async function runViewer(params: URLSearchParams) {
   }
   // a grid of every car on the start grid
   const cars: CarModel[] = [];
-  CARS.forEach((def, i) => {
+  CARS.slice(0, td.grid.length).forEach((def, i) => {
     const slot = td.grid[i];
     const lv = defaultLivery(def);
     if (i === 1) { lv.wrap = 'naija'; }
@@ -55,7 +56,7 @@ export async function runViewer(params: URLSearchParams) {
     if (i === 7) { lv.finish = 'pearl'; lv.rims = 'split'; }
     if (i === 4) { lv.wrap = 'ankara'; lv.wrapColor = '#d0141c'; }
     const m = new CarModel(def, lv, { shadows: settings.shadows > 0, detail: 2 });
-    if (lv.rims !== 'five') m.setRims(lv.rims);
+    if (lv.rims !== 'five' && lv.rims !== 'stock') m.setRims(lv.rims);
     m.root.position.set(slot.x, slot.y + 0.02, slot.z);
     m.root.rotation.y = slot.h;
     engine.scene.add(m.root);

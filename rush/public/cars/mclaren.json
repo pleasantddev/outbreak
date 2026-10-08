@@ -1,0 +1,61 @@
+{
+ "paintMode": "hue",
+ "paintHue": 0.0359,
+ "paintSat": 0.878,
+ "paintVal": 0.769,
+ "length": 4.54,
+ "width": 2.147,
+ "height": 1.189,
+ "front": "+x",
+ "wheels": [
+  {
+   "q": 0,
+   "x": 0.822,
+   "y": 0.336,
+   "z": 1.454,
+   "r": 0.336,
+   "w": 0.291
+  },
+  {
+   "q": 1,
+   "x": -0.822,
+   "y": 0.336,
+   "z": 1.454,
+   "r": 0.336,
+   "w": 0.291
+  },
+  {
+   "q": 2,
+   "x": 0.823,
+   "y": 0.329,
+   "z": -1.209,
+   "r": 0.329,
+   "w": 0.285
+  },
+  {
+   "q": 3,
+   "x": -0.823,
+   "y": 0.329,
+   "z": -1.209,
+   "r": 0.329,
+   "w": 0.285
+  }
+ ],
+ "paint": true,
+ "paintTextured": true,
+ "tris": 6843,
+ "srcTris": 6907,
+ "materials": [
+  "carbon_fibre",
+  "paint",
+  "mesh",
+  "lights",
+  "glass",
+  "silver",
+  "mirror",
+  "tyres",
+  "interior",
+  "brake_dics_and_caps",
+  "interior_A"
+ ]
+}

@@ -9,7 +9,7 @@ import { UI_ICON } from '../icons';
 import { tierOf } from '../../shared/ranking';
 
 const COLORS = ['#f6c514', '#ff2d8a', '#39d0ff', '#39ff14', '#ff6a00', '#a678ff', '#ffffff', '#e5322d'];
-const CREWS = ['Oshodi Kings', 'Ikeja Night Runners', 'Mushin Motorworks', 'Isolo Drift Club', 'Ilupeju Iron', 'Agege Express', 'Surulere Sliders', 'Yaba Tech'];
+const CREWS = ['Oshodi Kings', 'Ikeja Night Runners', 'Mushin Motorworks', 'Isolo Drift Club', 'Ilupeju Iron', 'Agege Express', 'Surulere Sliders', 'Yaba Hustlers'];
 
 function badges(app: App) {
   const s = app.profile.stats;

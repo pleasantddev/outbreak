@@ -1,0 +1,60 @@
+{
+ "paintMode": "color",
+ "paintHue": 0,
+ "paintSat": 0,
+ "paintVal": 0,
+ "length": 5,
+ "width": 1.981,
+ "height": 1.411,
+ "front": "-z",
+ "wheels": [
+  {
+   "q": 0,
+   "x": 0.783,
+   "y": 0.35,
+   "z": 1.578,
+   "r": 0.35,
+   "w": 0.323
+  },
+  {
+   "q": 1,
+   "x": -0.746,
+   "y": 0.35,
+   "z": 1.578,
+   "r": 0.35,
+   "w": 0.323
+  },
+  {
+   "q": 2,
+   "x": 0.783,
+   "y": 0.35,
+   "z": -1.455,
+   "r": 0.35,
+   "w": 0.323
+  },
+  {
+   "q": 3,
+   "x": -0.746,
+   "y": 0.35,
+   "z": -1.455,
+   "r": 0.35,
+   "w": 0.323
+  }
+ ],
+ "paint": true,
+ "paintTextured": false,
+ "tris": 44021,
+ "srcTris": 78270,
+ "materials": [
+  "pCube156SG",
+  "pCube156SG1",
+  "pCube156SG2",
+  "paint",
+  "pCube157SG1",
+  "pCylinder13SG",
+  "pPipe1SG",
+  "pPipe1SG1",
+  "pPipe1SG2",
+  "polySurface29SG"
+ ]
+}

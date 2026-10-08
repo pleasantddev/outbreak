@@ -1,0 +1,64 @@
+{
+ "paintMode": "color",
+ "paintHue": 0,
+ "paintSat": 0,
+ "paintVal": 0,
+ "length": 4.02,
+ "width": 1.973,
+ "height": 1.444,
+ "front": "+z",
+ "wheels": [
+  {
+   "q": 0,
+   "x": 0.537,
+   "y": 0.514,
+   "z": 1.544,
+   "r": 0.258,
+   "w": 0.499
+  },
+  {
+   "q": 1,
+   "x": -0.534,
+   "y": 0.514,
+   "z": 1.544,
+   "r": 0.258,
+   "w": 0.493
+  },
+  {
+   "q": 2,
+   "x": 0.802,
+   "y": 0.57,
+   "z": -1.185,
+   "r": 0.245,
+   "w": 0.1
+  },
+  {
+   "q": 3,
+   "x": -0.793,
+   "y": 0.537,
+   "z": -1.186,
+   "r": 0.277,
+   "w": 0.118
+  }
+ ],
+ "paint": true,
+ "paintTextured": false,
+ "tris": 18079,
+ "srcTris": 18079,
+ "materials": [
+  "paint",
+  "Secondary",
+  "Grill",
+  "orange",
+  "material",
+  "glass",
+  "Under",
+  "Interior",
+  "Lamp",
+  "Material.001",
+  "Material.003",
+  "glass",
+  "Light",
+  "Mirror"
+ ]
+}

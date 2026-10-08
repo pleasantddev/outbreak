@@ -6,6 +6,7 @@ import { topbar } from './main';
 import { saveProfile, setPreset } from '../../app/profile';
 import { PRESET_ORDER, PRESET_LABEL, refineByBenchmark, detectDevice, guessPreset, type PresetId } from '../../render/quality';
 import { ACTION_LABEL, DEFAULT_KEYS, type Action } from '../../game/input';
+import carCredits from '../../../public/cars/CREDITS.json';
 
 let tab: 'graphics' | 'audio' | 'controls' | 'access' | 'gameplay' | 'about' = 'graphics';
 let needsRebuild = false;
@@ -74,6 +75,7 @@ export function settingsScreen(app: App): Screen {
     <div class="small" style="line-height:1.6">
       <p>Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:var(--yellow)">OpenStreetMap contributors</a>, ODbL 1.0; the map data derived from it is available under the same licence.</p>
       <p>Every maker, brand, billboard and shop name in the game is invented.</p>
+      <p>Car models from Sketchfab under Creative Commons Attribution 4.0, renamed, stripped of badges, simplified and recoloured for the game: ${carCredits.map((c) => `${esc(c.title)} by ${esc(c.author)}`).join('; ')}.</p>
       <p>There is no real money anywhere in this version. Naira in the game is play money that can't be bought, sold or cashed out.</p>
       <p>Fonts: Barlow Condensed, Inter and JetBrains Mono under the SIL Open Font License. Rendering with three.js (MIT) and postprocessing (zlib). All sound is synthesised live.</p>
       <p>Your save stays on this device. Online rooms only see your racing name, crew, car and lap data.</p>

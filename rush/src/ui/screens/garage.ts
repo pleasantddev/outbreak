@@ -59,6 +59,7 @@ export function garageScreen(app: App): Screen {
   else if (tab === 'paint') custom = `
     <div class="field"><span class="lab">Colour <span class="price">${naira(PAINT_PRICE)}</span></span><div class="swatches">${PAINTS.map((c) => swatch(c, c === liv.paint, 'paint')).join('')}</div></div>
     <div class="field"><span class="lab">Finish</span><div class="seg">${FINISHES.map((f) => `<button class="${liv.finish === f ? 'on' : ''}" data-act="finish" data-v="${f}">${f}${FINISH_PRICE[f] ? ` ${'₦'}${(FINISH_PRICE[f] / 1000).toFixed(1)}k` : ''}</button>`).join('')}</div></div>`;
+  else if (tab === 'wrap' && def.model) custom = `<div class="mute">Wraps fit the Keke for now. Paint, finish, rims and the extras all fit this car.</div>`;
   else if (tab === 'wrap') custom = `
     <div class="field"><span class="lab">Wrap <span class="price">${naira(WRAP_PRICE)}</span></span><div class="seg">${WRAPS.map((w) => `<button class="${liv.wrap === w.id ? 'on' : ''}" data-act="wrap" data-v="${w.id}">${w.name}</button>`).join('')}</div></div>
     <div class="field"><span class="lab">Wrap colour</span><div class="swatches">${['#111111', '#ffffff', '#f6c514', '#d0141c', '#0a7a3c', '#1d4fb8', '#ff2d8a', '#ff6a00'].map((c) => swatch(c, c === liv.wrapColor, 'wrapColor')).join('')}</div></div>`;

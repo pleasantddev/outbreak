@@ -13,6 +13,8 @@ import { WorldView } from '../render/worldView';
 import { TrackView } from '../render/trackView';
 import { Track } from '../shared/track';
 import { routeBlocker } from '../render/clearance';
+import { preloadCarAssets } from '../render/carAssets';
+import { CARS } from '../shared/cars';
 
 export interface Scenery { trackId: string; track: Track; world: WorldView; trackView: TrackView; props: Props; group: THREE.Group; key: string }
 
@@ -36,8 +38,13 @@ export class Stage {
       fetch('world/tracks.json').then((r) => r.json()) as Promise<TrackData[]>,
       fetch('ads/slots.json').then((r) => r.json()).catch(() => null) as Promise<AdConfig | null>,
     ]);
+    // the cars, while the fonts load: bodies arrive compressed and are shared by every car that wears them
+    progress(0.45, 'Polishing the cars');
+    await Promise.all([
+      preloadCarAssets(CARS.flatMap((c) => (c.model ? [c.model] : [])), (d, t) => progress(0.45 + 0.1 * (d / t), 'Polishing the cars')),
+      loadFonts(),
+    ]);
     progress(0.55, 'Painting the streets');
-    await loadFonts();
     await new Promise((r) => setTimeout(r, 0));
     const stage = new Stage(engine, world, tracks, ads);
     progress(0.75, 'Raising the terminals');

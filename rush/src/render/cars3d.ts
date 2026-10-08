@@ -7,6 +7,7 @@ import { canvas, tex } from './textures';
 import { fixNormals } from './geom';
 import { skyReflection } from './atmosphere';
 import { SKINS, lookFor, type DriverLook } from '../shared/drivers';
+import { carAsset, type CarAsset, type CarAssetMeta } from './carAssets';
 
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -222,11 +223,12 @@ const glowTex = (() => { let t: THREE.Texture | null = null; return () => {
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
   t = tex(c, { repeat: false }); return t; }; })();
 
-export function makeCarMaterials(l: Livery, def: CarDef, mapSize = 1024): CarMaterials {
-  const map = tex(liveryCanvas(l, def, mapSize), { repeat: false, aniso: 8 });
+export function makeCarMaterials(l: Livery, def: CarDef, mapSize = 1024, imported = false): CarMaterials {
+  // an imported body carries its own panels: its paint is a plain colour (or the model's texture, recoloured)
+  const map = imported ? null : tex(liveryCanvas(l, def, mapSize), { repeat: false, aniso: 8 });
   const finish = l.finish;
   const paint = new THREE.MeshPhysicalMaterial({
-    map, roughness: finish === 'matte' ? 0.62 : finish === 'chrome' ? 0.06 : 0.32,
+    map, color: imported ? new THREE.Color(l.paint) : new THREE.Color(0xffffff), roughness: finish === 'matte' ? 0.62 : finish === 'chrome' ? 0.06 : 0.32,
     metalness: finish === 'chrome' ? 1 : finish === 'metallic' ? 0.62 : finish === 'pearl' ? 0.35 : 0.08,
     clearcoat: finish === 'matte' ? 0 : 1, clearcoatRoughness: 0.06,
     iridescence: finish === 'pearl' ? 0.6 : 0, iridescenceIOR: 1.6,
@@ -356,6 +358,7 @@ function loftBody(s: CarShape, p: Profile) {
 // ------------------------------------------------------------------------------------------- wheels
 
 function rimGeometry(style: RimStyle, r: number, w: number): THREE.BufferGeometry {
+  if (style === 'stock') style = 'five';
   const parts: THREE.BufferGeometry[] = [];
   const barrel = new THREE.CylinderGeometry(r, r, w * 0.92, 28, 1, true);
   barrel.rotateZ(Math.PI / 2);
@@ -559,27 +562,117 @@ export class CarModel {
   private detail: number;
 
   driver: THREE.Mesh | null = null;
+  /** the imported body this car wears, if any; null means the procedural body built from shape */
+  imported: CarAsset | null = null;
+  private tailMats: THREE.MeshStandardMaterial[] = [];
+  private headMats: THREE.MeshStandardMaterial[] = [];
+  private extraMats: THREE.MeshStandardMaterial[] = [];
+  private stockWheels: THREE.Object3D[] = [];
+  private paintUniform: { value: THREE.Color } | null = null;
   constructor(public def: CarDef, livery: Livery, opts: { shadows: boolean; detail: number; driver?: DriverLook | null }) {
     const s = this.shape = def.shape;
     this.detail = opts.detail;
-    this.mats = makeCarMaterials(livery, def, opts.detail >= 2 ? 1024 : 512);
+    const asset = carAsset(def.model);
+    this.mats = makeCarMaterials(livery, def, opts.detail >= 2 ? 1024 : 512, !!asset);
     const m = this.mats;
     this.root.add(this.body);
-    if (s.style === 'keke') this.buildKeke(s);
-    else this.buildCar(s, opts.detail);
-    this.mergeBody();
+    if (asset) this.buildImported(asset, livery);
+    else {
+      if (s.style === 'keke') this.buildKeke(s);
+      else this.buildCar(s, opts.detail);
+      this.mergeBody();
+    }
     if (opts.driver !== null) this.setDriver(opts.driver ?? lookFor(livery.plate.split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) >>> 0));
     // headlight pool on the road for night driving
     this.headGlow = new THREE.Mesh(new THREE.PlaneGeometry(6, 13), new THREE.MeshBasicMaterial({ map: glowTex(), color: 0xfff0d0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     this.headGlow.rotation.x = -Math.PI / 2;
-    this.headGlow.position.set(0, 0.05, s.length / 2 + 6);
+    const dims = asset ? asset.meta : s;
+    this.headGlow.position.set(0, 0.05, dims.length / 2 + 6);
     this.root.add(this.headGlow);
     if (livery.glow) {
-      this.underGlow = new THREE.Mesh(new THREE.PlaneGeometry(s.width + 1.6, s.length + 1.4), m.glow);
+      this.underGlow = new THREE.Mesh(new THREE.PlaneGeometry(dims.width + 1.2, dims.length + 1.2), m.glow);
       this.underGlow.rotation.x = -Math.PI / 2; this.underGlow.position.y = 0.04;
       this.root.add(this.underGlow);
     }
     this.root.traverse((o) => { if ((o as THREE.Mesh).isMesh && o !== this.headGlow && o !== this.underGlow) { o.castShadow = opts.shadows; o.receiveShadow = false; } });
+  }
+
+  // ------------------------------------------------------------------------------------------- imported bodies
+
+  /** Clone an imported body: geometry and textures stay shared, every material is this car's own (paint follows
+   *  the livery, glass the tint, and a faded car fades alone). Wheels go on the same spin and steer pivots as the
+   *  procedural ones. */
+  private buildImported(a: CarAsset, l: Livery) {
+    this.imported = a;
+    const meta = a.meta, cache = new Map<THREE.Material, THREE.Material>();
+    const remat = (o: THREE.Object3D) => o.traverse((x) => {
+      const mesh = x as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.material = Array.isArray(mesh.material) ? mesh.material.map((mm) => this.importMat(mm, cache, meta)) : this.importMat(mesh.material, cache, meta);
+    });
+    const body = a.body.clone(true);
+    remat(body);
+    this.body.add(body);
+    meta.wheels.forEach((w, i) => {
+      const steer = new THREE.Group(); steer.position.set(w.x, w.y, w.z);
+      const spin = new THREE.Group(); steer.add(spin);
+      const wheel = a.wheels[i].clone(true); wheel.position.set(0, 0, 0);
+      remat(wheel);
+      spin.add(wheel);
+      this.stockWheels.push(wheel);
+      this.root.add(steer);
+      this.wheels.push({ spin, steer, front: w.z > 0, r: w.r });
+    });
+    if (l.rims !== 'stock') this.setRims(l.rims);
+  }
+
+  private importMat(src: THREE.Material, cache: Map<THREE.Material, THREE.Material>, meta: CarAssetMeta): THREE.Material {
+    const hit = cache.get(src);
+    if (hit) return hit;
+    const sm = src as THREE.MeshStandardMaterial;
+    let out: THREE.Material;
+    if (src.name === 'paint') {
+      const p = this.mats.paint;
+      p.normalMap = sm.normalMap ?? null; p.aoMap = sm.aoMap ?? null;
+      if (meta.paintMode === 'hue' && sm.map) { const colour = p.color.clone(); p.map = sm.map; p.color.set(0xffffff); this.hueShift(p, meta, colour); }
+      out = p;
+    } else if (src.name === 'glass') out = this.mats.glass;
+    else {
+      const c = sm.clone();
+      const n = src.name.toLowerCase(), col = c.color;
+      // red lamps brake, bright lamps glow at night; everything else just reflects the sky
+      if (/brake|tail|stop|luz2|reverse/.test(n) || (col && col.r > 0.25 && col.g < 0.12 && col.b < 0.12)) { c.emissive = new THREE.Color(0xff1a1a); c.emissiveIntensity = 0.5; this.tailMats.push(c); }
+      else if (/head|lamp|light|luz|bulb|indicator/.test(n)) { c.emissive = new THREE.Color(0xfff2dd); c.emissiveIntensity = 0.3; this.headMats.push(c); }
+      this.extraMats.push(c);
+      out = c;
+    }
+    cache.set(src, out);
+    return out;
+  }
+
+  /** Paint baked into a texture: texels near the model's own paint hue take the player's colour, keeping the
+   *  texture's shading; lamps, trim and carbon keep theirs. */
+  private hueShift(p: THREE.MeshPhysicalMaterial, meta: CarAssetMeta, colour: THREE.Color) {
+    const uPaint = { value: colour };
+    this.paintUniform = uPaint;
+    p.customProgramCacheKey = () => 'paint-hue';
+    p.onBeforeCompile = (sh) => {
+      sh.uniforms.uPaint = uPaint; sh.uniforms.uHue = { value: meta.paintHue }; sh.uniforms.uVal = { value: Math.max(0.05, meta.paintVal) };
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform vec3 uPaint; uniform float uHue; uniform float uVal;')
+        .replace('#include <map_fragment>', `#include <map_fragment>
+        {
+          vec3 c = pow(max(diffuseColor.rgb, vec3(0.0)), vec3(1.0 / 2.2));
+          float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)), d = mx - mn;
+          float h = 0.0;
+          if (d > 1e-4) { if (mx == c.r) h = mod((c.g - c.b) / d, 6.0); else if (mx == c.g) h = (c.b - c.r) / d + 2.0; else h = (c.r - c.g) / d + 4.0; h /= 6.0; }
+          float sat = mx > 0.0 ? d / mx : 0.0;
+          float dh = abs(fract(h - uHue + 0.5) - 0.5);
+          float m = smoothstep(0.075, 0.035, dh) * smoothstep(0.2, 0.42, sat);
+          diffuseColor.rgb = mix(diffuseColor.rgb, uPaint * clamp(mx / uVal, 0.0, 1.4), m);
+        }`);
+    };
+    p.needsUpdate = true;
   }
 
   private buildCar(s: CarShape, detail: number) {
@@ -724,6 +817,22 @@ export class CarModel {
 
   setRims(style: RimStyle) {
     this.rimStyle = style;
+    if (this.imported) {
+      // factory wheels from the model, or our rims and tyres sized to fit its arches
+      this.wheels.forEach((wh, i) => {
+        const stock = this.stockWheels[i], w = this.imported!.meta.wheels[i];
+        for (const c of [...wh.spin.children]) if (c !== stock) { wh.spin.remove(c); (c as THREE.Mesh).geometry?.dispose(); }
+        stock.visible = style === 'stock';
+        if (style === 'stock') return;
+        const width = Math.max(0.18, w.w * 0.92), side = w.x > 0 ? 1 : -1;
+        const tyre = new THREE.Mesh(tyreGeometry(w.r, width), this.mats.rubber);
+        const rim = new THREE.Mesh(rimGeometry(style, w.r * 0.7, width), this.mats.rim);
+        rim.scale.x = side;
+        wh.spin.add(tyre, rim);
+      });
+      this.fadeList = null;
+      return;
+    }
     for (const wh of this.wheels) {
       const rim = wh.spin.children[1] as THREE.Mesh;
       rim.geometry.dispose();
@@ -738,21 +847,32 @@ export class CarModel {
     let seat: Seat;
     let cabin: Cabin | null = null;
     const riders: { x: number; z: number; look: DriverLook }[] = [];
-    if (s.style === 'keke') seat = { x: 0, z: s.length * 0.12, hipY: 0.88, headY: 1.42, wheelY: 1.06, bar: true };
+    let rearLimit = 0;
+    const im = this.imported?.meta;
+    if (im && im.wheels.length === 4) {
+      // seated from the model's own measurements: behind the front axle, under the roof, on the left
+      const zF = Math.max(...im.wheels.map((w) => w.z)), zR = Math.min(...im.wheels.map((w) => w.z));
+      const low = im.height < 1.3;
+      const headY = Math.min(im.height - 0.24, im.height * (low ? 0.72 : 0.8));
+      seat = { x: im.width * 0.2, z: zF - (low ? 1.4 : 1.5), hipY: headY - 0.56, headY, wheelY: headY - 0.36, bar: false };
+      rearLimit = zR - 0.1;
+    } else if (s.style === 'keke') seat = { x: 0, z: s.length * 0.12, hipY: 0.88, headY: 1.42, wheelY: 1.06, bar: true };
     else {
       const p = profileOf(s);
       const headY = Math.min(p.roofY - 0.17, p.beltY + 0.3);
       seat = { x: s.width * 0.21, z: p.zRf - 0.3, hipY: Math.max(s.rideH + 0.22, headY - 0.62), headY, wheelY: p.beltY - 0.07, bar: false };
       // the tub stops just under the belt line, so it never shows outside the body
       cabin = { w: s.width * 0.84, y0: s.rideH + 0.2, y1: p.beltY - 0.04, z0: p.zRr - 0.05, z1: p.zWs - 0.08 };
-      // a danfo is never empty: a passenger up front and most of the benches behind taken
-      if (this.def.id === 'danfo') {
-        const seed = look.skin * 97 + parseInt(look.top.slice(1), 16) % 1009 + parseInt(look.accent.slice(1), 16) % 613;
-        const across = [-s.width * 0.27, 0, s.width * 0.27];
-        let k = 0;
-        riders.push({ x: -seat.x, z: seat.z, look: riderLook(seed + k++) });
-        for (let rz = seat.z - 0.95; rz > p.zRr + 0.3; rz -= 0.82) for (const rx of across) { const lk = riderLook(seed + k++); if ((seed + k * 7) % 10 < 7) riders.push({ x: rx, z: rz, look: lk }); }
-      }
+      rearLimit = p.zRr + 0.3;
+    }
+    // a danfo is never empty: a passenger up front and most of the benches behind taken
+    if (this.def.id === 'danfo') {
+      const width = im ? im.width * 0.9 : s.width;
+      const seed = look.skin * 97 + parseInt(look.top.slice(1), 16) % 1009 + parseInt(look.accent.slice(1), 16) % 613;
+      const across = [-width * 0.27, 0, width * 0.27];
+      let k = 0;
+      riders.push({ x: -seat.x, z: seat.z, look: riderLook(seed + k++) });
+      for (let rz = seat.z - 0.95; rz > rearLimit; rz -= 0.82) for (const rx of across) { const lk = riderLook(seed + k++); if ((seed + k * 7) % 10 < 7) riders.push({ x: rx, z: rz, look: lk }); }
     }
     // its own material, so a car seen through can fade its driver with it
     this.driver = new THREE.Mesh(driverGeometry(look, seat, cabin, riders), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0 }));
@@ -785,7 +905,7 @@ export class CarModel {
   private reflect() {
     const t = skyReflection.tex, k = skyReflection.intensity;
     if (t === this.envTex && k === this.envK) return;
-    for (const m of Object.values(this.mats) as THREE.Material[]) {
+    for (const m of [...Object.values(this.mats), ...this.extraMats] as THREE.Material[]) {
       if (!(m instanceof THREE.MeshStandardMaterial)) continue;
       if ((m.envMap === null) !== (t === null)) m.needsUpdate = true;
       m.envMap = t;
@@ -804,6 +924,8 @@ export class CarModel {
     this.body.rotation.z = roll;
     this.body.rotation.x = pitch;
     for (const b of this.brakeLights) (b.material as THREE.MeshStandardMaterial).emissiveIntensity = braking ? 3.2 : 0.6 + night * 0.8;
+    for (const t of this.tailMats) t.emissiveIntensity = braking ? 3.2 : 0.4 + night * 0.9;
+    for (const h of this.headMats) h.emissiveIntensity = 0.25 + night * 2.6;
     (this.mats.lampF as THREE.MeshStandardMaterial).emissiveIntensity = 0.8 + night * 3;
     (this.headGlow.material as THREE.MeshBasicMaterial).opacity = night * 0.5;
     this.headGlow.visible = night > 0.05;
@@ -811,9 +933,13 @@ export class CarModel {
   }
 
   applyLivery(l: Livery) {
-    const map = tex(liveryCanvas(l, this.def, this.detail >= 2 ? 1024 : 512), { repeat: false, aniso: 8 });
-    this.mats.paint.map?.dispose();
-    this.mats.paint.map = map;
+    if (this.imported) {
+      if (this.paintUniform) this.paintUniform.value.set(l.paint); else this.mats.paint.color.set(l.paint);
+    } else {
+      const map = tex(liveryCanvas(l, this.def, this.detail >= 2 ? 1024 : 512), { repeat: false, aniso: 8 });
+      this.mats.paint.map?.dispose();
+      this.mats.paint.map = map;
+    }
     const f = l.finish;
     this.mats.paint.roughness = f === 'matte' ? 0.62 : f === 'chrome' ? 0.06 : 0.32;
     this.mats.paint.metalness = f === 'chrome' ? 1 : f === 'metallic' ? 0.62 : f === 'pearl' ? 0.35 : 0.08;
@@ -831,7 +957,15 @@ export class CarModel {
   }
 
   dispose() {
-    this.root.traverse((o) => { const mm = o as THREE.Mesh; if (mm.isMesh) mm.geometry.dispose(); });
-    for (const mat of Object.values(this.mats)) { (mat as THREE.Material & { map?: THREE.Texture | null }).map?.dispose(); (mat as THREE.Material).dispose(); }
+    // an imported body's geometry and textures are shared by every car that wears it: only free our own
+    const shared = new Set<THREE.BufferGeometry>();
+    if (this.imported) { this.imported.body.traverse((o) => { const mm = o as THREE.Mesh; if (mm.isMesh) shared.add(mm.geometry); }); for (const w of this.imported.wheels) w.traverse((o) => { const mm = o as THREE.Mesh; if (mm.isMesh) shared.add(mm.geometry); }); }
+    this.root.traverse((o) => { const mm = o as THREE.Mesh; if (mm.isMesh && !shared.has(mm.geometry)) mm.geometry.dispose(); });
+    for (const mat of Object.values(this.mats)) {
+      const tm = (mat as THREE.Material & { map?: THREE.Texture | null }).map;
+      if (tm && !(this.imported && mat === this.mats.paint)) tm.dispose();
+      (mat as THREE.Material).dispose();
+    }
+    for (const mat of this.extraMats) mat.dispose();
   }
 }

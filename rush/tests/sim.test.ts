@@ -65,7 +65,7 @@ describe('race sim', () => {
 
   it('counts laps from the line and finishes after the configured laps', () => {
     const td = byId('expressway');
-    const { sim } = run(td, { traffic: 0, mode: 'street', laps: 1 }, field(1, 'thirdmainland'));
+    const { sim } = run(td, { traffic: 0, mode: 'street', laps: 1 }, field(1, 'zaki'));
     const c = sim.cars[0].c;
     expect(c.finished).toBe(true);
     expect(c.lap).toBe(2);

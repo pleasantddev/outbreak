@@ -274,9 +274,17 @@ export class AiDriver {
   }
 }
 
-const FIRST = ['Tunde', 'Ngozi', 'Chidi', 'Aisha', 'Femi', 'Kemi', 'Emeka', 'Bola', 'Segun', 'Funmi', 'Ike', 'Zainab', 'Dayo', 'Ada', 'Musa', 'Tola', 'Uche', 'Yemi', 'Obinna', 'Halima', 'Kunle', 'Nneka', 'Sola', 'Bisi'];
-const NICK = ['Agbero', 'Speed', 'Okada', 'Bridge', 'Gbedu', 'Wahala', 'Jollof', 'Express', 'Third Mainland', 'Danfo', 'Area', 'Molue', 'Suya', 'Owambe', 'Shayo', 'Burger'];
-const CREWS = ['Oshodi Kings', 'Ikeja Night Runners', 'Mushin Motorworks', 'Isolo Drift Club', 'Ilupeju Iron', 'Agege Express', 'Surulere Sliders', 'Yaba Tech'];
+// Rival names: a first name, sometimes with a street nickname. A nickname either comes from the same language as
+// the name or is one every Lagos driver uses whatever their language (English and Pidgin); names never mix two
+// Nigerian languages.
+const FIRST: Record<'yo' | 'ig' | 'ha', string[]> = {
+  yo: ['Tunde', 'Femi', 'Kemi', 'Bola', 'Segun', 'Funmi', 'Dayo', 'Tola', 'Yemi', 'Kunle', 'Sola', 'Bisi'],
+  ig: ['Ngozi', 'Chidi', 'Emeka', 'Ike', 'Ada', 'Uche', 'Obinna', 'Nneka', 'Chioma', 'Ifeanyi', 'Amaka', 'Kelechi'],
+  ha: ['Aisha', 'Zainab', 'Musa', 'Halima', 'Sani', 'Usman', 'Hauwa', 'Bashir', 'Aminu', 'Fatima', 'Ibrahim', 'Maryam'],
+};
+const NICK_OWN: Record<'yo' | 'ig' | 'ha', string[]> = { yo: ['Agbero', 'Gbedu', 'Owambe', 'Molue'], ig: ['Odogwu', 'Agu', 'Ugo'], ha: ['Zaki', 'Gudu', 'Damisa'] };
+const NICK_ANY = ['Speed', 'Express', 'Bridge', 'Third Mainland', 'Danfo', 'Okada', 'Turbo', 'Sharp Sharp', 'Wahala', 'Japa'];
+const CREWS = ['Oshodi Kings', 'Ikeja Night Runners', 'Mushin Motorworks', 'Isolo Drift Club', 'Ilupeju Iron', 'Agege Express', 'Surulere Sliders', 'Yaba Hustlers'];
 
 export function makePersonas(count: number, seed: number): AiPersona[] {
   const rng = new Rng(seed ^ 0x51a7e);
@@ -285,7 +293,8 @@ export function makePersonas(count: number, seed: number): AiPersona[] {
   for (let i = 0; i < count; i++) {
     let name = '';
     for (let tries = 0; tries < 20; tries++) {
-      name = rng.chance(0.55) ? `${rng.pick(FIRST)} ${rng.pick(NICK)}` : rng.pick(FIRST);
+      const lang = rng.pick(['yo', 'ig', 'ha'] as const), first = rng.pick(FIRST[lang]);
+      name = rng.chance(0.55) ? `${first} ${rng.chance(0.4) ? rng.pick(NICK_OWN[lang]) : rng.pick(NICK_ANY)}` : first;
       if (!used.has(name)) break;
     }
     used.add(name);

@@ -1,0 +1,66 @@
+{
+ "paintMode": "replace",
+ "paintHue": 0,
+ "paintSat": 0,
+ "paintVal": 0,
+ "length": 4.6,
+ "width": 2.208,
+ "height": 1.237,
+ "front": "+x",
+ "wheels": [
+  {
+   "q": 0,
+   "x": 0.841,
+   "y": 0.347,
+   "z": 1.553,
+   "r": 0.347,
+   "w": 0.319
+  },
+  {
+   "q": 1,
+   "x": -0.841,
+   "y": 0.347,
+   "z": 1.553,
+   "r": 0.347,
+   "w": 0.319
+  },
+  {
+   "q": 2,
+   "x": 0.794,
+   "y": 0.36,
+   "z": -1.559,
+   "r": 0.36,
+   "w": 0.413
+  },
+  {
+   "q": 3,
+   "x": -0.794,
+   "y": 0.36,
+   "z": -1.559,
+   "r": 0.36,
+   "w": 0.413
+  }
+ ],
+ "paint": true,
+ "paintTextured": true,
+ "tris": 24225,
+ "srcTris": 30529,
+ "materials": [
+  "paint",
+  "aluminium",
+  "glass",
+  "black",
+  "exhaust",
+  "lights",
+  "mirror",
+  "lights.002",
+  "lights.003",
+  "brake_calipers",
+  "interior",
+  "lights.004",
+  "brake_dics",
+  "rims.001",
+  "rims",
+  "tyre"
+ ]
+}

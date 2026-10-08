@@ -1,0 +1,61 @@
+{
+ "paintMode": "color",
+ "paintHue": 0,
+ "paintSat": 0,
+ "paintVal": 0,
+ "length": 4.8,
+ "width": 2.041,
+ "height": 1.469,
+ "front": "+z",
+ "wheels": [
+  {
+   "q": 0,
+   "x": 0.82,
+   "y": 0.329,
+   "z": 1.445,
+   "r": 0.329,
+   "w": 0.228
+  },
+  {
+   "q": 1,
+   "x": -0.82,
+   "y": 0.329,
+   "z": 1.445,
+   "r": 0.329,
+   "w": 0.228
+  },
+  {
+   "q": 2,
+   "x": 0.82,
+   "y": 0.329,
+   "z": -1.334,
+   "r": 0.329,
+   "w": 0.228
+  },
+  {
+   "q": 3,
+   "x": -0.82,
+   "y": 0.329,
+   "z": -1.334,
+   "r": 0.329,
+   "w": 0.228
+  }
+ ],
+ "paint": true,
+ "paintTextured": false,
+ "tris": 17950,
+ "srcTris": 18410,
+ "materials": [
+  "CAMRY_int",
+  "CAMRY_luz",
+  "cromo",
+  "CAMRY_plast",
+  "paint",
+  "bajo",
+  "Mold-Tech-8017",
+  "CAMRY_rin",
+  "CAMRY_luz2",
+  "glass",
+  "disk"
+ ]
+}

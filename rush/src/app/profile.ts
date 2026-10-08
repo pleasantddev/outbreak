@@ -1,6 +1,6 @@
 // The player's save: name, crew, garage, play money, progress, records and settings. Stored on this device; there
 // is no real money and no account system in version 1.
-import { CARS, defaultLivery, type Livery } from '../shared/cars';
+import { CARS, carById, defaultLivery, type Livery } from '../shared/cars';
 import { settingsFor, type GraphicsSettings, type PresetId } from '../render/quality';
 import { defaultAudioPrefs, type AudioPrefs } from '../audio/audio';
 import { defaultInputPrefs, type InputPrefs } from '../game/input';
@@ -27,10 +27,12 @@ export interface Profile {
   settings: { graphics: GraphicsSettings; audio: AudioPrefs; input: InputPrefs; access: AccessPrefs; gameplay: GameplayPrefs; deviceChecked: boolean };
   ghosts: Record<string, string>;
   onboarded: boolean;
+  /** bumped when garage data changes shape (2: factory wheels on imported bodies) */
+  garageV?: number;
 }
 
 const KEY = 'lagosrush.profile.v1';
-const NAMES = ['Kola', 'Amaka', 'Seyi', 'Chinedu', 'Bimpe', 'Tobi', 'Ifeoma', 'Musa', 'Lola', 'Femi', 'Zainab', 'Dapo'];
+const NAMES = ['Kola', 'Amaka', 'Musa', 'Seyi', 'Chinedu', 'Zainab', 'Bimpe', 'Ifeoma', 'Sani', 'Tobi', 'Obinna', 'Halima'];
 const COLORS = ['#f6c514', '#ff2d8a', '#39d0ff', '#39ff14', '#ff6a00', '#a678ff'];
 
 function rid(bytes = 8) { const a = new Uint8Array(bytes); crypto.getRandomValues(a); return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join(''); }
@@ -47,7 +49,7 @@ export function newProfile(touch: boolean): Profile {
     career: {}, stats: { races: 0, wins: 0, podiums: 0, drift: 0, nearMiss: 0, tricks: 0, shunts: 0, km: 0, online: 0 },
     records: {}, recent: [], friends: [],
     settings: { graphics: settingsFor('medium', true), audio: defaultAudioPrefs(), input: defaultInputPrefs(touch), access: { cbSafe: false, reduceMotion: false, highContrast: false, uiScale: 1, bigCallouts: false }, gameplay: { units: 'kmh', political: true, camera: 'near', showPerf: false, skipIntro: false }, deviceChecked: false },
-    ghosts: {}, onboarded: false,
+    ghosts: {}, onboarded: false, garageV: 2,
   };
 }
 
@@ -65,6 +67,12 @@ export function loadProfile(touch: boolean): Profile {
         // older saves have no key: make one and keep it at once, or the ladder would meet a new player next time
         if (!/^[0-9a-f]{64}$/.test(p.key ?? '')) { p.key = rid(32); localStorage.setItem(KEY, JSON.stringify(p)); }
         p.look = validLook(p.look) ?? lookFor(parseInt(p.id.slice(0, 6), 16) || 1);
+        // cars renamed when the garage moved to imported bodies: keep what the player bought
+        const renamed: Record<string, string> = { thirdmainland: 'zaki', phantom: 'odogwu' };
+        for (const g of p.garage) if (renamed[g.carId]) g.carId = renamed[g.carId];
+        if (renamed[p.current]) p.current = renamed[p.current];
+        // imported bodies wear their factory wheels unless the player picked rims; old saves only ever had the default
+        if ((p.garageV ?? 1) < 2) { for (const g of p.garage) if (carById(g.carId).model && g.livery.rims === 'five') g.livery.rims = 'stock'; p.garageV = 2; }
         // saves from before manual gas: the car no longer drives itself and the steering is the player's own
         if ((p.settings.input.controlsV ?? 1) < 2) Object.assign(p.settings.input, { autoAccel: false, steerAssist: 0, touchLayout: 'arrows', controlsV: 2 });
         if (p.settings.input.touchLayout !== 'arrows' && p.settings.input.touchLayout !== 'stick') p.settings.input.touchLayout = 'arrows';

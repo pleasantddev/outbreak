@@ -11,7 +11,7 @@ import { careerScreen } from './career';
 import { profileScreen } from './profile';
 import { settingsScreen } from './settings';
 
-const SLOGANS = ['NO KING AS GOD', "GOD'S TIME IS THE BEST", 'NO CONDITION IS PERMANENT', 'EKO O NI BAJE', 'HOLD YOUR CHANGE', 'OSHODI OKE', 'SHINE YOUR EYE', 'WE MOVE'];
+const SLOGANS = ['NO KING AS GOD', "GOD'S TIME IS THE BEST", 'NO CONDITION IS PERMANENT', 'EKO O NI BAJE', 'IGWEBUIKE', 'SANNU A HANKALI', 'HOLD YOUR CHANGE', 'SHINE YOUR EYE', 'WE MOVE'];
 
 export function playerCard(app: App) {
   const p = app.profile, lv = level(p);

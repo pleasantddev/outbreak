@@ -1,0 +1,19 @@
+{
+  "_about": "Source models (Sketchfab, CC BY 4.0) and how each was prepared. Download with a Sketchfab API token, then: node tools/cars/process.mjs <scene.gltf> public/cars/<model> '<config>'. The tools need @gltf-transform/core, extensions and functions (v4), meshoptimizer and sharp, installed outside the game's own dependencies.",
+  "cars": [
+    { "model": "camry", "uid": "560c174d073f4a10bb153ded41ada8c9", "config": { "length": 4.8 } },
+    { "model": "civic", "uid": "f81da34570b145deb463fa091604d251", "config": { "length": 4.07, "drop": ["plate"] } },
+    { "model": "hiace", "uid": "f83b4ed4d8534efb81def77b6c1b642d", "config": { "length": 4.7, "drop": ["BADGE_CHROME"] } },
+    { "model": "golf", "uid": "ed77f74d644c453cb41bb780645b1b32", "config": { "length": 4.02, "drop": ["Logo_Metal"] } },
+    { "model": "impreza", "uid": "59713723e55f4e2c809c46db27bf825d", "config": { "length": 4.4, "paint": ["material_0"] } },
+    { "model": "challenger", "uid": "c91bea8c7d114555a0d5ca400dc17db6", "config": { "length": 5.0, "front": "-z" } },
+    { "model": "gclass", "uid": "1a2a52b16cad4e618af347461817895c", "config": { "length": 4.6, "drop": ["Material.015"] } },
+    { "model": "rrsport", "uid": "31a894c9f1f544fd931b6bb5a0762c7b", "config": { "length": 4.85, "drop": ["range_logo", "range_chrome_sign", "range_plate"] } },
+    { "model": "skyline", "uid": "ff8fb2251dfa4bb9979e7022c5a6666c", "config": { "length": 4.6 } },
+    { "model": "porsche", "uid": "de1ffd344c41481892511f7fd332c136", "config": { "length": 4.29 } },
+    { "model": "one77", "uid": "57d0b9062aab4e079fbb8d06bf39baf4", "config": { "length": 4.6, "drop": ["logo"] } },
+    { "model": "aventador", "uid": "888e37a3641d4f7b94bc1a39396e2441", "config": { "length": 4.8 } },
+    { "model": "mclaren", "uid": "f7bece69400f4640a4a3be746b44998b", "config": { "length": 4.54, "drop": ["badges"] } },
+    { "model": "koenigsegg", "uid": "b4e5a4c5fa5d4d45acd6715d3325254f", "config": { "length": 4.5 } }
+  ]
+}
