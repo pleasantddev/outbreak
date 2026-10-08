@@ -693,7 +693,8 @@ export function parTime(track: Track) {
   const c = track.paths[0];
   const n = c.n;
   const v = new Float64Array(n);
-  const vmax = 58, aLat = 24, acc = 12, brk = 26;
+  // a mid range car on a clean lap (about 125 km/h flat out): starters earn bronze, gold takes a faster car
+  const vmax = 34, aLat = 16, acc = 8, brk = 18;
   for (let i = 0; i < n; i++) v[i] = Math.min(vmax, Math.sqrt(aLat / Math.max(Math.abs(track.curvature[i]), 1e-4)));
   for (let pass = 0; pass < 2; pass++) {
     for (let k = 1; k <= n; k++) { const i = k % n, h = k - 1; const ds = SAMPLE; v[i] = Math.min(v[i], Math.sqrt(v[h % n] ** 2 + 2 * acc * ds)); }

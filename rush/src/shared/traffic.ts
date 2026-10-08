@@ -50,7 +50,7 @@ export class Traffic {
       const lanesPerDir = hw > 8.2 ? 2 : 1;
       const addLane = (dir: 1 | -1, frac: number, kerb: boolean) => {
         const li = this.lanes.length;
-        this.lanes.push({ section: si, dir, frac, speed: kerb ? rng.range(8.5, 10.5) : rng.range(11.5, 14.5), f0, f1 });
+        this.lanes.push({ section: si, dir, frac, speed: kerb ? rng.range(5.5, 7.5) : rng.range(8, 11), f0, f1 });
         const span = f1 - f0;
         const count = Math.max(1, Math.floor(span / spacing));
         const step = span / count;

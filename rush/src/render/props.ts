@@ -12,6 +12,7 @@ import type { Materials } from './materials';
 import { CREATIVES, creativeTexture, houseTexture, flierTexture, streetPosterTexture, roadSignTexture, chevronTexture, shopSignAtlas, makeLitMaterial, type HouseCreative } from './signage';
 import { parkedVehicle } from './traffic3d';
 import { canvas, tex } from './textures';
+import { Clearance } from './clearance';
 
 export interface PropOptions { density: number; shadows: boolean; political: boolean; crowd: boolean; detail: number }
 export interface AdConfig { slots: { id: string; size: string; placement: string; creative: string }[]; creatives: Record<string, HouseCreative & { type: string }> }
@@ -48,11 +49,13 @@ export class Props {
   private crowdBody: THREE.InstancedMesh | null = null;
   private rng: Rng;
   private bgrid: BuildingGrid;
+  private clear: Clearance;
   private dummy = new THREE.Object3D();
 
   constructor(private world: WorldData, private track: Track, buildings: WorldBuilding[], private mats: Materials, private opts: PropOptions, private ads: AdConfig | null) {
     this.rng = new Rng(track.data.id.length * 131 + 7);
     this.bgrid = new BuildingGrid(buildings);
+    this.clear = new Clearance(track);
     this.group.name = 'props';
     // the giant boards claim their spots first so no ordinary billboard ends up in front of them
     this.giantBoards();
@@ -128,9 +131,10 @@ export class Props {
     this.group.add(m);
   }
 
+  /** Within `margin` metres of the race corridor, on any level. Seen from above, so a palm under a flyover or a lamp
+   *  post at a junction counts: either would stand in some stretch of the lap. */
   private trackNear(x: number, z: number, margin: number) {
-    const q = this.track.query(x, 0, z);
-    return q.outside < margin;
+    return this.clear.blocks(x, z, margin);
   }
 
   /** The giant house board at the end of the longest straight, plus a second one on the next longest. */
@@ -183,6 +187,7 @@ export class Props {
       const s = straight.s0 + 20;
       const p = tr.pointAt(s, 0, 0, false);
       const span = p.hw + 1.6;
+      if ([-1, 1].some((sd) => this.trackNear(p.x + p.rx * span * sd, p.z + p.rz * span * sd, 0.6))) return;
       // gantry over the road
       for (const sd of [-1, 1]) steel.cylinder(p.x + p.rx * span * sd, p.y, p.z + p.rz * span * sd, 0.22, 6.6, 10, false);
       const A = [p.x - p.rx * span, p.y + 6.4, p.z - p.rz * span], B = [p.x + p.rx * span, p.y + 6.4, p.z + p.rz * span];
@@ -201,6 +206,7 @@ export class Props {
       if (Math.abs(k) < 0.05) continue;
       const side = k > 0 ? -1 : 1;
       const b = this.beside(s, side, 0.9);
+      if (this.trackNear(b.x, b.z, 0.4)) continue;
       const m = new THREE.Mesh(geo, chev);
       m.position.set(b.x, b.y + 1.6, b.z);
       m.rotation.y = Math.atan2(-b.rx * side, -b.rz * side);
@@ -266,7 +272,7 @@ export class Props {
       const b = this.beside(s, side, 2.2);
       const sideHere = side;
       side = -side;
-      if (this.bgrid.blocked(b.x, b.z, 0.5)) continue;
+      if (this.bgrid.blocked(b.x, b.z, 0.5) || this.trackNear(b.x, b.z, 0.8)) continue;
       const y0 = b.y > 2 ? b.y + 1.0 : 0;
       const h = 9;
       steel.cylinder(b.x, y0, b.z, 0.13, h, 8, true, 0.08);

@@ -12,6 +12,7 @@ import { Props } from '../render/props';
 import { WorldView } from '../render/worldView';
 import { TrackView } from '../render/trackView';
 import { Track } from '../shared/track';
+import { routeBlocker } from '../render/clearance';
 
 export interface Scenery { trackId: string; track: Track; world: WorldView; trackView: TrackView; props: Props; group: THREE.Group; key: string }
 
@@ -73,11 +74,13 @@ export class Stage {
     this.scenery = null;
   }
 
+  private blocker: ReturnType<typeof routeBlocker> | null = null;
   ensureLandmarks() {
     const d = this.engine.settings.buildingDetail;
     if (this.landmarks && this.landmarkDetail === d) return this.landmarks;
     if (this.landmarks) { this.engine.scene.remove(this.landmarks.group); disposeTree(this.landmarks.group); }
-    this.landmarks = new Landmarks(this.world, this.mats, { detail: d, shadows: this.engine.settings.shadows > 0 });
+    this.blocker ??= routeBlocker(this.tracks);
+    this.landmarks = new Landmarks(this.world, this.mats, { detail: d, shadows: this.engine.settings.shadows > 0, blocked: this.blocker });
     this.landmarkDetail = d;
     this.engine.scene.add(this.landmarks.group);
     return this.landmarks;

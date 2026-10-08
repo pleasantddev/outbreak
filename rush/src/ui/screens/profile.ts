@@ -67,15 +67,14 @@ export function onboarding(app: App): Screen {
     <div class="panel scroll" style="padding:22px; width:min(560px,100%); display:flex; flex-direction:column; gap:16px; max-height:100%">
       <div class="logo small"><div class="l1">LAGOS</div><div class="l2">RUSH</div><div class="bar stripes"></div></div>
       <div class="h3">Welcome to Oshodi. What do they call you?</div>
-      <input class="input" maxlength="16" value="${esc(p.name)}" data-input="name" data-autofocus>
+      <div class="row" style="gap:10px"><input class="input" maxlength="16" value="${esc(p.name)}" data-input="name" data-autofocus style="flex:1; min-width:0"><button class="btn" data-act="go"><span>Let's go</span></button></div>
       <div class="field"><span class="lab">Pick a crew</span><div class="seg">${CREWS.slice(0, 6).map((c) => `<button class="${c === p.crew ? 'on' : ''}" data-act="crew" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</div></div>
       <div class="panel" style="padding:12px; background:var(--ink2)">
         <div class="h3" style="margin-bottom:6px">How to drive</div>
-        ${touch ? `<div class="small">Steer with the pad on the left. The car accelerates for you. <b>DRIFT</b> charges Gbedu through corners, <b>FUEL</b> burns your nitro, <b>ITEM</b> fires what you picked up.</div>`
+        ${touch ? `<div class="small">Steer with the arrows on the left. Hold <b>GAS</b> to go and <b>BRAKE</b> to slow down or reverse. Hold a full turn through a corner to drift and charge Gbedu. <b>FUEL</b> burns your nitro, <b>ITEM</b> fires what you picked up.</div>`
           : `<div class="small"><b>W A S D</b> or arrows to drive. <b>SPACE</b> to drift and charge Gbedu, release for a boost. <b>SHIFT</b> burns Fuel. <b>E</b> uses your item. <b>C</b> looks back. In the air, steer to spin and press up or down to flip. A gamepad works too.</div>`}
       </div>
       <div class="small mute">We set graphics to <b>${PRESET_LABEL[(p.settings.graphics.preset === 'custom' ? 'medium' : p.settings.graphics.preset)]}</b> for this device. Change it any time in Settings.</div>
-      <button class="btn" data-act="go"><span>Let's go</span></button>
     </div>
   </div>`);
   acts(node, {

@@ -538,8 +538,8 @@ export function seeThroughNear(cam: THREE.Camera, cars: CarModel[], skip: number
       const dx = p.x - c.x, dy = p.y + 0.7 - c.y, dz = p.z - c.z;
       const fwd = dx * f.x + dy * f.y + dz * f.z;
       const side = Math.abs(dx * rx + dz * rz);
-      // 0.15 right under the lens, solid again 5.5 m out or 3.2 m to the side
-      if (fwd > -2.6 && fwd < 5.5 && side < 3.2) k = 0.15 + 0.85 * Math.max(Math.min(1, Math.max(0, (fwd - 1.5) / 4)), Math.min(1, Math.max(0, side - 2.2)));
+      // gone right under the lens (a ghost of a car there reads as a grey slab), solid again 5.5 m out or 3.2 m aside
+      if (fwd > -2.6 && fwd < 5.5 && side < 3.2) k = Math.max(Math.min(1, Math.max(0, (fwd - 1.5) / 4)), Math.min(1, Math.max(0, side - 2.2)));
     }
     m.fade(k);
   }
@@ -764,6 +764,7 @@ export class CarModel {
   /** See through the whole car (1 is solid). Used for a rival right under the chase camera. */
   fade(k: number) {
     k = k > 0.98 ? 1 : Math.max(0, k);
+    this.body.visible = k > 0.06;
     if (k === this.fadeK) return;
     if (!this.fadeList) {
       const all = new Set<THREE.Material>();

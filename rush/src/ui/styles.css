@@ -151,6 +151,8 @@ table.list tr.me td { background: rgba(246,197,20,0.12); color: var(--yellow); f
   .hide-sm { display: none !important; }
 }
 .bottombar { display: flex; gap: 10px; justify-content: flex-end; align-items: center; margin-top: 12px; flex-wrap: wrap; flex-shrink: 0; }
+/* the garage's try-on bar: what is on the car but not paid for */
+.buybar { position: sticky; bottom: -14px; margin: 14px -14px -14px; padding: 12px 14px; background: var(--ink2, #15151a); border-top: 2px solid var(--yellow); display: flex; flex-direction: column; gap: 8px; }
 
 /* garage specifics */
 .garage { background: linear-gradient(90deg, rgba(11,11,13,0.9) 0%, rgba(11,11,13,0.4) 34%, rgba(11,11,13,0) 55%, rgba(11,11,13,0) 70%, rgba(11,11,13,0.85) 100%); }
@@ -261,20 +263,39 @@ table.list tr.me td { background: rgba(246,197,20,0.12); color: var(--yellow); f
   .touch-on .hud-br { bottom: auto; top: 150px; } .touch-on .hud-bl { bottom: auto; top: 150px; }
 }
 
-/* touch controls */
-.touch { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
-.touch > * { pointer-events: auto; }
-.t-steer { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom)); width: 190px; height: 110px; border-radius: 55px; background: rgba(0,0,0,0.35); border: 2px solid rgba(255,255,255,0.2); display: grid; place-items: center; touch-action: none; }
-.t-steer span { position: absolute; bottom: -20px; font: 700 0.75em var(--font-d); letter-spacing: 0.2em; color: rgba(255,255,255,0.5); }
-.t-knob { width: 76px; height: 76px; border-radius: 50%; background: rgba(246,197,20,0.85); box-shadow: 0 4px 12px rgba(0,0,0,0.5); transition: transform .06s; }
-.t-right { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: 74px 74px 90px; grid-template-rows: 74px 90px; gap: 10px; touch-action: none; }
-.t-btn { border-radius: 50%; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.28); font: 800 italic 0.95em var(--font-d); letter-spacing: 0.04em; color: #fff; touch-action: none; }
-.t-btn.on { background: rgba(246,197,20,0.85); color: var(--ink); }
-.t-gas { grid-column: 3; grid-row: 1 / span 2; border-radius: 45px; background: rgba(10,154,76,0.45); }
-.t-brake { grid-column: 2; grid-row: 2; background: rgba(229,50,45,0.4); }
-.t-drift { grid-column: 1; grid-row: 2; background: rgba(255,45,138,0.4); }
-.t-nitro { grid-column: 2; grid-row: 1; background: rgba(57,208,255,0.35); }
-.t-item { grid-column: 1; grid-row: 1; }
+/* touch controls: quiet glass pads, bright only while pressed. Left thumb: arrows. Right thumb: the pedals, with
+   drift, Fuel and the item in a row just inside them, clear of the speed gauge. */
+.touch { position: absolute; inset: 0; pointer-events: none; z-index: 5; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.touch > * { pointer-events: auto; touch-action: none; }
+.t-pad { display: grid; place-items: center; align-content: center; gap: 2px; background: rgba(12,12,16,0.34); border: 1.5px solid rgba(255,255,255,0.22); border-radius: 22px; color: rgba(255,255,255,0.88); touch-action: none; transition: background .08s, transform .08s, border-color .08s; }
+.t-pad svg { width: 30px; height: 30px; pointer-events: none; }
+.t-pad span { font: 700 10px var(--font-d); letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.75; pointer-events: none; }
+.t-pad.on { transform: scale(0.95); background: rgba(246,197,20,0.42); border-color: rgba(246,197,20,0.9); color: #fff; }
+.t-arrows { position: absolute; left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom)); display: flex; gap: 12px; }
+.t-arrows .t-pad { width: 86px; height: 86px; }
+.t-arrows .t-pad svg { width: 38px; height: 38px; }
+.t-pedals { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); display: flex; align-items: flex-end; gap: 12px; }
+.k-brake { width: 74px; height: 92px; }
+.k-throttle { width: 92px; height: 128px; border-radius: 26px; }
+.k-throttle.on { background: rgba(57,220,110,0.38); border-color: rgba(120,255,160,0.95); }
+.k-brake.on { background: rgba(229,50,45,0.42); border-color: rgba(255,120,110,0.95); }
+.t-acts { position: absolute; right: calc(max(16px, env(safe-area-inset-right)) + 192px); bottom: max(16px, env(safe-area-inset-bottom)); display: flex; gap: 10px; }
+.t-pad.small { width: 56px; height: 56px; border-radius: 50%; }
+.t-pad.small svg { width: 24px; height: 24px; }
+.t-pad.small span { display: none; }
+.k-nitro.on { background: rgba(57,208,255,0.42); border-color: rgba(57,208,255,0.95); }
+.t-stickzone { position: absolute; left: 0; bottom: 0; width: 42%; height: 72%; display: none; }
+.t-stick { position: fixed; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.25); background: rgba(12,12,16,0.25); display: grid; place-items: center; opacity: 0; transition: opacity .1s; pointer-events: none; }
+.t-stick.on { opacity: 1; }
+.t-knob { width: 54px; height: 54px; border-radius: 50%; background: rgba(246,197,20,0.85); box-shadow: 0 3px 10px rgba(0,0,0,0.45); }
+.touch.stick-mode .t-arrows { display: none; }
+.touch.stick-mode .t-stickzone { display: block; }
+@media (max-height: 420px) {
+  .t-arrows .t-pad { width: 76px; height: 76px; }
+  .k-throttle { width: 84px; height: 112px; } .k-brake { width: 68px; height: 84px; }
+  .t-acts { right: calc(max(12px, env(safe-area-inset-right)) + 178px); }
+  .t-pad.small { width: 50px; height: 50px; }
+}
 
 /* pause */
 .pause { background: rgba(5,5,7,0.6); align-items: flex-start; justify-content: center; }

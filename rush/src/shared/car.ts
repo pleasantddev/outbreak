@@ -20,6 +20,9 @@ export const PHYS = {
   maxReverse: 12,
 };
 
+/** Slowest speed a drift can start at: 11 m/s, or half the car's top speed for the slow starters. */
+export const driftMin = (def: CarDef) => Math.min(PHYS.driftMinSpeed, def.topSpeed * 0.5);
+
 export type CarEvent =
   | { t: 'driftStart'; car: number }
   | { t: 'driftTier'; car: number; tier: number }
@@ -43,7 +46,7 @@ export interface CarState {
   danfoT: number; blackoutT: number; ghostT: number;
   hint: TrackHint; q: TrackQuery | null;
   lastSafeS: number; lastSafeT: number; offT: number; respawnT: number; prevSlope: number;
-  wrongWayT: number; slipT: number; hop: number;
+  wrongWayT: number; slipT: number; hop: number; stuckT: number;
   // race progress
   raceDist: number; lap: number; cp: number; lapStart: number; lastLap: number; bestLap: number; finished: boolean; finishTime: number; place: number;
   item: string | null; itemRoll: number; itemCharges: number;
@@ -58,7 +61,7 @@ export function newCar(id: number, x: number, y: number, z: number, h: number, t
     drifting: false, driftDir: 0, driftT: 0, driftTier: 0,
     boostT: 0, nitroOn: false, fuel: 0.25, spinT: 0, spinDir: 1, danfoT: 0, blackoutT: 0, ghostT: 0,
     hint: { path: q.path, i: q.i }, q, lastSafeS: q.sMain, lastSafeT: 0, offT: 0, respawnT: 0, prevSlope: 0,
-    wrongWayT: 0, slipT: 0, hop: 0,
+    wrongWayT: 0, slipT: 0, hop: 0, stuckT: 0,
     raceDist: track.gap(0, q.sMain), lap: 0, cp: 0, lapStart: 0, lastLap: 0, bestLap: 0, finished: false, finishTime: 0, place: 0,
     item: null, itemRoll: 0, itemCharges: 0, lastPos: { x, z },
   };
@@ -108,7 +111,7 @@ export function stepCar(c: CarState, inp: CarInput, def: CarDef, track: Track, d
       if (vf > maxV) vf = expDecay(vf, maxV, 1.6, dt);
       if (brakeIn > 0) {
         if (vf > 1) vf -= 30 * brakeIn * dt;
-        else vf = Math.max(-PHYS.maxReverse, vf - 10 * brakeIn * dt);
+        else vf = Math.max(-Math.min(PHYS.maxReverse, def.topSpeed * 0.35), vf - 10 * brakeIn * dt);
       } else if (throttleIn > 0 && vf < -0.5) vf += 25 * dt;
       // rolling and air drag
       const drag = (throttleIn > 0 ? 0 : 1.1) + 0.00055 * vf * vf;
@@ -116,12 +119,12 @@ export function stepCar(c: CarState, inp: CarInput, def: CarDef, track: Track, d
 
       // drifting
       const wantDrift = controlEnabled && inp.drift;
-      if (!c.drifting && wantDrift && Math.abs(steerIn) > 0.25 && vf > PHYS.driftMinSpeed) {
+      if (!c.drifting && wantDrift && Math.abs(steerIn) > 0.25 && vf > driftMin(def)) {
         c.drifting = true; c.driftDir = Math.sign(steerIn); c.driftT = 0; c.driftTier = 0; c.hop = 1;
         events.push({ t: 'driftStart', car: c.id });
       }
       if (c.drifting) {
-        if (!wantDrift || vf < 7) {
+        if (!wantDrift || vf < driftMin(def) * 0.62) {
           if (c.driftTier > 0) { c.boostT = Math.max(c.boostT, PHYS.driftBoost[c.driftTier]); events.push({ t: 'driftBoost', car: c.id, tier: c.driftTier }); }
           c.drifting = false; c.driftTier = 0;
         } else {
@@ -134,7 +137,9 @@ export function stepCar(c: CarState, inp: CarInput, def: CarDef, track: Track, d
       }
 
       // steering: tight at low speed, calmer at the top end
-      const sf = clamp(Math.abs(vf) / 8, 0, 1) * (1 - 0.3 * clamp(Math.abs(vf) / def.topSpeed, 0, 1));
+      let sf = clamp(Math.abs(vf) / 8, 0, 1) * (1 - 0.3 * clamp(Math.abs(vf) / def.topSpeed, 0, 1));
+      // almost stopped but on the pedals: enough lock to turn out of a wall or a jam instead of grinding into it
+      if (Math.abs(vf) < 8 && (throttleIn > 0 || brakeIn > 0)) sf = Math.max(sf, 0.35);
       let target: number;
       if (c.drifting) target = c.driftDir * (0.78 + 0.5 * clamp(steerIn * c.driftDir, -1, 1)) * def.steer * 0.95;
       else target = steerIn * def.steer * sf * (vf >= 0 ? 1 : -1);
@@ -191,6 +196,10 @@ export function stepCar(c: CarState, inp: CarInput, def: CarDef, track: Track, d
       const along = c.vx * q.tx + c.vz * q.tz >= 0 ? tangentH : wrapAngle(tangentH + Math.PI);
       c.h = wrapAngle(c.h + wrapAngle(along - c.h) * Math.min(1, impact * 0.04));
       if (impact > 3) events.push({ t: 'wall', car: c.id, impact, x: c.x, y: c.y, z: c.z });
+      // pressing on against the wall at low speed: swing the nose along it so the car slides free
+      // toward the way the race runs, and only if the car already points roughly that way
+      const ahead = wrapAngle(tangentH - c.h);
+      if (impact < 6 && throttleIn > 0 && Math.abs(ahead) < 1.6) c.h = wrapAngle(c.h + clamp(ahead, -1, 1) * 2.4 * dt);
       if (impact > 9 && c.drifting) { c.drifting = false; c.driftTier = 0; }
     }
   }
@@ -246,6 +255,9 @@ export function stepCar(c: CarState, inp: CarInput, def: CarDef, track: Track, d
   const lost = c.y < gy - 4 || (q.outside > 3 && !c.grounded && c.y < gy + 0.5) || q.outside > 6;
   if (lost) c.offT += dt; else c.offT = Math.max(0, c.offT - dt * 2);
   if (c.offT > PHYS.respawnAfter && c.respawnT <= 0) { c.respawnT = 0.9; c.offT = 0; }
+  // wedged: gas down, going nowhere for three seconds. Nobody should have to find the tow button to keep racing.
+  if (controlEnabled && throttleIn > 0.5 && c.grounded && c.spinT <= 0 && Math.hypot(c.vx, c.vz) < 1.2) c.stuckT += dt; else c.stuckT = 0;
+  if (c.stuckT > 3 && c.respawnT <= 0) { c.respawnT = 0.9; c.stuckT = 0; }
 
   // remember the last safe place to be put back
   if (c.grounded && q.outside < -0.5 && q.path === 0 && time - c.lastSafeT > 0.4 && c.spinT <= 0) { c.lastSafeS = q.sMain; c.lastSafeT = time; }

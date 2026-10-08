@@ -23,7 +23,8 @@ export interface CarDef {
   blurb: string;
   // gameplay stats, roughly 1..10 for the garage bars
   stats: { speed: number; accel: number; handling: number; drift: number; weight: number };
-  // physics
+  // physics. Top speeds are capped low and climb with price: a starter does 60 km/h flat out on the gas, a
+  // supercar about three times that, so better cars are a real advantage without making the cheap ones hopeless
   topSpeed: number;     // m/s
   accel: number;        // m/s^2 at low speed
   steer: number;        // rad/s at reference speed
@@ -39,56 +40,56 @@ export const CARS: CarDef[] = [
   {
     id: 'tokunbo', name: 'Tokunbo 1.8', maker: 'Oba Motors', cls: 'street', price: 0, unlockLevel: 1,
     blurb: 'Foreign used, freshly sprayed, will outlive its third owner. The car every Lagos racer starts in.',
-    stats: { speed: 5, accel: 6, handling: 7, drift: 6, weight: 5 }, topSpeed: 52, accel: 15, steer: 2.35, grip: 9.5, driftGrip: 1.9, mass: 1.0, sound: 'turbo4',
+    stats: { speed: 2, accel: 3, handling: 7, drift: 6, weight: 5 }, topSpeed: 16.7, accel: 6.0, steer: 2.35, grip: 9.5, driftGrip: 1.9, mass: 1.0, sound: 'turbo4',
     shape: { length: 4.5, width: 1.78, height: 1.44, wheelbase: 2.7, track: 1.52, wheelR: 0.33, rideH: 0.15, cabin: 0.54, cabinLen: 0.46, roofH: 0.5, nose: 0.55, tail: 0.75, belt: 0.58, fender: 0.02, spoiler: 'lip', style: 'sedan', lights: 'slim' },
     defaultPaint: '#c8ccd0',
   },
   {
     id: 'keke', name: 'Keke Turbo', maker: 'Ajala Works', cls: 'street', price: 15000, unlockLevel: 2,
     blurb: 'Three wheels, one cylinder, zero fear. Corners like it is on rails and laughs at your traffic.',
-    stats: { speed: 3, accel: 9, handling: 10, drift: 9, weight: 2 }, topSpeed: 44, accel: 19, steer: 3.1, grip: 11, driftGrip: 2.6, mass: 0.55, sound: 'twostroke',
+    stats: { speed: 1, accel: 4, handling: 10, drift: 9, weight: 2 }, topSpeed: 15.3, accel: 7.0, steer: 3.1, grip: 11, driftGrip: 2.6, mass: 0.55, sound: 'twostroke',
     shape: { length: 2.9, width: 1.35, height: 1.75, wheelbase: 1.95, track: 1.15, wheelR: 0.24, rideH: 0.2, cabin: 0.45, cabinLen: 0.7, roofH: 0.8, nose: 0.2, tail: 0.6, belt: 0.45, fender: 0, spoiler: 'none', style: 'keke', lights: 'round' },
     defaultPaint: '#e8c020',
   },
   {
     id: 'danfo', name: 'Danfo GT', maker: 'Eko Coachworks', cls: 'heavy', price: 25000, unlockLevel: 3,
     blurb: 'Fourteen seats, a widebody kit and a horn that clears the Third Mainland Bridge. Hit it and you bounce.',
-    stats: { speed: 5, accel: 4, handling: 4, drift: 5, weight: 10 }, topSpeed: 50, accel: 12, steer: 1.95, grip: 8.5, driftGrip: 1.7, mass: 2.2, sound: 'diesel',
+    stats: { speed: 3, accel: 2, handling: 4, drift: 5, weight: 10 }, topSpeed: 20.8, accel: 5.0, steer: 1.95, grip: 8.5, driftGrip: 1.7, mass: 2.2, sound: 'diesel',
     shape: { length: 4.9, width: 2.0, height: 2.15, wheelbase: 2.95, track: 1.72, wheelR: 0.37, rideH: 0.2, cabin: 0.52, cabinLen: 0.82, roofH: 0.85, nose: 0.12, tail: 0.95, belt: 0.5, fender: 0.06, spoiler: 'roofrack', style: 'van', lights: 'round' },
     defaultPaint: '#e6b11e',
   },
   {
     id: 'spirit', name: 'Eko Spirit RS', maker: 'Oba Motors', cls: 'sport', price: 40000, unlockLevel: 4,
     blurb: 'A hot hatch built for Ikorodu Road at 2am. Light, eager and very happy sideways.',
-    stats: { speed: 7, accel: 8, handling: 8, drift: 8, weight: 4 }, topSpeed: 60, accel: 18, steer: 2.5, grip: 10, driftGrip: 2.1, mass: 0.85, sound: 'turbo4',
+    stats: { speed: 5, accel: 5, handling: 8, drift: 8, weight: 4 }, topSpeed: 27.8, accel: 7.5, steer: 2.5, grip: 10, driftGrip: 2.1, mass: 0.85, sound: 'turbo4',
     shape: { length: 4.15, width: 1.82, height: 1.42, wheelbase: 2.6, track: 1.58, wheelR: 0.34, rideH: 0.12, cabin: 0.56, cabinLen: 0.5, roofH: 0.48, nose: 0.5, tail: 0.15, belt: 0.56, fender: 0.05, spoiler: 'duck', style: 'hatch', lights: 'bar' },
     defaultPaint: '#d0141c',
   },
   {
     id: 'ajah', name: 'Ajah V8', maker: 'Lekki Iron', cls: 'sport', price: 60000, unlockLevel: 6,
     blurb: 'A long, low muscle saloon with a V8 you can hear from Ajah to Obalende. Straight lines are its love language.',
-    stats: { speed: 8, accel: 7, handling: 5, drift: 9, weight: 7 }, topSpeed: 66, accel: 17, steer: 2.15, grip: 8.8, driftGrip: 1.5, mass: 1.35, sound: 'v8',
+    stats: { speed: 7, accel: 6, handling: 5, drift: 9, weight: 7 }, topSpeed: 34.7, accel: 8.5, steer: 2.15, grip: 8.8, driftGrip: 1.5, mass: 1.35, sound: 'v8',
     shape: { length: 4.95, width: 1.95, height: 1.38, wheelbase: 2.95, track: 1.65, wheelR: 0.36, rideH: 0.12, cabin: 0.62, cabinLen: 0.42, roofH: 0.44, nose: 0.7, tail: 0.8, belt: 0.6, fender: 0.08, spoiler: 'duck', style: 'muscle', lights: 'quad' },
     defaultPaint: '#101418',
   },
   {
     id: 'wahala', name: 'Wahala Cruiser', maker: 'Lekki Iron', cls: 'heavy', price: 75000, unlockLevel: 7,
     blurb: 'The big man jeep. Seven seats, tinted glass, bull bar and a convoy attitude. Push it and others move.',
-    stats: { speed: 7, accel: 6, handling: 5, drift: 5, weight: 9 }, topSpeed: 61, accel: 15, steer: 2.05, grip: 9, driftGrip: 1.7, mass: 1.8, sound: 'v6',
+    stats: { speed: 6, accel: 4, handling: 5, drift: 5, weight: 9 }, topSpeed: 31.9, accel: 7.0, steer: 2.05, grip: 9, driftGrip: 1.7, mass: 1.8, sound: 'v6',
     shape: { length: 4.95, width: 1.98, height: 1.85, wheelbase: 2.9, track: 1.68, wheelR: 0.42, rideH: 0.26, cabin: 0.5, cabinLen: 0.6, roofH: 0.62, nose: 0.3, tail: 0.92, belt: 0.55, fender: 0.06, spoiler: 'roofrack', style: 'suv', lights: 'quad' },
     defaultPaint: '#0e0e10',
   },
   {
     id: 'thirdmainland', name: 'Third Mainland R', maker: 'Lagoon Automobili', cls: 'super', price: 140000, unlockLevel: 9,
     blurb: 'A wedge of carbon named after the longest bridge in town. Mid engine, all attitude, no patience.',
-    stats: { speed: 10, accel: 9, handling: 8, drift: 7, weight: 4 }, topSpeed: 76, accel: 21, steer: 2.45, grip: 11.5, driftGrip: 2.2, mass: 0.95, sound: 'v12',
+    stats: { speed: 9, accel: 9, handling: 8, drift: 7, weight: 4 }, topSpeed: 45.8, accel: 10.5, steer: 2.45, grip: 11.5, driftGrip: 2.2, mass: 0.95, sound: 'v12',
     shape: { length: 4.6, width: 2.02, height: 1.16, wheelbase: 2.7, track: 1.72, wheelR: 0.36, rideH: 0.09, cabin: 0.5, cabinLen: 0.4, roofH: 0.4, nose: 0.95, tail: 0.3, belt: 0.62, fender: 0.1, spoiler: 'wing', style: 'super', lights: 'slim' },
     defaultPaint: '#1b8a3a',
   },
   {
     id: 'phantom', name: 'Banana Island Phantom', maker: 'Lagoon Automobili', cls: 'super', price: 180000, unlockLevel: 11,
     blurb: 'A grand tourer for people with a driver they no longer need. Silent electric shove, absurd top speed.',
-    stats: { speed: 10, accel: 10, handling: 7, drift: 6, weight: 6 }, topSpeed: 78, accel: 22, steer: 2.3, grip: 11, driftGrip: 2.0, mass: 1.15, sound: 'electric',
+    stats: { speed: 10, accel: 10, handling: 7, drift: 6, weight: 6 }, topSpeed: 48.6, accel: 11.5, steer: 2.3, grip: 11, driftGrip: 2.0, mass: 1.15, sound: 'electric',
     shape: { length: 4.85, width: 2.0, height: 1.24, wheelbase: 2.9, track: 1.7, wheelR: 0.37, rideH: 0.1, cabin: 0.57, cabinLen: 0.46, roofH: 0.42, nose: 0.85, tail: 0.45, belt: 0.6, fender: 0.07, spoiler: 'lip', style: 'coupe', lights: 'bar' },
     defaultPaint: '#e8e2d6',
   },

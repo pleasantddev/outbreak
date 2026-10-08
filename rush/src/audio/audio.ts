@@ -64,14 +64,16 @@ class EngineVoice {
   /** speed in m/s, top speed, throttle 0..1, boosting */
   update(speed: number, top: number, throttle: number, boost: boolean, airborne: boolean, dt: number, vol: number) {
     const s = this.spec, t = this.ac.currentTime;
+    // a phone may only get here ten times a second: glide across the gap to the next update instead of stepping
+    const tc = (base: number) => Math.max(base, dt * 0.7);
     let freq: number, load = throttle;
     if (s.whine) {
       const f = 120 + (speed / top) * 1400;
       freq = f;
-      this.oscA.frequency.setTargetAtTime(f, t, 0.05); this.oscB.frequency.setTargetAtTime(f * 1.5, t, 0.05); this.sub.frequency.setTargetAtTime(f * 0.25, t, 0.05);
-      this.filt.frequency.setTargetAtTime(2400 + f, t, 0.05);
-      this.whistleGain!.gain.setTargetAtTime(0.04 + throttle * 0.06, t, 0.05); this.whistle!.frequency.setTargetAtTime(f * 3.02, t, 0.05);
-      this.out.gain.setTargetAtTime((0.12 + 0.5 * (speed / top) * (0.5 + throttle * 0.5)) * vol, t, 0.06);
+      this.oscA.frequency.setTargetAtTime(f, t, tc(0.05)); this.oscB.frequency.setTargetAtTime(f * 1.5, t, tc(0.05)); this.sub.frequency.setTargetAtTime(f * 0.25, t, tc(0.05));
+      this.filt.frequency.setTargetAtTime(2400 + f, t, tc(0.05));
+      this.whistleGain!.gain.setTargetAtTime(0.04 + throttle * 0.06, t, tc(0.05)); this.whistle!.frequency.setTargetAtTime(f * 3.02, t, tc(0.05));
+      this.out.gain.setTargetAtTime((0.12 + 0.5 * (speed / top) * (0.5 + throttle * 0.5)) * vol, t, tc(0.06));
       return;
     }
     // a virtual gearbox: each gear covers a slice of the speed range, rpm climbs then drops on the shift
@@ -85,21 +87,21 @@ class EngineVoice {
     if (this.shiftT > 0) { this.shiftT -= dt; target *= 0.82; load *= 0.3; }
     this.rpm += (target - this.rpm) * Math.min(1, dt * (target > this.rpm ? 9 : 5));
     freq = (this.rpm / 60) * (s.cyl / 2) * s.base;
-    this.oscA.frequency.setTargetAtTime(freq, t, 0.02);
-    this.oscB.frequency.setTargetAtTime(freq * 0.5 * 1.004, t, 0.02);
-    this.sub.frequency.setTargetAtTime(freq * 0.5, t, 0.02);
-    this.filt.frequency.setTargetAtTime(500 + freq * (2.2 + load * 3.5), t, 0.03);
-    this.noiseFilt.frequency.setTargetAtTime(Math.min(4000, 300 + freq * 2), t, 0.03);
-    this.noiseGain.gain.setTargetAtTime((s.diesel ? 0.35 : 0.12) * (0.3 + load), t, 0.05);
-    if (this.whistleGain && this.whistle) { this.whistleGain.gain.setTargetAtTime((boost ? 0.05 : 0.015) * load * (this.rpm / s.red), t, 0.08); this.whistle.frequency.setTargetAtTime(3000 + (this.rpm / s.red) * 4500, t, 0.08); }
-    this.out.gain.setTargetAtTime((0.16 + 0.32 * load + 0.12 * (this.rpm / s.red)) * vol, t, 0.04);
+    this.oscA.frequency.setTargetAtTime(freq, t, tc(0.02));
+    this.oscB.frequency.setTargetAtTime(freq * 0.5 * 1.004, t, tc(0.02));
+    this.sub.frequency.setTargetAtTime(freq * 0.5, t, tc(0.02));
+    this.filt.frequency.setTargetAtTime(500 + freq * (2.2 + load * 3.5), t, tc(0.03));
+    this.noiseFilt.frequency.setTargetAtTime(Math.min(4000, 300 + freq * 2), t, tc(0.03));
+    this.noiseGain.gain.setTargetAtTime((s.diesel ? 0.35 : 0.12) * (0.3 + load), t, tc(0.05));
+    if (this.whistleGain && this.whistle) { this.whistleGain.gain.setTargetAtTime((boost ? 0.05 : 0.015) * load * (this.rpm / s.red), t, tc(0.08)); this.whistle.frequency.setTargetAtTime(3000 + (this.rpm / s.red) * 4500, t, tc(0.08)); }
+    this.out.gain.setTargetAtTime((0.16 + 0.32 * load + 0.12 * (this.rpm / s.red)) * vol, t, tc(0.04));
     void freq;
   }
 
   setPosition(x: number, y: number, z: number) {
     if (!this.panner) return;
     const t = this.ac.currentTime;
-    this.panner.positionX.setTargetAtTime(x, t, 0.05); this.panner.positionY.setTargetAtTime(y, t, 0.05); this.panner.positionZ.setTargetAtTime(z, t, 0.05);
+    this.panner.positionX.setTargetAtTime(x, t, 0.08); this.panner.positionY.setTargetAtTime(y, t, 0.08); this.panner.positionZ.setTargetAtTime(z, t, 0.08);
   }
 
   stop() { const t = this.ac.currentTime; this.out.gain.setTargetAtTime(0, t, 0.1); setTimeout(() => { try { this.oscA.stop(); this.oscB.stop(); this.sub.stop(); this.noise.stop(); this.whistle?.stop(); } catch { /* already stopped */ } this.out.disconnect(); }, 400); }
@@ -177,16 +179,16 @@ export class AudioEngine {
     this.wind.filt.frequency.setTargetAtTime(300 + speed * 25, t, 0.1);
     this.crowd.gain.gain.setTargetAtTime(crowd * 0.12, t, 0.3);
   }
-  opponent(i: number, x: number, y: number, z: number, speed: number, top: number) {
+  opponent(i: number, x: number, y: number, z: number, speed: number, top: number, dt = 1 / 60, vol = 0.6) {
     const v = this.others[i];
     if (!v) return;
     v.setPosition(x, y, z);
-    v.update(speed, top, 0.8, false, false, 1 / 60, 0.6);
+    v.update(speed, top, 0.8, false, false, dt, vol);
   }
   listener(x: number, y: number, z: number, fx: number, fz: number) {
     if (!this.ac) return;
-    const L = this.ac.listener, t = this.ac.currentTime;
-    if (L.positionX) { L.positionX.setTargetAtTime(x, t, 0.03); L.positionY.setTargetAtTime(y, t, 0.03); L.positionZ.setTargetAtTime(z, t, 0.03); L.forwardX.setTargetAtTime(fx, t, 0.03); L.forwardY.setTargetAtTime(0, t, 0.03); L.forwardZ.setTargetAtTime(fz, t, 0.03); L.upY.setTargetAtTime(1, t, 0.03); }
+    const L = this.ac.listener, t = this.ac.currentTime, k = 0.08;
+    if (L.positionX) { L.positionX.setTargetAtTime(x, t, k); L.positionY.setTargetAtTime(y, t, k); L.positionZ.setTargetAtTime(z, t, k); L.forwardX.setTargetAtTime(fx, t, k); L.forwardY.setTargetAtTime(0, t, k); L.forwardZ.setTargetAtTime(fz, t, k); L.upY.setTargetAtTime(1, t, k); }
   }
 
   // ------------------------------------------------------------------------------------------- one shots
@@ -287,12 +289,16 @@ class MusicPlayer {
     if (mode === 'off') return;
     this.song = (this.song + 1) % 3;
     this.nextT = this.ac.currentTime + 0.1; this.step = 0; this.bar = 0;
-    this.timer = window.setInterval(() => this.schedule(), 25);
+    this.timer = window.setInterval(() => this.schedule(), 50);
   }
   private get bpm() { return this.mode === 'race' ? 118 : this.mode === 'results' ? 112 : 108; }
   private schedule() {
     const spb = 60 / this.bpm / 4; // sixteenth notes
-    while (this.nextT < this.ac.currentTime + 0.12) {
+    const now = this.ac.currentTime;
+    // the page stalled (a heavy frame, a tab switch): skip the beats we missed rather than play them in a heap
+    while (this.nextT < now - 0.02) { this.nextT += spb; this.step = (this.step + 1) % 16; if (this.step === 0) this.bar++; }
+    // half a second ahead: a slow phone frame can hold up this timer far longer than a few milliseconds
+    while (this.nextT < now + 0.5) {
       this.playStep(this.step, this.nextT, spb);
       this.nextT += spb * (this.step % 2 ? 0.92 : 1.08); // swing
       this.step = (this.step + 1) % 16;

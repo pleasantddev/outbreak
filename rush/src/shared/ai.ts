@@ -4,7 +4,7 @@
 import type { Track } from './track';
 import type { CarDef } from './cars';
 import type { CarInput, CarState } from './car';
-import { PHYS } from './car';
+import { driftMin } from './car';
 import type { Hazard, ItemId } from './items';
 import type { TrafficPose, TrafficKind } from './traffic';
 import { TRAFFIC_KINDS } from './traffic';
@@ -179,7 +179,9 @@ export class AiDriver {
         const latAt = q.d + (dc - q.d) * reach;
         const clear = Math.abs(latAt - ob.d) - (ob.half + 1.05);
         if (clear < 0.7) score += (0.7 - clear) * 10 * (1 - tt / 2.8) + (clear < 0 ? 8 : 0);
-        if (clear < 0.1 && tt < 1.4 && ob.v > -1) blockV = Math.min(blockV, ob.v);
+        // only something properly ahead sets our pace: two cars side by side tucking in behind each other would
+        // brake each other down into a crawling train
+        if (clear < 0.1 && tt < 1.4 && ob.v > -1 && ob.gap > 1.5) blockV = Math.min(blockV, ob.v);
       }
       if (score < bestScore) { bestScore = score; bestD = dc; bestBlockV = blockV; }
     }
@@ -225,7 +227,7 @@ export class AiDriver {
     // drifting for boost through long tight bends: only into the bend, never across it
     const kSigned = line.k[tr.indexAt(s + 8)] + line.k[tr.indexAt(s + 20)] + line.k[tr.indexAt(s + 32)];
     const kAhead = Math.abs(kSigned);
-    if (!c.drifting && !this.wantDrift && this.persona.drifter && lvl.drift > 0 && kAhead > 0.075 && v > PHYS.driftMinSpeed + 5
+    if (!c.drifting && !this.wantDrift && this.persona.drifter && lvl.drift > 0 && kAhead > 0.075 && v > driftMin(this.def) + Math.min(5, this.def.topSpeed * 0.2)
       && Math.sign(out.steer) === Math.sign(kSigned) && Math.abs(out.steer) > 0.3 && this.rng.next() < lvl.drift * 0.25) { this.wantDrift = true; this.driftHold = 0; this.driftSlack = 0; }
     if (this.wantDrift) {
       this.driftHold += ctx.dt;

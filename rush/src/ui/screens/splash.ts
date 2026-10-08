@@ -15,7 +15,6 @@ const TIPS = [
 
 export function splashScreen(app: App): Screen {
   const node = el(`<div class="screen splash">
-    <div class="legal">Map data &copy; OpenStreetMap contributors</div>
     <div class="logo"><div class="l1">LAGOS</div><div class="l2">RUSH</div><div class="bar stripes"></div></div>
     <div class="load"><div class="track"><div class="fill"></div></div><div class="label">Starting</div></div>
     <div class="press" style="display:none">PRESS ANY KEY OR TAP</div>

@@ -1,5 +1,5 @@
 // Settings: graphics presets and every advanced switch, audio, controls with rebinding, accessibility, gameplay,
-// and the credits and licences.
+// and Credits, the one place the game names its map data source and licences.
 import type { App, Screen } from '../../app/app';
 import { el, acts, esc } from '../dom';
 import { topbar } from './main';
@@ -54,7 +54,7 @@ export function settingsScreen(app: App): Screen {
     <div class="h3" style="margin-top:10px">Gamepad</div>
     <div class="small mute">Right trigger accelerates, left trigger brakes. Left stick steers and flips in the air. A or RB drifts, B or X burns Fuel, Y or LB uses your item, Start pauses.</div>
     <div class="h3" style="margin-top:10px">Touch and assists</div>
-    ${toggle('Auto accelerate', 'The car drives forward on its own; brake to slow down', inp.autoAccel, 'input', 'autoAccel')}
+    <div class="toggle"><div class="t">Touch steering<small>Arrow pads, or a stick that appears under your thumb</small></div><div class="seg">${([['arrows', 'Arrows'], ['stick', 'Stick']] as const).map(([v, l]) => `<button class="${inp.touchLayout === v ? 'on' : ''}" data-act="touchLayout" data-v="${v}">${l}</button>`).join('')}</div></div>
     ${slider('Steering assist', 'steerAssist', inp.steerAssist, 0, 0.8, 0.05, (v) => (v === 0 ? 'Off' : `${Math.round(v * 100)}%`))}
     ${toggle('Vibration', 'Rumble on hits and landings', inp.vibration, 'input', 'vibration')}
     ${toggle('Invert flips', 'Swap forward and back flips in the air', inp.invertAirPitch, 'input', 'invertAirPitch')}`;
@@ -63,7 +63,7 @@ export function settingsScreen(app: App): Screen {
     ${toggle('Reduce motion', 'Fewer animations in menus; no speed effects', acc.reduceMotion, 'access', 'reduceMotion')}
     ${toggle('High contrast', 'Solid panels and brighter secondary text', acc.highContrast, 'access', 'highContrast')}
     ${slider('Interface size', 'uiScale', acc.uiScale, 0.85, 1.4, 0.05, (v) => `${Math.round(v * 100)}%`)}
-    <div class="small mute">Steering assist and auto accelerate live under Controls.</div>`;
+    <div class="small mute">Steering assist and touch steering live under Controls.</div>`;
   else if (tab === 'gameplay') body = `
     <div class="toggle"><div class="t">Speed units</div><div class="seg">${[['kmh', 'km/h'], ['mph', 'mph']].map(([v, l]) => `<button class="${gp.units === v ? 'on' : ''}" data-act="units" data-v="${v}">${l}</button>`).join('')}</div></div>
     <div class="toggle"><div class="t">Camera</div><div class="seg">${[['near', 'Chase'], ['far', 'Far chase'], ['hood', 'Hood']].map(([v, l]) => `<button class="${gp.camera === v ? 'on' : ''}" data-act="camera" data-v="${v}">${l}</button>`).join('')}</div></div>
@@ -72,16 +72,15 @@ export function settingsScreen(app: App): Screen {
   else body = `
     <div class="h3">Lagos Rush 0.1</div>
     <div class="small" style="line-height:1.6">
-      <p>Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:var(--yellow)">OpenStreetMap contributors</a>, available under the Open Database License (ODbL 1.0). The game world database built from it is shared under the same licence. Roads, buildings, the railway and the terminal footprints come from OpenStreetMap; the race routes, ramps, signs and everything else are made for the game.</p>
-      <p>The Oshodi Transport Interchange buildings are shown as procedural models from public map data and public photos used only as reference.</p>
-      <p>Every car, maker, brand, billboard and shop name in the game is invented. Any resemblance to a real product is a coincidence.</p>
+      <p>Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:var(--yellow)">OpenStreetMap contributors</a>, ODbL 1.0; the map data derived from it is available under the same licence.</p>
+      <p>Every maker, brand, billboard and shop name in the game is invented.</p>
       <p>There is no real money anywhere in this version. Naira in the game is play money that can't be bought, sold or cashed out.</p>
       <p>Fonts: Barlow Condensed, Inter and JetBrains Mono under the SIL Open Font License. Rendering with three.js (MIT) and postprocessing (zlib). All sound is synthesised live.</p>
       <p>Your save stays on this device. Online rooms only see your racing name, crew, car and lap data.</p>
     </div>`;
   const node = el(`<div class="screen" style="background:rgba(11,11,13,0.78)">
     ${topbar('Settings')}
-    <div class="tabs">${(['graphics', 'audio', 'controls', 'access', 'gameplay', 'about'] as const).map((t) => `<button class="${tab === t ? 'on' : ''}" data-act="tab" data-v="${t}">${t === 'access' ? 'Accessibility' : t}</button>`).join('')}</div>
+    <div class="tabs">${(['graphics', 'audio', 'controls', 'access', 'gameplay', 'about'] as const).map((t) => `<button class="${tab === t ? 'on' : ''}" data-act="tab" data-v="${t}">${t === 'access' ? 'Accessibility' : t === 'about' ? 'Credits' : t}</button>`).join('')}</div>
     <div class="scroll panel" style="padding:4px 16px 16px; flex:1; max-width:860px">${body}</div>
   </div>`);
   const gfx = () => { p.settings.graphics.preset = 'custom'; p.settings.graphics.auto = false; app.applyGraphics(); };
@@ -105,7 +104,8 @@ export function settingsScreen(app: App): Screen {
       out.textContent = `${ms.toFixed(1)} ms per frame. Suggested: ${PRESET_LABEL[rec]}.`;
     },
     audio: (t) => { const k = t.dataset.k as 'muted'; a[k] = !a[k]; app.audio.applyPrefs(); saveProfile(p); app.refresh(); },
-    input: (t) => { const k = t.dataset.k as 'autoAccel' | 'vibration' | 'invertAirPitch'; inp[k] = !inp[k]; saveProfile(p); app.refresh(); },
+    input: (t) => { const k = t.dataset.k as 'vibration' | 'invertAirPitch'; inp[k] = !inp[k]; saveProfile(p); app.refresh(); },
+    touchLayout: (t) => { inp.touchLayout = t.dataset.v as 'arrows' | 'stick'; app.touch?.setLayout(inp.touchLayout); saveProfile(p); app.refresh(); },
     access: (t) => { const k = t.dataset.k as 'cbSafe' | 'reduceMotion' | 'highContrast'; acc[k] = !acc[k]; if (k === 'reduceMotion' && acc.reduceMotion) { g.motionFx = false; app.applyGraphics(); } app.applyAccess(); saveProfile(p); app.refresh(); },
     gameplay: (t) => { const k = t.dataset.k as 'skipIntro' | 'political'; gp[k] = !gp[k]; if (k === 'political') needsRebuild = true; saveProfile(p); app.refresh(); },
     units: (t) => { gp.units = t.dataset.v as 'kmh' | 'mph'; saveProfile(p); app.refresh(); },

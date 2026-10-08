@@ -1,5 +1,6 @@
 // Garage: pick a car, buy new ones, and customise paint, finish, wraps, rims, underglow, tint and plates. The menu
-// backdrop turns into a close turntable shot of the car.
+// backdrop turns into a close turntable shot of the car. Nothing is ever bought by a tap: tapping a colour or a part
+// tries it on the car, and a Buy bar shows the total until the player buys it or puts it back.
 import type { App, Screen } from '../../app/app';
 import { el, acts, esc, naira } from '../dom';
 import { topbar } from './main';
@@ -9,6 +10,21 @@ import { PAINT_PRICE, WRAP_PRICE, RIM_PRICE, GLOW_PRICE, PLATE_PRICE, FINISH_PRI
 
 let tab: 'cars' | 'paint' | 'wrap' | 'rims' | 'extras' = 'cars';
 let viewing = '';
+/** Changes being tried on the car being viewed, not yet paid for. */
+let draft: { carId: string; livery: Livery } | null = null;
+
+/** What the tried-on changes cost: each changed part once; colours of a wrap or rim come with it. */
+function draftCost(from: Livery, to: Livery) {
+  const lines: [string, number][] = [];
+  if (to.paint !== from.paint) lines.push(['Paint', PAINT_PRICE]);
+  if (to.finish !== from.finish) lines.push([`${to.finish[0].toUpperCase()}${to.finish.slice(1)} finish`, FINISH_PRICE[to.finish] ?? 0]);
+  if (to.wrap !== from.wrap || (to.wrap !== 'none' && to.wrapColor !== from.wrapColor)) lines.push(['Wrap', to.wrap === 'none' ? 0 : WRAP_PRICE]);
+  if (to.rims !== from.rims || to.rimColor !== from.rimColor) lines.push(['Rims', to.rims !== from.rims ? RIM_PRICE : 0]);
+  if (to.glow !== from.glow) lines.push(['Underglow', to.glow ? GLOW_PRICE : 0]);
+  if (to.plate !== from.plate) lines.push(['Plate', PLATE_PRICE]);
+  if (to.tint !== from.tint) lines.push(['Window tint', 0]);
+  return { lines, total: lines.reduce((a, l) => a + l[1], 0) };
+}
 
 const FINISHES: Finish[] = ['gloss', 'metallic', 'matte', 'pearl', 'chrome'];
 const STAT_LABEL: [keyof typeof CARS[0]['stats'], string][] = [['speed', 'Speed'], ['accel', 'Accel'], ['handling', 'Handling'], ['drift', 'Drift'], ['weight', 'Weight']];
@@ -20,7 +36,9 @@ export function garageScreen(app: App): Screen {
   const own = owned(p, viewing);
   const lvl = level(p).level;
   const cur = carById(p.current);
-  const liv: Livery = own ? own.livery : defaultLivery(def);
+  if (draft && (draft.carId !== viewing || !own)) draft = null;
+  const liv: Livery = draft ? draft.livery : own ? own.livery : defaultLivery(def);
+  const bill = own && draft ? draftCost(own.livery, draft.livery) : null;
   app.menu?.setCar(viewing, liv);
   const statBars = STAT_LABEL.map(([k, l]) => {
     const v = def.stats[k], c = cur.stats[k];
@@ -65,21 +83,56 @@ export function garageScreen(app: App): Screen {
           <div class="small mute">Top speed ${(def.topSpeed * 3.6).toFixed(0)} km/h . ${def.cls.toUpperCase()} class</div>
           ${own ? (viewing === p.current ? '<div class="tag">THIS IS YOUR RIDE</div>' : '<button class="btn" data-act="use"><span>Use this car</span></button>') : lvl < def.unlockLevel ? `<div class="tag dark">UNLOCKS AT LEVEL ${def.unlockLevel}</div>` : `<button class="btn" data-act="buy" ${p.naira < def.price ? 'disabled' : ''}><span>Buy for ${'₦'}${def.price.toLocaleString()}</span></button>${p.naira < def.price ? '<div class="small mute">Win a few races to save up.</div>' : ''}`}
         </div>` : `<div style="display:flex; flex-direction:column; gap:14px">${custom}</div>`}
+        ${bill && bill.lines.length ? `<div class="buybar">
+          <div class="small mute">Trying on: ${bill.lines.map(([n]) => esc(n)).join(', ')}</div>
+          <div class="row"><span class="h3">${bill.total ? naira(bill.total) : 'Free'}</span><span class="spacer"></span>
+            <button class="btn ghost small" data-act="undoDraft"><span>Put back</span></button>
+            <button class="btn small" data-act="buyDraft" ${p.naira < bill.total ? 'disabled' : ''}><span>${bill.total ? 'Buy' : 'Keep'}</span></button></div>
+          ${p.naira < bill.total ? `<div class="small mute">You have ${naira(p.naira)}. Win a few races to save up.</div>` : ''}
+        </div>` : ''}
       </div>
     </div>
   </div>`);
 
-  const spend = (cost: number, apply: () => void) => {
-    if (p.naira < cost) { app.toast('Not enough Naira yet'); return; }
-    p.naira -= cost; apply(); saveProfile(p); app.audio.play('uiOk'); app.refresh();
+  // try a change on the car: free until bought
+  const edit = (_cost: number, fn: (l: Livery) => void) => {
+    if (!own) return;
+    if (!draft) draft = { carId: viewing, livery: structuredClone(own.livery) };
+    fn(draft.livery);
+    app.audio.play('ui');
+    app.refresh();
   };
-  const edit = (cost: number, fn: (l: Livery) => void) => { if (!own) return; spend(cost, () => fn(own.livery)); };
+  const buyCar = () => {
+    if (p.naira < def.price) { app.toast('Not enough Naira yet'); return; }
+    app.modal(`<div class="h2">Buy the ${esc(def.name)}?</div>
+      <div class="mute">${naira(def.price)} from your ${naira(p.naira)}. ${(def.topSpeed * 3.6).toFixed(0)} km/h flat out, ${def.cls} class.</div>
+      <div class="bottombar"><button class="btn ghost small" data-act="close"><span>Not now</span></button><button class="btn" data-act="ok" data-autofocus><span>Buy for ${naira(def.price)}</span></button></div>`, (m, close) => {
+      acts(m, {
+        close,
+        ok: () => {
+          close();
+          if (p.naira < def.price || owned(p, def.id)) return;
+          p.naira -= def.price;
+          p.garage.push({ carId: def.id, livery: defaultLivery(def, p.garage[0].livery.plate) });
+          p.current = def.id;
+          saveProfile(p); app.audio.play('uiOk'); app.toast(`You bought the ${def.name}`); app.refresh();
+        },
+      });
+    });
+  };
   acts(node, {
     back: () => app.back(),
-    view: (t) => { viewing = t.dataset.id!; app.audio.play('ui'); app.refresh(); },
+    view: (t) => { viewing = t.dataset.id!; draft = null; app.audio.play('ui'); app.refresh(); },
+    undoDraft: () => { draft = null; app.refresh(); },
+    buyDraft: () => {
+      if (!own || !draft || !bill) return;
+      if (p.naira < bill.total) { app.toast('Not enough Naira yet'); return; }
+      p.naira -= bill.total; own.livery = draft.livery; draft = null;
+      saveProfile(p); app.audio.play('uiOk'); app.toast(bill.total ? `Done. ${naira(bill.total)} well spent` : 'Saved'); app.refresh();
+    },
     tab: (t) => { tab = t.dataset.v as typeof tab; app.refresh(); },
     use: () => { p.current = viewing; saveProfile(p); app.toast(`${def.name} is ready`); app.refresh(); },
-    buy: () => spend(def.price, () => { p.garage.push({ carId: def.id, livery: defaultLivery(def, p.garage[0].livery.plate) }); p.current = def.id; app.toast(`You bought the ${def.name}`); }),
+    buy: buyCar,
     paint: (t) => edit(PAINT_PRICE, (l) => { l.paint = t.dataset.v!; }),
     finish: (t) => edit(FINISH_PRICE[t.dataset.v!] ?? 0, (l) => { l.finish = t.dataset.v as Finish; }),
     wrap: (t) => edit(WRAP_PRICE, (l) => { l.wrap = t.dataset.v as Livery['wrap']; }),
@@ -89,7 +142,7 @@ export function garageScreen(app: App): Screen {
     glow: (t) => edit(t.dataset.v ? GLOW_PRICE : 0, (l) => { l.glow = t.dataset.v || null; }),
     plate: () => { const v = (node.querySelector('[data-input=plate]') as HTMLInputElement).value.toUpperCase().replace(/[^A-Z0-9 ]/g, '').slice(0, 9) || 'RUSH 001'; edit(PLATE_PRICE, (l) => { l.plate = v; }); },
   });
-  node.querySelector<HTMLInputElement>('[data-input=tint]')?.addEventListener('input', (e) => { if (!own) return; own.livery.tint = +(e.target as HTMLInputElement).value; app.menu?.setCar(viewing, own.livery); saveProfile(p); });
+  node.querySelector<HTMLInputElement>('[data-input=tint]')?.addEventListener('change', (e) => { const v = +(e.target as HTMLInputElement).value; edit(0, (l) => { l.tint = v; }); });
   // drag to spin the car on the turntable
   let dragX: number | null = null;
   const area = node.querySelector<HTMLElement>('[data-drag]');
@@ -97,5 +150,6 @@ export function garageScreen(app: App): Screen {
   area?.addEventListener('pointermove', (e) => { if (dragX !== null) { app.menu?.rotate((e.clientX - dragX) * 0.01); dragX = e.clientX; } });
   const up = () => { if (dragX !== null) { dragX = null; if (app.menu) app.menu.spin = true; } };
   area?.addEventListener('pointerup', up); area?.addEventListener('pointercancel', up);
-  return { el: node, view: 'garage', onLeave: () => { viewing = ''; const c = owned(p, p.current)!; app.menu?.setCar(c.carId, c.livery); } };
+  // leaving puts anything unbought back
+  return { el: node, view: 'garage', onLeave: () => { viewing = ''; draft = null; const c = owned(p, p.current)!; app.menu?.setCar(c.carId, c.livery); } };
 }

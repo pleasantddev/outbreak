@@ -14,6 +14,7 @@ import type { WorldData } from '../shared/world';
 import { CARS, defaultLivery } from '../shared/cars';
 import { Props, type AdConfig } from '../render/props';
 import { loadFonts } from '../game/stage';
+import { routeBlocker } from '../render/clearance';
 
 export async function runViewer(params: URLSearchParams) {
   const canvas = document.getElementById('gl') as HTMLCanvasElement;
@@ -32,7 +33,7 @@ export async function runViewer(params: URLSearchParams) {
   atmos.set((params.get('time') ?? 'dusk') as any, (params.get('weather') ?? 'clear') as any, settings.drawDistance, settings.reflections);
   const wv = new WorldView(world, track, mats, { detail: settings.buildingDetail, drawDistance: settings.drawDistance, shadows: settings.shadows > 0 });
   engine.scene.add(wv.group);
-  const lm = new Landmarks(world, mats, { detail: settings.buildingDetail, shadows: settings.shadows > 0 });
+  const lm = new Landmarks(world, mats, { detail: settings.buildingDetail, shadows: settings.shadows > 0, blocked: routeBlocker(tracks) });
   engine.scene.add(lm.group);
   const tv = new TrackView(track, mats, { shadows: settings.shadows > 0, detail: settings.buildingDetail });
   engine.scene.add(tv.group);

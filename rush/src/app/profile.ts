@@ -65,6 +65,9 @@ export function loadProfile(touch: boolean): Profile {
         // older saves have no key: make one and keep it at once, or the ladder would meet a new player next time
         if (!/^[0-9a-f]{64}$/.test(p.key ?? '')) { p.key = rid(32); localStorage.setItem(KEY, JSON.stringify(p)); }
         p.look = validLook(p.look) ?? lookFor(parseInt(p.id.slice(0, 6), 16) || 1);
+        // saves from before manual gas: the car no longer drives itself and the steering is the player's own
+        if ((p.settings.input.controlsV ?? 1) < 2) Object.assign(p.settings.input, { autoAccel: false, steerAssist: 0, touchLayout: 'arrows', controlsV: 2 });
+        if (p.settings.input.touchLayout !== 'arrows' && p.settings.input.touchLayout !== 'stick') p.settings.input.touchLayout = 'arrows';
         return p;
       }
     }

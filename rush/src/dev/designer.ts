@@ -102,7 +102,6 @@ export async function runDesigner(params: URLSearchParams) {
     <div class="dz-tools">${TOOLS.map((t) => `<button class="dz-tool" data-tool="${t.id}" title="${t.name} (${t.key})"><kbd>${t.key}</kbd>${t.icon}<small>${t.name}</small></button>`).join('')}</div>
     <div class="dz-map"><canvas></canvas><div class="dz-hint"></div>
       <div class="dz-legend"><span><i style="background:#f6c514"></i>route</span><span><i style="background:#ff2d8a"></i>AI line</span><span><i style="background:#3ddc84"></i>traffic with you</span><span><i style="background:#ff5a4f"></i>oncoming</span><span><i style="background:#f6a623"></i>two way</span><span><i style="background:#39d0ff"></i>bridge or boost</span></div>
-      <div class="dz-osm">Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, ODbL</div>
     </div>
     <div class="dz-side"></div>
     <div class="dz-foot"></div>

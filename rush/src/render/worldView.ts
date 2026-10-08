@@ -102,8 +102,16 @@ export class WorldView {
       const lanes = r.oneway ? Math.max(1, r.lanes) : Math.max(2, r.lanes);
       for (let i = 0; i < pts.length - 1; i++) {
         const y0 = pts[i][2] + lift, y1 = pts[i + 1][2] + lift;
+        // on a raised road the race corridor rebuilds with its own smoother heights; where the two share the same
+        // stretch, the map's surface drops under the race surface so no lip of it pokes up into the lanes
+        const sink = (x: number, z: number, y: number) => {
+          if (y < 0.5) return y;
+          const n = this.clearance.nearestAt(x, z, y, 3);
+          return n && n.d < n.hw + 2 ? Math.min(y, n.y - 0.6) : y;
+        };
         const f0 = Math.min(1, Math.min(acc[i], total - acc[i]) / 14), f1 = Math.min(1, Math.min(acc[i + 1], total - acc[i + 1]) / 14);
-        const a = [L[i][0], y0, L[i][1]], b = [R[i][0], y0, R[i][1]], c = [R[i + 1][0], y1, R[i + 1][1]], d = [L[i + 1][0], y1, L[i + 1][1]];
+        const a = [L[i][0], sink(L[i][0], L[i][1], y0), L[i][1]], b = [R[i][0], sink(R[i][0], R[i][1], y0), R[i][1]];
+        const c = [R[i + 1][0], sink(R[i + 1][0], R[i + 1][1], y1), R[i + 1][1]], d = [L[i + 1][0], sink(L[i + 1][0], L[i + 1][1], y1), L[i + 1][1]];
         const base = surface.count;
         surface.set('lane', -hw, hw, lanes, f0).vertex(a[0], a[1], a[2], 0, 1, 0, 0, acc[i]);
         surface.set('lane', hw, hw, lanes, f0).vertex(b[0], b[1], b[2], 0, 1, 0, 1, acc[i]);
@@ -176,8 +184,10 @@ export class WorldView {
         const a = edge[i], b = edge[i + 1];
         // skip parapets the race corridor replaces with its own barriers
         const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
-        const near = this.clearance.nearest(mx, mz, 25);
-        const raced = near && Math.abs(near.y - (y0 + y1) / 2) < 2.5 && near.d < near.hw + 3;
+        const near = this.clearance.nearestAt(mx, mz, (y0 + y1) / 2, 2.5, 25);
+        const raced = !!near && near.d < near.hw + 3;
+        // this edge of the map's road lies inside the race lanes: its fascia or wall would stand in the way
+        if (near && near.d < near.hw - 0.3) continue;
         const out = side;
         if (r.bridge) {
           // deck edge fascia
@@ -217,6 +227,8 @@ export class WorldView {
           const t = 1 - (sinceCol - 24 * (k + 1)) / segLen;
           const cx = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, cz = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t, cy = y0 + (y1 - y0) * t;
           if (cy < 2.5) continue;
+          // a race route running under this bridge keeps its lanes clear of columns
+          if (this.clearance.blocks(cx, cz, 1.4, -5, cy - 2.5)) continue;
           st.cylinder(cx, 0, cz, 0.75, cy - 1.3, 12, false);
           st.box(cx, cy - 2.1, cz, r.w * 0.7, 0.8, 1.6, Math.atan2(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]) + Math.PI / 2);
         }

@@ -45,7 +45,8 @@ describe('tracks', () => {
 describe('race sim', () => {
   it('runs a full AI race to the flag on every forward track', () => {
     for (const id of ['terminal', 'oshodi', 'expressway']) {
-      const { sim, events } = run(byId(id), { traffic: 0, mode: 'street', laps: 2, finishGrace: 60 }, field(8, 'spirit'));
+      // cars are capped by tier now (the Spirit does 100 km/h), so give the field the sim time a real race takes
+      const { sim, events } = run(byId(id), { traffic: 0, mode: 'street', laps: 2, finishGrace: 60 }, field(8, 'spirit'), 900);
       const st = sim.standings();
       expect(sim.phase).toBe('done');
       expect(st.filter((s) => s.finished).length).toBeGreaterThanOrEqual(6);
@@ -153,6 +154,25 @@ describe('items and traffic', () => {
     // vehicles stay on the road
     for (const p of a.poses(12)) expect(Math.abs(p.d)).toBeLessThanOrEqual(tr.hwAt(p.s));
   });
+  it('NEPA dims the cars ahead briefly, and a generator in the slot keeps the lights on', () => {
+    const td = byId('oshodi');
+    const e: Entrant[] = ['lead', 'mid', 'back'].map((id) => ({ id, name: id, carId: 'tokunbo', livery: defaultLivery(CARS[0]), human: true }));
+    const sim = new RaceSim(td, defaultRaceConfig(td.id, 1), e, { authority: true, local: ['lead', 'mid', 'back'] });
+    while (sim.time < 1) sim.step(1 / 60, {});
+    const [lead, mid, back] = sim.cars;
+    lead.c.place = 1; mid.c.place = 2; back.c.place = 3;
+    mid.c.item = 'genboost'; mid.c.itemCharges = 2;
+    back.c.item = 'blackout'; back.c.itemCharges = 1;
+    sim.useItem(back);
+    const ev = sim.drainEvents().find((x) => x.t === 'blackout');
+    expect(ev).toMatchObject({ car: back.idx, victims: [lead.idx, mid.idx], gens: [mid.idx] });
+    expect(lead.c.blackoutT).toBeGreaterThan(2);
+    expect(lead.c.blackoutT).toBeLessThan(3);
+    expect(mid.c.blackoutT).toBeLessThan(0.6);
+    expect(mid.c.itemCharges).toBe(1);
+    expect(back.c.blackoutT).toBe(0);
+  });
+
   it('rush races hand out items and use them', () => {
     const { events } = run(byId('terminal'), { mode: 'rush', laps: 2, traffic: 1 }, field(10), 200);
     expect(events.filter((e) => e === 'item').length).toBeGreaterThan(10);

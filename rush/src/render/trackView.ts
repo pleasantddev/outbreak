@@ -7,6 +7,7 @@ import { GeoBuilder } from './geom';
 import type { Materials } from './materials';
 import { canvas, tex } from './textures';
 import { Rng } from '../shared/rng';
+import { Clearance } from './clearance';
 
 export interface TrackViewOptions { shadows: boolean; detail: 0 | 1 | 2 }
 
@@ -36,6 +37,20 @@ function bannerTexture(text: string, bg: string, fg: string, sub = '') {
   g.fillText(text, 512, sub ? 66 : 86);
   if (sub) { g.font = '600 34px "Barlow Condensed", sans-serif'; g.fillText(sub, 512, 132); }
   return tex(c, { repeat: false });
+}
+
+/** Kicker planks with a painted arrow, so a ramp reads as a ramp from the driver's seat and never as a block. */
+function rampTexture() {
+  const c = canvas(256), g = c.getContext('2d')!;
+  g.fillStyle = '#9a7448'; g.fillRect(0, 0, 256, 256);
+  g.strokeStyle = 'rgba(40,24,10,0.55)'; g.lineWidth = 3;
+  for (let x = 32; x < 256; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke(); }
+  // v runs up the ramp; canvas y is flipped, so the arrow points to the top of the canvas
+  g.fillStyle = '#f6c514';
+  g.beginPath(); g.moveTo(128, 40); g.lineTo(220, 150); g.lineTo(178, 150); g.lineTo(128, 90); g.lineTo(78, 150); g.lineTo(36, 150); g.closePath(); g.fill();
+  g.fillStyle = '#111';
+  g.fillRect(0, 236, 256, 20);
+  return tex(c, { aniso: 8 });
 }
 
 function brtTexture() {
@@ -126,6 +141,7 @@ export class TrackView {
   private barriers() {
     const jersey = new GeoBuilder(), parapet = new GeoBuilder(), rail = new GeoBuilder(), posts = new GeoBuilder();
     const tr = this.track;
+    const clear = new Clearance(tr);
     tr.paths.forEach((c, pi) => {
       const segs = c.closed ? c.n : c.n - 1;
       for (const side of [-1, 1]) {
@@ -142,8 +158,7 @@ export class TrackView {
           u += len;
           // leave a gap where this edge runs into another corridor (shortcut mouths, the hairpin apex)
           const mx = (a[0] + b[0]) / 2, mz = (a[2] + b[2]) / 2;
-          const q = tr.query(mx, (a[1] + b[1]) / 2, mz, { path: pi, i });
-          if (q.outside < -0.2 && (q.path !== pi || Math.abs(q.i - i) > 6)) continue;
+          if (clear.insideOther(mx, mz, (a[1] + b[1]) / 2, pi, i, 8)) continue;
           if (pi === 0 && Math.abs(tr.curvature[i]) * c.hw[i] > 0.92 && Math.sign(tr.curvature[i]) === side) continue;
           const elevated = c.y[i] > 2.2 || c.y[j] > 2.2;
           const T = (p: number[], d: number, h: number, k: number) => { const rx = -c.tz[k], rz = c.tx[k]; return [p[0] + rx * d * side, p[1] + h, p[2] + rz * d * side]; };
@@ -174,6 +189,7 @@ export class TrackView {
       const side = rng.chance(0.5) ? 1 : -1;
       const rx = -c.tz[i], rz = c.tx[i];
       const x = c.x[i] + rx * (c.hw[i] + 1.4) * side, z = c.z[i] + rz * (c.hw[i] + 1.4) * side;
+      if (clear.blocks(x, z, 0.5)) continue;
       posts.setColor([0.22, 0.24, 0.26]);
       posts.cylinder(x, 0, z, 0.12, 9, 8, true, 0.08);
       posts.box(x - rx * side * 1.2, 8.9, z - rz * side * 1.2, 0.18, 0.12, 2.6, Math.atan2(rx, rz) + Math.PI / 2);
@@ -186,12 +202,33 @@ export class TrackView {
 
   private gantry() {
     const tr = this.track;
-    const p = tr.pointAt(0, 0);
+    const p0 = tr.pointAt(0, 0);
+    const H = 7.5;
+    // the gantry stands over the line unless another stretch of the lap (a flyover above, a junction beside) runs
+    // through its frame; then it moves along the straight to the nearest clear spot, or is left out
+    const clear = new Clearance(tr);
+    const fits = (s: number) => {
+      const q = tr.pointAt(s, 0), span = q.hw + 1.4;
+      for (let k = -1; k <= 1.001; k += 0.125) {
+        const x = q.x + q.rx * span * k, z = q.z + q.rz * span * k;
+        const leg = Math.abs(k) > 0.99;
+        if (clear.blocks(x, z, 0.6, leg ? -Infinity : q.y + 2, q.y + H + 3.5)) return false;
+      }
+      return true;
+    };
+    const sG = [0, 10, -10, 20, -20, 30, -30, 45, -45, 60, -60].find(fits);
+    if (sG !== undefined) this.gantryAt(sG, H);
+    // checkered line and grid boxes
+    this.startLine(p0);
+  }
+
+  private gantryAt(sG: number, H: number) {
+    const tr = this.track;
+    const p = tr.pointAt(sG, 0);
     const hw = p.hw;
     const steel = new GeoBuilder();
     const ang = Math.atan2(p.tx, p.tz);
     const rx = p.rx, rz = p.rz;
-    const H = 7.5;
     for (const sd of [-1, 1]) {
       const x = p.x + rx * (hw + 1.4) * sd, z = p.z + rz * (hw + 1.4) * sd;
       for (const [ox, oz] of [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]]) steel.strut([x + ox, p.y, z + oz], [x + ox, p.y + H + 1.6, z + oz], 0.16);
@@ -221,7 +258,10 @@ export class TrackView {
       this.startLights.push(pod);
       this.group.add(pod);
     }
-    // checkered line and grid boxes
+  }
+
+  private startLine(p: ReturnType<Track['pointAt']>) {
+    const tr = this.track, hw = p.hw, ang = Math.atan2(p.tx, p.tz);
     const chk = new THREE.Mesh(new THREE.PlaneGeometry(hw * 2, 1.8), new THREE.MeshStandardMaterial({ map: checker(), roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -8 }));
     chk.rotation.x = -Math.PI / 2; chk.rotation.z = ang + Math.PI / 2;
     chk.position.set(p.x, p.y + 0.09, p.z);
@@ -268,7 +308,7 @@ export class TrackView {
       const yb = sL.y - tr.rampHeight(r.s1, (d0 ?? -tr.hwAt(r.s1)) + 0.05).h;
       sides.quad([sL.x, yb, sL.z], [sR.x, yb, sR.z], [sR.x, yb + hb + 0.08, sR.z], [sL.x, yb + hb + 0.08, sL.z]);
     }
-    const wood = new THREE.MeshStandardMaterial({ color: 0x9a7448, roughness: 0.8 });
+    const wood = new THREE.MeshStandardMaterial({ map: rampTexture(), roughness: 0.8 });
     if (planks.count) this.group.add(Object.assign(new THREE.Mesh(planks.build(), wood), { castShadow: this.opts.shadows, receiveShadow: this.opts.shadows }));
     if (sides.count) this.group.add(Object.assign(new THREE.Mesh(sides.build(), this.mats.hazardStripe), { castShadow: this.opts.shadows }));
   }

@@ -299,7 +299,7 @@ export class App {
     this.menu?.dispose(); this.menu = null;
     this.replay?.dispose(); this.replay = null;
     this.input.enabled = true;
-    if (this.isTouch) { if (!this.touch) this.touch = new TouchControls(this.ui); this.touch.show(true); document.documentElement.classList.add('touch-on'); }
+    if (this.isTouch) { if (!this.touch) this.touch = new TouchControls(this.ui, this.profile.settings.input.touchLayout); this.input.touch = this.touch; this.touch.release(); this.touch.show(true); document.documentElement.classList.add('touch-on'); }
     this.session = new RaceSession(this.stage, this.ui, this.audio, this.input, {
       track, cfg, entrants, localId: net ? this.net.you : this.profile.id, political: this.profile.settings.gameplay.political, skipIntro: this.profile.settings.gameplay.skipIntro,
       onFinish: (r) => this.finishRace(r), net, banner, units: this.profile.settings.gameplay.units,

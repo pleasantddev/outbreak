@@ -42,12 +42,12 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     c += vec3(1.0, 0.97, 0.9) * streak * uSpeed * 0.45;
     c *= 1.0 - uSpeed * 0.18 * smoothstep(0.45, 1.1, r);
   }
-  // blackout: the world goes dark except a headlight wedge in front of the car
+  // blackout: the city goes dim, never black, and the headlights still light the road ahead
   if (uBlackout > 0.001) {
-    vec2 hp = (uv - vec2(0.5, 0.18)) * vec2(1.0, 1.4);
-    float cone = smoothstep(0.42, 0.08, length(hp)) * smoothstep(-0.05, 0.2, uv.y - 0.12);
-    float flicker = 0.92 + 0.08 * sin(uTime * 43.0) * sin(uTime * 7.0);
-    c *= mix(1.0, mix(0.04, 1.0, cone) * flicker, uBlackout);
+    vec2 hp = (uv - vec2(0.5, 0.2)) * vec2(0.85, 1.25);
+    float cone = smoothstep(0.55, 0.1, length(hp)) * smoothstep(-0.1, 0.18, uv.y - 0.08);
+    float flicker = 0.94 + 0.06 * sin(uTime * 43.0) * sin(uTime * 7.0);
+    c *= mix(1.0, mix(0.3, 1.0, cone) * flicker, uBlackout);
   }
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = mix(c, vec3(l), uDesat);

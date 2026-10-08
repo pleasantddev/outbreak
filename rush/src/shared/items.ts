@@ -11,7 +11,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   horn: { id: 'horn', name: 'Agbero Horn', short: 'HORN', charges: 1, colour: '#ffb300', hint: 'A blast that shoves every car near you sideways and clears hazards.' },
   rocket: { id: 'rocket', name: 'Gala Rocket', short: 'ROCKET', charges: 1, colour: '#ff3b30', hint: 'A homing snack rocket for the car ahead. A drift at the right moment dodges it.' },
   genboost: { id: 'genboost', name: 'Gen Boost', short: 'GEN x3', charges: 3, colour: '#39ff14', hint: 'Three short boosts, like a generator kicking in.' },
-  blackout: { id: 'blackout', name: 'NEPA Blackout', short: 'NEPA', charges: 1, colour: '#8a5cff', hint: 'Lights out for everyone ahead of you. Only their headlights stay on.' },
+  blackout: { id: 'blackout', name: 'NEPA Blackout', short: 'NEPA', charges: 1, colour: '#8a5cff', hint: 'Lights go dim for everyone ahead of you for a couple of seconds. A Gen Boost in their slot starts by itself and keeps their lights on.' },
   danfo: { id: 'danfo', name: 'Danfo Mode', short: 'DANFO', charges: 1, colour: '#ffd000', hint: 'Become an unstoppable yellow bus on autopilot. Flatten anyone you touch.' },
   okada: { id: 'okada', name: 'Okada Swarm', short: 'OKADA', charges: 1, colour: '#ff6a00', hint: 'A swarm of okadas cuts across the race leader. Last place only.' },
 };

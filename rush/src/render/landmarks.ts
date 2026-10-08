@@ -9,7 +9,8 @@ import type { Materials } from './materials';
 import { minRect } from './worldView';
 import { canvas, tex } from './textures';
 
-export interface LandmarkOptions { detail: 0 | 1 | 2; shadows: boolean }
+/** blocked: is a column of this radius, standing from the ground up to `top`, in the way of any race route? */
+export interface LandmarkOptions { detail: 0 | 1 | 2; shadows: boolean; blocked?: (x: number, z: number, r: number, top: number) => boolean }
 
 /** Grow or shrink a closed footprint by d metres, whatever its winding. */
 function grow(pts: number[][], d: number) {
@@ -144,8 +145,11 @@ export class Landmarks {
     }
   }
 
-  /** Square lattice column from the ground to y, X-braced. */
+  private blocked(x: number, z: number, r: number, top: number) { return this.opts.blocked?.(x, z, r + 0.6, top) ?? false; }
+
+  /** Square lattice column from the ground to y, X-braced. Left out where it would stand in a race route. */
   private latticeColumn(x: number, z: number, y: number, w: number, rot = 0) {
+    if (this.blocked(x, z, w * 0.72, y)) return;
     const c = Math.cos(rot), s = Math.sin(rot);
     const corner = (i: number, yy: number) => { const lx = (i === 0 || i === 3 ? -1 : 1) * w / 2, lz = (i < 2 ? -1 : 1) * w / 2; return [x + lx * c + lz * s, yy, z - lx * s + lz * c]; };
     for (let i = 0; i < 4; i++) this.steel.strut(corner(i, 0), corner(i, y), 0.22);
@@ -198,7 +202,7 @@ export class Landmarks {
     const ground = grow(pts, -7);
     // dark recessed ground floor with columns, then four decks of blue glass
     this.walls(this.dark.setColor([0.12, 0.13, 0.15]), ground, 0, 5);
-    for (const p of body) this.conc.cylinder(p[0], 0, p[1], 0.45, 5, 10, false);
+    for (const p of body) if (!this.blocked(p[0], p[1], 0.45, 5)) this.conc.cylinder(p[0], 0, p[1], 0.45, 5, 10, false);
     this.walls(this.glass, body, 5, 18, 1 / 12);
     this.cap(this.conc, body, 5, false);
     this.cap(this.dark.setColor([0.2, 0.21, 0.22]), body, 18, true);
@@ -226,7 +230,7 @@ export class Landmarks {
     const H = (x: number, z: number) => { let f = ((x * ux + z * uz) - u0) / (u1 - u0); if (!roundEndHigh) f = 1 - f; const s = f * f * (3 - 2 * f); return 9 + (1 - s) * 9; };
     const body = grow(pts, -2.5);
     this.walls(this.dark.setColor([0.14, 0.15, 0.16]), grow(pts, -6), 0, 4.5);
-    for (const p of body) this.conc.cylinder(p[0], 0, p[1], 0.4, 4.5, 10, false);
+    for (const p of body) if (!this.blocked(p[0], p[1], 0.4, 4.5)) this.conc.cylinder(p[0], 0, p[1], 0.4, 4.5, 10, false);
     this.walls(this.perf, body, 4.5, H, 1 / 8);
     this.cap(this.conc, body, 4.5, false);
     this.cap(this.perf, body, H, true);
@@ -336,7 +340,13 @@ export class Landmarks {
           this.roof.quad([x0 + nx * o0, y0, z0 + nz * o0], [x0 + nx * o1, y1, z0 + nz * o1], [x1 + nx * o1, y1, z1 + nz * o1], [x1 + nx * o0, y0, z1 + nz * o0], undefined, [0, 1, 0]);
         }
         along += len / steps;
-        if (along >= nextPylon) { this.pylon(x1, z1, tx, tz, deck, H); nextPylon += pylonEvery; }
+        if (along >= nextPylon) {
+          // both legs must stand clear of every race route; slide along the walkway to find room
+          const legsClear = (o: number) => [-1, 1].every((sd) => !this.blocked(x1 + tx * o + nx * 3.2 * sd, z1 + tz * o + nz * 3.2 * sd, 1.1, deck + 22));
+          const o = [0, 6, -6, 12, -12, 18, -18, 24, -24].find(legsClear);
+          if (o !== undefined) this.pylon(x1 + tx * o, z1 + tz * o, tx, tz, deck, H);
+          nextPylon += pylonEvery;
+        }
       }
     }
   }
@@ -371,10 +381,10 @@ export class Landmarks {
         this.dark.setColor([0.35, 0.22, 0.14]);
         this.dark.box((a[0] + b[0]) / 2 + nx * (W / 2 - 0.05) * sd, deck, (a[1] + b[1]) / 2 + nz * (W / 2 - 0.05) * sd, 0.08, 1.1, len, ang);
       }
-      this.conc.cylinder(a[0], 0, a[1], 0.4, deck - 0.6, 10, false);
+      if (!this.blocked(a[0], a[1], 0.4, deck)) this.conc.cylinder(a[0], 0, a[1], 0.4, deck - 0.6, 10, false);
     }
     const e = pts[pts.length - 1];
-    this.conc.cylinder(e[0], 0, e[1], 0.4, deck - 0.6, 10, false);
+    if (!this.blocked(e[0], e[1], 0.4, deck)) this.conc.cylinder(e[0], 0, e[1], 0.4, deck - 0.6, 10, false);
   }
 
   /** Rail station beside the line, on the Terminal 3 side: platform, canopy, a glazed concourse and the sign. */

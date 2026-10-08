@@ -1,4 +1,4 @@
-// LAGOS: the map of Oshodi drawn from the OpenStreetMap data, with every race route and the landmarks. Pan and
+// LAGOS: the map of Oshodi drawn from the world data, with every race route and the landmarks. Pan and
 // zoom with a finger, a mouse or the keyboard.
 import type { App, Screen } from '../../app/app';
 import { el, acts, esc } from '../dom';
@@ -27,7 +27,6 @@ export function lagosMap(app: App): Screen {
       <div class="mapwrap panel">
         <canvas></canvas>
         <div class="legend panel"><div><span style="color:#f6c514">■</span> Selected route</div><div><span style="color:#39d0ff">■</span> Bridges</div><div><span style="color:#d040d0">■</span> Terminals</div></div>
-        <div class="osm">&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div>
       </div>
       <div class="scroll" style="display:flex; flex-direction:column; gap:10px">
         <div class="h3">Routes</div>
@@ -35,7 +34,6 @@ export function lagosMap(app: App): Screen {
         <button class="card" data-act="design"><div class="k">Design a route</div><div class="d">Draw your own race over these roads, then test drive it. Best with a mouse.</div></button>
         <div class="h3" style="margin-top:6px">Landmarks</div>
         ${LANDMARKS.map((l, i) => `<button class="card" data-act="mark" data-i="${i}" style="min-height:0"><div class="k" style="font-size:1.05em">${esc(l.name)}</div><div class="d">${esc(l.d)}</div></button>`).join('')}
-        <div class="small mute">Roads, buildings and the terminal footprints come from OpenStreetMap, available under the Open Database License. The race routes and everything built on top are made for the game.</div>
       </div>
     </div>
   </div>`);

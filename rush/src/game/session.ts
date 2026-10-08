@@ -82,6 +82,7 @@ export class RaceSession {
   private lightsN = 0;
   private introSkip = false;
   phase: 'intro' | 'countdown' | 'race' | 'finished' = 'intro';
+  private voiceCar = [-1, -1, -1];
   private lastPlace = 0;
   private trafficHonkT = 2;
   private net: NetLink | null;
@@ -374,7 +375,13 @@ export class RaceSession {
           break;
         case 'dodge': if (mine) hud.call('DODGED!', 'good'); break;
         case 'horn': this.fx.burst(e.x, e.y + 0.5, e.z, [1, 0.8, 0.3], 30, 10, true); break;
-        case 'blackout': if (e.victims.includes(me)) { a.play('blackout'); hud.call('NEPA TAKE LIGHT!', 'bad'); } else if (e.car === me) hud.call('LIGHTS OUT AHEAD', 'good'); break;
+        case 'blackout': {
+          const who = this.sim.cars.find((r) => r.idx === e.car)?.entrant.name || 'Someone';
+          if (e.gens?.includes(me)) { a.play('boost'); hud.call(`${who.toUpperCase()} CUT THE LIGHT. YOUR GEN KICKED IN`, 'good'); }
+          else if (e.victims.includes(me)) { a.play('blackout'); hud.call(`NEPA TAKE LIGHT! ${who.toUpperCase()} DID IT`, 'bad'); }
+          else if (e.car === me) hud.call('LIGHTS OUT AHEAD', 'good');
+          break;
+        }
         case 'nearMiss': if (mine) a.play('nearMiss'); break;
         case 'trafficHit': if (mine) { a.play('wall', e.impact); if (Math.random() < 0.7) setTimeout(() => a.play('traffic'), 150); this.cam.shake(Math.min(0.3, e.impact * 0.02)); if (e.smashed) hud.style('SMASH', 30); } break;
         case 'bump': if (e.car === me || e.other === me) { a.play('bump'); this.cam.shake(Math.min(0.2, e.impact * 0.015)); } break;
@@ -446,8 +453,16 @@ export class RaceSession {
     const crowd = clamp(1 - Math.min(me.q ? Math.abs(this.track.gap(0, me.q.sMain)) : 999, 200) / 200, 0, 1);
     this.audio.driving(Math.hypot(me.vx, me.vz), top, this.input.throttle, boosting, !me.grounded, slip, dt, crowd);
     this.audio.listener(eng.camera.position.x, eng.camera.position.y, eng.camera.position.z, Math.sin(me.h), Math.cos(me.h));
-    const others = this.sim.cars.filter((r) => r.idx !== this.playerIdx).sort((a, b) => Math.hypot(a.c.x - me.x, a.c.z - me.z) - Math.hypot(b.c.x - me.x, b.c.z - me.z)).slice(0, 3);
-    others.forEach((r, k) => this.audio.opponent(k, r.c.x, r.c.y, r.c.z, Math.hypot(r.c.vx, r.c.vz), r.def.topSpeed));
+    // the three nearest rivals get an engine each. A voice stays on its car while that car is still near; handing
+    // voices round every time the order changes made engines jump pitch and place, which sounded like stutter
+    const near = this.sim.cars.filter((r) => r.idx !== this.playerIdx).sort((a, b) => Math.hypot(a.c.x - me.x, a.c.z - me.z) - Math.hypot(b.c.x - me.x, b.c.z - me.z)).slice(0, 3).map((r) => r.idx);
+    for (let k = 0; k < this.voiceCar.length; k++) if (!near.includes(this.voiceCar[k])) this.voiceCar[k] = -1;
+    for (const idx of near) if (!this.voiceCar.includes(idx)) { const free = this.voiceCar.indexOf(-1); if (free >= 0) this.voiceCar[free] = idx; }
+    this.voiceCar.forEach((idx, k) => {
+      const r = this.sim.cars.find((x) => x.idx === idx);
+      if (r) this.audio.opponent(k, r.c.x, r.c.y, r.c.z, Math.hypot(r.c.vx, r.c.vz), r.def.topSpeed, dt);
+      else this.audio.opponent(k, me.x, me.y, me.z, 0, 1, dt, 0);
+    });
     this.trafficHonkT -= dt;
     if (this.trafficHonkT <= 0) { this.trafficHonkT = 3 + Math.random() * 6; if (this.sim.trafficPoses.length && this.sim.racing) this.audio.play('traffic'); }
     // HUD

@@ -48,7 +48,7 @@ export type RaceEvent =
   | { t: 'hit'; car: number; by: number; kind: HazardKind | 'horn' | 'danfo' }
   | { t: 'dodge'; car: number }
   | { t: 'horn'; car: number; x: number; y: number; z: number }
-  | { t: 'blackout'; car: number; victims: number[] }
+  | { t: 'blackout'; car: number; victims: number[]; gens?: number[] }
   | { t: 'nearMiss'; car: number; oncoming: boolean; kind: string }
   | { t: 'trafficHit'; car: number; impact: number; kind: string; x: number; y: number; z: number; smashed: boolean }
   | { t: 'bump'; car: number; other: number; impact: number; x: number; y: number; z: number }
@@ -78,6 +78,12 @@ export interface RemoteSnap {
 }
 
 const DT_MAX = 1 / 20;
+
+/** NEPA takes light: a short, partial blackout. A generator in the slot starts by itself and keeps the lights on. */
+function nepa(c: CarState, gen: boolean) {
+  if (gen) { c.blackoutT = Math.max(c.blackoutT, 0.45); c.itemCharges--; if (c.itemCharges <= 0) { c.item = null; c.itemCharges = 0; } }
+  else c.blackoutT = Math.max(c.blackoutT, 2.4);
+}
 
 export class RaceSim {
   track: Track;
@@ -286,8 +292,10 @@ export class RaceSim {
       case 'genboost': c.boostT = Math.max(c.boostT, 1.05); break;
       case 'blackout': {
         const victims = this.cars.filter((o) => o.c.place < c.place && !o.c.finished).map((o) => o.idx);
-        for (const v of victims) { const o = this.cars[v]; if (o.control !== 'remote') o.c.blackoutT = 3.6; }
-        this.events.push({ t: 'blackout', car: rc.idx, victims });
+        // anyone holding a generator gets it started on their behalf: a flicker, one charge used, lights back
+        const gens = victims.filter((v) => this.cars[v].c.item === 'genboost' && this.cars[v].c.itemCharges > 0);
+        for (const v of victims) { const o = this.cars[v]; if (o.control !== 'remote') nepa(o.c, gens.includes(v)); }
+        this.events.push({ t: 'blackout', car: rc.idx, victims, gens });
         break;
       }
       case 'danfo': c.danfoT = 5.5; break;
@@ -650,7 +658,7 @@ export class RaceSim {
       case 'hazardGone': this.hazards = this.hazards.filter((h) => h.id !== ev.id); break;
       case 'pickup': { const b = this.bags[ev.bag]; if (b) b.respawn = this.time + 3.5; break; }
       case 'useItem': { const rc = this.cars[ev.car]; if (rc && rc.control === 'local') { rc.c.itemCharges -= 1; if (rc.c.itemCharges <= 0) { rc.c.item = null; rc.c.itemCharges = 0; } if (ev.item === 'genboost') rc.c.boostT = Math.max(rc.c.boostT, 1.05); if (ev.item === 'danfo') rc.c.danfoT = 5.5; } break; }
-      case 'blackout': for (const v of ev.victims) { const rc = this.cars[v]; if (rc && rc.control === 'local') rc.c.blackoutT = 3.6; } break;
+      case 'blackout': for (const v of ev.victims) { const rc = this.cars[v]; if (rc && rc.control === 'local') nepa(rc.c, !!ev.gens?.includes(v)); } break;
     }
   }
 

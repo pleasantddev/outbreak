@@ -39,7 +39,7 @@ export function mainMenu(app: App): Screen {
       <div class="foot">
         ${playerCard(app)}
         <button class="icon-btn" data-act="settings" aria-label="Settings">${UI_ICON.gear}</button>
-        <div class="attrib">Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>, ODbL. All brands in the game are fictional. No real money anywhere.</div>
+        <div class="attrib">All brands in the game are fictional. No real money anywhere. Credits in Settings.</div>
       </div>
     </div>
     <div class="slogan hide-sm"><span class="danfo-slogan">${SLOGANS[Math.floor(Math.random() * SLOGANS.length)]}</span></div>
