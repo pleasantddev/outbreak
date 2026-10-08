@@ -1,6 +1,7 @@
 // One race: grid, countdown, laps, pickups, items, traffic, slipstream, shunts, finish order. The same class runs
 // offline races on the client, the authoritative copy on the room server, and the headless tests. Cars are driven
 // locally (this machine's player), by AI, or remotely (state arrives over the network and is only observed here).
+import type { DriverLook } from './drivers';
 import { Track, type TrackData } from './track';
 import { carById, type CarDef, type Livery } from './cars';
 import { newCar, stepCar, collideCars, idleInput, type CarInput, type CarState, type CarEvent } from './car';
@@ -29,7 +30,7 @@ export const defaultRaceConfig = (track: string, laps: number): RaceConfig => ({
   track, laps, mode: 'rush', traffic: 1, aiLevel: 'normal', catchUp: true, seed: 1, weather: 'clear', time: 'dusk', stuntTime: 120, finishGrace: 30,
 });
 
-export interface Entrant { id: string; name: string; carId: string; livery: Livery; human: boolean; crew?: string; level?: number }
+export interface Entrant { id: string; name: string; carId: string; livery: Livery; human: boolean; crew?: string; level?: number; look?: DriverLook }
 
 export type RaceEvent =
   | (CarEvent & { car: number })

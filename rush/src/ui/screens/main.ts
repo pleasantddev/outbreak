@@ -6,6 +6,7 @@ import { quickRace } from './raceflow';
 import { garageScreen } from './garage';
 import { lagosMap } from './lagos';
 import { multiplayer } from './online';
+import { OFFLINE } from '../../app/route';
 import { careerScreen } from './career';
 import { profileScreen } from './profile';
 import { settingsScreen } from './settings';
@@ -27,7 +28,7 @@ export function mainMenu(app: App): Screen {
     ['race', 'RACE', 'Quick race on the streets of Oshodi'],
     ['garage', 'GARAGE', 'Paint, wraps, rims and new rides'],
     ['lagos', 'LAGOS', 'The map, the routes, the landmarks'],
-    ['online', 'MULTIPLAYER', 'Quick match, private rooms, your crew'],
+    ['online', 'MULTIPLAYER', OFFLINE ? 'Needs the race server, not in this copy' : 'Quick match, private rooms, your crew'],
     ['career', 'CAREER', 'Cups from rookie to Lagos legend'],
     ['profile', 'PROFILE', 'Your stats, records and crew'],
   ];

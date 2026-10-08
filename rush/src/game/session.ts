@@ -7,6 +7,7 @@ import type { Track, TrackData } from '../shared/track';
 import type { CarInput } from '../shared/car';
 import { idleInput } from '../shared/car';
 import { carById, CARS, defaultLivery } from '../shared/cars';
+import { lookFor } from '../shared/drivers';
 import type { WorldView } from '../render/worldView';
 import type { TrackView } from '../render/trackView';
 import type { Props } from '../render/props';
@@ -112,7 +113,7 @@ export class RaceSession {
     this.group.add(this.trafficView.group, this.fx.group, this.hazards.group);
     stage.engine.scene.add(this.group);
     for (const rc of this.sim.cars) {
-      const m = new CarModel(rc.def, rc.entrant.livery, { shadows, detail: rc.idx === this.playerIdx ? 2 : 1 });
+      const m = new CarModel(rc.def, rc.entrant.livery, { shadows, detail: rc.idx === this.playerIdx ? 2 : 1, driver: rc.entrant.look });
       if (rc.entrant.livery.rims !== 'five') m.setRims(rc.entrant.livery.rims);
       this.group.add(m.root);
       this.models.push(m);
@@ -407,7 +408,7 @@ export class RaceSession {
       let model = this.models[i];
       // Danfo Mode: the car becomes a big yellow bus for a few seconds
       if (c.danfoT > 0) {
-        if (!this.danfos[i]) { const def = carById('danfo'); const lv = defaultLivery(def); this.danfos[i] = new CarModel(def, lv, { shadows: false, detail: 1 }); this.danfos[i]!.root.scale.setScalar(1.25); this.group.add(this.danfos[i]!.root); }
+        if (!this.danfos[i]) { const def = carById('danfo'); const lv = defaultLivery(def); this.danfos[i] = new CarModel(def, lv, { shadows: false, detail: 1, driver: lookFor(i * 7 + 3) }); this.danfos[i]!.root.scale.setScalar(1.25); this.group.add(this.danfos[i]!.root); }
         model.root.visible = false; model = this.danfos[i]!; model.root.visible = true;
       } else if (this.danfos[i]) { this.danfos[i]!.root.visible = false; this.models[i].root.visible = true; }
       const lift = c.respawnT > 0 ? Math.sin(Math.min(1, (0.9 - c.respawnT) / 0.9) * Math.PI) * 3 : 0;
@@ -508,7 +509,7 @@ export function quickEntrants(player: Entrant, count: number, seed: number, clas
     if (i % 3 === 1) { lv.wrap = (['stripes', 'naija', 'fire', 'checker', 'ankara', 'adire'] as const)[(i + seed) % 6]; lv.wrapColor = ['#ffffff', '#111111', '#f6c514'][i % 3]; }
     lv.paint = ['#d0141c', '#0d4fa8', '#e6b11e', '#1b8a3a', '#101418', '#e8e2d6', '#ff6a00', '#7a2bd9', '#00a6a6', '#c8ccd0', '#ff2d8a'][(i * 5 + seed) % 11];
     lv.rims = (['five', 'mesh', 'multi', 'turbine', 'dish', 'split'] as const)[(i + seed) % 6];
-    list.push({ id: `ai${i}`, name: '', carId: def.id, livery: lv, human: false });
+    list.push({ id: `ai${i}`, name: '', carId: def.id, livery: lv, human: false, look: lookFor(seed * 13 + i) });
   }
   // the player starts mid pack, the way arcade racers put you in the fight from the off
   const at = Math.min(list.length, Math.floor(count * 0.6));

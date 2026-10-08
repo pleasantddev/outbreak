@@ -16,6 +16,7 @@ import { raceReward, levelFromXp, type Reward } from '../../shared/economy';
 import type { SessionResult } from '../../game/session';
 import { fmtTime } from '../hud';
 import { designIdOf } from '../../app/designs';
+import { goRoute } from '../../app/route';
 import type { TrackData } from '../../shared/track';
 
 export const MODES: { id: RaceMode; name: string; d: string }[] = [
@@ -101,7 +102,7 @@ export function launchQuick(app: App) {
   const td = app.stage!.tracks.find((t) => t.id === s.track)!;
   const cfg: RaceConfig = { ...defaultRaceConfig(td.id, s.laps), mode: s.mode, traffic: s.mode === 'trial' || s.mode === 'stunt' ? 0 : s.traffic, aiLevel: s.ai, time: s.time, weather: s.weather, seed: Math.floor(Math.random() * 1e9) };
   const car = currentCar(app.profile);
-  const me = { id: app.profile.id, name: app.profile.name, carId: car.carId, livery: car.livery, human: true, crew: app.profile.crew, level: level(app.profile).level };
+  const me = { id: app.profile.id, name: app.profile.name, carId: car.carId, livery: car.livery, human: true, crew: app.profile.crew, level: level(app.profile).level, look: app.profile.look };
   const count = s.mode === 'trial' ? 1 : s.opponents + 1;
   const entrants = count === 1 ? [me] : quickEntrants(me, count, cfg.seed % 97, carById(car.carId).cls);
   app.startRace(td, cfg, entrants, () => {});
@@ -199,7 +200,7 @@ export function resultsScreen(app: App): Screen {
     </div>
   </div>`);
   acts(node, {
-    designer: () => { location.href = `/?dev=designer&design=${encodeURIComponent(designIdOf(td.id)!)}`; },
+    designer: () => goRoute('designer', designIdOf(td.id)!),
     rematch: () => { const lr = app.lastRace!; app.session?.dispose(); app.session = null; app.startRace(lr.track, { ...lr.cfg, seed: Math.floor(Math.random() * 1e9) }, lr.entrants, app.onRaceEnd ?? (() => {})); },
     replay: () => { app.watchReplay(); for (const s of [node]) s.remove(); },
     garage: () => { app.leaveRace(); app.show(mainMenu, true); app.show(garageScreen); },

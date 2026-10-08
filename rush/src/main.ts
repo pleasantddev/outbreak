@@ -6,7 +6,9 @@ import '@fontsource/inter/400.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/jetbrains-mono/500.css';
 
-const params = new URLSearchParams(location.search);
+import { routeParams } from './app/route';
+
+const params = routeParams();
 if (params.get('dev') === 'designer') {
   import('./dev/designer').then((m) => m.runDesigner(params));
 } else if (params.get('dev')) {

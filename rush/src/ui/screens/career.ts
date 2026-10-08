@@ -73,7 +73,7 @@ function startCupRace(app: App, cup: Cup) {
   const td = app.stage!.tracks.find((t) => t.id === race.track)!;
   const cfg: RaceConfig = { ...defaultRaceConfig(td.id, race.laps), aiLevel: cup.ai, traffic: cup.traffic, time: cup.time, weather: 'clear', seed: cup.id.length * 1000 + st.results.length * 17 + 3 };
   const car = currentCar(p);
-  const me = { id: p.id, name: p.name, carId: car.carId, livery: car.livery, human: true, crew: p.crew };
+  const me = { id: p.id, name: p.name, carId: car.carId, livery: car.livery, human: true, crew: p.crew, look: p.look };
   const entrants = quickEntrants(me, 12, cup.id.length * 101 + 7, carById(car.carId).cls);
   // keep rival names stable across the cup
   const personas = makePersonas(11, cup.id.length * 101 + 7);

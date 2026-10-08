@@ -11,6 +11,7 @@ import { Track, type TrackData } from '../shared/track';
 import type { WorldData, GraphNode, GraphEdge, RoadClass } from '../shared/world';
 import { lineFor, type RacingLine } from '../shared/ai';
 import { loadDesigns, saveDesign, deleteDesign, loadGraph, validDesign } from '../app/designs';
+import { goRoute } from '../app/route';
 
 type Tool = 'select' | 'anchor' | 'start' | 'link' | 'ramp' | 'pickup' | 'boost' | 'hazard' | 'checkpoint' | 'traffic' | 'shortcut' | 'close';
 const TOOLS: { id: Tool; key: string; icon: string; name: string; hint: string }[] = [
@@ -38,7 +39,7 @@ export async function runDesigner(params: URLSearchParams) {
   document.getElementById('gl')?.remove();
   const ui = document.getElementById('ui')!;
   ui.style.cssText = 'position:fixed;inset:0;pointer-events:auto';
-  const [published, graph] = await Promise.all([fetch('/world/oshodi.json').then((r) => r.json()) as Promise<WorldData>, loadGraph('/')]);
+  const [published, graph] = await Promise.all([fetch('world/oshodi.json').then((r) => r.json()) as Promise<WorldData>, loadGraph('')]);
   const world: WorldData = { ...published, graph };
   const nodes = world.graph.nodes.filter((n) => n.edges.some((ei) => world.graph.edges[ei]?.cls !== 'path'));
   const edges = world.graph.edges.filter((e) => e.cls !== 'path');
@@ -85,6 +86,7 @@ export async function runDesigner(params: URLSearchParams) {
   ui.innerHTML = `<div class="dz">
     <div class="dz-top">
       <div class="dz-brand"><b>Lagos</b> Rush<span>Race designer</span></div>
+      <button class="b" data-a="game" title="Back to the game">Game</button>
       <button class="b" data-a="new" title="Start an empty route">New</button>
       <select data-a="open" title="Open a saved design or copy an official route"></select>
       <button class="b" data-a="undo" title="Undo (Ctrl+Z)">Undo</button>
@@ -700,16 +702,20 @@ export async function runDesigner(params: URLSearchParams) {
   root.querySelector('.dz-top')!.addEventListener('click', (e) => { const b = (e.target as HTMLElement).closest('button[data-a]') as HTMLElement | null; if (b) action(b.dataset.a!); });
   openSel.addEventListener('change', () => {
     const v = openSel.value; openSel.value = '';
-    if (!v || !confirmLeave()) return;
-    const [kind, id] = v.split(':');
-    if (kind === 'mine') { const d = loadDesigns().find((x) => x.id === id); if (d) load(d); }
-    else { const o = forwardDefs.find((x) => x.id === id); if (o) { load(copyOfficial(o)); saved = ''; toast(`Copied ${o.name}. Save to keep it.`); } }
+    if (!v) return;
+    void confirmLeave().then((ok) => {
+      if (!ok) return;
+      const [kind, id] = v.split(':');
+      if (kind === 'mine') { const d = loadDesigns().find((x) => x.id === id); if (d) load(d); }
+      else { const o = forwardDefs.find((x) => x.id === id); if (o) { load(copyOfficial(o)); saved = ''; toast(`Copied ${o.name}. Save to keep it.`); } }
+    });
   });
 
-  function confirmLeave() { return JSON.stringify(def) === saved || confirm('Leave this design without saving?'); }
+  function confirmLeave() { return JSON.stringify(def) === saved ? Promise.resolve(true) : ask('Leave this design without saving?', 'Leave'); }
   function action(a: string) {
     switch (a) {
-      case 'new': if (confirmLeave()) { load(blank()); saved = ''; setTool('anchor'); } break;
+      case 'game': void confirmLeave().then((ok) => { if (ok) goRoute('game'); }); break;
+      case 'new': void confirmLeave().then((ok) => { if (ok) { load(blank()); saved = ''; setTool('anchor'); } }); break;
       case 'undo': doUndo(); break;
       case 'redo': doRedo(); break;
       case 'fit': fit(); break;
@@ -719,11 +725,11 @@ export async function runDesigner(params: URLSearchParams) {
         if (def.noTraffic) def.noTraffic = def.noTraffic.map(([a2, b]) => [b, a2]);
       }); break;
       case 'save': doSave(); break;
-      case 'drive': if (doSave()) location.href = `/?test=${encodeURIComponent(def.id)}`; break;
+      case 'drive': if (doSave()) goRoute('test', def.id); break;
       case 'export': exportModal(); break;
       case 'import': importModal(); break;
       case 'dup': { const c = structuredClone(def); c.id = freeId(`${def.id}-copy`); c.name = `${def.name} copy`; load(c); saved = ''; toast('Duplicated. Save to keep it.'); break; }
-      case 'delete': if (confirm(`Delete "${def.name}" from this browser?`)) { deleteDesign(def.id); load(loadDesigns()[0] ?? blank()); toast('Deleted'); } break;
+      case 'delete': void ask(`Delete "${def.name}" from this browser?`, 'Delete').then((ok) => { if (ok) { deleteDesign(def.id); load(loadDesigns()[0] ?? blank()); toast('Deleted'); } }); break;
       case 'remove': removeSel(); break;
     }
   }
@@ -759,6 +765,17 @@ export async function runDesigner(params: URLSearchParams) {
     });
   }
   function modal(html: string) { const m = document.createElement('div'); m.className = 'dz-modal'; m.innerHTML = `<div>${html}</div>`; root.appendChild(m); return m; }
+  /** An in page yes or no: browser confirm boxes are blocked inside hosted preview pages. */
+  function ask(question: string, yes: string) {
+    return new Promise<boolean>((done) => {
+      const m = modal(`<div class="h3">${esc(question)}</div><div class="dz-pair"><button class="b" data-m="no">Cancel</button><button class="b go" data-m="yes">${esc(yes)}</button></div>`);
+      m.addEventListener('click', (e) => {
+        const b = (e.target as HTMLElement).closest('[data-m]') as HTMLElement | null; if (!b) return;
+        m.remove(); done(b.dataset.m === 'yes');
+      });
+      (m.querySelector('[data-m="yes"]') as HTMLButtonElement).focus();
+    });
+  }
   let toastT = 0;
   function toast(text: string) {
     root.querySelector('.dz-toast')?.remove();

@@ -11,6 +11,7 @@ import { Rooms, type Conn } from './rooms';
 import { Store } from './store';
 import { PROTOCOL_VERSION, normaliseCode, validState, unpackState, type ClientMsg, type ServerMsg, type PlayerCard, type RankInfo } from '../src/shared/protocol';
 import { CARS, carById } from '../src/shared/cars';
+import { validLook } from '../src/shared/drivers';
 import type { TrackData } from '../src/shared/track';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -182,7 +183,7 @@ export function createServer(port = PORT, opts: { dataFile?: string | null } = {
       rimColor: hex(lv?.rimColor, '#c0c4c8'), glow: lv?.glow ? hex(lv.glow, '#00e5ff') : null, plate: String(lv?.plate ?? 'RUSH 001').toUpperCase().replace(/[^A-Z0-9 ]/g, '').slice(0, 9) || 'RUSH 001',
       tint: Math.min(1, Math.max(0, Number(lv?.tint ?? 0.6))),
     };
-    return { id: '', name, crew: String(c.crew ?? '').slice(0, 24), color: hex(c.color, '#f6c514'), level: Math.min(99, Math.max(1, Math.round(Number(c.level ?? 1)))), carId: car.id, livery };
+    return { id: '', name, crew: String(c.crew ?? '').slice(0, 24), color: hex(c.color, '#f6c514'), level: Math.min(99, Math.max(1, Math.round(Number(c.level ?? 1)))), carId: car.id, livery, look: validLook(c.look) ?? undefined };
   }
 
   for (const sig of ['SIGINT', 'SIGTERM'] as const) process.once(sig, () => { store.flush(); process.exit(0); });

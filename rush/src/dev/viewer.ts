@@ -22,7 +22,7 @@ export async function runViewer(params: URLSearchParams) {
   const settings = settingsFor(q);
   const engine = new Engine(canvas, settings);
   const t0 = performance.now();
-  const [world, tracks]: [WorldData, TrackData[]] = await Promise.all([fetch('/world/oshodi.json').then((r) => r.json()), fetch('/world/tracks.json').then((r) => r.json())]);
+  const [world, tracks]: [WorldData, TrackData[]] = await Promise.all([fetch('world/oshodi.json').then((r) => r.json()), fetch('world/tracks.json').then((r) => r.json())]);
   const td = tracks.find((t) => t.id === (params.get('track') ?? 'terminal')) ?? tracks[0];
   const track = new Track(td);
   await loadFonts();
@@ -39,7 +39,7 @@ export async function runViewer(params: URLSearchParams) {
   // &props=1 dresses the streets too: billboards, the giant house boards, fliers, signs, lights, crowds
   let props: Props | null = null;
   if (params.get('props')) {
-    const ads = await fetch('/ads/slots.json').then((r) => r.json()).catch(() => null) as AdConfig | null;
+    const ads = await fetch('ads/slots.json').then((r) => r.json()).catch(() => null) as AdConfig | null;
     props = new Props(world, track, wv.buildingsKept, mats, { density: settings.props, shadows: settings.shadows > 0, political: true, crowd: settings.crowd, detail: settings.buildingDetail }, ads);
     engine.scene.add(props.group);
   }

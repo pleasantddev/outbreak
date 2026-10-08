@@ -33,7 +33,7 @@ Status: GREEN means the licence is explicit and our use fits it. YELLOW means us
 | Campaign fliers (name only) | `src/render/signage.ts` | No likeness or party logo; toggle in settings | YELLOW: legal review of political content before release |
 | Street posters (crusade, owambe, tailoring, room to let) | `src/render/signage.ts` | Generic notices | GREEN |
 | Road signs and chevrons | `src/render/signage.ts` | Our own drawings in the style of Nigerian green direction signs | GREEN |
-| Garage workshop and the OSHODI CUSTOMS sign | `src/render/garageSet.ts` | Invented business | GREEN |
+| Garage workshop and the CAPPA MECHANIC VILLAGE sign | `src/render/garageSet.ts` | Invented workshop under a Lagos place name; no real business is named | GREEN |
 | Item icons and UI icons | `src/ui/icons.ts` | Inline SVG drawn for the game | GREEN |
 | App icon | `public/icon.svg` | Drawn for the game | GREEN |
 | Engine sounds, tyres, impacts, horns, NEPA cut, crowd | `src/audio/audio.ts` | Web Audio synthesis | GREEN |

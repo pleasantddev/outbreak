@@ -20,6 +20,7 @@ import type { SessionResult, ReplayFrame } from './session';
 import { el, acts, esc } from '../ui/dom';
 import { fmtTime } from '../ui/hud';
 import { clamp, expDecay, lerp, wrapAngle } from '../shared/math';
+import { lookFor } from '../shared/drivers';
 
 type CamKind = 'tv' | 'heli' | 'chase' | 'hood';
 const CAM_LABEL: Record<CamKind, string> = { tv: 'TV', heli: 'Heli', chase: 'Chase', hood: 'Bonnet' };
@@ -68,7 +69,7 @@ export class ReplayPlayer {
     this.focus = result.playerIdx;
     const shadows = s.shadows > 0;
     entrants.forEach((e, i) => {
-      const m = new CarModel(carById(e.carId), e.livery, { shadows, detail: i === this.focus ? 2 : 1 });
+      const m = new CarModel(carById(e.carId), e.livery, { shadows, detail: i === this.focus ? 2 : 1, driver: e.look });
       if (e.livery.rims !== 'five') m.setRims(e.livery.rims);
       this.group.add(m.root);
       this.models.push(m); this.danfos.push(null);
@@ -190,7 +191,7 @@ export class ReplayPlayer {
       const drifting = !!(flags & 1), boosting = !!(flags & 2), danfo = !!(flags & 4), tier = flags >> 4;
       let model = this.models[k];
       if (danfo) {
-        if (!this.danfos[k]) { const def = carById('danfo'); const m = new CarModel(def, defaultLivery(def), { shadows: false, detail: 1 }); m.root.scale.setScalar(1.25); this.group.add(m.root); this.danfos[k] = m; }
+        if (!this.danfos[k]) { const def = carById('danfo'); const m = new CarModel(def, defaultLivery(def), { shadows: false, detail: 1, driver: lookFor(k * 7 + 3) }); m.root.scale.setScalar(1.25); this.group.add(m.root); this.danfos[k] = m; }
         model.root.visible = false; model = this.danfos[k]!; model.root.visible = true;
       } else if (this.danfos[k]) { this.danfos[k]!.root.visible = false; model.root.visible = true; }
       model.root.position.set(x, y, z);

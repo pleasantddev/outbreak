@@ -4,6 +4,7 @@ import type { App, Screen } from '../../app/app';
 import { el, acts, esc } from '../dom';
 import { topbar } from './main';
 import type { TrackData } from '../../shared/track';
+import { goRoute } from '../../app/route';
 
 let selTrack = 'terminal';
 const LANDMARKS: { name: string; x: number; z: number; d: string }[] = [
@@ -31,6 +32,7 @@ export function lagosMap(app: App): Screen {
       <div class="scroll" style="display:flex; flex-direction:column; gap:10px">
         <div class="h3">Routes</div>
         ${tracks.map((t) => `<button class="card ${t.id === td.id ? 'sel' : ''}" data-act="track" data-id="${t.id}"><div class="k">${esc(t.name)}</div><div class="d">${esc(t.district)} . ${(t.length / 1000).toFixed(2)} km</div></button>`).join('')}
+        <button class="card" data-act="design"><div class="k">Design a route</div><div class="d">Draw your own race over these roads, then test drive it. Best with a mouse.</div></button>
         <div class="h3" style="margin-top:6px">Landmarks</div>
         ${LANDMARKS.map((l, i) => `<button class="card" data-act="mark" data-i="${i}" style="min-height:0"><div class="k" style="font-size:1.05em">${esc(l.name)}</div><div class="d">${esc(l.d)}</div></button>`).join('')}
         <div class="small mute">Roads, buildings and the terminal footprints come from OpenStreetMap, available under the Open Database License. The race routes and everything built on top are made for the game.</div>
@@ -100,6 +102,7 @@ export function lagosMap(app: App): Screen {
     back: () => app.back(),
     track: (t) => { selTrack = t.dataset.id!; app.refresh(); },
     mark: (t) => { const l = LANDMARKS[+t.dataset.i!]; view.cx = l.x; view.cz = l.z; view.s = 1.6; redraw(); },
+    design: () => goRoute('designer'),
   });
   return { el: node, view: 'map', onLeave: () => ro.disconnect() };
 }

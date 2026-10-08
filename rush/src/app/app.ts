@@ -14,6 +14,7 @@ import type { TrackData } from '../shared/track';
 import { splashScreen } from '../ui/screens/splash';
 import { mainMenu } from '../ui/screens/main';
 import { resultsScreen, pauseScreen, testDrive } from '../ui/screens/raceflow';
+import { routeParams } from './route';
 import { buildDesigns, designTrackId } from './designs';
 import { onlineResults, multiplayer, joinRoom } from '../ui/screens/online';
 import { ReplayPlayer } from '../game/replay';
@@ -84,6 +85,7 @@ export class App {
     this.emitProgress(0.96, 'Warming up');
     this.menu = new MenuScene(this.stage, this.stage.tracks[0]);
     const car = this.profile.garage.find((g) => g.carId === this.profile.current) ?? this.profile.garage[0];
+    this.menu.setLook(this.profile.look);
     this.menu.setCar(car.carId, car.livery);
     // Auto preset: time a few frames of the real scene and step the preset up or down once
     if (this.profile.settings.graphics.auto && !this.profile.settings.deviceChecked) {
@@ -98,8 +100,8 @@ export class App {
     this.emitProgress(1, 'Ready');
     (window as unknown as { __rushReady: boolean }).__rushReady = true;
     this.loop();
-    // ?test=<design> comes from the designer's Test drive button: straight onto the grid
-    const test = new URLSearchParams(location.search).get('test');
+    // ?test=<design> (or #test.<design>) comes from the designer's Test drive button: straight onto the grid
+    const test = routeParams().get('test');
     if (test) {
       const id = designTrackId(test);
       if (this.stage.tracks.some((t) => t.id === id)) testDrive(this, id);

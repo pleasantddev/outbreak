@@ -23,6 +23,14 @@ Open http://localhost:8787. For client work with hot reload, run `npm run server
 
 `npm start` builds and serves in one go. Set `PORT` to change the port and `QUIET=1` to silence room logs.
 
+### A copy that runs anywhere, without the server
+
+```bash
+VITE_OFFLINE=1 npx vite build --base=./ --outDir /some/folder
+```
+
+This builds a copy that loads from any folder or preview page and needs no room server. Quick races, the career, the garage, the Lagos map and the race designer all work; the Multiplayer screen says plainly that rooms, ranked and the global boards need the server. Where a page only passes a bare hash through, the designer opens with `#designer` and a test drive with `#test.<design id>`, so the Design a route button on the Lagos map works there too.
+
 ## Play
 
 | Action | Keyboard | Gamepad | Touch |
@@ -52,7 +60,7 @@ Captured in headless Chromium with software rendering, so they show the content 
 | ![Campaign fliers on a barrier](../docs/rush/screens/fliers.jpg) | ![The crowd at the start line](../docs/rush/screens/crowd.jpg) |
 | Fliers on the barriers | The crowd under the bridge at the start line |
 | ![Main menu](../docs/rush/screens/menu.jpg) | ![Garage](../docs/rush/screens/garage.jpg) |
-| Main menu | The Oshodi Customs garage |
+| Main menu | The Cappa Mechanic Village garage |
 | ![Paint shop](../docs/rush/screens/garage-paint.jpg) | ![Lagos map](../docs/rush/screens/lagos-map.jpg) |
 | Paint and finish | The Lagos map |
 | ![Career](../docs/rush/screens/career.jpg) | ![Graphics settings](../docs/rush/screens/settings.jpg) |
@@ -76,7 +84,7 @@ node tools/bandwidth.mjs ws://localhost:8787/ws            # what an online race
 
 ## Design a route
 
-Open http://localhost:8787/?dev=designer for the race designer. Click anchors onto real Oshodi roads in driving order and the route rebuilds live with the same code the game, the room server and the tests use. Links join roads the real network does not join (a U-turn through a median, a cut through a motor park). Ramps, bag rows, BRT boost strips, potholes, water spills, checkpoints, traffic free stretches and closed roads are all one key away, and the panel shows the lap length, the gold lap time and anything that would make the route race badly.
+Open http://localhost:8787/?dev=designer for the race designer, or press Design a route on the Lagos map. Click anchors onto real Oshodi roads in driving order and the route rebuilds live with the same code the game, the room server and the tests use. Links join roads the real network does not join (a U-turn through a median, a cut through a motor park). Ramps, bag rows, BRT boost strips, potholes, water spills, checkpoints, traffic free stretches and closed roads are all one key away, and the panel shows the lap length, the gold lap time and anything that would make the route race badly.
 
 Save keeps a design in the browser. Test drive puts you on its grid against seven AI racers, and Edit route on the results screen takes you back. Designs race offline only; to make one an official route that rooms can use, export it, add it to `src/shared/trackDefs.ts` and run `npm run gis:build`.
 

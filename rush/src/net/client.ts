@@ -6,9 +6,11 @@ import type { NetLink } from '../game/session';
 import type { RaceEvent, RemoteSnap } from '../shared/race';
 import { currentCar, level } from '../app/profile';
 import { wrapAngle } from '../shared/math';
+import { OFFLINE } from '../app/route';
 
 export type NetStatus = 'offline' | 'connecting' | 'online' | 'error';
 interface Snap { rt: number; cars: SnapCar[]; hz: SnapHazard[] }
+
 
 export class NetClient {
   ws: WebSocket | null = null;
@@ -43,6 +45,7 @@ export class NetClient {
   /** The same server over HTTP, for the global boards. */
   get httpBase() { return this.url.replace(/^ws/, 'http').replace(/\/ws$/, ''); }
   async leaderboard(track?: string): Promise<{ ratings: { rank: number; pid: string; name: string; rating: number; tier: string; races: number; wins: number }[]; laps: { rank: number; pid: string; name: string; time: number; car: string }[] }> {
+    if (OFFLINE) throw new Error('offline build');
     const r = await fetch(`${this.httpBase}/api/leaderboard${track ? `?track=${encodeURIComponent(track)}` : ''}`, { cache: 'no-store' });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
@@ -53,7 +56,7 @@ export class NetClient {
 
   card(): PlayerCard {
     const p = this.app.profile, car = currentCar(p);
-    return { id: p.id, name: p.name, crew: p.crew, color: p.color, level: level(p).level, carId: car.carId, livery: car.livery };
+    return { id: p.id, name: p.name, crew: p.crew, color: p.color, level: level(p).level, carId: car.carId, livery: car.livery, look: p.look };
   }
 
   /** Screens call this: start connecting unless a socket is already open or we are waiting out a retry. */
@@ -61,6 +64,7 @@ export class NetClient {
 
   connect() {
     this.wanted = true;
+    if (OFFLINE) { this.status = 'offline'; this.lastError = 'Online play needs the race server'; return; }
     if (this.ws) return; // open or opening; also stops re-entry from listeners that render and call back in
     let ws: WebSocket;
     try { ws = new WebSocket(this.url); } catch { this.status = 'error'; this.lastError = 'Could not reach the race server'; this.retry++; this.retryT = Math.min(8, 0.5 * 2 ** this.retry); queueMicrotask(() => this.changed()); return; }

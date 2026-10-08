@@ -1,6 +1,6 @@
 // The garage: a closed workshop set built away from the city so the car always has a clean, lit stage for paint,
-// wraps and rims. Polished floor, a turntable, neon tubes, a lit shop sign, tyre stacks and tool walls. Every brand
-// on these walls is invented for the game.
+// wraps and rims. Polished floor, a turntable, neon tubes, a lit shop sign, tyre stacks and tool walls. The shop
+// carries a Lagos place name, Cappa; the shop itself and every brand on these walls are invented for the game.
 import * as THREE from 'three';
 import { GeoBuilder } from './geom';
 import { canvas, tex, corrugated } from './textures';
@@ -35,14 +35,19 @@ function floorTexture() {
 function signTexture() {
   const c = canvas(2048, 512), g = c.getContext('2d')!;
   g.clearRect(0, 0, 2048, 512);
-  g.font = '800 italic 250px "Barlow Condensed", Impact, sans-serif';
+  const name = 'CAPPA MECHANIC VILLAGE';
+  const face = (px: number) => `800 italic ${px}px "Barlow Condensed", Impact, sans-serif`;
+  g.font = face(250);
+  // the name fills the board edge to edge, leaving room for the glow
+  const px = Math.min(250, Math.floor((250 * 1880) / g.measureText(name).width));
+  g.font = face(px);
   g.textAlign = 'center'; g.textBaseline = 'middle';
   // tube glow, then the bright core
-  g.shadowColor = '#ff2d8a'; g.shadowBlur = 60; g.fillStyle = '#ff2d8a'; g.fillText('OSHODI CUSTOMS', 1024, 230);
-  g.shadowBlur = 18; g.fillStyle = '#ffd6ec'; g.fillText('OSHODI CUSTOMS', 1024, 230);
+  g.shadowColor = '#ff2d8a'; g.shadowBlur = 60; g.fillStyle = '#ff2d8a'; g.fillText(name, 1024, 230);
+  g.shadowBlur = 18; g.fillStyle = '#ffd6ec'; g.fillText(name, 1024, 230);
   g.font = '600 64px "Barlow Condensed", sans-serif';
   g.shadowColor = '#f6c514'; g.shadowBlur = 24; g.fillStyle = '#ffe680';
-  g.fillText('PAINT . WRAPS . RIMS . TUNING . SINCE 1999', 1024, 420);
+  g.fillText('SPRAYING . WRAPS . RIMS . TUNING', 1024, 420);
   return tex(c, { repeat: false });
 }
 

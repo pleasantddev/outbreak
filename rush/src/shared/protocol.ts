@@ -4,11 +4,12 @@ import type { Livery } from './cars';
 import type { RaceMode, TimeOfDay, Weather, RaceEvent, RemoteSnap } from './race';
 import { HAZARD_KINDS, type HazardKind } from './items';
 import type { AiLevel } from './ai';
+import type { DriverLook } from './drivers';
 import type { CarClass } from './cars';
 
 export const PROTOCOL_VERSION = 2;
 
-export interface PlayerCard { id: string; name: string; crew: string; color: string; level: number; carId: string; livery: Livery }
+export interface PlayerCard { id: string; name: string; crew: string; color: string; level: number; carId: string; livery: Livery; look?: DriverLook }
 
 export interface RoomConfig {
   track: string; mode: RaceMode; laps: number; aiFill: number; aiLevel: AiLevel; traffic: number;
@@ -53,7 +54,7 @@ export type ClientMsg =
   | { t: 'useItem' }
   | { t: 'ping'; ct: number };
 
-export interface RaceStart { startAt: number; seed: number; cfg: { track: string; laps: number; mode: RaceMode; traffic: number; aiLevel: AiLevel; time: TimeOfDay; weather: Weather; items?: boolean }; entrants: { id: string; name: string; carId: string; livery: Livery; human: boolean; crew?: string }[]; raceNo: number }
+export interface RaceStart { startAt: number; seed: number; cfg: { track: string; laps: number; mode: RaceMode; traffic: number; aiLevel: AiLevel; time: TimeOfDay; weather: Weather; items?: boolean }; entrants: { id: string; name: string; carId: string; livery: Livery; human: boolean; crew?: string; look?: DriverLook }[]; raceNo: number }
 export interface SnapCar { i: number; s: RemoteSnap; lap: number; place: number; fin: boolean; rd: number }
 export interface SnapHazard { id: number; k: HazardKind; x: number; y: number; z: number; h: number; s: number; d: number }
 

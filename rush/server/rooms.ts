@@ -6,6 +6,7 @@ import { carById, CARS, defaultLivery } from '../src/shared/cars';
 import { sanitiseConfig } from '../src/shared/roomConfig';
 import { DEFAULT_ROOM, packCar, packHazard, type PlayerCard, type RoomConfig, type RoomPhase, type RoomView, type RoomPlayer, type ServerMsg, type ResultRow, type RaceStart, type SnapCar } from '../src/shared/protocol';
 import { makePersonas } from '../src/shared/ai';
+import { lookFor } from '../src/shared/drivers';
 import type { Store } from './store';
 
 export interface Conn { id: string; card: PlayerCard; send: (m: ServerMsg) => void; room: Room | null; token: string; alive: boolean; queued: boolean; lastState: number; violations: number; ping: number; pid?: string }
@@ -163,7 +164,7 @@ export class Room {
     this.seed = (Math.random() * 1e9) | 0;
     const humans = this.humans.filter((p) => p.connected);
     for (const h of this.humans) h.spectating = !h.connected;
-    const entrants: Entrant[] = humans.map((h) => ({ id: h.id, name: h.card.name, carId: h.card.carId, livery: h.card.livery, human: true, crew: h.card.crew, level: h.card.level }));
+    const entrants: Entrant[] = humans.map((h) => ({ id: h.id, name: h.card.name, carId: h.card.carId, livery: h.card.livery, human: true, crew: h.card.crew, level: h.card.level, look: h.card.look }));
     const aiCount = Math.max(0, Math.min(this.config.aiFill, 12 - entrants.length));
     const personas = makePersonas(aiCount, this.seed);
     const pool = CARS.filter((c) => this.config.carClass === 'any' || c.cls === this.config.carClass);
@@ -171,7 +172,7 @@ export class Room {
       const def = pool[(i * 5 + this.seed) % pool.length];
       const lv = defaultLivery(def, `LAG ${100 + ((i * 37 + this.seed) % 900)}`);
       lv.paint = ['#d0141c', '#0d4fa8', '#e6b11e', '#1b8a3a', '#101418', '#e8e2d6', '#ff6a00', '#7a2bd9'][(i + this.seed) % 8];
-      entrants.push({ id: `ai${i}`, name: personas[i].name, carId: def.id, livery: lv, human: false, crew: personas[i].crew });
+      entrants.push({ id: `ai${i}`, name: personas[i].name, carId: def.id, livery: lv, human: false, crew: personas[i].crew, look: lookFor(this.seed + i) });
     }
     // humans start at the back half of the grid, AI fill the front: the fun is in the overtaking
     entrants.sort((a, b) => Number(a.human) - Number(b.human));
@@ -192,7 +193,7 @@ export class Room {
 
   private raceStart(): RaceStart {
     const sim = this.sim!;
-    return { startAt: this.startAt, seed: this.seed, raceNo: this.raceNo, cfg: { track: sim.cfg.track, laps: sim.cfg.laps, mode: sim.cfg.mode, traffic: sim.cfg.traffic, aiLevel: sim.cfg.aiLevel, time: sim.cfg.time, weather: sim.cfg.weather, items: sim.cfg.items }, entrants: sim.cars.map((c) => ({ id: c.entrant.id, name: c.entrant.name, carId: c.entrant.carId, livery: c.entrant.livery, human: c.entrant.human, crew: c.entrant.crew })) };
+    return { startAt: this.startAt, seed: this.seed, raceNo: this.raceNo, cfg: { track: sim.cfg.track, laps: sim.cfg.laps, mode: sim.cfg.mode, traffic: sim.cfg.traffic, aiLevel: sim.cfg.aiLevel, time: sim.cfg.time, weather: sim.cfg.weather, items: sim.cfg.items }, entrants: sim.cars.map((c) => ({ id: c.entrant.id, name: c.entrant.name, carId: c.entrant.carId, livery: c.entrant.livery, human: c.entrant.human, crew: c.entrant.crew, look: c.entrant.look })) };
   }
 
   /** A client's report of its own car. Checked against the track and the laws of this game's physics. */

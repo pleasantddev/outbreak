@@ -12,7 +12,8 @@ import { friendCode, saveProfile } from '../../app/profile';
 import { fmtTime } from '../hud';
 import { garageScreen } from './garage';
 import { mainMenu } from './main';
-import { settleRace, rewardPanel, ordinal } from './raceflow';
+import { settleRace, rewardPanel, ordinal, quickRace } from './raceflow';
+import { OFFLINE } from '../../app/route';
 import { tierOf } from '../../shared/ranking';
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
@@ -37,7 +38,23 @@ function live(app: App, screen: Screen, follow?: () => void): Screen {
   return screen;
 }
 
+/** The hub in a build with no race server: say so plainly and point at what still works. */
+function offlineHub(app: App): Screen {
+  const node = el(`<div class="screen">
+    ${topbar('Multiplayer', 'Instanced races for up to 12 cars', app)}
+    <div class="row" style="margin-bottom:12px"><span class="pill">OFFLINE</span> <span class="small mute">This copy has no race server</span></div>
+    <div class="panel" style="padding:16px; max-width:640px; display:flex; flex-direction:column; gap:12px">
+      <div class="h3">Online rooms are off in this copy</div>
+      <div class="small mute" style="line-height:1.5">Quick match, private rooms, ranked and the global boards all run through the Lagos Rush race server, and this page has none. Everything else plays the same: race the AI on every route, run the career, build your car in the garage and keep your records on this device.</div>
+      <div class="row" style="gap:10px; flex-wrap:wrap"><button class="btn" data-act="race" data-autofocus><span>Race the AI</span></button><button class="btn ghost" data-act="boards"><span>My records</span></button></div>
+    </div>
+  </div>`);
+  acts(node, { back: () => app.back(), race: () => app.go(quickRace), boards: () => { boards.tab = 'device'; app.go(leaderboards); } });
+  return { el: node, view: 'city' };
+}
+
 export function multiplayer(app: App): Screen {
+  if (OFFLINE) return offlineHub(app);
   app.net.ensure();
   const p = app.profile;
   const me = app.net.me;
@@ -276,7 +293,7 @@ export function leaderboards(app: App): Screen {
     const want = boards.track;
     app.net.leaderboard(want)
       .then((d) => { boards.data = d; boards.loadedFor = want; })
-      .catch(() => { boards.error = 'Could not reach the race server. Your own records are under This device.'; boards.loadedFor = ''; })
+      .catch(() => { boards.error = OFFLINE ? 'The global boards live on the race server, and this copy has none. Your own records are under This device.' : 'Could not reach the race server. Your own records are under This device.'; boards.loadedFor = ''; })
       .finally(() => { boards.loading = false; if (app.top?.screen === screen) app.refresh(); });
   };
   if (boards.tab !== 'device') fetchBoards();

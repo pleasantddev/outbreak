@@ -6,6 +6,7 @@ import type { CarDef, CarShape, Livery, RimStyle } from '../shared/cars';
 import { canvas, tex } from './textures';
 import { fixNormals } from './geom';
 import { skyReflection } from './atmosphere';
+import { SKINS, lookFor, type DriverLook } from '../shared/drivers';
 
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -70,6 +71,10 @@ function halfWidthAt(p: Profile, z: number, s: CarShape) {
   for (const wz of p.wheelZ) hw += p.flare * Math.exp(-(((z - wz) / (p.arch * 1.1)) ** 2));
   return hw;
 }
+
+const glassOpacity = (tint: number) => 0.4 + 0.5 * tint;
+/** A bus passenger: any look but a race helmet. */
+const riderLook = (n: number): DriverLook => { const l = lookFor(n); return l.head === 'helmet' ? { ...l, head: 'none' } : l; };
 
 export interface CarMaterials { paint: THREE.MeshPhysicalMaterial; glass: THREE.MeshPhysicalMaterial; trim: THREE.MeshStandardMaterial; chrome: THREE.MeshStandardMaterial; lampF: THREE.MeshStandardMaterial; lampR: THREE.MeshStandardMaterial; rubber: THREE.MeshStandardMaterial; rim: THREE.MeshStandardMaterial; caliper: THREE.MeshStandardMaterial; plate: THREE.MeshStandardMaterial; glow: THREE.MeshBasicMaterial; }
 
@@ -229,7 +234,8 @@ export function makeCarMaterials(l: Livery, def: CarDef, mapSize = 1024): CarMat
   });
   return {
     paint,
-    glass: new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0x0c1218).lerp(new THREE.Color(0x3a4a58), 1 - l.tint), roughness: 0.04, metalness: 0.1, clearcoat: 1, envMapIntensity: 1.6 }),
+    // tinted, not blacked out: the driver shows through, darker as the tint goes up
+    glass: new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0x0c1218).lerp(new THREE.Color(0x3a4a58), 1 - l.tint), roughness: 0.04, metalness: 0.1, clearcoat: 1, envMapIntensity: 1.6, transparent: true, opacity: glassOpacity(l.tint) }),
     trim: new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: 0.55, metalness: 0.2 }),
     chrome: new THREE.MeshStandardMaterial({ color: 0xe8ecf0, roughness: 0.08, metalness: 1 }),
     lampF: new THREE.MeshStandardMaterial({ color: 0xf8f8ff, emissive: new THREE.Color(0xfff6e6), emissiveIntensity: 1.2, roughness: 0.1, metalness: 0.3 }),
@@ -410,6 +416,112 @@ export function mergeGeos(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
 
 // ------------------------------------------------------------------------------------------- assembly
 
+// ------------------------------------------------------------------------------------------- the driver
+
+interface Seat { x: number; z: number; hipY: number; headY: number; wheelY: number; bar: boolean }
+/** The inside of a closed car, seen through tinted glass: a dark tub up to the belt line and two seat backs. */
+interface Cabin { w: number; y0: number; y1: number; z0: number; z1: number }
+
+/** The driver as one mesh with vertex colours: head, torso, arms, the wheel and their headwear. Left hand drive,
+ *  as in Nigeria; a keke rider sits in the middle of the cab with handlebars. Passengers, when there are any, sit
+ *  upright behind on bench seats. */
+function driverGeometry(look: DriverLook, seat: Seat, cabin: Cabin | null, riders: { x: number; z: number; look: DriverLook }[] = []): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const col = new THREE.Color();
+  const put = (g: THREE.BufferGeometry, colour: string, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) => {
+    const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
+    const geo = (g.index ? g.toNonIndexed() : g).applyMatrix4(m);
+    col.set(colour);
+    const n = geo.attributes.position.count, c = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { c[i * 3] = col.r; c[i * 3 + 1] = col.g; c[i * 3 + 2] = col.b; }
+    geo.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    geo.deleteAttribute('uv');
+    parts.push(geo);
+  };
+  const skin = SKINS[look.skin] ?? SKINS[2], dark = '#16100e';
+  const { x, z, hipY, headY, wheelY } = seat;
+  const shoulderY = headY - 0.19, torsoH = Math.max(0.2, shoulderY - hipY + 0.04);
+  if (cabin) {
+    const { w, y0, y1, z0, z1 } = cabin;
+    put(new THREE.BoxGeometry(w, y1 - y0, z1 - z0), '#17181c', 0, (y0 + y1) / 2, (z0 + z1) / 2);
+    const backH = Math.max(0.3, headY - 0.06 - y1);
+    for (const sx of [x, -x]) put(new THREE.BoxGeometry(0.44, backH, 0.09), '#22232a', sx, y1 + backH / 2, z - 0.22, -0.12);
+  }
+  // torso and shoulders, with the accent at the collar
+  put(new THREE.BoxGeometry(0.36, torsoH, 0.22), look.top, x, hipY + torsoH / 2, z - 0.04);
+  put(new THREE.BoxGeometry(0.2, 0.04, 0.2), look.accent, x, shoulderY + 0.04, z - 0.02);
+  put(new THREE.CylinderGeometry(0.045, 0.05, 0.08, 8), skin, x, headY - 0.13, z);
+  put(new THREE.SphereGeometry(0.105, 12, 9), skin, x, headY, z, 0, 0, 0, 1, 1.12, 1);
+  // arms out to the wheel or the bars
+  const reach = 0.34;
+  for (const side of [-1, 1]) {
+    const sx = x + side * 0.17, sy = shoulderY - 0.02, hx = x + side * (seat.bar ? 0.26 : 0.13), hy = wheelY + 0.04, hz = z + reach;
+    const dx = hx - sx, dy = hy - sy, dz = hz - (z - 0.02), len = Math.hypot(dx, dy, dz);
+    const dir = new THREE.Vector3(dx, dy, dz).normalize();
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    const e = new THREE.Euler().setFromQuaternion(q);
+    put(new THREE.CylinderGeometry(0.04, 0.045, len, 6), look.top, (sx + hx) / 2, (sy + hy) / 2, (z - 0.02 + hz) / 2, e.x, e.y, e.z);
+    put(new THREE.SphereGeometry(0.035, 6, 5), skin, hx, hy, hz);
+  }
+  if (seat.bar) put(new THREE.CylinderGeometry(0.018, 0.018, 0.62, 6), '#1b1b1d', x, wheelY + 0.04, z + reach + 0.02, 0, 0, Math.PI / 2);
+  else put(new THREE.TorusGeometry(0.16, 0.022, 6, 18), '#141416', x, wheelY + 0.04, z + reach + 0.03, -0.45);
+  // headwear
+  const hat = (look: DriverLook, x: number, hy: number, z: number) => {
+    const acc = look.accent;
+    switch (look.head) {
+      case 'none': put(new THREE.SphereGeometry(0.108, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.42), dark, x, hy + 0.012, z - 0.004); break;
+      case 'cap':
+        put(new THREE.SphereGeometry(0.114, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.45), acc, x, hy + 0.015, z);
+        put(new THREE.BoxGeometry(0.17, 0.014, 0.11), acc, x, hy + 0.04, z + 0.12, -0.12);
+        break;
+      case 'fila':
+        put(new THREE.CylinderGeometry(0.085, 0.113, 0.12, 12), acc, x, hy + 0.09, z, 0, 0, 0.28);
+        put(new THREE.BoxGeometry(0.08, 0.05, 0.15), acc, x - 0.07, hy + 0.15, z, 0, 0, 0.55);
+        break;
+      case 'gele':
+        put(new THREE.CylinderGeometry(0.2, 0.11, 0.16, 14, 1, true), acc, x, hy + 0.12, z - 0.01);
+        put(new THREE.TorusGeometry(0.115, 0.03, 6, 16), acc, x, hy + 0.05, z, Math.PI / 2);
+        put(new THREE.CircleGeometry(0.2, 14), acc, x, hy + 0.2, z - 0.01, -Math.PI / 2);
+        break;
+      case 'durag':
+        put(new THREE.SphereGeometry(0.112, 12, 7, 0, Math.PI * 2, 0, Math.PI * 0.5), acc, x, hy + 0.01, z);
+        put(new THREE.BoxGeometry(0.05, 0.16, 0.02), acc, x + 0.02, hy - 0.09, z - 0.11, 0.25);
+        break;
+      case 'helmet':
+        put(new THREE.SphereGeometry(0.135, 14, 10), acc, x, hy + 0.005, z);
+        put(new THREE.BoxGeometry(0.18, 0.065, 0.06), '#0c1016', x, hy + 0.0, z + 0.105);
+        put(new THREE.BoxGeometry(0.035, 0.012, 0.25), look.top, x, hy + 0.136, z, 0, 0, 0);
+        break;
+    }
+  };
+  hat(look, x, headY, z);
+  // passengers: upright, hands in laps, a bench back behind each row
+  const rows = new Set<number>();
+  for (const r of riders) {
+    const top = r.look.top, sk = SKINS[r.look.skin] ?? SKINS[2];
+    put(new THREE.BoxGeometry(0.34, torsoH, 0.2), top, r.x, hipY + torsoH / 2, r.z - 0.02);
+    put(new THREE.CylinderGeometry(0.045, 0.05, 0.08, 8), sk, r.x, headY - 0.13, r.z);
+    put(new THREE.SphereGeometry(0.1, 10, 8), sk, r.x, headY, r.z, 0, 0, 0, 1, 1.12, 1);
+    hat(r.look, r.x, headY, r.z);
+    rows.add(Math.round(r.z * 100));
+  }
+  if (cabin) for (const rz of rows) { const backH = Math.max(0.3, headY - 0.1 - cabin.y1); put(new THREE.BoxGeometry(cabin.w * 0.96, backH, 0.08), '#22232a', 0, cabin.y1 + backH / 2, rz / 100 - 0.2, -0.1); }
+  // one geometry: positions, normals and colours, no index
+  let count = 0; for (const g of parts) count += g.attributes.position.count;
+  const pos = new Float32Array(count * 3), nor = new Float32Array(count * 3), cc = new Float32Array(count * 3);
+  let o = 0;
+  for (const g of parts) {
+    if (!g.attributes.normal) g.computeVertexNormals();
+    pos.set(g.attributes.position.array as Float32Array, o); nor.set(g.attributes.normal.array as Float32Array, o); cc.set(g.attributes.color.array as Float32Array, o);
+    o += g.attributes.position.count * 3;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  out.setAttribute('color', new THREE.BufferAttribute(cc, 3));
+  return fixNormals(out);
+}
+
 const fwdV = new THREE.Vector3();
 /** A car right under a chase camera fills the bottom third of the screen, which happens off the grid behind every
  *  player: see through it until it pulls clear. Cars off to the side stay solid, and with `on` false every car does. */
@@ -446,7 +558,8 @@ export class CarModel {
 
   private detail: number;
 
-  constructor(public def: CarDef, livery: Livery, opts: { shadows: boolean; detail: number }) {
+  driver: THREE.Mesh | null = null;
+  constructor(public def: CarDef, livery: Livery, opts: { shadows: boolean; detail: number; driver?: DriverLook | null }) {
     const s = this.shape = def.shape;
     this.detail = opts.detail;
     this.mats = makeCarMaterials(livery, def, opts.detail >= 2 ? 1024 : 512);
@@ -455,6 +568,7 @@ export class CarModel {
     if (s.style === 'keke') this.buildKeke(s);
     else this.buildCar(s, opts.detail);
     this.mergeBody();
+    if (opts.driver !== null) this.setDriver(opts.driver ?? lookFor(livery.plate.split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) >>> 0));
     // headlight pool on the road for night driving
     this.headGlow = new THREE.Mesh(new THREE.PlaneGeometry(6, 13), new THREE.MeshBasicMaterial({ map: glowTex(), color: 0xfff0d0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     this.headGlow.rotation.x = -Math.PI / 2;
@@ -617,6 +731,35 @@ export class CarModel {
     }
   }
 
+  /** Seat the driver: where the cabin is, under the roof, behind the windscreen; in a keke, front and centre. */
+  setDriver(look: DriverLook) {
+    if (this.driver) { this.body.remove(this.driver); this.driver.geometry.dispose(); (this.driver.material as THREE.Material).dispose(); this.driver = null; }
+    const s = this.shape;
+    let seat: Seat;
+    let cabin: Cabin | null = null;
+    const riders: { x: number; z: number; look: DriverLook }[] = [];
+    if (s.style === 'keke') seat = { x: 0, z: s.length * 0.12, hipY: 0.88, headY: 1.42, wheelY: 1.06, bar: true };
+    else {
+      const p = profileOf(s);
+      const headY = Math.min(p.roofY - 0.17, p.beltY + 0.3);
+      seat = { x: s.width * 0.21, z: p.zRf - 0.3, hipY: Math.max(s.rideH + 0.22, headY - 0.62), headY, wheelY: p.beltY - 0.07, bar: false };
+      // the tub stops just under the belt line, so it never shows outside the body
+      cabin = { w: s.width * 0.84, y0: s.rideH + 0.2, y1: p.beltY - 0.04, z0: p.zRr - 0.05, z1: p.zWs - 0.08 };
+      // a danfo is never empty: a passenger up front and most of the benches behind taken
+      if (this.def.id === 'danfo') {
+        const seed = look.skin * 97 + parseInt(look.top.slice(1), 16) % 1009 + parseInt(look.accent.slice(1), 16) % 613;
+        const across = [-s.width * 0.27, 0, s.width * 0.27];
+        let k = 0;
+        riders.push({ x: -seat.x, z: seat.z, look: riderLook(seed + k++) });
+        for (let rz = seat.z - 0.95; rz > p.zRr + 0.3; rz -= 0.82) for (const rx of across) { const lk = riderLook(seed + k++); if ((seed + k * 7) % 10 < 7) riders.push({ x: rx, z: rz, look: lk }); }
+      }
+    }
+    // its own material, so a car seen through can fade its driver with it
+    this.driver = new THREE.Mesh(driverGeometry(look, seat, cabin, riders), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0 }));
+    this.body.add(this.driver);
+    this.fadeList = null;
+  }
+
   private fadeK = 1; private fadeList: THREE.Material[] | null = null;
   /** See through the whole car (1 is solid). Used for a rival right under the chase camera. */
   fade(k: number) {
@@ -678,6 +821,8 @@ export class CarModel {
     this.mats.paint.needsUpdate = true;
     this.mats.rim.color.set(l.rimColor);
     this.mats.glass.color.set(new THREE.Color(0x0c1218).lerp(new THREE.Color(0x3a4a58), 1 - l.tint));
+    this.mats.glass.opacity = glassOpacity(l.tint) * this.fadeK;
+    this.mats.glass.userData.solidO = glassOpacity(l.tint);
     if (this.underGlow) (this.underGlow.material as THREE.MeshBasicMaterial).color.set(l.glow ?? '#000');
     this.mats.plate.map?.dispose();
     this.mats.plate.map = plateCanvas(l.plate);

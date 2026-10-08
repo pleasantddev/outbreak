@@ -11,6 +11,7 @@ import { TrafficView } from './traffic3d';
 import { setWorldUniforms } from './materials';
 import { GarageSet } from './garageSet';
 import { skyReflection } from './atmosphere';
+import type { DriverLook } from '../shared/drivers';
 
 export type MenuView = 'city' | 'garage' | 'map';
 
@@ -73,11 +74,15 @@ export class MenuScene {
 
   private get inGarage() { return this.view === 'garage'; }
 
+  /** The player's driver, sat in whichever car the menu shows. */
+  private look: DriverLook | undefined;
+  setLook(look: DriverLook) { this.look = look; this.car?.setDriver(look); }
+
   setCar(carId: string, livery: Livery) {
     if (this.car && this.carId === carId) { this.car.applyLivery(livery); return; }
     if (this.car) { this.group.remove(this.car.root); this.car.dispose(); }
     const def = carById(carId);
-    this.car = new CarModel(def, livery, { shadows: this.stage.engine.settings.shadows > 0, detail: 2 });
+    this.car = new CarModel(def, livery, { shadows: this.stage.engine.settings.shadows > 0, detail: 2, driver: this.look });
     if (livery.rims !== 'five') this.car.setRims(livery.rims);
     this.group.add(this.car.root);
     this.carId = carId;

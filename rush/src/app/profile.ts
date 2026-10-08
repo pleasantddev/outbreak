@@ -5,6 +5,7 @@ import { settingsFor, type GraphicsSettings, type PresetId } from '../render/qua
 import { defaultAudioPrefs, type AudioPrefs } from '../audio/audio';
 import { defaultInputPrefs, type InputPrefs } from '../game/input';
 import { levelFromXp } from '../shared/economy';
+import { lookFor, validLook, type DriverLook } from '../shared/drivers';
 
 export interface AccessPrefs { cbSafe: boolean; reduceMotion: boolean; highContrast: boolean; uiScale: number; bigCallouts: boolean }
 export interface GameplayPrefs { units: 'kmh' | 'mph'; political: boolean; camera: 'near' | 'far' | 'hood'; showPerf: boolean; skipIntro: boolean }
@@ -13,6 +14,8 @@ export interface Profile {
   id: string; name: string; crew: string; color: string;
   /** a secret this device made; the race server knows the player by a hash of it for the ranked ladder */
   key: string;
+  /** the driver behind the wheel, chosen on the Driver screen */
+  look: DriverLook;
   xp: number; naira: number;
   garage: { carId: string; livery: Livery }[];
   current: string;
@@ -36,7 +39,7 @@ export function newProfile(touch: boolean): Profile {
   const starter = CARS[0];
   const n = Math.floor(Math.random() * NAMES.length);
   return {
-    v: 1, id: rid(), key: rid(32), name: `${NAMES[n]}${Math.floor(10 + Math.random() * 89)}`, crew: 'Oshodi Kings', color: COLORS[n % COLORS.length],
+    v: 1, id: rid(), key: rid(32), look: lookFor(Math.floor(Math.random() * 1e6)), name: `${NAMES[n]}${Math.floor(10 + Math.random() * 89)}`, crew: 'Oshodi Kings', color: COLORS[n % COLORS.length],
     xp: 0, naira: 12000,
     // the first car leaves the lot in green and white: a Lagos plate, a fresh respray and twin stripes
     garage: [{ carId: starter.id, livery: { ...defaultLivery(starter, `LAG ${100 + Math.floor(Math.random() * 899)}`), paint: '#0b7a3e', wrap: 'stripes', wrapColor: '#f4f4f0' } }],
@@ -61,6 +64,7 @@ export function loadProfile(touch: boolean): Profile {
         p.ghosts = p.ghosts ?? {}; p.records = p.records ?? {}; p.recent = p.recent ?? []; p.friends = p.friends ?? []; p.career = p.career ?? {};
         // older saves have no key: make one and keep it at once, or the ladder would meet a new player next time
         if (!/^[0-9a-f]{64}$/.test(p.key ?? '')) { p.key = rid(32); localStorage.setItem(KEY, JSON.stringify(p)); }
+        p.look = validLook(p.look) ?? lookFor(parseInt(p.id.slice(0, 6), 16) || 1);
         return p;
       }
     }

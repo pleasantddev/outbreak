@@ -6,7 +6,7 @@ All browser testing so far ran in headless Chromium with SwiftShader software re
 
 ## Automated tests
 
-`npm test` runs 39 tests in five files, all passing on 7 October 2026.
+`npm test` runs 61 tests in eight files, all passing on 8 October 2026.
 
 | File | Tests | Covers |
 |---|---|---|
@@ -14,7 +14,10 @@ All browser testing so far ran in headless Chromium with SwiftShader software re
 | `tests/protocol.test.ts` | 5 | Packed state round trip within a centimetre; malformed state arrays rejected; snapshot cars and hazards round trip; room codes typed loosely; room settings clamped |
 | `tests/economy.test.ts` | 3 | Rewards rise with place; a race not finished says so; one of a thing is singular; totals are the sum of the lines |
 | `tests/quality.test.ts` | 3 | Auto graphics: GPU name guesses; benchmark steps down one, down two, straight to Potato, up one; dynamic resolution stays between its limits |
-| `tests/server.test.ts` | 13 | Real WebSockets against a real server: old client refused; private room with a LAGOS code; join by digits; unknown code; host only settings; full room; a whole race (start, relay, impossible moves ignored, results, points, series reset); AI stand in and hand back; dropped seat kept and restored by token; host migration; names stripped of markup; a late joiner watches, then races the next one; kick; chat rate limit; quick match with AI fill; health |
+| `tests/server.test.ts` | 15 | Real WebSockets against a real server: old client refused; private room with a LAGOS code; join by digits; unknown code; host only settings; full room; a whole race (start, relay, impossible moves ignored, results, points, series reset); AI stand in and hand back; dropped seat kept and restored by token; host migration; names stripped of markup; a late joiner watches, then races the next one; kick; chat rate limit; quick match with AI fill; ranked rooms (humans only, no host controls, ratings from the server result, the ladder); ranked needs a device key; health |
+| `tests/designer.test.ts` | 7 | Every official route rebuilds from the published world and road graph exactly as shipped; placed bags, boost strips, checkpoints and potholes replace or add to the automatic ones; traffic free stretches; a link far from any road is named in the warnings; potholes from the designer stay all race and hit on every lap; saved designs are checked before they load |
+| `tests/ranking.test.ts` | 10 | Rating maths between equals, upsets, big fields, new and settled drivers, shared places; tiers; the store knows players by a salted hash of their key, rates races, keeps best laps and ignores nonsense, survives a restart and sets aside a corrupt file |
+| `tests/drivers.test.ts` | 3 | Every generated driver look is valid and repeatable (this caught a hash that went negative and crashed AI grids); a field of AI drivers gets a spread of looks; malformed looks from a client are turned away |
 
 ## Scripted browser playtests
 
@@ -26,6 +29,8 @@ All browser testing so far ran in headless Chromium with SwiftShader software re
 | Solo: results, rewards, replay with TV, chase and helicopter cameras, back to results | TESTED on High at 1280 by 720 |
 | Online: two browsers, create room, invite link joins the second player straight into the lobby, ready, start, race with three AI, server results with points, back to the room | TESTED on Potato at 640 by 360 and 1280 by 720 |
 | Gallery: aerials of the interchange at noon, dusk and night, Terminal 3 and the bridges, Terminals 1 and 2, the skywalk over the grid, the giant boards, fliers on barriers, the crowd | TESTED on High |
+| Offline copy (`VITE_OFFLINE=1`, relative paths) inside a stand-in for a hosted preview page, served from a sub folder with no query string: boot, menu, garage, the offline Multiplayer screen, records, Lagos map, Design a route by hash, back to the game, quick race | TESTED on Potato at 1280 by 720 |
+| Drivers seen through tinted glass in every car, a keke rider on the bars, a danfo full of passengers | TESTED by closeups on High; the live preview page itself is NOT TESTED from here |
 
 ## Probes and measurements
 
