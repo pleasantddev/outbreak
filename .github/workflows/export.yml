@@ -1,0 +1,48 @@
+name: HustleLife map export
+on:
+  push:
+    branches: [hustlelife-osm]
+    paths: ['.github/workflows/export.yml', 'export.cfg']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
+      - name: Nigeria extract from Geofabrik
+        run: |
+          curl -sSL -o ng.pbf https://download.geofabrik.de/africa/nigeria-latest.osm.pbf
+          curl -sSL -o ng.state.txt https://download.geofabrik.de/africa/nigeria-updates/state.txt || true
+          ls -la ng.pbf
+      - name: Cut the Sango Ota to Papa Ajao corridor
+        run: |
+          source export.cfg
+          mkdir -p data
+          osmium extract -b "$BBOX" ng.pbf -o corridor.pbf --overwrite -s smart
+          osmium tags-filter corridor.pbf nwr/highway nwr/building nwr/building:part nwr/landuse nwr/natural nwr/waterway nwr/railway nwr/amenity nwr/shop nwr/leisure nwr/place nwr/man_made nwr/public_transport nwr/craft nwr/office nwr/barrier nwr/bridge -o data/corridor.osm.pbf --overwrite
+          osmium fileinfo -e data/corridor.osm.pbf > data/fileinfo.txt
+          cp ng.state.txt data/geofabrik_state.txt || true
+          ls -la data
+      - name: Poly Haven CC0 textures (2k)
+        run: |
+          mkdir -p tex
+          for a in $(cat textures.txt); do
+            for m in diff nor_gl arm; do
+              curl -sSfL -o "tex/${a}_${m}_2k.jpg" "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/${a}/${a}_${m}_2k.jpg" || echo "miss $a $m"
+            done
+          done
+          mkdir -p hdri
+          for h in $(cat hdris.txt); do curl -sSfL -o "hdri/${h}_2k.hdr" "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/${h}_2k.hdr" || echo "miss $h"; done
+          du -sh tex hdri
+      - name: Commit
+        run: |
+          git config user.name "Pleasant"
+          git config user.email "joylove.rightchoice@gmail.com"
+          git add data tex hdri
+          git commit -m "Map export: Sango Ota to Papa Ajao corridor (OSM, ODbL) and CC0 textures" || echo nothing
+          git push
