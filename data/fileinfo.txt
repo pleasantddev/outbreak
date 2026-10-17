@@ -1,0 +1,39 @@
+File:
+  Name: data/corridor.osm.pbf
+  Format: PBF
+  Compression: none
+  Size: 30158133
+Header:
+  Bounding boxes:
+  With history: no
+  Options:
+    generator=osmium/1.16.0
+    pbf_dense_nodes=true
+    pbf_optional_feature_0=Sort.Type_then_ID
+    sorting=Type_then_ID
+Data:
+  Bounding box: (2.9851953,6.4175123,3.87649,6.8607357)
+  Timestamps:
+    First: 2007-01-02T08:27:42Z
+    Last: 2026-10-16T08:37:38Z
+  Objects ordered (by type and id): yes
+  Multiple versions of same object: no
+  CRC32: not calculated (use --crc/-c to enable)
+  Number of changesets: 0
+  Number of nodes: 4943078
+  Number of ways: 1079983
+  Number of relations: 4483
+  Smallest changeset ID: 0
+  Smallest node ID: 24085481
+  Smallest way ID: 4174092
+  Smallest relation ID: 2116203
+  Largest changeset ID: 0
+  Largest node ID: 14288765347
+  Largest way ID: 1568736693
+  Largest relation ID: 19552898
+  Number of buffers: 7190 (avg 838 objects per buffer)
+  Sum of buffer sizes: 459382336 (0.438 GB)
+  Sum of buffer capacities: 471203840 (0.449 GB, 97% full)
+Metadata:
+  All objects have following metadata attributes: version+timestamp
+  Some objects have following metadata attributes: version+timestamp
