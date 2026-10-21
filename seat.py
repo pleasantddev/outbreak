@@ -74,7 +74,7 @@ def wait_frames(n):
 HIDE = "document.querySelectorAll('body > *:not(canvas)').forEach((e) => (e.style.display = 'none'))"
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--use-gl=angle","--use-angle=swiftshader","--enable-unsafe-swiftshader","--ignore-gpu-blocklist"])
-    pg = b.new_page(viewport={"width": w, "height": h})
+    pg = b.new_page(viewport={"width": w, "height": h}); pg.set_default_timeout(150000)
     logs=[]; pg.on("console", lambda m: logs.append(m.type+': '+m.text[:300])); pg.on("pageerror", lambda e: logs.append("ERR "+str(e)[:500]))
     pg.goto(url); t0=time.time()
     while time.time()-t0 < 400:
