@@ -154,7 +154,7 @@ Surf ground(vec3 wp, out float waterOut){
     o.col = mix(o.col, wc, water * 0.9);
     o.rough = mix(o.rough, 0.03, water);
     o.nrm = normalize(mix(o.nrm, vec3(0.0, 1.0, 0.0), water) + vec3(ring * 0.3, 0.0, ring * 0.2));
-    if (lagoon > 0.5) { vec2 rp = w * 0.8 + vec2(uTime * 0.12, uTime * 0.08); o.nrm = normalize(vec3((gn(rp) - 0.5) * 0.22 + (gn(rp * 2.7 - uTime * 0.2) - 0.5) * 0.1, 1.0, (gn(rp + 17.0) - 0.5) * 0.22)); o.rough = 0.06; }
+    if (lagoon > 0.5) { vec2 rp = w * 0.12 + vec2(uTime * 0.04, uTime * 0.03); float fz = 1.0 / (1.0 + length(vWP - cameraPosition) * 0.004); o.nrm = normalize(vec3(((gn(rp) - 0.5) * 0.16 + (gn(rp * 3.1 - uTime * 0.08) - 0.5) * 0.06) * fz, 1.0, ((gn(rp + 17.0) - 0.5) * 0.16 + (gn(rp * 2.7 + 5.0) - 0.5) * 0.06) * fz)); o.rough = 0.06; }
   }
   waterOut = water;
   return o;

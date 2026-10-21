@@ -396,7 +396,12 @@ def process_face(fi):
         out.append({'id': f"V{round(c.x)}_{round(c.y)}", 'pts': sp, 'zone': 0, 'rich': 0.0, 'bids': [], 'name': None, 'area': round(v.area, 1), 'cx': round(c.x, 1), 'cz': round(c.y, 1), 'claim': False})
     return out
 
-def work(chunk):
+PARTS = os.path.join(HERE, 'parcels_parts')
+def work(job):
+    """job = (index, faces). Results go to disk so a killed run resumes where it stopped and the parent stays small."""
+    idx, chunk = job
+    out = os.path.join(PARTS, f'part{idx}.pkl')
+    if os.path.exists(out): return idx, -1
     res = []
     for fi in chunk:
         try:
@@ -404,17 +409,23 @@ def work(chunk):
             if time.time() - t1 > 60: print('slow face', fi, len(face_blds.get(fi, [])), f'{time.time()-t1:.0f}s', flush=True)
         except Exception as e:
             print('face fail', fi, repr(e)[:200], flush=True)
-    return res
+    pickle.dump(res, open(out + '.tmp', 'wb')); os.replace(out + '.tmp', out)
+    return idx, len(res)
 
 if __name__ == '__main__':
     order = sorted(range(len(faces)), key=lambda i: -(len(face_blds.get(i, [])) + faces[i].area / 5e4))
     only = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     if only: order = order[:only] if only > 0 else order
-    chunks = [order[k::64] for k in range(64)]
+    NCH = 64
+    chunks = [order[k::NCH] for k in range(NCH)]
+    os.makedirs(PARTS, exist_ok=True)
+    todo = [(k, c) for k, c in enumerate(chunks) if not os.path.exists(os.path.join(PARTS, f'part{k}.pkl'))]
+    log('chunks todo', len(todo), 'of', NCH)
+    with Pool(2, maxtasksperchild=4) as pool:
+        for idx, n in pool.imap_unordered(work, todo):
+            log('chunk', idx, 'parcels', n)
     parcels = []
-    with Pool(2) as pool:
-        for n, res in enumerate(pool.imap_unordered(work, chunks)):
-            parcels.extend(res); log('chunk', n, 'parcels', len(parcels))
+    for k in range(NCH): parcels.extend(pickle.load(open(os.path.join(PARTS, f'part{k}.pkl'), 'rb')))
     # unique ids
     seen = collections.Counter();
     for p in parcels:

@@ -17,3 +17,4 @@ cars/*.raw.glb
 __pycache__/
 pipe/*.pkl
 shots_work/
+pipe/parcels_parts/

@@ -35,7 +35,15 @@ export class WorldStreamer {
     this.asphalt = tl.load(`tex/g0_diff_${tg.size}.webp`); this.asphalt.wrapS = this.asphalt.wrapT = THREE.RepeatWrapping; this.asphalt.colorSpace = THREE.SRGBColorSpace;
     this.asphaltN = tl.load(`tex/g0_nor_${tg.size}.webp`); this.asphaltN.wrapS = this.asphaltN.wrapT = THREE.RepeatWrapping;
   }
-  regionPlots(r: Region) { const k = `${r.i},${r.j}`; let p = this.plots.get(k); if (!p) { p = plotsForRegion(r, this.store.bldById); this.plots.set(k, p); } return p; }
+  regionPlots(r: Region) {
+    const k = `${r.i},${r.j}`; let p = this.plots.get(k); if (p) return p;
+    const miss = { n: 0 }; p = plotsForRegion(r, this.store.bldById, miss);
+    // keep the result only when no parcel is waiting for a building in a neighbouring region that is still loading
+    let settled = miss.n === 0;
+    if (!settled) { settled = true; for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) if (this.store.has(r.i + di, r.j + dj) && !this.store.get(r.i + di, r.j + dj)) settled = false; }
+    if (settled) this.plots.set(k, p);
+    return p;
+  }
 
   private gather(x0: number, z0: number, size: number, margin: number) {
     const roads: Road[] = [], blds: Building[] = [], ph: Pothole[] = [], areas: Area[] = [], plots: Plot[] = [], rails: Rail[] = [], pois: Poi[] = [], waters: (Water & { bx0: number; bx1: number; bz0: number; bz1: number })[] = [];
@@ -68,6 +76,7 @@ export class WorldStreamer {
     // ground surfaces: landuse plus compounds (paved for the rich, swept sand for the rest) and bush on vacant plots
     const surfaces = areaSurfaces(areas);
     for (const pl of plots) surfaces.push({ code: pl.zone === 'vacant' ? SURF.bush : pl.zone === 'industrial' ? SURF.concrete : pl.rich > 0.6 ? SURF.interlock : SURF.compound, pts: new Float32Array(pl.pts) });
+    for (const b of blds) if (b.kind === 14) surfaces.push({ code: SURF.concrete, pts: b.pts });
     surfaces.push(...waterSurfaces(waters, x0, z0, TILE), ...mechanicSurfaces(areas));
     const field = buildTileField(this.renderer, { x0, z0, size: TILE, roads, potholes: ph, surfaces }, res);
     const group = new THREE.Group(); group.position.set(x0, 0, z0);
@@ -104,7 +113,17 @@ export class WorldStreamer {
     const props = buildProps({ x0, z0, size: TILE, roads: roads.filter((r) => r.pts.length), trees, tanks: bb.tanks, bars: bb.bars, dishes: bb.dishes, blocked });
     props.group.position.set(-x0, 0, -z0); group.add(props.group);
     // bridges whose first point is in this tile own their deck
-    const br = roads.filter((r) => (r.flags & RF.bridge) && inTile(r.pts[0], r.pts[1]));
+    // every bridge segment whose midpoint lies in this tile belongs to this tile (long viaducts span many tiles)
+    const br: Road[] = [];
+    for (const r of roads) {
+      if (!(r.flags & RF.bridge)) continue;
+      const n = r.pts.length / 2; let s = -1;
+      for (let k = 0; k <= n - 1; k++) {
+        const own = k < n - 1 && inTile((r.pts[k * 2] + r.pts[k * 2 + 2]) / 2, (r.pts[k * 2 + 1] + r.pts[k * 2 + 3]) / 2);
+        if (own && s < 0) s = k;
+        else if (!own && s >= 0) { br.push({ ...r, pts: r.pts.slice(s * 2, (k + 1) * 2), elev: r.elev ? r.elev.slice(s, k + 1) : null }); s = -1; }
+      }
+    }
     if (br.length) { const b = buildBridges(br, x0, z0, this.asphalt, this.asphaltN); group.add(b.group); }
     // rails, platforms, courts, banks, mechanic villages
     const onRoad = (x: number, z: number) => { for (const r of roads) { if (r.flags & RF.bridge) continue; const hw = halfWidth(r) + verge(r); for (let k = 0; k < r.pts.length / 2 - 1; k++) { const ax = r.pts[k * 2], az = r.pts[k * 2 + 1], bx = r.pts[k * 2 + 2], bz = r.pts[k * 2 + 3]; if (Math.abs(ax - x) > 300 && Math.abs(bx - x) > 300) continue; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); if (Math.hypot(ax + dx * t - x, az + dz * t - z) < hw) return true; } } return false; };
@@ -113,11 +132,21 @@ export class WorldStreamer {
     this.group.add(group);
     // collision for the sim: building prisms, compound walls, poles and trunks, bridge decks
     const convex = (p: Float32Array) => { const n = p.length / 2; let sgn = 0; for (let i = 0; i < n; i++) { const a = i, b = (i + 1) % n, c = (i + 2) % n; const cr = (p[b * 2] - p[a * 2]) * (p[c * 2 + 1] - p[b * 2 + 1]) - (p[b * 2 + 1] - p[a * 2 + 1]) * (p[c * 2] - p[b * 2]); if (Math.abs(cr) < 1e-6) continue; const s2 = Math.sign(cr); if (sgn && s2 !== sgn) return false; sgn = s2; } return true; };
-    const col: TileCol = { hulls: own.map((b) => ({ pts: Array.from(b.pts), h: buildingHeight(b) + 0.9, convex: convex(b.pts) })), walls: cp.segs, poles: [], decks: [] };
+    const col: TileCol = { hulls: own.filter((b) => b.kind !== 14).map((b) => ({ pts: Array.from(b.pts), h: buildingHeight(b) + 0.9, convex: convex(b.pts) })), walls: cp.segs, poles: [], decks: [] };
     for (let i = 0; i < props.lamps.length; i += 3) col.poles.push(props.lamps[i], props.lamps[i + 1], 0.12);
     for (const t of trees) if (inTile(t.x, t.z)) col.poles.push(t.x, t.z, t.palm ? 0.2 : 0.25);
-    const railDecks = rails.filter((r) => r.elev && (r.flags & 1) && inTile(r.pts[0], r.pts[1]) && (r.kind === RAIL.standard || r.kind === RAIL.narrow || r.kind === RAIL.light || r.kind === RAIL.disused)).map((r) => ({ pts: r.pts, ys: Float32Array.from(r.elev!, (e) => e + 0.1), hw: r.gauge / 2000 + 1.3 }));
+    const railDecks: { pts: Float32Array; ys: Float32Array; hw: number }[] = [];
+    for (const r of rails) {
+      if (!r.elev || !(r.flags & 1) || !(r.kind === RAIL.standard || r.kind === RAIL.narrow || r.kind === RAIL.light || r.kind === RAIL.disused)) continue;
+      const n = r.pts.length / 2; let s = -1;
+      for (let k = 0; k <= n - 1; k++) {
+        const own = k < n - 1 && inTile((r.pts[k * 2] + r.pts[k * 2 + 2]) / 2, (r.pts[k * 2 + 1] + r.pts[k * 2 + 3]) / 2);
+        if (own && s < 0) s = k;
+        else if (!own && s >= 0) { railDecks.push({ pts: r.pts.slice(s * 2, (k + 1) * 2), ys: Float32Array.from(r.elev.slice(s, k + 1), (e) => e + 0.1), hw: r.gauge / 2000 + 1.3 }); s = -1; }
+      }
+    }
     if (br.length || railDecks.length) { const dc = deckCollision([...br.map((r) => deckProfile(r)), ...railDecks]); col.decks.push(dc); }
+    if (ft.poles) col.poles.push(...ft.poles);
     for (const f of ft.fenceWalls) col.walls.push({ ax: f.ax, az: f.az, bx: f.bx, bz: f.bz, h: f.h });
     // the shore is a wall: nobody drives or walks into the lagoon
     for (const w of waters) {

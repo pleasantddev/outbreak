@@ -14,7 +14,7 @@ const ZONES: Plot['zone'][] = ['vacant', 'residential', 'commercial', 'industria
 
 /** Parcels are built offline from the OSM footprints (pipe/parcels.py): one parcel per real property, a built
  *  parcel holds its whole compound, and only land with no building is cut into vacant 18 x 36 m plots. */
-export function plotsForRegion(r: Region, bldById?: Map<number, Building>): Plot[] {
+export function plotsForRegion(r: Region, bldById?: Map<number, Building>, miss?: { n: number }): Plot[] {
   const local = new Map<number, Building>(); for (const b of r.buildings) local.set(b.id, b);
   const out: Plot[] = [];
   for (const pc of r.parcels) {
@@ -23,7 +23,7 @@ export function plotsForRegion(r: Region, bldById?: Map<number, Building>): Plot
     let cx = 0, cz = 0; for (let k = 0; k < n; k++) { cx += pts[k * 2]; cz += pts[k * 2 + 1]; } cx /= n; cz /= n;
     const area = Math.abs(polyArea(pts));
     const buildings: Building[] = [];
-    for (const id of pc.bids) { const b = local.get(id) ?? bldById?.get(id); if (b) buildings.push(b); }
+    for (const id of pc.bids) { const b = local.get(id) ?? bldById?.get(id); if (b) buildings.push(b); else if (miss) miss.n++; }
     out.push({ id: pc.id, pts, cx, cz, area, buildings, zone: ZONES[pc.zone] ?? 'residential', rich: pc.rich, name: pc.name });
   }
   return out;

@@ -92,7 +92,7 @@ for w in d['water']:
     water_polys.append((w, p))
     if p.area > 100000 and w['kind'] in ('water', 'riverbank'): bigwater.append(p)
 lagoon = shapely.union_all(bigwater) if bigwater else None
-if lagoon is not None: lagoon = shapely.prepare(lagoon) or lagoon
+if lagoon is not None: shapely.prepare(lagoon)
 
 # ---------- bridge elevation (roads and rails share one graph; ground nodes are where bridges descend)
 def kq(x, z): return (int(round(x * 2)), int(round(z * 2)))
@@ -191,6 +191,18 @@ if os.path.exists(SITES):
     for s in json.load(open(SITES)):
         pts = [P(lo, la) for la, lo in s['poly']]
         areas.append({'k': s['kind'], 'sub': 0, 'name': s['name'], 'poly': Polygon(pts), 'tags': {}})
+# sports pitches mapped as buildings (leisure=pitch + building=yes): draw them as pitches, not as boxes
+SKIP_B = set()
+for i, t in enumerate(BCL['tags']):
+    if not t or 'sport' not in t: continue
+    sp = AREA_SPORT.get(t['sport'].split(';')[0], 0)
+    if not sp or sp in (4, 6, 8) or t.get('leisure') not in ('pitch', 'sports_centre', None): continue
+    if t.get('leisure') != 'pitch' and not t.get('building'): continue
+    g = shapely.from_wkb(BCL['wkb'][i])
+    if g.geom_type != 'Polygon' or g.area < 40 or g.area > 6000: continue
+    if t.get('leisure') == 'pitch': SKIP_B.add(i)
+    areas.append({'k': 9, 'sub': sp, 'name': t.get('name'), 'poly': g, 'tags': t})
+log('pitch buildings', len(SKIP_B))
 log('areas', len(areas))
 
 # ---------- POIs
@@ -294,7 +306,7 @@ log('potholes reported', nrep, 'background', len(potholes) - nrep)
 json.dump({'compiled': rep['compiled'], 'reports': report_out, 'outside_current_map': rep['outside_current_map'], 'excluded': rep['excluded']}, open(f'{OUT}/potholes.json', 'w'), indent=1)
 
 # ---------- parcels
-PARCELS = pickle.load(open(os.path.join(HERE, 'parcels.pkl'), 'rb'))
+PARCELS = pickle.load(open(os.environ.get('HL_PARCELS') or os.path.join(HERE, 'parcels.pkl'), 'rb'))
 log('parcels', len(PARCELS))
 
 # ---------- bucket everything by region
@@ -328,6 +340,7 @@ for ph in potholes: reg[rkey(ph[0], ph[1])]['ph'].append(ph)
 nb = 0
 valid = np.nonzero((AREAS >= 4) & (CX >= X0) & (CX <= X1) & (CZ >= Z0) & (CZ <= Z1))[0]
 for i in valid:
+    if int(i) in SKIP_B: continue
     reg[rkey(CX[i], CZ[i])]['bld'].append(int(i)); nb += 1
 for k, e in enumerate(EXTRA):
     if inside_corr(e['x'], e['z']): reg[rkey(e['x'], e['z'])]['bld'].append(-1 - k); nb += 1

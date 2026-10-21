@@ -114,9 +114,9 @@ export interface FeatureInput {
   /** True for points on the road or its verge, so props stay off the carriageway. */
   onRoad: (x: number, z: number) => boolean;
 }
-export interface FeatureOut { group: THREE.Group; courts: { x: number; z: number; r: number }[]; fenceWalls: { ax: number; az: number; bx: number; bz: number; h: number }[]; mechSites: Area[] }
+export interface FeatureOut { poles?: number[]; group: THREE.Group; courts: { x: number; z: number; r: number }[]; fenceWalls: { ax: number; az: number; bx: number; bz: number; h: number }[]; mechSites: Area[] }
 
-const RAILC: RGB = [0.52, 0.53, 0.56], RUST: RGB = [0.42, 0.24, 0.14], BALLAST: RGB = [0.46, 0.45, 0.43], BALLAST_D: RGB = [0.36, 0.34, 0.28], CONC: RGB = [0.66, 0.65, 0.62];
+const RAILC: RGB = [0.27, 0.26, 0.27], RUST: RGB = [0.42, 0.24, 0.14], BALLAST: RGB = [0.46, 0.45, 0.43], BALLAST_D: RGB = [0.36, 0.34, 0.28], CONC: RGB = [0.66, 0.65, 0.62];
 
 export function buildFeatures(inp: FeatureInput): FeatureOut {
   const S = sharedGeos();
@@ -171,9 +171,9 @@ export function buildFeatures(inp: FeatureInput): FeatureOut {
         void by0; void by1;
         // two rails
         for (const sd of [1, -1]) {
-          const w0 = gauge / 2 * sd, rw = 0.04;
+          const w0 = gauge / 2 * sd, rw = 0.06;
           const Ra: V3 = [A[0] + nx * w0, A[1] + 0.22, A[2] + nz * w0], Rb: V3 = [B[0] + nx * w0, B[1] + 0.22, B[2] + nz * w0];
-          addQuad(G, [Ra[0] + nx * rw, Ra[1] + 0.12, Ra[2] + nz * rw], [Rb[0] + nx * rw, Rb[1] + 0.12, Rb[2] + nz * rw], [Rb[0] - nx * rw, Rb[1] + 0.12, Rb[2] - nz * rw], [Ra[0] - nx * rw, Ra[1] + 0.12, Ra[2] - nz * rw], rc, undefined, {}, true);
+          addQuad(G, [Ra[0] + nx * rw, Ra[1] + 0.12, Ra[2] + nz * rw], [Rb[0] + nx * rw, Rb[1] + 0.12, Rb[2] + nz * rw], [Rb[0] - nx * rw, Rb[1] + 0.12, Rb[2] - nz * rw], [Ra[0] - nx * rw, Ra[1] + 0.12, Ra[2] - nz * rw], disused ? RUST : [0.66, 0.66, 0.68], undefined, {}, true);
           for (const o of [1, -1]) addQuad(G, [Ra[0] + nx * rw * o, Ra[1], Ra[2] + nz * rw * o], [Rb[0] + nx * rw * o, Rb[1], Rb[2] + nz * rw * o], [Rb[0] + nx * rw * o, Rb[1] + 0.12, Rb[2] + nz * rw * o], [Ra[0] + nx * rw * o, Ra[1] + 0.12, Ra[2] + nz * rw * o], mul(rc, 0.8), undefined, {}, true);
         }
         // sleepers
@@ -352,12 +352,43 @@ export function buildFeatures(inp: FeatureInput): FeatureOut {
     if (AG.count) { const m = new THREE.Mesh(AG.build(), vertexMat()); m.castShadow = true; m.receiveShadow = true; g.add(m); }
   }
 
+  // ---------------------------------------------------------------- bus terminals (Oshodi Transport Interchange): columns, painted bays, terminal name boards
+  const TG = vcGeo(); const termPoles: number[] = [];
+  for (const b of inp.buildings) {
+    if (b.kind !== BK.terminal || !inTile(b.cx, b.cz)) continue;
+    const o = obb(b.pts); const ca = Math.cos(o.ang), sa = Math.sin(o.ang); const H = buildingHeight(b);
+    const W = (lx: number, lz: number): [number, number] => [b.cx * 0 + o.cx + lx * ca - lz * sa - x0, o.cz + lx * sa + lz * ca - z0];
+    const inside = (lx: number, lz: number) => { const [x, z] = W(lx, lz); return pointInPoly(x + x0, z + z0, b.pts); };
+    // columns on a 10 x 9 m grid, steel box section on a concrete foot
+    for (let lx = -o.hl + 2; lx <= o.hl - 1.5; lx += 10) for (let lz = -o.hw + 2; lz <= o.hw - 1.5; lz += 9) {
+      if (!inside(lx, lz)) continue; const [x, z] = W(lx, lz);
+      addBox(TG, x, 0, z, 0.9, 0.5, 0.9, o.ang, [0.62, 0.61, 0.58]); addBox(TG, x, 0.5, z, 0.45, H - 0.5, 0.45, o.ang, [0.34, 0.36, 0.4]);
+      termPoles.push(x + x0, z + z0, 0.45);
+    }
+    // painted bays: yellow dividers across the long axis, 3.8 m apart, 12 m deep, along both long sides and a median
+    for (const lane of [-1, 0, 1]) {
+      const lz0 = lane * o.hw * 0.62; for (let lx = -o.hl + 4; lx <= o.hl - 4; lx += 3.8) {
+        if (!inside(lx, lz0) || !inside(lx, lz0 + (lane === 0 ? 0 : 5))) continue;
+        const dz = 5.5; const a = W(lx, lz0 - dz), c = W(lx, lz0 + dz);
+        addQuad(TG, [a[0] - sa * 0.07, 0.04, a[1] + ca * 0.07 * 0 - ca * 0.0], [c[0] - sa * 0.07, 0.04, c[1]], [c[0] + sa * 0.07, 0.04, c[1]], [a[0] + sa * 0.07, 0.04, a[1]], [0.93, 0.78, 0.12], undefined, {}, true);
+      }
+    }
+    // name boards on the roof edge facing both long sides
+    if (b.name) { const uv = signUV(b.name.replace('Oshodi Transport Interchange - ', 'OSHODI ').replace('Oshodi Transport Interchange', 'OSHODI INTERCHANGE'), 1); const w = Math.min(14, o.hl * 1.2);
+      for (const sd of [-1, 1]) { const [x, z] = W(0, sd * (o.hw - 0.1)); signs.push({ cx: x, cy: H - 0.9, cz: z, ang: o.ang, w, h: w / SIGN_ASPECT, uv }); } }
+    // fascia: dark steel band round the roof edge
+    const n = b.pts.length / 2;
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n; addQuad(TG, [b.pts[i * 2] - x0, H - 0.5, b.pts[i * 2 + 1] - z0], [b.pts[j * 2] - x0, H - 0.5, b.pts[j * 2 + 1] - z0], [b.pts[j * 2] - x0, H + 0.3, b.pts[j * 2 + 1] - z0], [b.pts[i * 2] - x0, H + 0.3, b.pts[i * 2 + 1] - z0], [0.3, 0.33, 0.38], undefined, {}, true); }
+  }
+  if (TG.count) { const m = new THREE.Mesh(TG.build(), vertexMat()); m.castShadow = true; m.receiveShadow = true; g.add(m); }
+  out.poles = termPoles;
+
   // ---------------------------------------------------------------- mechanic villages
   for (const a of mechs) {
     const o = obb(a.pts); if (!inTile(o.cx, o.cz) && !a.pts.some((_, i) => i % 2 === 0 && inTile(a.pts[i], a.pts[i + 1]))) continue;
     out.mechSites.push(a);
   }
-  if (out.mechSites.length) mechanicProps(out.mechSites, inp, inst, S);
+  if (out.mechSites.length) mechanicProps(out.mechSites, inp, inst, S, g);
   if (signs.length) signsMesh(g, signs.splice(0)); else signs.length = 0;
   return out;
 }
@@ -391,10 +422,10 @@ function nearestStation(pois: Poi[], x: number, z: number) {
 }
 
 // ------------------------------------------------------------------------------------------------ mechanic village
-function mechanicProps(sites: Area[], inp: FeatureInput, inst: (geo: THREE.BufferGeometry, mat: THREE.Material, n: number, f: (i: number, put: (x: number, y: number, z: number, ry: number, sx?: number, sy?: number, sz?: number) => void) => void, colors?: (i: number) => RGB) => THREE.InstancedMesh | null, S: Record<string, THREE.BufferGeometry>) {
+function mechanicProps(sites: Area[], inp: FeatureInput, inst: (geo: THREE.BufferGeometry, mat: THREE.Material, n: number, f: (i: number, put: (x: number, y: number, z: number, ry: number, sx?: number, sy?: number, sz?: number) => void) => void, colors?: (i: number) => RGB) => THREE.InstancedMesh | null, S: Record<string, THREE.BufferGeometry>, grp: THREE.Group) {
   const { x0, z0, size } = inp;
   const carcass: { x: number; z: number; ry: number; col: RGB }[] = [], tyres: { x: number; z: number; ry: number }[] = [], engines: { x: number; z: number; ry: number }[] = [], drums: { x: number; z: number; col: RGB }[] = [];
-  const CAR: RGB[] = [[0.55, 0.3, 0.2], [0.6, 0.58, 0.55], [0.3, 0.38, 0.5], [0.62, 0.55, 0.3], [0.42, 0.18, 0.15], [0.7, 0.7, 0.72], [0.25, 0.4, 0.3]];
+  const CAR: RGB[] = [[0.3, 0.15, 0.1], [0.36, 0.34, 0.31], [0.2, 0.24, 0.3], [0.38, 0.32, 0.18], [0.26, 0.1, 0.08], [0.42, 0.41, 0.4], [0.16, 0.22, 0.17], [0.33, 0.2, 0.12]];
   for (const a of sites) {
     const o = obb(a.pts); const area = o.hl * o.hw * 4;
     const n = Math.min(260, Math.floor(area / 38));
@@ -412,6 +443,29 @@ function mechanicProps(sites: Area[], inp: FeatureInput, inst: (geo: THREE.Buffe
       else drums.push({ x, z, col: [[0.1, 0.25, 0.55], [0.55, 0.12, 0.1], [0.12, 0.12, 0.13], [0.2, 0.4, 0.2]][Math.floor(hash(seed + k, 6) * 4)] as RGB });
     }
   }
+  // rusty zinc workshop sheds: open front, three corrugated walls, mono-pitch roof, a tilted oil-black pad inside
+  const SG = vcGeo(); const RUSTS: RGB[] = [[0.45, 0.24, 0.14], [0.52, 0.3, 0.18], [0.38, 0.22, 0.15], [0.55, 0.52, 0.48], [0.34, 0.3, 0.27]];
+  for (const a of sites) {
+    const o = obb(a.pts); const area = o.hl * o.hw * 4; const ns = Math.min(40, Math.floor(area / 650)); const seed = Math.floor(o.cx * 5 + o.cz * 11);
+    for (let k = 0, made = 0; k < ns * 6 && made < ns; k++) {
+      const lx = (hash(seed + k, 21) * 2 - 1) * (o.hl - 5), lz = (hash(seed + k, 22) * 2 - 1) * (o.hw - 4); const ca = Math.cos(o.ang), sa = Math.sin(o.ang);
+      const x = o.cx + lx * ca - lz * sa, z = o.cz + lx * sa + lz * ca; if (x < x0 + 4 || x >= x0 + size - 4 || z < z0 + 4 || z >= z0 + size - 4) continue;
+      const w = 7 + hash(seed + k, 23) * 5, d = 4.5 + hash(seed + k, 24) * 2.5, h = 2.5 + hash(seed + k, 25) * 0.6;
+      let ok = true; for (const [cx2, cz2] of [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2], [0, 0]]) { const px = x + cx2 * ca - cz2 * sa, pz = z + cx2 * sa + cz2 * ca; if (!pointInPoly(px, pz, a.pts) || inp.blocked(px, pz) || inp.onRoad(px, pz)) { ok = false; break; } }
+      if (!ok) continue; made++;
+      const c1 = RUSTS[Math.floor(hash(seed + k, 26) * RUSTS.length)], c2 = RUSTS[Math.floor(hash(seed + k, 27) * RUSTS.length)];
+      const ry = o.ang; const cx = x - x0, cz = z - z0; const R = (px: number, pz: number): [number, number] => [cx + px * ca - pz * sa, cz + px * sa + pz * ca];
+      const bx = (px: number, pz: number, y0: number, bw: number, bh: number, bd: number, col: RGB) => { const [qx, qz] = R(px, pz); addBox(SG, qx, y0, qz, bw, bh, bd, ry, col); };
+      bx(0, -d / 2 + 0.05, 0, w, h, 0.1, c1 as RGB);
+      bx(-w / 2 + 0.05, 0, 0, 0.1, h * 0.92, d, c2 as RGB);
+      bx(w / 2 - 0.05, 0, 0, 0.1, h * 0.92, d, c1 as RGB);
+      const P = (px: number, pz: number, y: number): V3 => { const [qx, qz] = R(px, pz); return [qx, y, qz]; };
+      addQuad(SG, P(-w / 2 - 0.3, -d / 2 - 0.3, h + 0.5), P(w / 2 + 0.3, -d / 2 - 0.3, h + 0.5), P(w / 2 + 0.3, d / 2 + 0.4, h - 0.2), P(-w / 2 - 0.3, d / 2 + 0.4, h - 0.2), c2 as RGB, undefined, {}, true);
+      for (let r = 0; r < 3; r++) bx(-w / 2 + 0.5 + r * (w - 1) / 2, d / 2 - 0.1, 0, 0.14, h - 0.2, 0.14, [0.22, 0.2, 0.19]);
+      for (let r = 0; r < 3; r++) bx(-w / 2 + 1 + r * 0.9, 0.6, 0.02, 0.5 + hash(seed + k, 30 + r) * 1.2, 0.015, 0.6, [0.04, 0.035, 0.03]);
+    }
+  }
+  if (SG.count) { const m = new THREE.Mesh(SG.build(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, metalness: 0.5, side: THREE.DoubleSide })); m.castShadow = true; m.receiveShadow = true; grp.add(m); }
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.2 });
   inst(S.carcass, mat, carcass.length, (i, put) => { const c = carcass[i]; put(c.x - x0, 0, c.z - z0, c.ry, 1); }, (i) => carcass[i].col);
   inst(S.tyres, mat, tyres.length, (i, put) => { const c = tyres[i]; put(c.x - x0, 0, c.z - z0, c.ry, 0.9 + hash(i, 9) * 0.3); });

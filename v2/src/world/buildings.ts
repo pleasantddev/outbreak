@@ -19,7 +19,7 @@ export interface BuildingTile { mesh: THREE.Mesh; roofProps: { tanks: number[]; 
 
 export function buildingHeight(b: Building) {
   if (b.height > 0) return Math.max(2.4, b.height);
-  if (b.kind === BK.terminal) return 8.5;
+  if (b.kind === BK.terminal) return 6.8;
   if (b.kind === BK.market) return 5.5 + hash(b.id, 6) * 1.5;
   if (b.kind === BK.station) return 5.2;
   if (b.kind === BK.shed) return 2.6;
@@ -57,6 +57,7 @@ export function buildBuildings(list: Building[], ox: number, oz: number): { geo:
     const info = [lv, r3 * 100, kind, 1];
     // walls
     for (let i = 0; i < n; i++) {
+      if (kind === BK.terminal) break; // open-sided bus terminal: roof on columns, built in features.ts
       const j = (i + 1) % n; const ax = p[i * 2], az = p[i * 2 + 1], bx = p[j * 2], bz = p[j * 2 + 1];
       const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); if (L < 0.05) continue;
       const nn: [number, number, number] = [dz / L, 0, -dx / L];
@@ -192,7 +193,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
       float fx2 = u * 0.7 + v * 0.35;
       vec3 gl = mix(vec3(0.07, 0.17, 0.22), vec3(0.34, 0.52, 0.6), 0.5 + 0.5 * sin(fx2 + bn(vec2(u * 0.4, v * 0.3)) * 3.0));
       float fr = min(1.0, mul1 + spand);
-      BC = mix(gl, vec3(0.2, 0.21, 0.23), fr); BR = mix(0.05, 0.5, fr); BM = mix(0.75, 0.6, fr); BGL = 1.0 - fr;
+      BC = mix(gl, vec3(0.2, 0.21, 0.23), fr); BR = mix(0.12, 0.5, fr); BM = mix(0.35, 0.5, fr); BGL = 1.0 - fr;
       BN = vec3(0.0, 0.0, 1.0);
       BE += (1.0 - fr) * uNight * 0.55; BEC = vec3(0.85, 0.95, 1.0);
     }
