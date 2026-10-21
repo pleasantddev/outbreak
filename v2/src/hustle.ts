@@ -105,7 +105,7 @@ async function boot() {
   hud.onAction = onPhoneAction;
   hud.onBuy = (id) => { buyPlot(id); };
   bindLandmap();
-  (window as any).__hl = { sim, view, hud, state, gov, perf: perfHud, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
+  (window as any).__hl = { sim, view, hud, state, gov, perf: perfHud, THREE, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
     // test hook: run the sim without rendering, holding a command
     simulate(secs: number, patch: Partial<Command> & { pulse?: string[] } = {}) { for (let i = 0; i < secs * 60; i++) { const c: any = { ...emptyCommand(), yaw: sim.local.yaw, ...patch }; for (const k of patch.pulse ?? []) c[k] = Math.floor(i / 12) % 2 === 0; sim.setCommand(0, c); sim.step(1 / 60); if (i % 30 === 0) { view.world.update(sim.local.pos.x, sim.local.pos.z); syncColliders(true); } } view.handleEvents(sim.events, hud); sim.events.length = 0; },
     stoppedCar() { const m = sim.local.pos; return sim.liveVehicles().filter((v) => Math.abs(v.ctrl.currentVehicleSpeed()) < 2 && v.kind !== 'okada').sort((a, b) => { const pa = a.body.translation(), pb = b.body.translation(); return Math.hypot(pa.x - m.x, pa.z - m.z) - Math.hypot(pb.x - m.x, pb.z - m.z); })[0]; },

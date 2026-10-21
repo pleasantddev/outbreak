@@ -157,9 +157,12 @@ export class LifeView {
     }
   }
 
+  /** Test hook: pins the camera (and an optional clip plane for cutaway shots) regardless of the game camera. */
+  debugCam: { x: number; y: number; z: number; tx: number; ty: number; tz: number; fov?: number } | null = null;
   frame(dt: number) {
     this.time += dt;
     const sim = this.sim, me = sim.local; const cam = this.camera;
+    if (this.debugCam) { const d = this.debugCam; cam.position.set(d.x, d.y, d.z); cam.lookAt(d.tx, d.ty, d.tz); if (d.fov && cam.fov !== d.fov) { cam.fov = d.fov; cam.updateProjectionMatrix(); } cam.updateMatrixWorld(); }
     const L = this.landmap;
     const focus0 = me.vehicle !== null ? (() => { const t = sim.vehicles[me.vehicle!].body.translation(); return new THREE.Vector3(t.x, t.y, t.z); })() : new THREE.Vector3(me.pos.x, me.pos.y, me.pos.z);
     const focus = L.on ? new THREE.Vector3(L.x, 0, L.z) : focus0;
