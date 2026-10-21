@@ -140,13 +140,13 @@ export class LobbyStage {
   async build() {
     const lamps = this.view.world.lamps;
     this.sites = pickSites(this.store, lamps, this.spawn, 3);
-    this.siteIndex = 0; this.site = this.sites[0];
+    this.siteIndex = Math.min(this.sites.length - 1, Math.max(0, +(new URLSearchParams(location.search).get('site') ?? 0))); this.site = this.sites[this.siteIndex];
     this.place(this.site);
     // lights: key, teal rim, purple rim. Cars get their own headlight look from emissives and beams.
     const q = this.view.quality;
     this.key = new THREE.SpotLight(0xffe2c4, 34, 16, 0.42, 0.85, 1.4); this.key.position.set(2.6, 3.6, 4.2); this.key.target.position.set(0, 1.0, 0);
-    this.rimA = new THREE.SpotLight(0x2de0c8, 70, 14, 0.55, 0.8, 1.3); this.rimA.position.set(-2.8, 2.6, -2.8); this.rimA.target.position.set(0, 1.1, 0);
-    this.rimB = new THREE.SpotLight(0x8b5cf6, 80, 14, 0.55, 0.8, 1.3); this.rimB.position.set(3.0, 2.4, -2.6); this.rimB.target.position.set(0, 1.1, 0);
+    this.rimA = new THREE.SpotLight(0x2de0c8, 40, 12, 0.5, 0.9, 1.4); this.rimA.position.set(-2.8, 2.6, -2.8); this.rimA.target.position.set(0, 1.1, 0);
+    this.rimB = new THREE.SpotLight(0x8b5cf6, 55, 12, 0.5, 0.9, 1.4); this.rimB.position.set(3.0, 2.4, -2.6); this.rimB.target.position.set(0, 1.1, 0);
     this.lights = q === 'low' ? [this.key, this.rimA] : [this.key, this.rimA, this.rimB];
     for (const l of this.lights) { this.group.add(l, (l as THREE.SpotLight).target); }
     this.ready = true;
@@ -172,20 +172,19 @@ export class LobbyStage {
       for (const s of [-1, 1]) {
         const p = V3(x, hy, z).addScaledVector(fw, size.z / 2 - 0.1).addScaledVector(rt, s * size.x * 0.3);
         const bm = beamMesh(11, 1.7, 0xfff0d0); bm.position.copy(p); bm.rotation.y = yaw; bm.rotateX(0.045); this.group.add(bm); beams.push(bm);
-        const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: new THREE.Color(1.6, 1.45, 1.1), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); gl.scale.setScalar(1.5); gl.position.copy(p).addScaledVector(fw, 0.12); this.group.add(gl); glow.push(gl);
+
       }
       this.cars.push({ m, beams, glow }); return m;
     };
     this.mode = mode;
     if (mode === 'keyart') {
-      const D = Math.PI;
-      if (shot === 0) { await add('jeep', 0, -4.6, -5.2, D - 0.55, 0x101216); await add('sedan', 1, 4.8, -4.2, D + 0.5, 0x1b2f4f); await add('danfo', 0, 0.3, -12.5, D + 0.12); await add('hatch', 0, -7.5, -11, D - 0.2, 0x6e0f12); }
-      else if (shot === 1) { await add('danfo', 0, -3.3, -3.8, D - 0.62); await add('sedan', 0, 5.2, -7.5, D + 0.32, 0xb8b9bb); await add('jeep', 1, -1.0, -14, D + 0.05, 0x0d0d0f); }
-      else { await add('sedan', 2, -3.8, -4.2, D - 0.7, 0x24402a); await add('jeep', 0, 4.1, -5.6, D + 0.5, 0x0d0d0f); await add('danfo', 0, 1.2, -16, D, undefined); }
+      if (shot === 0) { await add('jeep', 0, -4.8, -5.4, 0.5, 0x101216); await add('sedan', 1, 4.9, -4.6, -0.5, 0x1b2f4f); await add('danfo', 0, 0.4, -12.5, -0.1); await add('hatch', 0, -8, -11, 0.25, 0x6e0f12); }
+      else if (shot === 1) { await add('danfo', 0, -3.6, -4.2, 0.6); await add('sedan', 0, 5.4, -7.5, -0.35, 0xb8b9bb); await add('jeep', 1, -1.0, -14, 0.03, 0x0d0d0f); }
+      else { await add('sedan', 2, -4, -4.6, 0.6, 0x24402a); await add('jeep', 0, 4.4, -6, -0.5, 0x0d0d0f); await add('danfo', 0, 1.2, -16, 0.02, undefined); }
     } else {
-      await add('danfo', 0, -4.4, -5.6, Math.PI - 0.5);
-      await add('sedan', 0, 4.6, -7.4, Math.PI + 0.38, 0x1b2f4f);
-      if (this.view.quality !== 'low') await add('jeep', 0, -0.6, -14.5, Math.PI + 0.06, 0x0d0d0f);
+      await add('danfo', 0, -4.9, -6.4, 0.5);
+      await add('sedan', 0, 4.8, -7.6, -0.42, 0x1b2f4f);
+      if (this.view.quality !== 'low') await add('jeep', 0, -0.4, -15, 0.04, 0x0d0d0f);
     }
   }
 
@@ -232,9 +231,11 @@ export class LobbyStage {
     }
   }
 
+  /** Key art prefers streets with the flyover in view. */
+  private keySite(i: number) { const o = [...this.sites].sort((a, b) => +b.bridge - +a.bridge); return o[Math.min(i, o.length - 1)]; }
   /** Crew key art for the loading screen: the roster posed in front of the cars, camera fixed. */
   async keyart(i: number, base: CharacterLook) {
-    const me = this.sim.local; const site = this.sites[Math.min(i, this.sites.length - 1)]; this.place(site);
+    const me = this.sim.local; const site = this.keySite(i); this.place(site);
     me.pos = { x: site.x, y: 0.05, z: site.z }; me.body.setTranslation({ x: site.x, y: 1, z: site.z }, true);
     await this.dress('keyart', i);
     this.hero?.dispose(); this.hero = null; this.plinth.visible = false;
@@ -242,8 +243,8 @@ export class LobbyStage {
     const tunde = L('survivor', 'oshodi-night', 1), amaka = L('girl', 'ankara-sun', 2), zainab = L('farah', 'lagoon', 1), shadow = L('rogue', 'street', 3), tac = L('trooper', 'street');
     const FA = 'Idle_FoldArms_Loop', ID = 'Idle_Loop', PH = 'Idle_TalkingPhone_Loop', TK = 'Idle_Talking_Loop';
     if (i === 0) {
-      await this.crew([{ look: zainab, x: -2.7, z: -0.3, yaw: 0.4, clip: FA }, { look: tunde, x: -0.9, z: 0.7, yaw: 0.12, clip: FA }, { look: amaka, x: 0.95, z: 0.5, yaw: -0.15, clip: PH }, { look: shadow, x: 2.7, z: -0.2, yaw: -0.45, clip: ID }, { look: tac, x: 0.1, z: -1.9, yaw: 0, clip: ID }]);
-      this.freeCam = { pos: V3(-0.2, 0.85, 7.2), look: V3(0.1, 1.25, -3), fov: 31 };
+      await this.crew([{ look: zainab, x: -2.5, z: 0.1, yaw: 0.4, clip: FA }, { look: tunde, x: -0.85, z: 1.0, yaw: 0.12, clip: FA }, { look: amaka, x: 0.9, z: 0.8, yaw: -0.15, clip: PH }, { look: shadow, x: 2.5, z: 0.1, yaw: -0.45, clip: ID }, { look: tac, x: 0.1, z: -1.4, yaw: 0, clip: ID }]);
+      this.freeCam = { pos: V3(-0.3, 0.5, 5.4), look: V3(0.1, 1.3, -2.5), fov: 33 };
     } else if (i === 1) {
       await this.crew([{ look: tunde, x: 0, z: 0.5, yaw: -0.1, clip: FA }, { look: amaka, x: -1.55, z: -0.3, yaw: 0.35, clip: TK }, { look: shadow, x: 1.65, z: -0.6, yaw: -0.4, clip: ID }]);
       this.freeCam = { pos: V3(1.3, 0.8, 5.2), look: V3(-0.2, 1.2, -1.5), fov: 29 };
@@ -261,7 +262,7 @@ export class LobbyStage {
     const v = this.view, a = v.atmo; const me = this.sim.local;
     this.saved = { hour: a.hour, target: a.target, locked: a.lockedWeather, cur: { ...a.cur, tint: [...a.cur.tint] }, wet: a.wet, water: a.water, bloom: v.bloom.intensity, fov: v.camera.fov, pos: { x: me.pos.x, z: me.pos.z }, layers: 0 };
     this.active = true; this.mode = mode;
-    if (mode === 'keyart') this.place(this.sites[Math.min(opts.shot ?? 0, this.sites.length - 1)]);
+    if (mode === 'keyart') this.place(this.keySite(opts.shot ?? 0));
     this.plinth.visible = mode !== 'keyart';
     await this.dress(mode, opts.shot ?? 0);
     v.scene.add(this.group); this.group.visible = true;

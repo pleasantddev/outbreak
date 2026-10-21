@@ -7,10 +7,10 @@ init = json.load(open(sys.argv[6])) if len(sys.argv) > 6 else {}
 touch = w < 1000 and '--touch' in sys.argv
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--use-gl=angle","--use-angle=swiftshader","--enable-unsafe-swiftshader","--ignore-gpu-blocklist"])
-    ctx = b.new_context(viewport={"width": w, "height": h}, has_touch=touch, is_mobile=touch, device_scale_factor=1)
+    ctx = b.new_context(viewport={"width": w, "height": h}, has_touch=touch, is_mobile=False, device_scale_factor=1)
     if init: ctx.add_init_script("for (const [k,v] of Object.entries(%s)) { try { if (localStorage.getItem(k) === null) localStorage.setItem(k, v) } catch(e){} }" % json.dumps(init))
     pg = ctx.new_page()
-    logs=[]; pg.on("console", lambda m: logs.append(m.type+': '+m.text[:300])); pg.on("pageerror", lambda e: logs.append("ERR "+str(e)[:800]))
+    logs=[]; pg.on("console", lambda m: (logs.append(m.type+": "+m.text[:300]), print("LOG", m.type, m.text[:200], flush=True))); pg.on("pageerror", lambda e: logs.append("ERR "+str(e)[:800]))
     pg.goto(url); t0=time.time()
     for i, st in enumerate(steps):
         if 'waitfor' in st:
@@ -31,8 +31,9 @@ with sync_playwright() as p:
         if 'click' in st:
             try: pg.click(st['click'], timeout=8000)
             except Exception as e: print(i, 'click error', str(e)[:200])
+        if 'jsclick' in st: print(i, 'jsclick', pg.evaluate('(s)=>{const e=document.querySelector(s); if(e){e.click(); return 1} return 0}', st['jsclick']))
         if 'wait' in st: time.sleep(st['wait'])
         if st.get('shot'):
-            time.sleep(st.get('settle', 2)); pg.screenshot(path=f"{out}_{st['shot']}.png", timeout=180000); print(i, 'shot', st['shot'])
+            time.sleep(st.get('settle', 2)); pg.screenshot(path=f"{out}_{st['shot']}.png", timeout=900000); print(i, 'shot', st['shot'])
     print('\n'.join([l for l in logs if 'ERR' in l or l.startswith('error') or 'warn' in l][:25]))
     b.close()

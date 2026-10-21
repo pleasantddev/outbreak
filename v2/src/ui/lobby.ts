@@ -39,6 +39,7 @@ const CSS = `
 #fe .me .xp{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.08)}
 #fe .me .xp u{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--pur))}
 #fe .grow{flex:1}
+#fe .brk{display:none}
 #fe .pill{display:flex;align-items:center;gap:8px;height:40px;padding:0 16px 0 6px;border-radius:999px;font-size:24px}
 #fe .pill .ico{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#0b0d14}
 #fe .pill .ico svg{width:16px;height:16px;stroke-width:2.2}
@@ -139,7 +140,7 @@ const CSS = `
 #fe .np{position:absolute;left:0;top:0;transform:translate(-50%,-100%);pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:3px;white-space:nowrap;text-shadow:0 2px 10px rgba(0,0,0,.8)}
 #fe .np b{font-size:25px;line-height:1;padding:5px 15px 4px;border-radius:7px;background:linear-gradient(100deg,rgba(10,12,20,.7),rgba(10,12,20,.5));border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(8px)}
 #fe .np i{font-style:normal;font-family:Teko,sans-serif;font-weight:600;font-size:16px;letter-spacing:.12em;color:var(--teal)}
-#fe .hint{position:absolute;left:50%;bottom:calc(var(--safe-b) - 4px);transform:translateX(-50%);font-size:11px;font-weight:600;color:rgba(255,255,255,.5);letter-spacing:.06em;white-space:nowrap;pointer-events:none;display:flex;gap:16px}
+#fe .hint{position:absolute;left:50%;top:calc(var(--safe-t) + 16px);transform:translateX(-50%);font-size:11px;font-weight:600;color:rgba(255,255,255,.5);letter-spacing:.06em;white-space:nowrap;pointer-events:none;display:flex;gap:16px}
 #fe .hint kbd{font-family:Teko,sans-serif;font-size:14px;font-weight:600;background:rgba(255,255,255,.14);border-radius:5px;padding:0 6px;margin-right:5px;color:#fff;letter-spacing:.04em}
 #fe .tapnote{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-b) + 108px);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.4);pointer-events:none;font-weight:600}
 /* onboarding */
@@ -169,7 +170,7 @@ const CSS = `
 @media (max-width:760px) and (orientation:portrait){
   #fe .vig{background:linear-gradient(0deg,rgba(4,5,9,.82),rgba(4,5,9,0) 42%),linear-gradient(180deg,rgba(4,5,9,.55),rgba(4,5,9,0) 20%)}
   #fe .top{flex-wrap:wrap;gap:8px}#fe .me{order:1;padding:4px 12px 4px 4px;gap:9px}#fe .me .av{width:38px;height:38px;font-size:17px;border-radius:11px}#fe .me .who b{font-size:17px;max-width:110px}#fe .me .who i{font-size:9.5px}
-  #fe .grow{display:none}#fe .pill{order:3;height:32px;font-size:20px;padding-right:12px}#fe .pill .ico{width:22px;height:22px}#fe .icon{order:2;margin-left:auto;width:40px;height:40px}
+  #fe .grow{display:none}#fe .brk{display:block;order:3;flex-basis:100%;height:0}#fe .pill{order:4;height:32px;font-size:20px;padding-right:12px}#fe .pill .ico{width:22px;height:22px}#fe .icon{order:2;margin-left:auto;width:40px;height:40px}
   #fe .menu{left:0;right:0;bottom:0;top:auto;flex-direction:row;gap:0;padding:6px var(--safe-l) var(--safe-b);background:linear-gradient(0deg,rgba(6,7,12,.94),rgba(6,7,12,.7));border-top:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
   #fe .mi{flex:1;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.1em;padding:8px 0 6px;min-width:0;align-items:center;justify-content:center}
   #fe .mi::before{transform:none;border-left:none;border-top:3px solid transparent;border-radius:0;background:none}
@@ -181,7 +182,7 @@ const CSS = `
   #fe .play{left:var(--safe-l);right:var(--safe-r);width:auto;bottom:calc(var(--safe-b) + 62px);height:62px}
   #fe .play::before{transform:none}#fe .play::after{display:none}#fe .play b{font-size:34px}#fe .play small{font-size:10px}
   #fe .news,#fe .hint,#fe .tapnote{display:none}
-  #fe .panel{left:var(--safe-l);right:var(--safe-r);width:auto;top:auto;bottom:calc(var(--safe-b) + 62px + 62px + 10px);height:min(46vh,440px);border-radius:20px 20px 16px 16px;animation:fe-sheet .35s cubic-bezier(.2,.9,.2,1)}
+  #fe .panel{left:var(--safe-l);right:var(--safe-r);width:auto;top:auto;bottom:calc(var(--safe-b) + 62px + 62px + 10px);height:min(42vh,420px);border-radius:20px 20px 16px 16px;animation:fe-sheet .35s cubic-bezier(.2,.9,.2,1)}
   @keyframes fe-sheet{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
   #fe .panel.tall{top:auto;bottom:calc(var(--safe-b) + 62px + 62px + 10px)}
   #fe.onb .panel{width:auto;left:var(--safe-l);right:var(--safe-r);top:auto;bottom:var(--safe-b);height:min(54vh,470px)}
@@ -267,7 +268,7 @@ export class FrontEnd {
   private applyLayout() {
     const w = innerWidth, h = innerHeight; const portrait = w < 760 && h > w; const compact = !portrait && h <= 520; const L = this.ctx.stage.layout;
     const panel = this.mode === 'onboard' || this.tab !== 'play';
-    if (portrait) { L.shiftX = 0; L.shiftY = this.mode === 'onboard' ? 0.27 : panel ? 0.22 : 0.09; L.fyMax = 0.6; }
+    if (portrait) { L.shiftX = 0; L.shiftY = this.mode === 'onboard' ? 0.3 : panel ? 0.33 : 0.1; L.fyMax = panel ? 0.3 : 0.6; }
     else { L.shiftX = panel ? -0.19 : 0.04; L.shiftY = compact ? 0.01 : 0.0; L.fyMax = compact ? 0.64 : 0.7; if (compact && panel) L.shiftX = -0.2; }
     L.bust = 0;
   }
@@ -386,7 +387,7 @@ export class FrontEnd {
     const p = this.profile!; const lp = levelProgress(p.xp);
     this.ui().innerHTML = `
       <header class="top intro"><button class="me gl" id="fe-me" aria-label="Profile and settings"><span class="av disp">${initials(p.name)}</span><span class="who"><b class="disp">${esc(p.name)}</b><i>LEVEL ${lp.level} · ${shortId(p.accountId)}</i></span><span class="xp"><u style="width:${Math.round(lp.frac * 100)}%"></u></span></button>
-        <span class="grow"></span>
+        <span class="grow"></span><span class="brk"></span>
         <div class="pill gl cash num" title="Cash"><span class="ico">${svg(IC.wallet)}</span><b id="fe-cash">${fmt(this.ctx.cash())}</b></div>
         <div class="pill gl bank num" title="Bank"><span class="ico">${svg(IC.bank)}</span><b id="fe-bank">${fmt(this.ctx.bank())}</b></div>
         <button class="icon gl" id="fe-gear" aria-label="Settings">${svg(IC.gear)}</button></header>
@@ -530,7 +531,7 @@ export class FrontEnd {
     // name plate above the hero's head
     const st = this.ctx.stage; if (st.active && st.hero) {
       const v = st.localToWorld(new THREE.Vector3(0, 2.0, 0)).project(st.view.camera);
-      const x = (v.x * 0.5 + 0.5) * innerWidth, y = (-v.y * 0.5 + 0.5) * innerHeight; this.np.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
+      const x = (v.x * 0.5 + 0.5) * innerWidth, y = (-v.y * 0.5 + 0.5) * innerHeight; this.np.style.display = this.mode === 'lobby' && innerWidth < 760 && innerHeight > innerWidth ? 'none' : ''; this.np.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
     }
     if (this.mode === 'lobby') {
       this.newsT += dt; if (this.newsT > 6) { this.newsT = 0; this.newsI = (this.newsI + 1) % NEWS.length; const tiles = [...this.root.querySelectorAll('.tile')] as HTMLElement[]; if (innerHeight <= 520 || innerWidth < 760) return; tiles.forEach((t, i) => (t.style.borderColor = i === this.newsI ? 'rgba(255,255,255,.3)' : '')); }

@@ -155,6 +155,7 @@ const css = `
   #speedo{width:min(130px,32vh)}#lm-panel{width:min(300px,36vw);padding:12px;gap:7px}#lm-panel h2{font-size:17px}#lm-panel .price{font-size:24px}#lm-top span{display:none}#lm-top{padding:7px 10px}#lm-top b{font-size:18px}
   #call{min-width:min(360px,60vw);padding:7px 9px 7px 7px}#call .av{width:36px;height:36px;font-size:15px}#call button{width:36px;height:36px}
   #toasts{width:min(260px,40vw)}.toast{padding:7px 9px}.toast h4{font-size:11.5px}.toast p{font-size:10.5px}}
+@media (max-width:760px),(max-height:520px){#p-me{height:28px;font-size:13px;max-width:130px;padding:0 9px 0 4px;gap:6px}#p-me .av{width:20px;height:20px;font-size:11px;border-radius:7px}#p-me .lv{font-size:14px}#nameplate b{font-size:12px}}
 `;
 const svg = (d: string) => `<svg viewBox="0 0 24 24"><path d="${d}"/></svg>`;
 const I = {

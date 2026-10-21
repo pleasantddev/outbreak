@@ -119,13 +119,13 @@ export const BASE_LOOKS: Record<RosterId, Partial<CharacterLook>> = {
 export interface Outfit { id: string; name: string; tag: string; swatch: [string, string]; look: Partial<CharacterLook> | null }
 export const OUTFITS: Outfit[] = [
   { id: 'street', name: 'Street Clean', tag: 'Your usual', swatch: ['#2c3a2a', '#1e2b3a'], look: null },
-  { id: 'oshodi-night', name: 'Oshodi Night', tag: 'Black and teal', swatch: ['#14161c', '#2de0c8'], look: { topColor: '#14161c', topAccent: '#2de0c8', pantsColor: '#1b1d24', shoes: '#e8e0d0', topPattern: 'solid' } },
+  { id: 'oshodi-night', name: 'Oshodi Night', tag: 'Black and teal', swatch: ['#14161c', '#2de0c8'], look: { topColor: '#14161c', topAccent: '#3a3f52', pantsColor: '#1b1d24', shoes: '#e8e0d0', topPattern: 'solid' } },
   { id: 'ankara-sun', name: 'Ankara Sunburst', tag: 'Print on print', swatch: ['#b0332a', '#e8c34a'], look: { topPattern: 'ankara_sun', topColor: '#b0332a', topAccent: '#e8c34a', pantsColor: '#141414', shoes: '#e8e0d0' } },
   { id: 'lagoon', name: 'Lagoon Wave', tag: 'Gold and navy', swatch: ['#d9a441', '#355070'], look: { topPattern: 'ankara_wave', topColor: '#d9a441', topAccent: '#355070', pantsColor: '#1e2b3a', shoes: '#5a3d2b' } },
   { id: 'adire', name: 'Adire Indigo', tag: 'Hand dyed', swatch: ['#355070', '#c9c1b2'], look: { topPattern: 'adire', topColor: '#355070', topAccent: '#c9c1b2', pantsColor: '#c9c1b2', shoes: '#141414' } },
   { id: 'naija', name: 'Naija Green', tag: 'Green white green', swatch: ['#1f6b3a', '#e8e0d0'], look: { topColor: '#1f6b3a', topAccent: '#e8e0d0', pantsColor: '#e8e0d0', shoes: '#141414', topPattern: 'solid' } },
   { id: 'danfo', name: 'Danfo Yellow', tag: 'Stripe and black', swatch: ['#e3a21a', '#141414'], look: { topPattern: 'stripe_danfo', topColor: '#e3a21a', topAccent: '#141414', pantsColor: '#1d1f24', shoes: '#141414' } },
-  { id: 'purple', name: 'Purple Company', tag: 'Owner energy', swatch: ['#6d3ef0', '#2de0c8'], look: { topColor: '#6d3ef0', topAccent: '#2de0c8', pantsColor: '#141414', shoes: '#e8e0d0', topPattern: 'solid' } },
+  { id: 'purple', name: 'Purple Company', tag: 'Owner energy', swatch: ['#6d3ef0', '#2de0c8'], look: { topColor: '#6d3ef0', topAccent: '#4b2bb0', pantsColor: '#141414', shoes: '#e8e0d0', topPattern: 'solid' } },
 ];
 export const SKIN_NAMES = ['Midnight', 'Cocoa', 'Chestnut', 'Bronze', 'Caramel', 'Honey'];
 export const clampSkin = (n: number) => Math.max(0, Math.min(SKIN_NAMES.length - 1, Math.round(Number.isFinite(n) ? n : 1)));
