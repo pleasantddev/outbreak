@@ -1,4 +1,4 @@
-node_modules/
+node_modules
 v2/dist/
 v2/public/devm/
 chars_in/

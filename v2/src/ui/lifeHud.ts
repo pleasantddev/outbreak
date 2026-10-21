@@ -5,6 +5,7 @@ import type { SimEvent } from '../sim/types';
 import type { LifeSim } from '../sim/life';
 import type { RoadNet } from '../world/roadnet';
 import type { Plot } from '../world/plots';
+import { intro as loadScreen } from './intro';
 
 const css = `
 :root{--glass:rgba(12,14,22,.56);--glass2:rgba(18,20,32,.72);--line:rgba(255,255,255,.09);--txt:#f3f5f8;--mut:#9ba3b4;--teal:#2de0c8;--pur:#8b5cf6;--pur2:#6d3ef0;--grn:#49e08a;--red:#ff4d5e;--gold:#ffc53d;--blue:#4aa8ff}
@@ -25,6 +26,13 @@ const css = `
 #stars svg{width:17px;height:17px;fill:rgba(255,255,255,.14)} #stars svg.on{fill:var(--gold);filter:drop-shadow(0 0 4px rgba(255,197,61,.6))}
 #stars.flash svg.on{animation:fl .45s steps(2) infinite} @keyframes fl{50%{fill:#fff}}
 #stars.none{display:none}
+#p-me{height:36px;padding:0 14px 0 5px;gap:9px;font-size:15px;font-weight:700;max-width:200px}
+#p-me .av{width:26px;height:26px;border-radius:9px;background:linear-gradient(140deg,var(--pur),var(--teal));display:flex;align-items:center;justify-content:center;font-family:Oswald,Rajdhani,sans-serif;font-size:13px;font-weight:700;color:#fff;flex:0 0 auto}
+#p-me .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:Oswald,Rajdhani,sans-serif;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+#p-me .lv{font-family:Teko,Rajdhani,sans-serif;font-weight:600;font-size:17px;color:var(--teal);letter-spacing:.06em;flex:0 0 auto}
+#nameplate{position:absolute;left:0;top:0;display:none;flex-direction:column;align-items:center;gap:1px;pointer-events:none;white-space:nowrap;will-change:transform}
+#nameplate b{font-family:Oswald,Rajdhani,sans-serif;font-weight:600;font-size:15px;letter-spacing:.08em;text-transform:uppercase;padding:2px 10px 1px;border-radius:6px;background:rgba(8,10,16,.5);border:1px solid rgba(255,255,255,.14);text-shadow:0 1px 3px rgba(0,0,0,.8)}
+#nameplate i{font-style:normal;font-family:Teko,Rajdhani,sans-serif;font-weight:600;font-size:13px;letter-spacing:.14em;color:var(--teal);text-shadow:0 1px 3px rgba(0,0,0,.9)}
 #flash{font-size:22px;opacity:0;transition:opacity .4s;margin-right:6px}
 #toasts{position:absolute;left:max(18px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;width:min(330px,60vw)}
 .toast{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;border-radius:16px;animation:tin .35s cubic-bezier(.2,.9,.2,1);transition:opacity .4s,transform .4s}
@@ -133,23 +141,6 @@ const css = `
 #tc .tb.down{transform:scale(.92);background:rgba(255,255,255,.3)}
 #joy-base{position:fixed;left:0;top:0;width:124px;height:124px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);background:radial-gradient(circle,rgba(45,224,200,.12),rgba(10,12,20,.25));transform:translate(-999px,-999px);pointer-events:none;z-index:4}
 #joy-knob{position:fixed;left:0;top:0;width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 0 0 6px rgba(45,224,200,.25);transform:translate(-999px,-999px);pointer-events:none;z-index:4}
-#boot{position:fixed;inset:0;z-index:20;background:radial-gradient(80% 60% at 70% 20%,rgba(139,92,246,.28),transparent 60%),radial-gradient(70% 60% at 10% 100%,rgba(45,224,200,.18),transparent 60%),#07080d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#f3f5f8;font-family:Inter,sans-serif;padding:20px;box-sizing:border-box}
-#boot h1{margin:0;font-family:Anton,Impact,sans-serif;font-weight:400;font-size:min(110px,17vw);letter-spacing:3px;line-height:.9}
-#boot h1 em{font-style:normal;background:linear-gradient(90deg,var(--teal),var(--pur));-webkit-background-clip:text;background-clip:text;color:transparent}
-#boot .load{width:min(360px,70vw);height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
-#boot .load i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--pur));transition:width .3s}
-#boot p{margin:0;font-size:15px;font-weight:500;color:var(--mut)}
-#boot .cr{position:absolute;bottom:12px;left:16px;right:16px;text-align:center;font-size:11px;color:rgba(255,255,255,.35)}
-#boot #start{display:none;padding:15px 40px;font-size:16px;letter-spacing:1.5px}
-#boot .keys{font-size:12.5px;color:rgba(255,255,255,.45);text-align:center;max-width:620px;line-height:1.6}
-#pick{display:none;gap:10px;flex-wrap:wrap;justify-content:center;max-width:860px;pointer-events:auto}
-#boot.picking h1{font-size:min(64px,11vw)}#boot.picking .keys{display:none}#boot.picking{gap:12px}
-#pick.on{display:flex}
-#pick .av{width:min(132px,17vw);box-sizing:border-box;border-radius:18px;padding:8px 8px 10px;cursor:pointer;text-align:left;transition:transform .15s,box-shadow .15s}
-#pick .av img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:12px;display:block;background:radial-gradient(circle at 50% 30%,#2b2f45,#12141f)}
-#pick .av b{display:block;font-size:13.5px;margin-top:7px} #pick .av span{display:block;font-size:11px;color:var(--mut);line-height:1.3;margin-top:2px}
-#pick .av.sel{box-shadow:0 0 0 2px var(--teal),0 10px 30px rgba(45,224,200,.25);transform:translateY(-3px)}
-#picklbl{display:none;font-size:12px;font-weight:700;letter-spacing:2px;color:var(--teal);text-transform:uppercase}
 @media (max-width:760px){.pill{height:30px;font-size:15px;padding:0 11px 0 5px}.pill .ico{width:21px;height:21px}#p-time{height:26px;font-size:11px}#p-time .num{font-size:14px}#stars svg{width:13px;height:13px}
   #toasts{width:min(250px,56vw)}.toast{padding:8px 10px;border-radius:13px}.toast .ti{flex-basis:28px;height:28px}.toast h4{font-size:12px}.toast p{font-size:11px}
   #mm{width:min(190px,42vw)}#mmhead b{font-size:14px}#mmhead span{font-size:11px}#parcel{display:none!important}
@@ -215,6 +206,8 @@ export class LifeHud {
   onAction?: (app: string, id: string) => void;
   onBuy?: (id: string) => void;
   radarCv: HTMLCanvasElement; radarG: CanvasRenderingContext2D;
+  me = { name: 'You', level: 1, id: '' };
+  private npShown = false;
   private callCb: { yes: () => void; no?: () => void } | null = null; private callT = 0;
   private parcelId = ''; private lastFrame: HudFrame | null = null;
   private speedArc: SVGPathElement; private rpmArc: SVGPathElement;
@@ -223,17 +216,12 @@ export class LifeHud {
     this.root = document.createElement('div'); document.body.appendChild(this.root);
     const tb = (id: string, icon: string, style: string, pri = false, label = '') => `<div class="tb${pri ? ' pri' : ''}" data-tbtn="${id}" style="${style}">${icon ? svg(icon) : label}</div>`;
     this.root.innerHTML = `
-<div id="boot"><h1>HUSTLE<em>LIFE</em></h1><div class="load"><i id="loadbar"></i></div><p id="loadtxt">Loading Lagos</p>
-  <div id="picklbl">Choose your hustler</div><div id="pick"></div>
-  <button id="start" class="btn">ENTER LAGOS</button>
-  <div class="keys" id="keys">WASD move · mouse look · Shift run · Space jump · E get in, out or jack a car · left click punch or shoot · right click aim · R reload · 1 2 3 weapons · T phone · M land map · V cockpit · gamepad supported</div>
-  <div class="cr">Map data © OpenStreetMap contributors (ODbL) · Vehicles CC BY, Sketchfab artists (cars/CREDITS.json) · People from the studio's Fab library · Animation CC0 Quaternius · Textures CC0 Poly Haven</div></div>
 <div id="hlhud">
   <div id="toasts"></div>
   <div id="call" class="gl"><div class="av" id="call-av">?</div><div class="who"><b id="call-n"></b><span id="call-l"></span></div>
     <button class="no" id="call-no" aria-label="Decline">${svg(I.hang)}</button><button class="yes" id="call-yes" aria-label="Answer">${svg(I.phone)}</button></div>
   <div id="tr">
-    <div class="pills"><div class="pill gl" id="p-bank"><span class="ico">${svg(I.bank)}</span><b class="num" id="bank">₦0</b></div>
+    <div class="pills"><div class="pill gl" id="p-me"><span class="av" id="me-av">?</span><span class="nm" id="me-nm">You</span><span class="lv" id="me-lv">LV 1</span></div><div class="pill gl" id="p-bank"><span class="ico">${svg(I.bank)}</span><b class="num" id="bank">₦0</b></div>
       <div class="pill gl" id="p-cash"><span class="ico">${svg(I.wallet)}</span><b class="num" id="money">₦0</b></div></div>
     <div class="pills"><span id="flash" class="num ts"></span><div class="pill gl" id="p-time"><span class="num" id="clock">07:10</span><span id="sub2"></span></div></div>
     <div id="stars" class="gl none">${[0, 1, 2, 3, 4].map(() => svg(I.star)).join('')}</div>
@@ -241,6 +229,7 @@ export class LifeHud {
   <div id="mm"><div id="mmhead" class="ts"><b id="area"></b><span id="street"></span></div>
     <div id="radarw" class="gl"><canvas id="radar" width="540" height="348"></canvas><div id="mmdir"></div></div>
     <div id="vitals"><div class="v"><i id="hp" style="width:100%"></i></div><div class="v"><i id="ar" style="width:0%"></i></div></div></div>
+  <div id="nameplate"><b id="np-n"></b><i id="np-l"></i></div>
   <div id="parcel" class="gl"></div>
   <div id="wcard" class="gl"><div class="wi" id="w-ico"></div><div><b id="w-name"></b><span class="num" id="w-ammo"></span></div></div>
   <div id="speedo"><svg viewBox="0 0 200 200">
@@ -253,7 +242,7 @@ export class LifeHud {
     </svg><div class="sv"><span class="num" id="kmh">0</span><small>KM/H</small></div><div class="gear num" id="gear">N</div></div>
   <div id="help" class="gl"></div><div id="subs" class="ts"></div><div id="title"><span class="t" id="title-t"></span><small id="title-s"></small><div class="bar"></div></div>
   <div id="prompt" class="gl"></div><div id="xhair"></div>
-  <div id="phone"><div id="scr"><div class="isl"></div><div class="st"><span id="ph-t"></span><span id="ph-b">5G · 64%</span></div><div class="big" id="ph-big"></div><div class="small" id="ph-s"></div><div id="apps"></div>
+  <div id="phone"><div id="scr"><div class="isl"></div><div class="st"><span id="ph-t"></span><span id="ph-b">5G · 64%</span></div><div class="big" id="ph-big"></div><div class="small" id="ph-s"></div><div class="small" id="ph-name" style="margin-top:6px;color:var(--teal);opacity:1"></div><div id="apps"></div>
     <div id="appview"><h3 id="av-h"></h3><div class="list" id="av-l"></div><button class="back" id="av-back" aria-label="Home"></button></div></div></div>
 </div>
 <div id="landmap"><div id="lm-catch" style="position:absolute;inset:0;pointer-events:auto;touch-action:none;cursor:grab"></div><div id="lm-top" class="gl"><b>LANDMAP</b><span>Drag to move · scroll or pinch to zoom · tap a plot</span><button class="btn ghost" id="lm-x">Close<kbd>M</kbd></button></div>
@@ -283,21 +272,23 @@ ${touch ? `<div id="tc">
   }
 
   // ---------------------------------------------------------------- boot
-  setLoad(p: number, txt?: string) { (this.el('loadbar') as HTMLElement).style.width = `${Math.round(p * 100)}%`; if (txt) this.el('loadtxt').textContent = txt; }
-  /** Avatar grid on the boot screen. */
-  pickCharacter(list: { id: string; name: string; blurb: string; img: string }[], sel: string, onPick: (id: string) => void) {
-    const P = this.el('pick');
-    P.innerHTML = list.map((c) => `<div class="av gl${c.id === sel ? ' sel' : ''}" data-id="${c.id}"><img src="${c.img}" alt=""><b>${c.name}</b><span>${c.blurb}</span></div>`).join('');
-    P.classList.add('on'); this.el('picklbl').style.display = 'block'; this.el('boot').classList.add('picking');
-    P.querySelectorAll('.av').forEach((a) => ((a as HTMLElement).onclick = (e) => { e.stopPropagation(); P.querySelectorAll('.av').forEach((x) => x.classList.toggle('sel', x === a)); onPick((a as HTMLElement).dataset.id!); }));
+  /** Progress on the loading screen (index.html markup, driven by ui/intro.ts). */
+  setLoad(p: number, txt?: string) { loadScreen.setLoad(p, txt); }
+
+  // ---------------------------------------------------------------- profile
+  /** The one profile of this account: chip in the top right, name on the phone, plate above the player. */
+  setProfile(name: string, level: number, id = '') {
+    this.me = { name, level, id };
+    const ini = (name.match(/[\p{L}\p{N}]/gu) ?? ['?']).slice(0, 2).join('').toUpperCase();
+    this.el('me-av').textContent = ini; this.el('me-nm').textContent = name; this.el('me-lv').textContent = `LV ${level}`;
+    this.el('np-n').textContent = name; this.el('np-l').textContent = `LV ${level}`; this.el('ph-name').textContent = name;
   }
-  ready(onStart: () => void, auto = false) {
-    const b = this.el('start'); b.style.display = 'block'; this.el('loadtxt').textContent = 'Lagos is ready';
-    let done = false;
-    const go = (e?: Event) => { if (done) return; done = true; e?.preventDefault?.(); this.el('boot').remove(); window.removeEventListener('keydown', k); onStart(); };
-    const k = (e: KeyboardEvent) => { if (e.code === 'Enter' || e.code === 'Space') go(); };
-    b.addEventListener('click', go); b.addEventListener('pointerup', go); b.addEventListener('touchend', go, { passive: false });
-    window.addEventListener('keydown', k); if (auto) go();
+  /** Name plate over the player's head; x, y in CSS pixels, null hides it. */
+  plate(at: { x: number; y: number } | null) {
+    const e = this.el('nameplate');
+    if (!at) { if (this.npShown) { e.style.display = 'none'; this.npShown = false; } return; }
+    if (!this.npShown) { e.style.display = 'flex'; this.npShown = true; }
+    e.style.transform = `translate(${Math.round(at.x)}px,${Math.round(at.y)}px) translate(-50%,-100%)`;
   }
 
   // ---------------------------------------------------------------- messages
@@ -381,8 +372,8 @@ ${touch ? `<div id="tc">
     else if (name === 'Bank') html = row('Cash in hand', fmt(c.cash)) + row('Account', fmt(c.bank), ['Bank', 'deposit', 'Deposit ₦10,000']) + row('Withdraw', 'Any POS stand on the street will do. Small charge.', ['Bank', 'withdraw', 'Withdraw ₦10,000']);
     else if (name === 'Weather') html = row('Now', `${c.weather}, ${c.season}`) + row('Game time', `${c.time} · day ${c.day}`) + row('Lagos time', `${c.real} WAT`) + row('Potholes', 'Rain fills them. Sun and harmattan dry them. Drive accordingly.');
     else if (name === 'Roads') html = row('Pothole reports', 'From news reports and residents, 2023 to October 2026. Each report is snapped to the named road.') + c.potholes.map((p) => row(`${p.name}`, `${p.road} · ${p.area}<br>Reported ${p.reported} · ${p.placed} potholes placed`)).join('');
-    else if (name === 'Contacts') html = row('Mama Put', 'Under the bridge, Oshodi') + row('Conductor Sule', 'Oshodi park') + row('Baba Landlord', 'Sells land. Asks no questions. Charges for C of O.');
-    else if (name === 'Settings') html = row('Graphics', `Quality: ${c.quality}`, ['Settings', 'quality', 'Change']) + row('Weather', 'Cycle the weather (testing)', ['Settings', 'weather', 'Next']) + row('Time', 'Jump one hour', ['Settings', 'hour', '+1 hour']);
+    else if (name === 'Contacts') html = row(`${this.me.name} (you)`, this.me.id ? `Account ${this.me.id}` : 'Your number') + row('Mama Put', 'Under the bridge, Oshodi') + row('Conductor Sule', 'Oshodi park') + row('Baba Landlord', 'Sells land. Asks no questions. Charges for C of O.');
+    else if (name === 'Settings') html = row('Graphics', `Quality: ${c.quality}`, ['Settings', 'quality', 'Change']) + row('Weather', 'Cycle the weather (testing)', ['Settings', 'weather', 'Next']) + row('Time', 'Jump one hour', ['Settings', 'hour', '+1 hour']) + row('Lobby', 'Save and go back to the lobby. Change your look or your name there.', ['Settings', 'lobby', 'Back to lobby']);
     else html = `<canvas id="pmap" width="400" height="400"></canvas>` + row('Legend', 'Teal: your route · Red dots: reported potholes · Purple: your land');
     L.innerHTML = html;
     L.querySelectorAll('button[data-app]').forEach((b) => ((b as HTMLElement).onclick = () => this.onAction?.((b as HTMLElement).dataset.app!, (b as HTMLElement).dataset.id!)));
