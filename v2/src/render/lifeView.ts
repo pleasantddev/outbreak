@@ -160,6 +160,15 @@ export class LifeView {
 
   /** Test hook: pins the camera (and an optional clip plane for cutaway shots) regardless of the game camera. */
   debugCam: { x: number; y: number; z: number; tx: number; ty: number; tz: number; fov?: number } | null = null;
+  /** Compiles every shader the first minutes of play need, off the main thread where the browser allows it, so cars and crowds do not stall the first frames they appear in. */
+  async precompile() {
+    const added: THREE.Object3D[] = [];
+    for (const k of ['sedan', 'hatch', 'jeep', 'police', 'danfo', 'keke', 'okada'] as const) {
+      try { const m = await buildCar(k, 0); m.root.position.set(0, -400, 0); this.scene.add(m.root); added.push(m.root); } catch { /* a missing model only costs a later compile */ }
+    }
+    try { await this.renderer.compileAsync(this.scene, this.camera); } catch { /* older drivers: shaders compile on first use */ }
+    for (const o of added) this.scene.remove(o);
+  }
   private tmpP = new THREE.Vector3(); private tmpD = new THREE.Vector3();
   private fr = new THREE.Frustum(); private frM = new THREE.Matrix4(); private frS = new THREE.Sphere(); private frInv = new THREE.Matrix4();
   private sphereInView(x: number, y: number, z: number, r: number) { this.frS.center.set(x, y, z); this.frS.radius = r; return this.fr.intersectsSphere(this.frS); }

@@ -58,6 +58,9 @@ export async function buildCar(kind: VehicleKind, seed: number): Promise<CarMode
         return s;
       });
       mesh.material = Array.isArray(mesh.material) ? out : out[0];
+      // trim, glass, lamps, interior and underside do not need to be in the shadow pass: about half of a car's shadow draw calls
+      const nm = ((mats[0] as THREE.Material).name || '').toLowerCase();
+      if (/glass|lamp|light|luz|brake|stop|chrome|cromo|hub|int|bajo|bottom|plast|wood|shield|carbon|ttr|tepian/.test(nm)) mesh.castShadow = false;
     }
   });
   m.traverse((o) => {
@@ -108,7 +111,9 @@ function keke(seed: number): CarModel {
   add(new THREE.BoxGeometry(1.3, 0.04, 2.0), canvas, 0, 1.75, -0.15);
   for (const [x, z] of [[-0.62, -1.1], [0.62, -1.1], [-0.4, 0.9], [0.4, 0.9]]) add(new THREE.CylinderGeometry(0.025, 0.025, 1.2, 6), black, x, 1.15, z);
   add(new THREE.BoxGeometry(1.15, 0.12, 0.5), seat, 0, 0.82, -0.45); add(new THREE.BoxGeometry(1.15, 0.5, 0.08), seat, 0, 1.08, -0.72);
-  add(new THREE.BoxGeometry(0.45, 0.1, 0.35), seat, 0, 0.82, 0.55);
+  add(new THREE.BoxGeometry(0.45, 0.1, 0.35), seat, 0, 0.82, 0.52);
+  // handlebar and column in front of the driver
+  add(new THREE.CylinderGeometry(0.018, 0.018, 0.72, 8).rotateZ(Math.PI / 2), black, 0, 1.12, 0.78); add(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 8), black, 0, 0.87, 0.8, -0.5);
   const wheels: THREE.Object3D[] = [];
   const wheel = (x: number, z: number) => { const g = new THREE.Group(); g.position.set(x, base + 0.24, z); const sp = new THREE.Group(); g.add(sp); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.14, 16).rotateZ(Math.PI / 2), black); t.castShadow = true; sp.add(t); body.add(g); return g; };
   const f = wheel(0, 0.98); wheels.push(f, f, wheel(-0.6, -0.97), wheel(0.6, -0.97));

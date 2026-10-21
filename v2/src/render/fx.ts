@@ -80,7 +80,8 @@ export class Fx {
     this.sparks = new ParticleSystem(600, THREE.AdditiveBlending, scene);
     this.smoke = new ParticleSystem(500, THREE.NormalBlending, scene);
     this.blood = new ParticleSystem(500, THREE.NormalBlending, scene);
-    for (let i = 0; i < 4; i++) { const l = new THREE.PointLight(0xffb060, 0, 14, 2); scene.add(l); this.lightPool.push(l); }
+    // every point light is evaluated per fragment on every lit material, even at intensity 0: keep the pool small
+    for (let i = 0; i < (quality === 'high' ? 3 : 2); i++) { const l = new THREE.PointLight(0xffb060, 0, 14, 2); scene.add(l); this.lightPool.push(l); }
     const dmat = new THREE.MeshStandardMaterial({ map: bloodTexture(), transparent: true, depthWrite: false, roughness: 0.2, polygonOffset: true, polygonOffsetFactor: -3 });
     this.decals = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), dmat, 160);
     this.decals.count = 0; this.decals.frustumCulled = false;
@@ -116,6 +117,8 @@ export class Fx {
     this.heartCore = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 2), new THREE.MeshStandardMaterial({ color: 0x300000, emissive: 0xff1010, emissiveIntensity: 5, roughness: 0.3 }));
     this.heartCore.visible = false; scene.add(this.heartCore);
     this.heartLight = new THREE.PointLight(0xff1a10, 0, 30, 1.5); scene.add(this.heartLight);
+    // only the extraction-shooter mode uses this light; it is switched on by fx.update when a heart is active
+    this.heartLight.visible = false;
 
     // the collapse: a wall of red fog
     const wallMat = new THREE.ShaderMaterial({
@@ -223,6 +226,7 @@ export class Fx {
     (this.heartBeam.material as THREE.ShaderMaterial).uniforms.uOn.value = heart.active ? 1 : 0;
     this.heartBeam.visible = heart.active;
     this.heartCore.visible = heart.active && !heart.carried;
+    if (heart.active !== this.heartLight.visible) this.heartLight.visible = heart.active;
     this.heartLight.intensity = heart.active ? 18 + Math.sin(time * 6) * 6 : 0;
     if (heart.active) {
       this.heartBeam.position.set(heart.pos.x, heart.pos.y, heart.pos.z);

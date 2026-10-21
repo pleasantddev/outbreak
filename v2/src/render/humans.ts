@@ -367,7 +367,7 @@ export class HumanView {
     const head = B('Head');
     if (head) {
       const have = head.getWorldPosition(V()).y + 0.2 - t.hip.y, room = t.roof - t.hip.y;
-      if (have > room && room > 0.35) { this.root.scale.setScalar(Math.max(0.84, room / have)); anchor(); }
+      if (have > room && room > 0.35) { this.root.scale.setScalar(Math.max(0.8, room / have)); anchor(); }
     }
     const down = V(0, -1, 0);
     if (t.hands) for (let i = 0; i < 2; i++) {

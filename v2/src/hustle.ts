@@ -94,7 +94,7 @@ async function boot() {
   input = new Input(canvas, touchDev ? 'on' : 'off');
   hud.setLoad(0.75, 'Building Oshodi');
   // build the ground under the player before letting them in
-  for (let i = 0; i < 60 && view.world.tiles.size < 9; i++) { view.world.update(spawn.x, spawn.z); await new Promise((r) => setTimeout(r, 0)); hud.setLoad(0.75 + 0.2 * Math.min(1, view.world.tiles.size / 9)); }
+  for (let i = 0; i < 60 && view.world.tiles.size < 9; i++) { view.world.update(spawn.x, spawn.z, true); await new Promise((r) => setTimeout(r, 0)); hud.setLoad(0.75 + 0.2 * Math.min(1, view.world.tiles.size / 9)); }
   // stand on a real walkway near the requested spot
   let best: { x: number; z: number } | null = null, bd = 1e9;
   for (const id of sim.net.nearWalks(spawn.x, spawn.z, 120)) { const w = sim.net.walks[id]; const pr = RoadNet.project(w.pts, spawn.x, spawn.z); if (pr.d < bd) { bd = pr.d; best = RoadNet.at(w.pts, pr.s); } }
@@ -104,6 +104,8 @@ async function boot() {
   { const lanes = sim.net.near(sim.local.pos.x, sim.local.pos.z, 40); let bl: any = null, bd2 = 1e9;
     for (const id of lanes) { const l = sim.net.lanes[id]; const pr = RoadNet.project(l.pts, sim.local.pos.x, sim.local.pos.z); if (pr.d < bd2) { bd2 = pr.d; bl = { l, s: pr.s }; } }
     if (bl) { const at = RoadNet.at(bl.l.pts, Math.min(bl.l.len - 1, bl.s + 6)); const v = sim.addVehicle('danfo', { x: at.x, y: 0.1, z: at.z }, at.yaw, true); (v as any).locked = false; const cd = sim.spawnActor('ped', { x: at.x + 1.5, y: 0.05, z: at.z }, undefined, 'Conductor'); void cd; } }
+  hud.setLoad(0.97, 'Compiling shaders');
+  { const t0 = performance.now(); await view.precompile(); console.info(`[hl] precompile ${Math.round(performance.now() - t0)} ms, ${view.renderer.info.programs?.length ?? 0} programs`); }
   hud.setLoad(1);
   try { hud.pickCharacter(await thumbs(assets), state.model, (id) => setPlayerModel(id)); } catch (e) { console.warn('thumbs', e); }
   makeJobs();
@@ -112,7 +114,7 @@ async function boot() {
   bindLandmap();
   (window as any).__hl = { sim, view, hud, state, gov, perf: perfHud, THREE, graph, guide, store, startJob, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
     // test hook: run the sim without rendering, holding a command
-    simulate(secs: number, patch: Partial<Command> & { pulse?: string[] } = {}) { for (let i = 0; i < secs * 60; i++) { const c: any = { ...emptyCommand(), yaw: sim.local.yaw, ...patch }; for (const k of patch.pulse ?? []) c[k] = Math.floor(i / 12) % 2 === 0; sim.setCommand(0, c); sim.step(1 / 60); if (i % 30 === 0) { view.world.update(sim.local.pos.x, sim.local.pos.z); syncColliders(true); } } view.handleEvents(sim.events, hud); sim.events.length = 0; },
+    simulate(secs: number, patch: Partial<Command> & { pulse?: string[] } = {}) { for (let i = 0; i < secs * 60; i++) { const c: any = { ...emptyCommand(), yaw: sim.local.yaw, ...patch }; for (const k of patch.pulse ?? []) c[k] = Math.floor(i / 12) % 2 === 0; sim.setCommand(0, c); sim.step(1 / 60); if (i % 30 === 0) { view.world.update(sim.local.pos.x, sim.local.pos.z, true); syncColliders(true); } } view.handleEvents(sim.events, hud); sim.events.length = 0; },
     stoppedCar() { const m = sim.local.pos; return sim.liveVehicles().filter((v) => Math.abs(v.ctrl.currentVehicleSpeed()) < 2 && v.kind !== 'okada').sort((a, b) => { const pa = a.body.translation(), pb = b.body.translation(); return Math.hypot(pa.x - m.x, pa.z - m.z) - Math.hypot(pb.x - m.x, pb.z - m.z); })[0]; },
     nearestCar() { let b: any = null, bd = 1e9; for (const v of sim.liveVehicles()) { const p = v.body.translation(); const d = Math.hypot(p.x - sim.local.pos.x, p.z - sim.local.pos.z); if (d < bd) { bd = d; b = v; } } return b; },
   };

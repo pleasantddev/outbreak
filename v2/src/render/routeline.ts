@@ -60,7 +60,7 @@ export class RouteLine {
         this.p.set(ax + dx * f, y, az + dz * f);
         this.q.setFromAxisAngle(this.up, Math.atan2(dx, dz));
         const fade = Math.max(0, 1 - (sd - lead) / (this.max * step)); const pulse = 0.65 + 0.35 * Math.sin(sd * 0.5 - t * 6);
-        const sc = onFoot ? 0.55 : 0.95; this.s.set(sc, 1, sc);
+        const sc = onFoot ? 0.72 : 1.0; this.s.set(sc, 1, sc);
         this.m.compose(this.p, this.q, this.s); this.mesh.setMatrixAt(n, this.m);
         const k = 0.9 * fade * pulse; this.c.setRGB(0.08 * k, 0.9 * k, 0.78 * k); this.mesh.setColorAt(n, this.c);
         n++;

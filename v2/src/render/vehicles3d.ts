@@ -100,17 +100,19 @@ export function buildVehicleModel(kind: VehicleKind, opts: { wrecked?: boolean; 
     // okada: a 125cc workhorse with a long seat and a passenger
     const cols = [0x8a1010, 0x101010, 0x1a3a8a, 0xb07010];
     const paint = new THREE.MeshStandardMaterial({ color: cols[seed % cols.length], roughness: 0.4, metalness: 0.5 });
-    const base = wy + 0.32;
-    b(0.12, 0.12, 1.25, darkMetal, 0, base + 0.25, 0, body);
-    b(0.3, 0.25, 0.5, paint, 0, base + 0.62, 0.3, body);
-    b(0.28, 0.12, 0.85, new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.8 }), 0, base + 0.62, -0.35, body);
-    b(0.22, 0.32, 0.35, darkMetal, 0, base + 0.35, 0.0, body);
-    b(0.06, 0.06, 0.6, chrome, 0.12, base + 0.3, -0.45, body);
-    const fork = b(0.05, 0.75, 0.05, chrome, 0, base + 0.55, 0.75, body); fork.rotation.x = -0.35;
-    b(0.75, 0.04, 0.04, chrome, 0, base + 0.95, 0.62, body);
-    headlights.push(b(0.18, 0.16, 0.1, lightOn, 0, base + 0.82, 0.78, body));
-    brake.push(b(0.12, 0.08, 0.05, tail, 0, base + 0.6, -0.8, body));
-    b(0.3, 0.05, 0.4, darkMetal, 0, base + 0.68, -0.85, body);
+    // heights are measured from the ground under the wheels so a rider of normal size sits astride it: seat 0.8 m, bars 1.08 m, pegs 0.3 m
+    const gr = wy - def.wheelRadius;
+    b(0.12, 0.12, 1.25, darkMetal, 0, gr + 0.5, 0, body);
+    b(0.3, 0.25, 0.5, paint, 0, gr + 0.9, 0.28, body);
+    b(0.28, 0.12, 0.85, new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.8 }), 0, gr + 0.74, -0.35, body);
+    b(0.22, 0.32, 0.35, darkMetal, 0, gr + 0.4, 0.0, body);
+    b(0.06, 0.06, 0.6, chrome, 0.12, gr + 0.3, -0.45, body);
+    b(0.04, 0.04, 0.16, chrome, 0.2, gr + 0.3, -0.05, body); b(0.04, 0.04, 0.16, chrome, -0.2, gr + 0.3, -0.05, body); // foot pegs
+    const fork = b(0.05, 0.85, 0.05, chrome, 0, gr + 0.7, 0.62, body); fork.rotation.x = -0.35;
+    b(0.75, 0.04, 0.04, chrome, 0, gr + 1.08, 0.53, body);
+    headlights.push(b(0.18, 0.16, 0.1, lightOn, 0, gr + 0.92, 0.72, body));
+    brake.push(b(0.12, 0.08, 0.05, tail, 0, gr + 0.72, -0.82, body));
+    b(0.3, 0.05, 0.4, darkMetal, 0, gr + 0.8, -0.88, body);
   }
   const wr = def.wheelRadius, ww = kind === 'okada' ? 0.12 : 0.26;
   const pos: [number, number][] = kind === 'okada'

@@ -45,30 +45,30 @@ function cabin(o: CabinOpt): CarSeats {
 }
 
 export const SEATS: Record<string, CarSeats> = {
-  camry: cabin({ hipX: 0.37, hipY: 0.6, hipZ: 0.3, rearGap: 0.98, roof: 1.37, rearRoof: 1.3, floor: 0.2, wheelY: 0.96, wheelDz: 0.55, tilt: 0.44, pedalDz: 0.62, rowHipY: 0.58 }),
-  civic: cabin({ hipX: 0.36, hipY: 0.54, hipZ: 0.22, rearGap: 0.95, roof: 1.23, rearRoof: 1.17, floor: 0.18, wheelY: 0.9, wheelDz: 0.54, tilt: 0.44, pedalDz: 0.62, rowHipY: 0.54 }),
-  golf: cabin({ hipX: 0.37, hipY: 0.64, hipZ: 0.14, rearGap: 0.82, roof: 1.35, rearRoof: 1.32, floor: 0.2, wheelY: 0.98, wheelDz: 0.52, tilt: 0.5, pedalDz: 0.6, rowHipY: 0.62 }),
-  rrsport: cabin({ hipX: 0.4, hipY: 0.9, hipZ: 0.24, rearGap: 1.0, roof: 1.72, rearRoof: 1.72, floor: 0.36, wheelY: 1.2, wheelDz: 0.5, tilt: 0.36, pedalDz: 0.62, rowHipY: 0.9 }),
-  gclass: cabin({ hipX: 0.4, hipY: 0.92, hipZ: 0.3, rearGap: 1.0, roof: 1.82, rearRoof: 1.82, floor: 0.38, wheelY: 1.22, wheelDz: 0.5, tilt: 0.32, pedalDz: 0.62, rowHipY: 0.92 }),
-  // Hiace: cab-over, driver almost on the front axle, wheel nearly flat. Two rear rows.
-  hiace: cabin({ hipX: 0.42, hipY: 1.06, hipZ: 1.28, rearGap: 0, roof: 1.8, floor: 0.54, wheelY: 1.26, wheelDz: 0.56, tilt: 0.85, pedalDz: 0.5, rows: [1.28, 0.3, -0.62], rowHipY: 1.04 }),
+  camry: cabin({ hipX: 0.37, hipY: 0.6, hipZ: 0.3, rearGap: 0.98, roof: 1.37, rearRoof: 1.3, floor: 0.2, wheelY: 0.96, wheelDz: 0.37, tilt: 0.44, pedalDz: 0.62, rowHipY: 0.56 }),
+  civic: cabin({ hipX: 0.36, hipY: 0.47, hipZ: 0.22, rearGap: 0.95, roof: 1.23, rearRoof: 1.17, floor: 0.18, wheelY: 0.88, wheelDz: 0.37, tilt: 0.44, pedalDz: 0.58, rowHipY: 0.46 }),
+  golf: cabin({ hipX: 0.37, hipY: 0.58, hipZ: 0.14, rearGap: 0.82, roof: 1.35, rearRoof: 1.32, floor: 0.2, wheelY: 0.95, wheelDz: 0.37, tilt: 0.5, pedalDz: 0.58, rowHipY: 0.58 }),
+  rrsport: cabin({ hipX: 0.4, hipY: 0.9, hipZ: 0.24, rearGap: 1.0, roof: 1.72, rearRoof: 1.72, floor: 0.36, wheelY: 1.2, wheelDz: 0.34, tilt: 0.36, pedalDz: 0.62, rowHipY: 0.9 }),
+  gclass: cabin({ hipX: 0.4, hipY: 0.92, hipZ: 0.3, rearGap: 1.0, roof: 1.82, rearRoof: 1.82, floor: 0.38, wheelY: 1.22, wheelDz: 0.34, tilt: 0.32, pedalDz: 0.62, rowHipY: 0.92 }),
+  // Hiace: cab-over, driver almost on the front axle, wheel nearly flat. Bench backs measured at z 0.5, -0.3 and -1.06, cushion top 0.8.
+  hiace: cabin({ hipX: 0.42, hipY: 0.98, hipZ: 1.28, rearGap: 0, roof: 1.8, floor: 0.54, wheelY: 1.24, wheelDz: 0.34, tilt: 0.85, pedalDz: 0.45, rows: [1.28, 0.72, -0.05], rowHipY: 0.92 }),
 };
 
 // ---- two and three wheelers: procedural bodies, so the numbers come from the geometry in cars.ts and vehicles3d.ts
 // Okada: seat top about 0.8 m above ground, handlebar 1.08 m, pegs 0.32 m.
 SEATS.okada = {
   seats: [
-    { hip: [0, 0.9, -0.12], pose: 'ride', feet: [[0.24, 0.34, -0.02], [-0.24, 0.34, -0.02]], hands: [[0.37, 1.08, 0.5], [-0.37, 1.08, 0.5]], lean: 0.32, roof: 9 },
-    { hip: [0, 0.92, -0.62], pose: 'pillion', feet: [[0.26, 0.36, -0.5], [-0.26, 0.36, -0.5]], hands: [[0.2, 0.98, -0.34], [-0.2, 0.98, -0.34]], lean: 0.12, roof: 9 },
+    { hip: [0, 0.9, -0.04], pose: 'ride', feet: [[0.24, 0.34, -0.02], [-0.24, 0.34, -0.02]], hands: [[0.34, 1.06, 0.4], [-0.34, 1.06, 0.4]], lean: 0.4, roof: 9 },
+    { hip: [0, 0.92, -0.6], pose: 'pillion', feet: [[0.26, 0.36, -0.5], [-0.26, 0.36, -0.5]], hands: [[0.2, 0.98, -0.34], [-0.2, 0.98, -0.34]], lean: 0.12, roof: 9 },
   ],
 };
-// Keke: driver on a single seat behind the cowl, three across the bench, canvas roof at 1.65.
+// Keke: driver on a single seat behind the cowl, three across the bench, canvas roof at 1.65. Seat tops are 0.88 above ground.
 SEATS.keke = {
   seats: [
-    { hip: [0, 0.98, 0.5], pose: 'ride', feet: [[0.14, 0.52, 0.86], [-0.14, 0.52, 0.86]], hands: [[0.3, 1.2, 0.82], [-0.3, 1.2, 0.82]], lean: 0.1, roof: 1.62 },
-    { hip: [0.4, 0.92, -0.4], pose: 'sit', feet: [[0.5, 0.5, 0.05], [0.3, 0.5, 0.05]], hands: null, lean: 0, roof: 1.62 },
-    { hip: [0, 0.92, -0.4], pose: 'sit', feet: [[0.1, 0.5, 0.05], [-0.1, 0.5, 0.05]], hands: null, lean: 0, roof: 1.62 },
-    { hip: [-0.4, 0.92, -0.4], pose: 'sit', feet: [[-0.3, 0.5, 0.05], [-0.5, 0.5, 0.05]], hands: null, lean: 0, roof: 1.62 },
+    { hip: [0, 0.98, 0.52], pose: 'ride', feet: [[0.14, 0.56, 0.64], [-0.14, 0.56, 0.64]], hands: [[0.32, 1.12, 0.78], [-0.32, 1.12, 0.78]], lean: 0.1, roof: 1.7 },
+    { hip: [0.4, 0.96, -0.42], pose: 'sit', feet: [[0.5, 0.56, 0.02], [0.3, 0.56, 0.02]], hands: null, lean: 0, roof: 1.7 },
+    { hip: [0, 0.96, -0.42], pose: 'sit', feet: [[0.1, 0.56, 0.02], [-0.1, 0.56, 0.02]], hands: null, lean: 0, roof: 1.7 },
+    { hip: [-0.4, 0.96, -0.42], pose: 'sit', feet: [[-0.3, 0.56, 0.02], [-0.5, 0.56, 0.02]], hands: null, lean: 0, roof: 1.7 },
   ],
 };
 
