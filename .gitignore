@@ -1,4 +1,4 @@
-node_modules/
+node_modules
 v2/dist/
 v2/public/devm/
 chars_in/
@@ -15,3 +15,5 @@ rush/
 cars/*.raw.glb
 *.blend1
 __pycache__/
+pipe/*.pkl
+shots_work/
