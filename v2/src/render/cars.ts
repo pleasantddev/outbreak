@@ -6,7 +6,7 @@ import { VEHICLES, type VehicleKind } from '../data/balance';
 import { buildVehicleModel } from './vehicles3d';
 
 export interface Door { node: THREE.Object3D; side: 1 | -1; slide: boolean; base: THREE.Vector3 }
-export interface CarModel { root: THREE.Group; body: THREE.Group; wheels: THREE.Object3D[]; wheelBase: THREE.Vector3[]; doors: Door[]; headlights: THREE.MeshStandardMaterial[]; brake: THREE.MeshStandardMaterial[]; smoke: THREE.Vector3; kind: VehicleKind; offsetY: number }
+export interface CarModel { root: THREE.Group; body: THREE.Group; wheels: THREE.Object3D[]; wheelBase: THREE.Vector3[]; doors: Door[]; headlights: THREE.MeshStandardMaterial[]; brake: THREE.MeshStandardMaterial[]; smoke: THREE.Vector3; kind: VehicleKind; offsetY: number; /** body-space y of the ground under the wheels: seat data is ground-relative */ groundY: number; /** seat table key: model file name, or the kind for hand built vehicles */ key: string }
 
 const FILES: Partial<Record<VehicleKind, string[]>> = { sedan: ['camry', 'camry', 'civic'], hatch: ['golf'], jeep: ['rrsport', 'gclass'], suv: ['rrsport'], police: ['gclass'], danfo: ['hiace'] };
 const PAINTS = [0xf2f2f0, 0x0d0d0f, 0x8c9096, 0x6e0f12, 0x1b2f4f, 0xc9c1b0, 0x24402a, 0xa07a28, 0x3c3c40, 0xb8b9bb];
@@ -58,6 +58,9 @@ export async function buildCar(kind: VehicleKind, seed: number): Promise<CarMode
         return s;
       });
       mesh.material = Array.isArray(mesh.material) ? out : out[0];
+      // trim, glass, lamps, interior and underside do not need to be in the shadow pass: about half of a car's shadow draw calls
+      const nm = ((mats[0] as THREE.Material).name || '').toLowerCase();
+      if (/glass|lamp|light|luz|brake|stop|chrome|cromo|hub|int|bajo|bottom|plast|wood|shield|carbon|ttr|tepian/.test(nm)) mesh.castShadow = false;
     }
   });
   m.traverse((o) => {
@@ -81,13 +84,13 @@ export async function buildCar(kind: VehicleKind, seed: number): Promise<CarMode
       m.add(bar); (root as any).siren = [red, blue];
     }
   }
-  return { root, body, wheels, wheelBase, doors, headlights, brake, smoke: new THREE.Vector3(0, 0.3, def.size[2] / 2 - 0.4), kind, offsetY };
+  return { root, body, wheels, wheelBase, doors, headlights, brake, smoke: new THREE.Vector3(0, 0.3, def.size[2] / 2 - 0.4), kind, offsetY, groundY: offsetY, key: name };
 }
 
 function procedural(kind: VehicleKind, seed: number): CarModel {
   if (kind === 'keke') return keke(seed);
   const vm = buildVehicleModel(kind, { seed });
-  return { root: vm.root, body: vm.body, wheels: vm.wheels, wheelBase: vm.wheels.map((w) => w.position.clone()), doors: [], headlights: vm.headlights.map((h) => h.material as THREE.MeshStandardMaterial), brake: vm.brake.map((h) => h.material as THREE.MeshStandardMaterial), smoke: vm.smoke, kind, offsetY: 0 };
+  return { root: vm.root, body: vm.body, wheels: vm.wheels, wheelBase: vm.wheels.map((w) => w.position.clone()), doors: [], headlights: vm.headlights.map((h) => h.material as THREE.MeshStandardMaterial), brake: vm.brake.map((h) => h.material as THREE.MeshStandardMaterial), smoke: vm.smoke, kind, offsetY: 0, groundY: -(VEHICLES[kind].size[1] / 2 - 0.25) + 0.05 - 0.24 - VEHICLES[kind].wheelRadius, key: kind };
 }
 
 /** Keke Marwa: the Bajaj tricycle, green and yellow, canvas roof, one wheel in front. */
@@ -108,7 +111,9 @@ function keke(seed: number): CarModel {
   add(new THREE.BoxGeometry(1.3, 0.04, 2.0), canvas, 0, 1.75, -0.15);
   for (const [x, z] of [[-0.62, -1.1], [0.62, -1.1], [-0.4, 0.9], [0.4, 0.9]]) add(new THREE.CylinderGeometry(0.025, 0.025, 1.2, 6), black, x, 1.15, z);
   add(new THREE.BoxGeometry(1.15, 0.12, 0.5), seat, 0, 0.82, -0.45); add(new THREE.BoxGeometry(1.15, 0.5, 0.08), seat, 0, 1.08, -0.72);
-  add(new THREE.BoxGeometry(0.45, 0.1, 0.35), seat, 0, 0.82, 0.55);
+  add(new THREE.BoxGeometry(0.45, 0.1, 0.35), seat, 0, 0.82, 0.52);
+  // handlebar and column in front of the driver
+  add(new THREE.CylinderGeometry(0.018, 0.018, 0.72, 8).rotateZ(Math.PI / 2), black, 0, 1.12, 0.78); add(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 8), black, 0, 0.87, 0.8, -0.5);
   const wheels: THREE.Object3D[] = [];
   const wheel = (x: number, z: number) => { const g = new THREE.Group(); g.position.set(x, base + 0.24, z); const sp = new THREE.Group(); g.add(sp); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.14, 16).rotateZ(Math.PI / 2), black); t.castShadow = true; sp.add(t); body.add(g); return g; };
   const f = wheel(0, 0.98); wheels.push(f, f, wheel(-0.6, -0.97), wheel(0.6, -0.97));
@@ -116,7 +121,7 @@ function keke(seed: number): CarModel {
   add(new THREE.SphereGeometry(0.08, 10, 8), hl, 0, 0.95, 1.22);
   const br = new THREE.MeshStandardMaterial({ color: 0x550000, emissive: 0xff1010, emissiveIntensity: 0 });
   add(new THREE.BoxGeometry(0.12, 0.06, 0.03), br, -0.45, 0.7, -1.31); add(new THREE.BoxGeometry(0.12, 0.06, 0.03), br, 0.45, 0.7, -1.31);
-  return { root, body, wheels, wheelBase: wheels.map((w) => w.position.clone()), doors: [], headlights: [hl], brake: [br], smoke: new THREE.Vector3(0, 0.2, -1.2), kind: 'keke', offsetY: 0 };
+  return { root, body, wheels, wheelBase: wheels.map((w) => w.position.clone()), doors: [], headlights: [hl], brake: [br], smoke: new THREE.Vector3(0, 0.2, -1.2), kind: 'keke', offsetY: 0, groundY: base, key: 'keke' };
 }
 
 /** Pose wheels and doors from the sim. open[i] is 0..1 for fl, fr, rl, rr (slide uses the passenger value). */

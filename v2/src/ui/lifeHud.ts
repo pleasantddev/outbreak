@@ -3,7 +3,7 @@
 // and the phone in the hand.
 import type { SimEvent } from '../sim/types';
 import type { LifeSim } from '../sim/life';
-import type { RoadNet } from '../world/roadnet';
+import type { RoadNet, Lane } from '../world/roadnet';
 import type { Plot } from '../world/plots';
 
 const css = `
@@ -382,7 +382,7 @@ ${touch ? `<div id="tc">
     else if (name === 'Weather') html = row('Now', `${c.weather}, ${c.season}`) + row('Game time', `${c.time} · day ${c.day}`) + row('Lagos time', `${c.real} WAT`) + row('Potholes', 'Rain fills them. Sun and harmattan dry them. Drive accordingly.');
     else if (name === 'Roads') html = row('Pothole reports', 'From news reports and residents, 2023 to October 2026. Each report is snapped to the named road.') + c.potholes.map((p) => row(`${p.name}`, `${p.road} · ${p.area}<br>Reported ${p.reported} · ${p.placed} potholes placed`)).join('');
     else if (name === 'Contacts') html = row('Mama Put', 'Under the bridge, Oshodi') + row('Conductor Sule', 'Oshodi park') + row('Baba Landlord', 'Sells land. Asks no questions. Charges for C of O.');
-    else if (name === 'Settings') html = row('Graphics', `Quality: ${c.quality}`, ['Settings', 'quality', 'Change']) + row('Weather', 'Cycle the weather (testing)', ['Settings', 'weather', 'Next']) + row('Time', 'Jump one hour', ['Settings', 'hour', '+1 hour']);
+    else if (name === 'Settings') html = row('Graphics', `Quality: ${c.quality}<br>Auto adapts to your device while you play. Tap to cycle Auto, High, Medium, Low. F3 shows frame stats.`, ['Settings', 'quality', 'Change']) + row('Weather', 'Cycle the weather (testing)', ['Settings', 'weather', 'Next']) + row('Time', 'Jump one hour', ['Settings', 'hour', '+1 hour']);
     else html = `<canvas id="pmap" width="400" height="400"></canvas>` + row('Legend', 'Teal: your route · Red dots: reported potholes · Purple: your land');
     L.innerHTML = html;
     L.querySelectorAll('button[data-app]').forEach((b) => ((b as HTMLElement).onclick = () => this.onAction?.((b as HTMLElement).dataset.app!, (b as HTMLElement).dataset.id!)));
@@ -426,21 +426,35 @@ ${touch ? `<div id="tc">
   }
 
   /** Dark GPS minimap: rotates with the camera, roads by class, a teal route, blips, potholes, your land. */
-  drawRadar(net: RoadNet, px: number, pz: number, heading: number, blips: { x: number; z: number; c: string; r?: number }[], potholes: { x: number; z: number }[], owned: number[][], route: number[] | null = null) {
+  /** Roads are painted once into an offscreen layer and re-painted only after the player has moved well off its centre. */
+  private radarCache: { cv: HTMLCanvasElement; cx: number; cz: number; n: number } | null = null;
+  private roadLayer(net: RoadNet, px: number, pz: number, S: number) {
+    const R = 430, size = Math.ceil(2 * R * S);
+    let c = this.radarCache;
+    if (!c) { const cv = document.createElement('canvas'); cv.width = cv.height = size; c = { cv, cx: 1e9, cz: 1e9, n: -1 }; this.radarCache = c; }
+    if (Math.hypot(px - c.cx, pz - c.cz) > 130 || c.n !== net.lanes.length) {
+      const g = c.cv.getContext('2d')!; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, size, size); g.save(); g.translate(size / 2, size / 2); g.translate(-px * S, -pz * S);
+      const done = new Set<number>(); const roads: Lane[] = [];
+      for (const id of net.near(px, pz, R)) { const l = net.lanes[id]; if (done.has(l.road.id)) continue; done.add(l.road.id); roads.push(l); }
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      for (const pass of [0, 1]) for (const major of [false, true]) {
+        g.strokeStyle = pass === 0 ? 'rgba(0,0,0,.55)' : major ? '#5d6a86' : '#3a4459'; g.lineWidth = (major ? 14 : 8) + (pass === 0 ? 4 : 0);
+        g.beginPath();
+        for (const l of roads) { if ((l.cls <= 4) !== major) continue; const p = l.road.pts; for (let k = 0; k < p.length; k += 2) (k ? g.lineTo : g.moveTo).call(g, p[k] * S, p[k + 1] * S); }
+        g.stroke();
+      }
+      g.restore(); c.cx = px; c.cz = pz; c.n = net.lanes.length;
+    }
+    return c;
+  }
+  drawRadar(net: RoadNet, px: number, pz: number, heading: number, blips: { x: number; z: number; c: string; r?: number }[], potholes: { x: number; z: number }[], owned: number[][], route: number[] | null = null, note: string | null = null) {
     const g = this.radarG, W = 540, H = 348, S = 1.25;
     g.save(); g.clearRect(0, 0, W, H);
     const bg = g.createRadialGradient(W / 2, H * 0.62, 20, W / 2, H * 0.62, W * 0.7); bg.addColorStop(0, '#1b2233'); bg.addColorStop(1, '#0d111b');
     g.fillStyle = bg; g.fillRect(0, 0, W, H);
     g.translate(W / 2, H * 0.62); g.rotate(heading); g.translate(-px * S, -pz * S);
     for (const o of owned) { g.fillStyle = 'rgba(139,92,246,0.45)'; g.strokeStyle = '#a78bfa'; g.lineWidth = 2; g.beginPath(); for (let k = 0; k < o.length; k += 2) (k ? g.lineTo : g.moveTo).call(g, o[k] * S, o[k + 1] * S); g.closePath(); g.fill(); g.stroke(); }
-    const lanes = net.near(px, pz, 300); const done = new Set<number>();
-    const roads = lanes.map((id) => net.lanes[id]).filter((l) => { if (done.has(l.road.id)) return false; done.add(l.road.id); return true; });
-    g.lineCap = 'round'; g.lineJoin = 'round';
-    for (const pass of [0, 1]) for (const l of roads) {
-      const major = l.cls <= 4; g.strokeStyle = pass === 0 ? 'rgba(0,0,0,.55)' : major ? '#5d6a86' : '#3a4459';
-      g.lineWidth = (major ? 14 : 8) + (pass === 0 ? 4 : 0);
-      g.beginPath(); const p = l.road.pts; for (let k = 0; k < p.length; k += 2) (k ? g.lineTo : g.moveTo).call(g, p[k] * S, p[k + 1] * S); g.stroke();
-    }
+    const rc = this.roadLayer(net, px, pz, S); g.drawImage(rc.cv, rc.cx * S - rc.cv.width / 2, rc.cz * S - rc.cv.height / 2);
     if (route && route.length >= 4) {
       g.strokeStyle = 'rgba(45,224,200,.25)'; g.lineWidth = 16; g.beginPath(); for (let k = 0; k < route.length; k += 2) (k ? g.lineTo : g.moveTo).call(g, route[k] * S, route[k + 1] * S); g.stroke();
       g.strokeStyle = '#2de0c8'; g.lineWidth = 6; g.stroke();
@@ -461,6 +475,7 @@ ${touch ? `<div id="tc">
     g.save(); g.translate(W / 2, H * 0.62);
     g.fillStyle = 'rgba(45,224,200,.18)'; g.beginPath(); g.arc(0, 0, 26, 0, 6.28); g.fill();
     g.fillStyle = '#fff'; g.strokeStyle = '#0b0d14'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, -15); g.lineTo(11, 12); g.lineTo(0, 6); g.lineTo(-11, 12); g.closePath(); g.fill(); g.stroke(); g.restore();
+    if (note) { g.font = '600 15px Inter, system-ui, sans-serif'; g.textAlign = 'center'; const tw = g.measureText(note).width + 18; g.fillStyle = 'rgba(8,12,20,.78)'; g.beginPath(); g.roundRect(W / 2 - tw / 2, H - 34, tw, 24, 12); g.fill(); g.fillStyle = '#2de0c8'; g.fillText(note, W / 2, H - 17); g.textAlign = 'start'; }
     const deg = ((-heading * 180) / Math.PI + 360 * 4) % 360;
     const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']; this.el('mmdir').textContent = `${dirs[Math.round(deg / 45) % 8]} ${Math.round(deg)}°`;
   }

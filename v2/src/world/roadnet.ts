@@ -53,6 +53,15 @@ export class RoadNet {
     for (const l of this.lanes) if (!l.next.length) {
       const ex = l.pts[l.pts.length - 2], ez = l.pts[l.pts.length - 1];
       for (const c of this.near(ex, ez, 14)) { if (c === l.id) continue; const o = this.lanes[c]; const d = Math.hypot(o.pts[0] - ex, o.pts[1] - ez); if (d < 14) l.next.push(c); }
+      // a road that ends at a T junction meets the side of another road, not its start: join lanes that pass by heading roughly the same way
+      if (!l.next.length && l.pts.length >= 4) {
+        const n = l.pts.length; const hx = ex - l.pts[n - 4], hz = ez - l.pts[n - 3]; const hl = Math.hypot(hx, hz) || 1;
+        for (const c of this.near(ex, ez, 12)) {
+          const o = this.lanes[c]; if (c === l.id || o.road.id === l.road.id) continue;
+          const pr = RoadNet.project(o.pts, ex, ez); if (pr.d > 9 || pr.s > o.len - 8) continue;
+          const at = RoadNet.at(o.pts, Math.min(o.len, pr.s + 1)); if ((hx * Math.sin(at.yaw) + hz * Math.cos(at.yaw)) / hl > 0.25) l.next.push(c);
+        }
+      }
     }
     void ends;
   }

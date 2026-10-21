@@ -13,15 +13,28 @@ import { loadTexSet } from './world/texsets';
 import { TILE } from './world/streamer';
 import { plotPrice, type Plot } from './world/plots';
 import { RoadNet } from './world/roadnet';
+import { RoadGraph } from './world/roadgraph';
+import { RouteGuide } from './world/routeguide';
+import { RouteLine } from './render/routeline';
+import { seatEye } from './render/seating';
 import { WEAPONS } from './data/balance';
 import { weaponStats, AMMO_STACK } from './sim/items';
 import { audio } from './audio/audio';
 import { WEATHER_ORDER, type WeatherName } from './render/sky';
 import type { CharacterLook } from './data/cosmetics';
+import { Governor, LEVELS, PRESET_LEVEL, detectDevice, loadPref, savePref, type Pref, type Tier } from './render/quality';
+import { PerfHud } from './render/perfhud';
 
 const q = new URLSearchParams(location.search);
 const touchDev = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-const quality = (q.get('q') as 'low' | 'medium' | 'high') ?? (touchDev ? 'low' : 'high');
+// Quality: ?q=low|medium|high|auto forces a preset for this session, otherwise the saved choice, otherwise auto-detect.
+const urlQ = q.get('q') as Pref | null;
+let pref: Pref = urlQ === 'low' || urlQ === 'medium' || urlQ === 'high' || urlQ === 'auto' ? urlQ : loadPref();
+const device = detectDevice();
+const startLevel = pref === 'auto' ? device.level : PRESET_LEVEL[pref as Tier];
+const tierOf = (lv: number): Tier => (lv <= 1 ? 'high' : lv <= 3 ? 'medium' : 'low');
+const quality: Tier = tierOf(startLevel);
+console.info(`[hl] quality ${pref} -> rung ${startLevel} ${LEVELS[startLevel].name} (${device.gpu}; ${device.reason})`);
 document.body.style.cssText = 'margin:0;background:#000;overflow:hidden;touch-action:none';
 const canvas = document.createElement('canvas'); canvas.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;display:block'; document.body.appendChild(canvas);
 const hud = new LifeHud(touchDev);
@@ -39,7 +52,8 @@ const LOOKS: Record<string, Partial<CharacterLook>> = {
 };
 Object.assign(PLAYER_LOOK, LOOKS[state.model] ?? {}, { model: state.model });
 
-let sim: LifeSim, view: LifeView, input: Input, store: RegionStore;
+let sim: LifeSim, view: LifeView, input: Input, store: RegionStore, gov: Governor;
+const perfHud = new PerfHud(() => view, () => gov);
 let started = false; let acc = 0; let last = performance.now();
 const jobs: PhoneCtx['jobs'] = [];
 let activeJob: { id: string; title: string; pay: number; stage: 0 | 1; a: { x: number; z: number }; b: { x: number; z: number }; t: number; needCar: boolean } | null = null;
@@ -71,13 +85,16 @@ async function boot() {
   const [tg, tw] = await Promise.all([loadTexSet('g', 8, size), loadTexSet('w', 8, size), preloadCars()]);
   sim = new LifeSim({ seed: (Math.random() * 1e9) | 0, name: 'You', look: PLAYER_LOOK, spawn, quality, potholes: potholesNear });
   sim.cash = save.cash ?? 1850;
-  view = new LifeView(canvas, sim, assets, store, tg, tw, quality, { hour: q.get('t') ? +q.get('t')! : undefined, weather: (q.get('w') as WeatherName) ?? undefined });
+  view = new LifeView(canvas, sim, assets, store, tg, tw, quality, { hour: q.get('t') ? +q.get('t')! : undefined, weather: (q.get('w') as WeatherName) ?? undefined, level: startLevel });
+  routeLine = new RouteLine(view.scene, startLevel >= 4 ? 36 : 72);
+  gov = new Governor(pref, startLevel, { level: (l) => view.applyLevel(l, gov.scale), scale: (s) => view.setRenderScale(s) });
+  view.applyLevel(startLevel, 1); gov.scale = 1;
   view.onTile = (t, built) => { if (built) sim.net.addRoads(t.roads); else sim.removeTile(t.key); };
   view.cam.yaw = Math.PI * 0.85;
   input = new Input(canvas, touchDev ? 'on' : 'off');
   hud.setLoad(0.75, 'Building Oshodi');
   // build the ground under the player before letting them in
-  for (let i = 0; i < 60 && view.world.tiles.size < 9; i++) { view.world.update(spawn.x, spawn.z); await new Promise((r) => setTimeout(r, 0)); hud.setLoad(0.75 + 0.2 * Math.min(1, view.world.tiles.size / 9)); }
+  for (let i = 0; i < 60 && view.world.tiles.size < 9; i++) { view.world.update(spawn.x, spawn.z, true); await new Promise((r) => setTimeout(r, 0)); hud.setLoad(0.75 + 0.2 * Math.min(1, view.world.tiles.size / 9)); }
   // stand on a real walkway near the requested spot
   let best: { x: number; z: number } | null = null, bd = 1e9;
   for (const id of sim.net.nearWalks(spawn.x, spawn.z, 120)) { const w = sim.net.walks[id]; const pr = RoadNet.project(w.pts, spawn.x, spawn.z); if (pr.d < bd) { bd = pr.d; best = RoadNet.at(w.pts, pr.s); } }
@@ -87,15 +104,17 @@ async function boot() {
   { const lanes = sim.net.near(sim.local.pos.x, sim.local.pos.z, 40); let bl: any = null, bd2 = 1e9;
     for (const id of lanes) { const l = sim.net.lanes[id]; const pr = RoadNet.project(l.pts, sim.local.pos.x, sim.local.pos.z); if (pr.d < bd2) { bd2 = pr.d; bl = { l, s: pr.s }; } }
     if (bl) { const at = RoadNet.at(bl.l.pts, Math.min(bl.l.len - 1, bl.s + 6)); const v = sim.addVehicle('danfo', { x: at.x, y: 0.1, z: at.z }, at.yaw, true); (v as any).locked = false; const cd = sim.spawnActor('ped', { x: at.x + 1.5, y: 0.05, z: at.z }, undefined, 'Conductor'); void cd; } }
+  hud.setLoad(0.97, 'Compiling shaders');
+  { const t0 = performance.now(); await view.precompile(); console.info(`[hl] precompile ${Math.round(performance.now() - t0)} ms, ${view.renderer.info.programs?.length ?? 0} programs`); }
   hud.setLoad(1);
   try { hud.pickCharacter(await thumbs(assets), state.model, (id) => setPlayerModel(id)); } catch (e) { console.warn('thumbs', e); }
   makeJobs();
   hud.onAction = onPhoneAction;
   hud.onBuy = (id) => { buyPlot(id); };
   bindLandmap();
-  (window as any).__hl = { sim, view, hud, state, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
+  (window as any).__hl = { sim, view, hud, state, gov, perf: perfHud, THREE, graph, guide, store, startJob, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
     // test hook: run the sim without rendering, holding a command
-    simulate(secs: number, patch: Partial<Command> & { pulse?: string[] } = {}) { for (let i = 0; i < secs * 60; i++) { const c: any = { ...emptyCommand(), yaw: sim.local.yaw, ...patch }; for (const k of patch.pulse ?? []) c[k] = Math.floor(i / 12) % 2 === 0; sim.setCommand(0, c); sim.step(1 / 60); if (i % 30 === 0) { view.world.update(sim.local.pos.x, sim.local.pos.z); syncColliders(true); } } view.handleEvents(sim.events, hud); sim.events.length = 0; },
+    simulate(secs: number, patch: Partial<Command> & { pulse?: string[] } = {}) { for (let i = 0; i < secs * 60; i++) { const c: any = { ...emptyCommand(), yaw: sim.local.yaw, ...patch }; for (const k of patch.pulse ?? []) c[k] = Math.floor(i / 12) % 2 === 0; sim.setCommand(0, c); sim.step(1 / 60); if (i % 30 === 0) { view.world.update(sim.local.pos.x, sim.local.pos.z, true); syncColliders(true); } } view.handleEvents(sim.events, hud); sim.events.length = 0; },
     stoppedCar() { const m = sim.local.pos; return sim.liveVehicles().filter((v) => Math.abs(v.ctrl.currentVehicleSpeed()) < 2 && v.kind !== 'okada').sort((a, b) => { const pa = a.body.translation(), pb = b.body.translation(); return Math.hypot(pa.x - m.x, pa.z - m.z) - Math.hypot(pb.x - m.x, pb.z - m.z); })[0]; },
     nearestCar() { let b: any = null, bd = 1e9; for (const v of sim.liveVehicles()) { const p = v.body.translation(); const d = Math.hypot(p.x - sim.local.pos.x, p.z - sim.local.pos.z); if (d < bd) { bd = d; b = v; } } return b; },
   };
@@ -143,6 +162,7 @@ function startJob(id: string) {
   const me = sim.local; const a = walkPointAround(me.pos.x, me.pos.z, 60, 220); const b = walkPointAround(a.x, a.z, 350, 700);
   activeJob = { id, title: j.title, pay: j.pay, stage: 0, a, b, t: id === 'delivery' ? 240 : id === 'danfo' ? 300 : 360, needCar: id === 'danfo' };
   jobs.forEach((x) => (x.active = x.id === id));
+  loadRouteRegions(me.pos.x, me.pos.z, b.x, b.z); guide.clear();
   hud.title(j.title.toUpperCase(), 'Go to the green marker on the radar.', 4);
   if (id === 'parcel') { sim.wanted = Math.max(sim.wanted, 1); sim.lastSeen = sim.time; }
 }
@@ -188,33 +208,25 @@ function onPhoneAction(app: string, id: string) {
   if (app === 'Settings') {
     if (id === 'weather') { view.atmo.cycleWeather(); }
     if (id === 'hour') view.atmo.hour = (view.atmo.hour + 1) % 24;
-    if (id === 'quality') { const next = quality === 'high' ? 'medium' : quality === 'medium' ? 'low' : 'high'; const u = new URL(location.href); u.searchParams.set('q', next); location.href = u.toString(); }
+    if (id === 'quality') {
+      const order: Pref[] = ['auto', 'high', 'medium', 'low']; pref = order[(order.indexOf(pref) + 1) % order.length]; savePref(pref);
+      const lv = pref === 'auto' ? device.level : PRESET_LEVEL[pref as Tier];
+      gov.setPref(pref, lv); view.applyLevel(lv, 1); view.world.update(sim.local.pos.x, sim.local.pos.z);
+    }
   }
   hud.refreshApp();
 }
 
 // ---------------------------------------------------------------- input
 let firstPersonPressed = false;
-let route: number[] | null = null, routeT = 0, parcelT = 0, street = '';
+let route: number[] | null = null, parcelT = 0, street = '';
 
-// ---------------------------------------------------------------- GPS: A* over the lane graph
-function gpsRoute(x0: number, z0: number, x1: number, z1: number): number[] | null {
-  const net = sim.net; const near = (x: number, z: number, r: number) => net.near(x, z, r);
-  let start = -1, sd = 1e9; for (const id of near(x0, z0, 60)) { const pr = RoadNet.project(net.lanes[id].pts, x0, z0); if (pr.d < sd) { sd = pr.d; start = id; } }
-  const goals = new Set(near(x1, z1, 50)); if (start < 0 || !goals.size) return [x0, z0, x1, z1];
-  const end = (id: number) => { const p = net.lanes[id].pts; return [p[p.length - 2], p[p.length - 1]]; };
-  const h = (id: number) => { const [ex, ez] = end(id); return Math.hypot(ex - x1, ez - z1); };
-  const g = new Map<number, number>([[start, 0]]), from = new Map<number, number>(); const open: [number, number][] = [[h(start), start]]; let found = -1, n = 0;
-  while (open.length && n++ < 6000) {
-    let bi = 0; for (let i = 1; i < open.length; i++) if (open[i][0] < open[bi][0]) bi = i;
-    const [, cur] = open.splice(bi, 1)[0];
-    if (goals.has(cur)) { found = cur; break; }
-    for (const nx of net.lanes[cur].next) { const c = g.get(cur)! + net.lanes[nx].len; if (c < (g.get(nx) ?? 1e12)) { g.set(nx, c); from.set(nx, cur); open.push([c + h(nx), nx]); } }
-  }
-  if (found < 0) return [x0, z0, x1, z1];
-  const chain: number[] = []; for (let c: number | undefined = found; c !== undefined; c = from.get(c)) chain.unshift(c);
-  const out: number[] = [x0, z0]; for (const id of chain) { const p = net.lanes[id].pts; for (let k = 0; k < p.length; k += 2) out.push(p[k], p[k + 1]); }
-  out.push(x1, z1); return out;
+// ---------------------------------------------------------------- GPS: A* over the road graph (world/roadgraph.ts), followed by world/routeguide.ts
+const graph = new RoadGraph(); const guide = new RouteGuide(graph); let routeLine: RouteLine | null = null; let graphT = 0;
+/** Regions between you and the objective may not be loaded yet: ask for the ones along the way. */
+function loadRouteRegions(x0: number, z0: number, x1: number, z1: number) {
+  const n = Math.min(6, Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 900)));
+  for (let i = 0; i <= n; i++) { const t = i / n; void store.around(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, 250); }
 }
 function streetName(x: number, z: number) { let best = '', bd = 1e9; for (const id of sim.net.near(x, z, 40)) { const l = sim.net.lanes[id]; if (!l.road.name) continue; const pr = RoadNet.project(l.pts, x, z); if (pr.d < bd) { bd = pr.d; best = l.road.name; } } return best; }
 function temperature() { const h = view.atmo.hour; const wl = view.atmo.weatherLabel.toLowerCase(); return 25 + 7 * Math.max(0, Math.sin(((h - 8) / 12) * Math.PI)) - (/rain|storm/.test(wl) ? 3.5 : 0) - (/harmattan/.test(wl) && (h < 8 || h > 20) ? 4 : 0); }
@@ -345,7 +357,9 @@ function command(f: ReturnType<Input['frame']>, aimDir: THREE.Vector3, pad: Retu
 
 let fps = 60, frames = 0, fpsT = 0;
 function loop(t: number) {
-  const dt = Math.min(0.1, (t - last) / 1000); last = t;
+  const rawDt = t - last; const dt = Math.min(0.1, rawDt / 1000); last = t;
+  if (gov && started && document.visibilityState === 'visible') gov.tick(rawDt, t); else if (gov) gov.reset();
+  perfHud.update(dt);
   frames++; fpsT += dt; if (fpsT > 1) { fps = frames / fpsT; frames = 0; fpsT = 0; }
   const phoneBtn = (input as any).tpressed?.has?.('phone');
   const f = input.frame(); const pad = gamepad();
@@ -392,12 +406,19 @@ function loop(t: number) {
     if (Math.random() < dt * 3) street = streetName(P.x, P.z);
     hud.update(dt, sim, { time: view.atmo.timeString(), real: view.atmo.realString(), weather: view.atmo.weatherLabel, temp: temperature(), area: areaName(P.x, P.z), street, weapon: w && w.id !== 'fists' ? WEAPONS[w.id].name : '', weaponKind: wk, mag: st ? String(w!.mag) : '', ammo: st ? String(me.inv.count(AMMO_STACK[st.ammo]!)) : '', aiming, inCar: me.vehicle !== null, bank: state.bank, kmh, gear: ms < -0.6 ? 'R' : kmh < 1 ? 'N' : String(gearN), rpm });
     void ammo;
-    routeT -= dt; if (activeJob && routeT <= 0) { routeT = 1.5; const tg = activeJob.stage === 0 ? activeJob.a : activeJob.b; route = gpsRoute(P.x, P.z, tg.x, tg.z); } if (!activeJob) route = null;
+    let note: string | null = null; const jobTg = activeJob ? (activeJob.stage === 0 ? activeJob.a : activeJob.b) : null;
+    if (jobTg) {
+      graphT -= dt; if (graphT <= 0) graphT = graph.sync(store.regions.values()) ? 0.15 : 0.6;
+      guide.update(dt, P.x, P.z, me.vehicle !== null ? 'drive' : 'walk', jobTg);
+      route = guide.remaining.length >= 4 ? guide.remaining : null;
+      if (guide.lost) note = 'No road route yet'; else if (guide.next) { const n = guide.next, d = n.dist >= 1000 ? `${(n.dist / 1000).toFixed(1)} km` : `${Math.round(n.dist / 10) * 10} m`; note = n.dir === 'arrive' ? `${d} to go` : `${n.dir === 'uturn' ? 'U-turn' : n.dir === 'left' ? 'Turn left' : 'Turn right'} in ${d}`; }
+    } else { if (guide.goal) guide.clear(); route = null; }
+    routeLine?.update(view.time, jobTg ? guide.remaining : null, jobTg, 0.07, me.vehicle === null);
     parcelT -= dt; if (parcelT <= 0 && me.vehicle === null) { parcelT = 0.4; hud.parcel(parcelAt(me.pos.x, me.pos.z)); } else if (me.vehicle !== null) hud.parcel(null);
     const blips: { x: number; z: number; c: string; r?: number }[] = [];
     if (activeJob) { const tg = activeJob.stage === 0 ? activeJob.a : activeJob.b; blips.push({ x: tg.x, z: tg.z, c: '#3ddc84', r: 11 }); }
     for (const a of sim.actors) if (a.alive && a.role === 'police' && !(a as any)._gone) blips.push({ x: a.pos.x, z: a.pos.z, c: '#3b6cff', r: 6 });
-    hud.drawRadar(sim.net, P.x, P.z, view.cam.yaw + Math.PI, blips, potholesNear(P.x, P.z, 160), state.owned.map((id) => state.ownedPts[id]).filter(Boolean), route);
+    hud.drawRadar(sim.net, P.x, P.z, view.cam.yaw + Math.PI, blips, potholesNear(P.x, P.z, 160), state.owned.map((id) => state.ownedPts[id]).filter(Boolean), route, note);
     // prompts
     let pr: string | null = null;
     if (me.vehicle === null) for (const v of sim.liveVehicles()) { const p = v.body.translation(); if (Math.hypot(p.x - me.pos.x, p.z - me.pos.z) < 4) { pr = v.seats[0] !== null ? '<kbd>E</kbd>Jack this car' : (v as any).locked ? '<kbd>E</kbd>Break in' : '<kbd>E</kbd>Get in'; break; } }
@@ -411,11 +432,13 @@ function loop(t: number) {
 }
 
 /** Cockpit camera: sit in the driver's seat and see the real interior. */
+const eyeTmp = new THREE.Vector3();
 function cockpit() {
   const me = sim.local; const v = sim.vehicles[me.vehicle!]; const p = v.body.translation(), r = v.body.rotation();
   const qn = new THREE.Quaternion(r.x, r.y, r.z, r.w);
-  const seat = new THREE.Vector3(me.seat % 2 === 0 ? 0.37 : -0.37, v.kind === 'okada' || v.kind === 'keke' ? 0.95 : v.kind === 'danfo' ? 0.75 : 0.62, v.kind === 'danfo' ? 1.45 : -0.3).applyQuaternion(qn);
-  view.camera.position.set(p.x + seat.x, p.y + seat.y, p.z + seat.z);
+  const cm = view.cars.get(v.id)?.m;
+  if (cm && seatEye(cm, me.seat, p, r, eyeTmp)) view.camera.position.copy(eyeTmp);
+  else { const seat = new THREE.Vector3(me.seat % 2 === 0 ? 0.37 : -0.37, v.kind === 'okada' || v.kind === 'keke' ? 0.95 : v.kind === 'danfo' ? 0.75 : 0.62, v.kind === 'danfo' ? 1.45 : -0.3).applyQuaternion(qn); view.camera.position.set(p.x + seat.x, p.y + seat.y, p.z + seat.z); }
   const look = new THREE.Vector3(Math.sin(view.cam.yaw) * Math.cos(view.cam.pitch), Math.sin(view.cam.pitch), Math.cos(view.cam.yaw) * Math.cos(view.cam.pitch));
   view.camera.lookAt(view.camera.position.clone().add(look));
 }
@@ -426,7 +449,11 @@ function areaName(x: number, z: number) {
   return best;
 }
 function phoneCtx(): PhoneCtx {
-  return { time: view.atmo.timeString(), real: view.atmo.realString(), weather: view.atmo.weatherLabel, season: view.atmo.season.name, day: view.atmo.day, cash: sim.cash, bank: state.bank, plots: nearbyPlots(), jobs, texts, potholes: (potholeReports?.reports ?? []).map((r: any) => ({ name: r.name, road: r.road || (r.road_used ?? []).filter(Boolean).join(', '), area: r.area, reported: r.reported, placed: r.placed ?? 0, source: r.source })), quality };
+  return { time: view.atmo.timeString(), real: view.atmo.realString(), weather: view.atmo.weatherLabel, season: view.atmo.season.name, day: view.atmo.day, cash: sim.cash, bank: state.bank, plots: nearbyPlots(), jobs, texts, potholes: (potholeReports?.reports ?? []).map((r: any) => ({ name: r.name, road: r.road || (r.road_used ?? []).filter(Boolean).join(', '), area: r.area, reported: r.reported, placed: r.placed ?? 0, source: r.source })), quality: qualityLabel() };
+}
+function qualityLabel() {
+  const name = pref === 'auto' ? 'Auto' : pref[0].toUpperCase() + pref.slice(1);
+  return `${name} · ${LEVELS[view.level].name} · ${Math.round(gov.fps)} fps · ${Math.round(view.renderScale * 100)}% resolution`;
 }
 function drawPhoneMap() {
   const cv = document.getElementById('pmap') as HTMLCanvasElement | null; if (!cv) return; const g = cv.getContext('2d')!; const me = sim.local; const S = 0.18;

@@ -32,7 +32,7 @@ const FOREGRIP: Partial<Record<WeaponId, number>> = { smg: 0.24, ar: 0.42, shotg
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const UAL_HIP = 0.949;
 
-interface ModelSet { gltf: GLTF; clips: Map<string, THREE.AnimationClip>; upper: Map<string, THREE.AnimationClip>; lower: Map<string, THREE.AnimationClip>; dims: { waistY: number; ankleY: number; neckY: number; top: number } }
+interface ModelSet { gltf: GLTF; clips: Map<string, THREE.AnimationClip>; upper: Map<string, THREE.AnimationClip>; lower: Map<string, THREE.AnimationClip>; dims: { waistY: number; ankleY: number; neckY: number; top: number }; /** decimated geometry per mesh, same order as the full model (null if the LOD file is missing) */ lod: THREE.BufferGeometry[] | null }
 
 export class HumanAssets {
   models = new Map<RosterId, ModelSet>();
@@ -42,6 +42,8 @@ export class HumanAssets {
     const files = ['anim/ual1', 'anim/ual2', ...ROSTER_IDS.map((r) => `humans/${r}`), 'humans/office'];
     let done = 0;
     const res = await Promise.all(files.map((f) => L.loadAsync(`assets/${f}.wasm`).then((g) => { onProgress?.(++done / files.length); return g; })));
+    // far-away LOD: geometry only, same skeleton and mesh order (tools/charlod.py); missing files just mean no LOD
+    const lods = await Promise.all(ROSTER_IDS.map((id) => L.loadAsync(`assets/humans/${id}_lod.wasm`).then((g) => { const out: THREE.BufferGeometry[] = []; g.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) out.push((o as THREE.Mesh).geometry); }); return out; }).catch(() => null)));
     const raw = new Map<string, THREE.AnimationClip>();
     for (const g of [res[0], res[1]]) for (const c of g.animations) raw.set(c.name, c);
     ROSTER_IDS.forEach((id, i) => {
@@ -61,7 +63,7 @@ export class HumanAssets {
         lower.set(name, new THREE.AnimationClip(name + '_L', c.duration, tr.filter((t) => !UPPER.test(t.name.split('.')[0]))));
       }
       const box = new THREE.Box3().setFromObject(g.scene);
-      this.models.set(id, { gltf: g, clips, upper, lower, dims: { waistY: hip + 0.07, ankleY: pos('foot_l').y + 0.04, neckY: pos('neck_01').y, top: box.max.y } });
+      this.models.set(id, { gltf: g, clips, upper, lower, dims: { waistY: hip + 0.07, ankleY: pos('foot_l').y + 0.04, neckY: pos('neck_01').y, top: box.max.y }, lod: lods[i] });
     });
     res[res.length - 1].scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) { const m = o as THREE.Mesh; m.castShadow = true; m.receiveShadow = true; this.office.push(m); } });
   }
@@ -121,6 +123,13 @@ function clothMaterial(base: THREE.MeshStandardMaterial, u: Record<string, THREE
 export interface CharState {
   anim: string; speed: number; moveYaw: number; aimYaw: number; pitch: number; aiming: boolean; armed: boolean; weapon: WeaponId | null;
   firing: boolean; reloading: boolean; melee: boolean; dead: boolean; driving: boolean; shadow: number; awaken: number; hit: number; cast: boolean; healing: boolean;
+  /** set while seated in a vehicle: world space anchor and limb targets */
+  seat?: SeatTarget | null;
+}
+/** Where a seated body goes, in world space. The pelvis lands on `hip`; hands and ankles are bent to the targets. */
+export interface SeatTarget {
+  pose: 'drive' | 'sit' | 'ride' | 'pillion'; hip: THREE.Vector3; yaw: number; roof: number; lean: number;
+  hands: [THREE.Vector3, THREE.Vector3] | null; feet: [THREE.Vector3, THREE.Vector3] | null;
 }
 
 function setWorldQuat(bone: THREE.Object3D, q: THREE.Quaternion) {
@@ -157,6 +166,8 @@ export class HumanView {
   private kick = 0;
   /** bone rotations as the mixer left them: restored before each mixer update so procedural aim never accumulates */
   private snap: { b: THREE.Bone; q: THREE.Quaternion }[] = [];
+  private skins: THREE.SkinnedMesh[] = []; private fullGeo: THREE.BufferGeometry[] = [];
+  lodOn = false;
 
   constructor(assets: HumanAssets, look: CharacterLook, seed = Math.random() * 100) {
     this.id = rosterOf(look);
@@ -177,6 +188,7 @@ export class HumanView {
       const sm = o as THREE.SkinnedMesh;
       if (!sm.isMesh) return;
       sm.castShadow = true; sm.receiveShadow = true; sm.frustumCulled = false;
+      this.skins.push(sm); this.fullGeo.push(sm.geometry);
       if (!this.bodyMesh || (sm.geometry.attributes.position.count > this.bodyMesh.geometry.attributes.position.count)) this.bodyMesh = sm;
       const src = sm.material as THREE.MeshStandardMaterial;
       let mat = cache.get(src) as THREE.MeshStandardMaterial | undefined;
@@ -202,6 +214,13 @@ export class HumanView {
     this.mixer = new THREE.AnimationMixer(this.model);
     this.yaw = seed % (Math.PI * 2);
     this.play('Idle_Loop', 0);
+  }
+
+  /** Swaps the decimated geometry in for characters far from the camera. */
+  setLod(on: boolean) {
+    if (on === this.lodOn) return;
+    const lod = this.set.lod; if (!lod || lod.length !== this.skins.length) return;
+    this.lodOn = on; for (let i = 0; i < this.skins.length; i++) this.skins[i].geometry = on ? lod[i] : this.fullGeo[i];
   }
 
   setWeapon(id: WeaponId | null, l?: Partial<WeaponLoadout>) {
@@ -275,6 +294,7 @@ export class HumanView {
     const targetYaw = s.aiming || s.firing || s.driving ? s.aimYaw : s.speed > 0.4 ? s.moveYaw : this.yaw;
     let dy = targetYaw - this.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
     this.yaw += dy * Math.min(1, dt * (s.aiming ? 18 : 10));
+    if (s.seat) this.yaw = s.seat.yaw; else if (this.root.scale.x !== 1) this.root.scale.setScalar(1);
     this.root.rotation.y = this.yaw;
 
     // undo last frame's procedural pose; the mixer skips writing bones whose value did not change
@@ -287,7 +307,7 @@ export class HumanView {
     const fem = ROSTER[this.id].sex === 'f';
     switch (s.anim) {
       case 'dead': this.play('Death01', 0.15, 'full', 1, true); this.playUpper(null); break;
-      case 'drive': this.play('Driving_Loop', 0.2, 'full'); break;
+      case 'drive': this.play(!s.seat || s.seat.pose === 'drive' || s.seat.pose === 'ride' ? 'Driving_Loop' : 'Sitting_Idle_Loop', 0.2, 'full'); break;
       case 'sprint': this.play('Sprint_Loop', 0.15, 'full', s.speed / 6.8); break;
       case 'jog': this.play('Jog_Fwd_Loop', 0.2, layer, back * s.speed / 4.6); break;
       case 'walk': this.play(fem && !armedUpper ? 'Walk_Formal_Loop' : 'Walk_Loop', 0.2, layer, back * Math.max(0.6, s.speed / 2.2)); break;
@@ -325,6 +345,41 @@ export class HumanView {
       }
     }
     if (armedUpper && s.weapon && LONG_GUNS.has(s.weapon) && this.weapon) this.shoulderRifle(s);
+    if (s.seat && s.driving) this.applySeat(s.seat);
+  }
+
+  /** Seats the body: pelvis onto the seat point, torso lean, headroom fit, then two-bone IK for hands and feet. Runs after the mixer. */
+  private applySeat(t: SeatTarget) {
+    const B = (n: string) => this.bones.get(n);
+    const pel = B('pelvis'); if (!pel) return;
+    const anchor = () => { this.root.updateMatrixWorld(true); this.root.position.add(V().copy(t.hip).sub(pel.getWorldPosition(V()))); this.root.updateMatrixWorld(true); };
+    this.root.scale.setScalar(1); anchor();
+    const ul = B('upperarm_l'), ur = B('upperarm_r');
+    const lat = ul && ur ? ul.getWorldPosition(V()).sub(ur.getWorldPosition(V())).normalize() : V(Math.cos(t.yaw), 0, -Math.sin(t.yaw));
+    const fwd = V(Math.sin(t.yaw), 0, Math.cos(t.yaw));
+    // lean forward by bending the three spine bones about the lateral axis
+    if (t.lean) for (const n of ['spine_01', 'spine_02', 'spine_03']) {
+      const b = B(n); if (!b || !b.parent) continue;
+      const pq = b.parent.getWorldQuaternion(new THREE.Quaternion());
+      b.quaternion.premultiply(pq.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(lat, t.lean / 3)).multiply(pq)); b.updateMatrixWorld(true);
+    }
+    // headroom: shrink the body a little rather than push the head through the roof
+    const head = B('Head');
+    if (head) {
+      const have = head.getWorldPosition(V()).y + 0.2 - t.hip.y, room = t.roof - t.hip.y;
+      if (have > room && room > 0.35) { this.root.scale.setScalar(Math.max(0.8, room / have)); anchor(); }
+    }
+    const down = V(0, -1, 0);
+    if (t.hands) for (let i = 0; i < 2; i++) {
+      const side = i === 0 ? 'l' : 'r', sg = i === 0 ? 1 : -1; const ua = B('upperarm_' + side), la = B('lowerarm_' + side), ha = B('hand_' + side); if (!ua || !la || !ha) continue;
+      const sh = ua.getWorldPosition(V());
+      twoBoneIK(ua, la, ha, t.hands[i], sh.clone().addScaledVector(lat, sg * 0.45).addScaledVector(down, 0.5).addScaledVector(fwd, -0.15));
+    }
+    if (t.feet) for (let i = 0; i < 2; i++) {
+      const side = i === 0 ? 'l' : 'r', sg = i === 0 ? 1 : -1; const th = B('thigh_' + side), ca = B('calf_' + side), fo = B('foot_' + side); if (!th || !ca || !fo) continue;
+      const hp = th.getWorldPosition(V());
+      twoBoneIK(th, ca, fo, t.feet[i], hp.clone().addScaledVector(fwd, 0.7).addScaledVector(lat, sg * (t.pose === 'ride' || t.pose === 'pillion' ? 0.5 : 0.12)).addScaledVector(down, -0.15));
+    }
   }
 
   private shoulderRifle(s: CharState) {

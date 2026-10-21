@@ -14,7 +14,7 @@ import { hash, pointInPoly } from './geo';
 import type { TexSet } from './texsets';
 
 export const TILE = 250;
-export interface Tile { key: string; x0: number; z0: number; res: number; field: TileField; group: THREE.Group; ground: THREE.Mesh; lamps: number[]; dist: number; col: TileCol; roads: Road[] }
+export interface Tile { key: string; x0: number; z0: number; res: number; field: TileField; group: THREE.Group; ground: THREE.Mesh; lamps: number[]; dist: number; col: TileCol; roads: Road[]; props: THREE.Group }
 
 export class WorldStreamer {
   tiles = new Map<string, Tile>();
@@ -54,14 +54,18 @@ export class WorldStreamer {
     return { roads, blds, ph, areas, plots };
   }
 
-  private buildTile(ix: number, iz: number, res: number): Tile {
+  /** Builds a tile in slices (one per frame, each a few ms) so streaming never stalls a frame. */
+  private *buildTile(ix: number, iz: number, res: number): Generator<void, Tile, void> {
     const x0 = ix * TILE, z0 = iz * TILE; const key = `${ix},${iz}`;
+    let t0 = performance.now(); const lap = (n: string) => { const t = performance.now(); this.slices.push([n, t - t0]); t0 = t; };
     const { roads, blds, ph, areas, plots } = this.gather(x0, z0, TILE, 40);
     const inTile = (x: number, z: number) => x >= x0 && x < x0 + TILE && z >= z0 && z < z0 + TILE;
     // ground surfaces: landuse plus compounds (paved for the rich, swept sand for the rest) and bush on vacant plots
     const surfaces = areaSurfaces(areas);
     for (const pl of plots) surfaces.push({ code: pl.zone === 'vacant' ? SURF.bush : pl.zone === 'industrial' ? SURF.concrete : pl.rich > 0.6 ? SURF.interlock : SURF.compound, pts: new Float32Array(pl.pts) });
     const field = buildTileField(this.renderer, { x0, z0, size: TILE, roads, potholes: ph, surfaces }, res);
+    lap('field'); yield;
+    t0 = performance.now();
     const group = new THREE.Group(); group.position.set(x0, 0, z0);
     const gm = makeGroundMaterial(this.tg);
     const u = (gm as any).hlUniforms; u.uField.value = field.field.texture; u.uDetail.value = field.detail.texture; u.uTile.value.set(x0, z0, TILE);
@@ -70,6 +74,8 @@ export class WorldStreamer {
     const own = blds.filter((b) => inTile(b.cx, b.cz));
     const bb = buildBuildings(own, x0, z0);
     const bm = new THREE.Mesh(bb.geo, this.buildMat); bm.castShadow = true; bm.receiveShadow = true; group.add(bm);
+    lap('buildings'); yield;
+    t0 = performance.now();
     // compounds for the plots whose centre is in this tile
     const near = (x: number, z: number) => blds.filter((b) => Math.abs(b.cx - x) < 60 && Math.abs(b.cz - z) < 60);
     const segs: number[] = [];
@@ -78,6 +84,8 @@ export class WorldStreamer {
     const ownPlots = plots.filter((p) => inTile(p.cx, p.cz));
     const cp = buildCompounds(ownPlots, near, roadDist, x0, z0);
     if (cp.geo) { const cm = new THREE.Mesh(cp.geo, this.buildMat); cm.castShadow = true; cm.receiveShadow = true; group.add(cm); }
+    lap('compounds'); yield;
+    t0 = performance.now();
     // trees: a few per plot, more on vacant land, never inside a building
     const trees: { x: number; z: number; palm: boolean; s: number }[] = [];
     for (const pl of ownPlots) {
@@ -95,6 +103,8 @@ export class WorldStreamer {
     const blocked = (x: number, z: number) => own.some((b) => Math.abs(b.cx - x) < 30 && Math.abs(b.cz - z) < 30 && pointInPoly(x, z, b.pts));
     const props = buildProps({ x0, z0, size: TILE, roads: roads.filter((r) => r.pts.length), trees, tanks: bb.tanks, bars: bb.bars, dishes: bb.dishes, blocked });
     props.group.position.set(-x0, 0, -z0); group.add(props.group);
+    lap('props'); yield;
+    t0 = performance.now();
     // bridges whose first point is in this tile own their deck
     const br = roads.filter((r) => (r.flags & RF.bridge) && inTile(r.pts[0], r.pts[1]));
     if (br.length) { const b = buildBridges(br, x0, z0, this.asphalt, this.asphaltN); group.add(b.group); }
@@ -105,12 +115,16 @@ export class WorldStreamer {
     for (let i = 0; i < props.lamps.length; i += 3) col.poles.push(props.lamps[i], props.lamps[i + 1], 0.12);
     for (const t of trees) if (inTile(t.x, t.z)) col.poles.push(t.x, t.z, t.palm ? 0.2 : 0.25);
     if (br.length) { const dc = deckCollision(br.map((r) => deckProfile(r))); col.decks.push(dc); }
-    const nt: Tile = { key, x0, z0, res, field, group, ground, lamps: props.lamps, dist: 0, col, roads };
+    const nt: Tile = { key, x0, z0, res, field, group, ground, lamps: props.lamps, dist: 0, col, roads, props: props.group };
     this.onTile?.(nt, true);
+    lap('finish');
     return nt;
   }
 
   onTile?: (t: Tile, built: boolean) => void;
+  /** timing of the last slices, for the perf overlay */
+  slices: [string, number][] = [];
+  private job: { key: string; res: number; old?: Tile; gen: Generator<void, Tile, void> } | null = null;
   private disposeTile(t: Tile) {
     this.onTile?.(t, false);
     this.group.remove(t.group);
@@ -118,8 +132,8 @@ export class WorldStreamer {
     t.field.dispose();
   }
 
-  /** Call every frame. Loads regions, then builds at most one tile per call, nearest first. */
-  update(cx: number, cz: number) {
+  /** Call every frame. Loads regions, then advances the tile build by one slice, nearest tile first. `burst` finishes a tile at once (boot, tests). */
+  update(cx: number, cz: number, burst = false) {
     const R = this.radius;
     void this.store.around(cx, cz, R + 300);
     const want: { ix: number; iz: number; d: number; res: number }[] = [];
@@ -131,19 +145,32 @@ export class WorldStreamer {
     want.sort((a, b) => a.d - b.d);
     const keep = new Set(want.map((w) => `${w.ix},${w.iz}`));
     for (const [k, t] of this.tiles) if (!keep.has(k)) { this.disposeTile(t); this.tiles.delete(k); }
-    if (this.building) return;
-    for (const w of want) {
-      const k = `${w.ix},${w.iz}`; const t = this.tiles.get(k);
-      if (t && t.res >= w.res) continue;
-      // every region the tile touches must be in memory first
-      const [a, b] = this.store.regionOf(w.ix * TILE - 100, w.iz * TILE - 100), [c, d] = this.store.regionOf(w.ix * TILE + TILE + 100, w.iz * TILE + TILE + 100);
-      let ready = true; for (let i = a; i <= c; i++) for (let j = b; j <= d; j++) if (this.store.has(i, j) && !this.store.get(i, j)) ready = false;
-      if (!ready) continue;
-      const nt = this.buildTile(w.ix, w.iz, w.res);
-      if (t) this.disposeTile(t);
-      this.tiles.set(k, nt);
-      this.lamps = [...this.tiles.values()].flatMap((x) => x.lamps);
-      return;
+    // small props (poles, lamps, trees: about a dozen draw calls a tile, doubled by the shadow pass) are not worth drawing in the far tiles
+    const propRange = R * 0.6;
+    for (const t of this.tiles.values()) { const mx = Math.max(t.x0, Math.min(cx, t.x0 + TILE)), mz = Math.max(t.z0, Math.min(cz, t.z0 + TILE)); t.props.visible = Math.hypot(mx - cx, mz - cz) < propRange; }
+    if (!this.job) {
+      for (const w of want) {
+        const k = `${w.ix},${w.iz}`; const t = this.tiles.get(k);
+        if (t && t.res >= w.res) continue;
+        // every region the tile touches must be in memory first
+        const [a, b] = this.store.regionOf(w.ix * TILE - 100, w.iz * TILE - 100), [c, d] = this.store.regionOf(w.ix * TILE + TILE + 100, w.iz * TILE + TILE + 100);
+        let ready = true; for (let i = a; i <= c; i++) for (let j = b; j <= d; j++) if (this.store.has(i, j) && !this.store.get(i, j)) ready = false;
+        if (!ready) continue;
+        this.slices.length = 0;
+        this.job = { key: k, res: w.res, old: t, gen: this.buildTile(w.ix, w.iz, w.res) };
+        break;
+      }
+    }
+    while (this.job) {
+      const r = this.job.gen.next();
+      if (r.done) {
+        const { key, old } = this.job; this.job = null;
+        if (old) this.disposeTile(old);
+        this.tiles.set(key, r.value);
+        this.lamps = [...this.tiles.values()].flatMap((x) => x.lamps);
+        break;
+      }
+      if (!burst) break;
     }
   }
   get pending() { let n = 0; return n; }
