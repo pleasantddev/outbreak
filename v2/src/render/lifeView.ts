@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { N8AOPostPass } from 'n8ao';
 import { EffectComposer, RenderPass, EffectPass, BloomEffect, VignetteEffect, ToneMappingEffect, ToneMappingMode, SMAAEffect, Effect } from 'postprocessing';
 import { Atmosphere, type WeatherName } from './sky';
+import { LEVELS, type Level } from './quality';
 import { Fx } from './fx';
 import { HumanAssets, HumanView, officePerson, type CharState } from './humans';
 import { buildCar, poseCar, type CarModel } from './cars';
@@ -41,7 +42,8 @@ interface ActorVis { ref: Actor; view: HumanView; last: THREE.Vector3; moveYaw: 
 
 export class LifeView {
   renderer: THREE.WebGLRenderer; scene = new THREE.Scene(); camera: THREE.PerspectiveCamera;
-  composer: EffectComposer; grade = new Grade(); bloom: BloomEffect; ao: any = null;
+  composer: EffectComposer; grade = new Grade(); bloom: BloomEffect | null = null; ao: any = null;
+  private smaaPass: EffectPass | null = null; private bloomPass: EffectPass | null = null; private finalPass!: EffectPass; private renderPass!: RenderPass;
   atmo: Atmosphere; world: WorldStreamer; fx: Fx; cam: ThirdPersonCamera;
   actors = new Map<number, ActorVis>();
   cars = new Map<number, { m: CarModel | null; loading: boolean; key: string }>();
@@ -52,36 +54,68 @@ export class LifeView {
   /** LANDMAP: an aerial camera over the city with every plot outlined by status */
   landmap = { on: false, x: 0, z: 0, h: 320, sel: '', builtAt: { x: 1e9, z: 1e9 }, owned: [] as string[], lines: null as THREE.LineSegments | null, fill: null as THREE.Mesh | null };
   onTile?: (t: Tile, built: boolean) => void;
-  constructor(canvas: HTMLCanvasElement, public sim: LifeSim, public assets: HumanAssets, store: RegionStore, tg: TexSet, tw: TexSet, public quality: 'low' | 'medium' | 'high', opts: { hour?: number; weather?: WeatherName }) {
+  /** quality ladder state */
+  level: number; L: Level; renderScale = 1; baseDpr: number;
+  constructor(canvas: HTMLCanvasElement, public sim: LifeSim, public assets: HumanAssets, store: RegionStore, tg: TexSet, tw: TexSet, public quality: 'low' | 'medium' | 'high', opts: { hour?: number; weather?: WeatherName; level?: number }) {
+    this.level = opts.level ?? (quality === 'high' ? 0 : quality === 'medium' ? 2 : 5); this.L = LEVELS[this.level];
+    const L = this.L;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === 'high' ? 2 : quality === 'medium' ? 1.5 : 1));
+    this.baseDpr = window.devicePixelRatio || 1;
+    this.renderer.setPixelRatio(Math.min(this.baseDpr, L.dprCap));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace; this.renderer.toneMapping = THREE.NoToneMapping;
-    this.renderer.shadowMap.enabled = quality !== 'low'; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // shadow shaders are compiled in only when the starting rung has shadows; later rungs just switch the map off
+    this.renderer.shadowMap.enabled = L.shadowSize > 0; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; this.renderer.shadowMap.autoUpdate = false;
     this.camera = new THREE.PerspectiveCamera(65, 1, 0.1, 2600);
     this.composer = new EffectComposer(this.renderer, { frameBufferType: THREE.HalfFloatType });
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-    // contact shadows under cars, kerbs, eaves and people: the single biggest step toward a grounded city
-    if (quality !== 'low') {
-      const ao = new N8AOPostPass(this.scene, this.camera, window.innerWidth, window.innerHeight);
-      Object.assign(ao.configuration, { aoRadius: 2.6, distanceFalloff: 1.2, intensity: 3.2, halfRes: quality !== 'high', color: new THREE.Color(0x06070b) });
-      ao.setQualityMode(quality === 'high' ? 'Medium' : 'Low');
-      this.composer.addPass(ao); this.ao = ao;
-    }
-    this.bloom = new BloomEffect({ intensity: 0.75, luminanceThreshold: 0.85, luminanceSmoothing: 0.2, mipmapBlur: true, radius: 0.7 });
-    const effects: Effect[] = [this.bloom, this.grade, new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC }), new VignetteEffect({ offset: 0.35, darkness: 0.45 })];
-    if (quality !== 'low') effects.unshift(new SMAAEffect());
-    this.composer.addPass(new EffectPass(this.camera, ...effects));
-    this.atmo = new Atmosphere(this.scene, this.renderer, quality, opts);
+    this.renderPass = new RenderPass(this.scene, this.camera); this.composer.addPass(this.renderPass);
+    this.finalPass = new EffectPass(this.camera, this.grade, new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC }), new VignetteEffect({ offset: 0.35, darkness: 0.45 }));
+    this.composer.addPass(this.finalPass);
+    this.atmo = new Atmosphere(this.scene, this.renderer, this.level, opts);
     this.world = new WorldStreamer(this.renderer, store, tg, tw, quality);
+    this.world.radius = L.radius;
     this.world.onTile = (t, b) => this.onTile?.(t, b);
     this.scene.add(this.world.group);
     this.fx = new Fx(this.scene, quality); this.fx.rainOn = false;
     this.cam = new ThirdPersonCamera(this.camera);
     this.headlight = new THREE.SpotLight(0xfff4d0, 0, 70, 0.55, 0.5, 1.2); this.scene.add(this.headlight, this.headlight.target);
-    for (let i = 0; i < (quality === 'low' ? 3 : 6); i++) { const l = new THREE.PointLight(0xffb060, 0, 34, 1.5); this.scene.add(l); this.lightPool.push(l); }
+    for (let i = 0; i < (this.level >= 4 ? 3 : this.level >= 2 ? 4 : 6); i++) { const l = new THREE.PointLight(0xffb060, 0, 34, 1.5); this.scene.add(l); this.lightPool.push(l); }
+    this.applyLevel(this.level, 1);
     window.addEventListener('resize', () => this.resize()); this.resize();
   }
-  resize() { const w = window.innerWidth, h = window.innerHeight; this.renderer.setSize(w, h, false); this.composer.setSize(w, h); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
+  /** Passes are built the first time a rung needs them, then only toggled. */
+  private ensurePasses(L: Level) {
+    const C = this.composer;
+    if (L.ao > 0 && !this.ao) {
+      const ao = new N8AOPostPass(this.scene, this.camera, window.innerWidth, window.innerHeight);
+      Object.assign(ao.configuration, { aoRadius: 2.6, distanceFalloff: 1.2, intensity: 3.2, halfRes: true, color: new THREE.Color(0x06070b), autoDetectTransparency: false, transparencyAware: false });
+      (ao as any).autoDetectTransparency = false; ao.configuration.transparencyAware = false;
+      C.addPass(ao, 1); this.ao = ao;
+    }
+    if (L.smaa && !this.smaaPass) { this.smaaPass = new EffectPass(this.camera, new SMAAEffect()); C.addPass(this.smaaPass, C.passes.indexOf(this.bloomPass ?? this.finalPass)); }
+    if (L.bloom && !this.bloomPass) { this.bloom = new BloomEffect({ intensity: 0.75, luminanceThreshold: 0.85, luminanceSmoothing: 0.2, mipmapBlur: true, radius: 0.7 }); this.bloomPass = new EffectPass(this.camera, this.bloom); C.addPass(this.bloomPass, C.passes.indexOf(this.finalPass)); }
+  }
+  /** Moves the whole renderer and its population caps to a rung of the ladder (live, no reload). */
+  applyLevel(level: number, scale = this.renderScale) {
+    this.level = level; const L = this.L = LEVELS[level];
+    this.ensurePasses(L);
+    if (this.ao) {
+      this.ao.enabled = L.ao > 0;
+      if (L.ao > 0) { this.ao.setQualityMode(L.ao === 3 ? 'Medium' : L.ao === 2 ? 'Low' : 'Performance'); this.ao.configuration.halfRes = L.ao < 3; }
+    }
+    if (this.smaaPass) this.smaaPass.enabled = L.smaa;
+    if (this.bloomPass) this.bloomPass.enabled = L.bloom;
+    this.atmo.applyLevel(level);
+    this.world.radius = L.radius;
+    const sim = this.sim as any; sim.maxPeds = L.peds; sim.maxTraffic = L.traffic; sim.maxParked = L.parked;
+    this.setRenderScale(scale);
+  }
+  /** Dynamic resolution: pixel ratio = min(device ratio, rung cap) x scale. Rate limited by the governor. */
+  setRenderScale(scale: number) {
+    this.renderScale = scale;
+    const pr = Math.max(0.35, Math.min(this.baseDpr, this.L.dprCap) * scale);
+    if (Math.abs(pr - this.renderer.getPixelRatio()) > 0.004) { this.renderer.setPixelRatio(pr); this.resize(); }
+  }
+  resize() { const w = window.innerWidth, h = window.innerHeight; this.renderer.setSize(w, h, false); this.composer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
 
   private actorVis(a: Actor): ActorVis {
     let v = this.actors.get(a.id);

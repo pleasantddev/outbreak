@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { groundShared } from '../world/ground';
 import { buildingShared } from '../world/buildings';
 import { propShared, setPropNight } from '../world/props';
+import { LEVELS, type Level } from './quality';
 
 export type WeatherName = 'clear' | 'hot' | 'harmattan' | 'fog' | 'rain' | 'storm';
 interface W { label: string; cover: number; dens: number; haze: number; fog: number; tint: [number, number, number]; sun: number; rain: number; wetRate: number; dry: number; dust: number; low: number }
@@ -141,20 +142,25 @@ export class Atmosphere {
   sun: THREE.DirectionalLight; hemi: THREE.HemisphereLight;
   dome: THREE.Mesh; domeMat: THREE.ShaderMaterial;
   cloudRT: THREE.WebGLRenderTarget; cloudMat: THREE.ShaderMaterial; cloudScene = new THREE.Scene(); cloudCam = new THREE.Camera();
-  envScene = new THREE.Scene(); envDome: THREE.Mesh; pmrem: THREE.PMREMGenerator; envT = 99; env: THREE.Texture | null = null;
+  envScene = new THREE.Scene(); envDome: THREE.Mesh; pmrem: THREE.PMREMGenerator; envT = 99; env: THREE.Texture | null = null; envRT: THREE.WebGLRenderTarget | null = null; envSize = 0;
   rain: THREE.LineSegments; lightning = 0; thunderQueue: number[] = [];
   water = 0.3; wet = 0;
   frame = 0; cloudScale: number; steps: number;
   wind = new THREE.Vector2(0, 0);
+  L: Level; shadowsBuilt: boolean; private cloudEvery = 1; private cloudAge = 99; private cloudDirLast = new THREE.Vector3(0, 0, 0); private cloudPosLast = new THREE.Vector3(1e9, 0, 0);
+  private shadowFrame = 0; private pmremSize = 128; private pmremEvery = 5; private rainFrac = 1; private tmpV = new THREE.Vector3(); private tmpV2 = new THREE.Vector3(); private tmpV3 = new THREE.Vector3();
+  private tmpSize = new THREE.Vector2(); private tmpV4 = new THREE.Vector3(); private tmpMoon = new THREE.Vector3();
+  private k = { zen: new THREE.Color(), hor: new THREE.Color(), tint: new THREE.Color(), a: new THREE.Color(), b: new THREE.Color(), c: new THREE.Color(), sun: new THREE.Color(), fog: new THREE.Color(), white: new THREE.Color(1, 1, 1), flash: new THREE.Color(0.7, 0.75, 0.9) };
   onThunder?: (delay: number, strength: number) => void;
-  constructor(public scene: THREE.Scene, public renderer: THREE.WebGLRenderer, public quality: 'low' | 'medium' | 'high', opts: { hour?: number; weather?: WeatherName } = {}) {
+  constructor(public scene: THREE.Scene, public renderer: THREE.WebGLRenderer, level: number, opts: { hour?: number; weather?: WeatherName } = {}) {
+    this.L = LEVELS[level]; this.shadowsBuilt = this.L.shadowSize > 0;
+    const quality = level <= 1 ? 'high' : level <= 3 ? 'medium' : 'low';
     if (opts.hour !== undefined) this.hour = opts.hour;
     const w = opts.weather ?? pick(this.season.table);
     this.target = w; this.lockedWeather = !!opts.weather;
     this.cur = { ...WEATHER[w], tint: [...WEATHER[w].tint] as [number, number, number], name: w };
     if (w === 'rain' || w === 'storm') { this.water = 0.7; this.wet = 1; }
-    this.cloudScale = quality === 'high' ? 0.4 : quality === 'medium' ? 0.33 : 0.25;
-    this.steps = quality === 'high' ? 28 : quality === 'medium' ? 20 : 12;
+    this.cloudScale = this.L.cloudScale; this.steps = this.L.cloudSteps; this.cloudEvery = this.L.cloudEvery; this.pmremSize = this.L.pmremSize; this.pmremEvery = this.L.pmremEvery;
     const skyU = () => ({ uSunDir: { value: this.sunDir }, uZenith: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uGround: { value: new THREE.Color() }, uSunCol: { value: new THREE.Color() }, uHaze: { value: 0 }, uNight: { value: 0 }, uTint: { value: new THREE.Color() } });
     const shared = skyU();
     this.cloudRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false });
@@ -169,21 +175,42 @@ export class Atmosphere {
     const envMat = this.domeMat.clone(); envMat.uniforms = { ...this.domeMat.uniforms, uUseClouds: { value: 0 }, uStars: { value: 0 }, uClouds: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uTime: { value: 0 } };
     this.envDome = new THREE.Mesh(new THREE.SphereGeometry(100, 32, 16), envMat); this.envScene.add(this.envDome);
     this.pmrem = new THREE.PMREMGenerator(renderer);
-    this.sun = new THREE.DirectionalLight(0xffffff, 3); this.sun.castShadow = quality !== 'low';
-    const sz = quality === 'high' ? 4096 : 2048; this.sun.shadow.mapSize.set(sz, sz);
-    const c = this.sun.shadow.camera as THREE.OrthographicCamera; c.left = -90; c.right = 90; c.top = 90; c.bottom = -90; c.near = 1; c.far = 900;
+    this.sun = new THREE.DirectionalLight(0xffffff, 3); this.sun.castShadow = this.shadowsBuilt;
+    this.sun.shadow.autoUpdate = false; // the frame loop decides when the map is redrawn
+    const c = this.sun.shadow.camera as THREE.OrthographicCamera; c.near = 1; c.far = 900;
+    this.applyLevel(level);
     this.sun.shadow.bias = -0.0003; this.sun.shadow.normalBias = 0.06;
     scene.add(this.sun, this.sun.target);
     this.hemi = new THREE.HemisphereLight(0xbfd6ff, 0x5a4636, 1); scene.add(this.hemi);
     scene.fog = new THREE.FogExp2(0xc8d4e0, 0.0008);
     // rain streaks
-    const N = quality === 'high' ? 9000 : quality === 'medium' ? 5000 : 2200;
+    const N = 9000;
     const rp = new Float32Array(N * 6);
     for (let i = 0; i < N; i++) { const x = (Math.random() - 0.5) * 70, y = Math.random() * 34, z = (Math.random() - 0.5) * 70; rp.set([x, y, z, x + 0.05, y - 0.9, z + 0.02], i * 6); }
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.BufferAttribute(rp, 3));
     this.rain = new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: 0xb8c2cc, transparent: true, opacity: 0, depthWrite: false, fog: false }));
     this.rain.frustumCulled = false; scene.add(this.rain);
+    this.applyLevel(level);
   }
+
+  /** Moves to another rung of the quality ladder at run time. Nothing here recompiles a shader. */
+  applyLevel(level: number) {
+    const L = this.L = LEVELS[level];
+    this.cloudScale = L.cloudScale; this.steps = L.cloudSteps; this.cloudEvery = L.cloudEvery; this.pmremSize = L.pmremSize; this.pmremEvery = L.pmremEvery; this.rainFrac = L.rain;
+    if (this.cloudMat) this.cloudMat.uniforms.uSteps.value = this.steps;
+    const sun = this.sun; if (!sun) return;
+    const on = L.shadowSize > 0 && this.shadowsBuilt;
+    sun.shadow.intensity = on ? 1 : 0;
+    this.renderer.shadowMap.autoUpdate = false;
+    const size = on ? L.shadowSize : 256;
+    if (sun.shadow.mapSize.x !== size) { sun.shadow.mapSize.set(size, size); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null as any; } }
+    const c = sun.shadow.camera as THREE.OrthographicCamera; const h = L.shadowHalf;
+    if (c.right !== h) { c.left = -h; c.right = h; c.top = h; c.bottom = -h; c.updateProjectionMatrix(); }
+    this.shadowOn = on;
+    if (this.rain) { const n = Math.floor(9000 * this.rainFrac); this.rain.geometry.setDrawRange(0, n * 2); }
+    this.envT = 99;
+  }
+  shadowOn = false;
 
   setWeather(n: WeatherName, lock = true) { this.target = n; this.lockedWeather = lock; }
   cycleWeather() { const i = WEATHER_ORDER.indexOf(this.target); this.setWeather(WEATHER_ORDER[(i + 1) % WEATHER_ORDER.length]); this.envT = 99; }
@@ -211,41 +238,58 @@ export class Atmosphere {
     const golden = THREE.MathUtils.smoothstep(elev, -4, 4) * (1 - THREE.MathUtils.smoothstep(elev, 6, 22));
     // sky palette
     const U = this.domeMat.uniforms;
-    const zen = new THREE.Color(0.12, 0.3, 0.68).lerp(new THREE.Color(0.18, 0.22, 0.38), golden * 0.6).lerp(new THREE.Color(0.006, 0.01, 0.03), night);
-    const hor = new THREE.Color(0.62, 0.74, 0.88).lerp(new THREE.Color(1.0, 0.56, 0.3), golden).lerp(new THREE.Color(0.02, 0.03, 0.06), night);
-    const tint = new THREE.Color(...W.tint);
-    const grey = (c: THREE.Color, a: number) => { const l = c.r * 0.3 + c.g * 0.59 + c.b * 0.11; return c.lerp(new THREE.Color(l, l, l).multiply(tint).multiplyScalar(1.25), a); };
+    const K = this.k;
+    const zen = K.zen.setRGB(0.12, 0.3, 0.68).lerp(K.a.setRGB(0.18, 0.22, 0.38), golden * 0.6).lerp(K.b.setRGB(0.006, 0.01, 0.03), night);
+    const hor = K.hor.setRGB(0.62, 0.74, 0.88).lerp(K.a.setRGB(1.0, 0.56, 0.3), golden).lerp(K.b.setRGB(0.02, 0.03, 0.06), night);
+    const tint = K.tint.setRGB(W.tint[0], W.tint[1], W.tint[2]);
+    const grey = (c: THREE.Color, a: number) => { const l = c.r * 0.3 + c.g * 0.59 + c.b * 0.11; return c.lerp(K.c.setRGB(l, l, l).multiply(tint).multiplyScalar(1.25), a); };
     grey(zen, W.cover * 0.75 + W.haze * 0.4); grey(hor, W.cover * 0.5 + W.haze * 0.55);
-    const sunCol = new THREE.Color(1, 0.62 + 0.36 * (1 - golden), 0.38 + 0.56 * (1 - golden)).multiplyScalar(day * (0.25 + 0.75 * W.sun));
+    const sunCol = K.sun.setRGB(1, 0.62 + 0.36 * (1 - golden), 0.38 + 0.56 * (1 - golden)).multiplyScalar(day * (0.25 + 0.75 * W.sun));
     U.uZenith.value.copy(zen); U.uHorizon.value.copy(hor); U.uGround.value.copy(hor).multiplyScalar(0.55); U.uSunCol.value.copy(sunCol);
     U.uHaze.value = W.haze; U.uNight.value = night; U.uTint.value.copy(tint);
     U.uStars.value = night * (1 - W.cover) * (1 - W.haze * 0.8); U.uTime.value += dt;
-    // clouds pass
+    // clouds pass: the half-res ray march is the costliest sky pass, so it only reruns when the camera has turned,
+    // or every few frames to let the wind move them
     this.wind.x += dt * 9; this.wind.y += dt * 4;
     const cm = this.cloudMat.uniforms;
     cm.uCover.value = Math.min(0.99, W.cover); cm.uDens.value = W.dens; cm.uTime.value += dt; cm.uFrame.value = this.frame % 64; cm.uLow.value = W.low;
     camera.updateMatrixWorld();
-    cm.uInvProj.value.copy(camera.projectionMatrixInverse); cm.uCamWorld.value.copy(camera.matrixWorld); cm.uCam.value.copy(camera.position);
-    const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+    const size = this.renderer.getDrawingBufferSize(this.tmpSize);
     const cw = Math.max(32, Math.round(size.x * this.cloudScale)), ch = Math.max(32, Math.round(size.y * this.cloudScale));
-    if (this.cloudRT.width !== cw || this.cloudRT.height !== ch) this.cloudRT.setSize(cw, ch);
+    let resized = false;
+    if (this.cloudRT.width !== cw || this.cloudRT.height !== ch) { this.cloudRT.setSize(cw, ch); resized = true; }
     U.uRes.value.set(size.x, size.y);
-    const prev = this.renderer.getRenderTarget();
-    this.renderer.setRenderTarget(this.cloudRT); this.renderer.render(this.cloudScene, this.cloudCam); this.renderer.setRenderTarget(prev);
+    camera.getWorldDirection(this.tmpV);
+    this.cloudAge++;
+    const turned = this.tmpV.dot(this.cloudDirLast) < 0.9995;       // about 1.8 degrees
+    const moved = this.tmpV2.copy(camera.position).sub(this.cloudPosLast).lengthSq() > 25;
+    if (resized || this.cloudAge >= this.cloudEvery || (this.cloudEvery > 1 && turned) || moved || W.rain > 0.1 && this.cloudAge >= 2) {
+      this.cloudAge = 0; this.cloudDirLast.copy(this.tmpV); this.cloudPosLast.copy(camera.position);
+      cm.uInvProj.value.copy(camera.projectionMatrixInverse); cm.uCamWorld.value.copy(camera.matrixWorld); cm.uCam.value.copy(camera.position);
+      const prev = this.renderer.getRenderTarget();
+      this.renderer.setRenderTarget(this.cloudRT); this.renderer.render(this.cloudScene, this.cloudCam); this.renderer.setRenderTarget(prev);
+    }
     this.dome.position.copy(camera.position);
     // lights
     const cloudShade = 1 - W.cover * 0.55;
-    this.sun.color.copy(sunCol.clone().multiplyScalar(1 / Math.max(0.001, day * (0.25 + 0.75 * W.sun))));
+    this.sun.color.copy(sunCol).multiplyScalar(1 / Math.max(0.001, day * (0.25 + 0.75 * W.sun)));
     this.sun.intensity = 4.6 * day * W.sun * cloudShade + this.lightning * 8;
-    const moonDir = this.sunDir.clone().negate().add(new THREE.Vector3(0.25, 0.1, 0)).normalize();
+    const moonDir = this.tmpV4.copy(this.sunDir).negate().add(this.tmpMoon.set(0.25, 0.1, 0)).normalize();
     if (night > 0.5) { this.sun.color.setRGB(0.6, 0.7, 1.0); this.sun.intensity = 0.35 * (1 - W.cover * 0.8) + this.lightning * 8; }
     const ld = night > 0.5 ? moonDir : this.sunDir;
-    this.sun.position.copy(focus).addScaledVector(ld, 400); this.sun.target.position.copy(focus);
-    this.hemi.color.copy(zen).lerp(new THREE.Color(1, 1, 1), 0.25).multiplyScalar(1.0);
+    // snap the shadow box to whole texels in light space so shadow edges do not crawl while moving
+    const tex = this.shadowOn ? (2 * this.L.shadowHalf) / this.sun.shadow.mapSize.x : 1;
+    const rt = this.tmpV3.set(0, 1, 0).cross(ld); if (rt.lengthSq() < 1e-6) rt.set(1, 0, 0); rt.normalize();
+    const up2 = this.tmpV2.copy(ld).cross(rt);
+    const fx = Math.round(focus.dot(rt) / tex) * tex - focus.dot(rt), fy = Math.round(focus.dot(up2) / tex) * tex - focus.dot(up2);
+    this.sun.target.position.copy(focus).addScaledVector(rt, fx).addScaledVector(up2, fy);
+    this.sun.position.copy(this.sun.target.position).addScaledVector(ld, 400);
+    if (this.shadowOn) { if (this.shadowFrame++ % this.L.shadowEvery === 0) this.sun.shadow.needsUpdate = true; }
+    this.hemi.color.copy(zen).lerp(K.white, 0.25);
     this.hemi.groundColor.setRGB(0.36, 0.28, 0.22).multiplyScalar(0.25 + 0.75 * day);
     this.hemi.intensity = 0.25 + 1.25 * day * (0.6 + 0.4 * W.cover) + night * 0.35 + this.lightning * 3;
     // fog matches the horizon
-    const fogC = hor.clone().lerp(tint, W.haze * 0.4);
+    const fogC = K.fog.copy(hor).lerp(tint, W.haze * 0.4);
     (this.scene.fog as THREE.FogExp2).color.copy(fogC); (this.scene.fog as THREE.FogExp2).density = W.fog * (1 + night * 0.4);
     this.renderer.toneMappingExposure = 0.55 + night * 0.55;
     // rain, puddles and drying
@@ -258,20 +302,20 @@ export class Atmosphere {
     rm.opacity = Math.min(0.55, W.rain * 0.4); this.rain.visible = W.rain > 0.03;
     if (this.rain.visible) {
       this.rain.position.set(camera.position.x, camera.position.y - 8, camera.position.z);
-      const a = (this.rain.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array; const fall = dt * 28;
-      for (let i = 0; i < a.length; i += 6) { a[i + 1] -= fall; a[i + 4] -= fall; if (a[i + 1] < 0) { a[i + 1] += 34; a[i + 4] += 34; } }
-      this.rain.geometry.attributes.position.needsUpdate = true;
+      const a = (this.rain.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array; const fall = dt * 28; const nmax = Math.floor(9000 * this.rainFrac) * 6;
+      for (let i = 0; i < nmax; i += 6) { a[i + 1] -= fall; a[i + 4] -= fall; if (a[i + 1] < 0) { a[i + 1] += 34; a[i + 4] += 34; } }
+      const ra = this.rain.geometry.attributes.position as THREE.BufferAttribute; ra.clearUpdateRanges(); ra.addUpdateRange(0, nmax); ra.needsUpdate = true;
     }
     if (this.target === 'storm' && Math.random() < dt * 0.1) { this.lightning = 1; this.onThunder?.(0.6 + Math.random() * 3, 0.6 + Math.random() * 0.4); }
     this.lightning = Math.max(0, this.lightning - dt * 3.5);
-    if (this.lightning > 0) U.uZenith.value.lerp(new THREE.Color(0.7, 0.75, 0.9), this.lightning * 0.5);
-    // reflections refresh
+    if (this.lightning > 0) U.uZenith.value.lerp(K.flash, this.lightning * 0.5);
+    // reflections: a small PMREM of the sky, refreshed slowly (the sky barely changes in 20 game seconds)
     this.envT += dt;
-    if (this.envT > 5) {
-      this.envT = 0; this.env?.dispose();
-      this.env = this.pmrem.fromScene(this.envScene, 0.02).texture; this.scene.environment = this.env;
-      this.scene.environmentIntensity = 0.35 + 0.65 * day;
+    if (this.envT > this.pmremEvery || this.envSize !== this.pmremSize) {
+      this.envT = 0; this.envSize = this.pmremSize; this.envRT?.dispose();
+      this.envRT = this.pmrem.fromScene(this.envScene, 0.02, 0.1, 100, { size: this.pmremSize }); this.env = this.envRT.texture; this.scene.environment = this.env;
     }
+    this.scene.environmentIntensity = 0.35 + 0.65 * day;
     return { day, night, elev, golden };
   }
 }

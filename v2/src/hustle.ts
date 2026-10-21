@@ -18,10 +18,19 @@ import { weaponStats, AMMO_STACK } from './sim/items';
 import { audio } from './audio/audio';
 import { WEATHER_ORDER, type WeatherName } from './render/sky';
 import type { CharacterLook } from './data/cosmetics';
+import { Governor, LEVELS, PRESET_LEVEL, detectDevice, loadPref, savePref, type Pref, type Tier } from './render/quality';
+import { PerfHud } from './render/perfhud';
 
 const q = new URLSearchParams(location.search);
 const touchDev = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-const quality = (q.get('q') as 'low' | 'medium' | 'high') ?? (touchDev ? 'low' : 'high');
+// Quality: ?q=low|medium|high|auto forces a preset for this session, otherwise the saved choice, otherwise auto-detect.
+const urlQ = q.get('q') as Pref | null;
+let pref: Pref = urlQ === 'low' || urlQ === 'medium' || urlQ === 'high' || urlQ === 'auto' ? urlQ : loadPref();
+const device = detectDevice();
+const startLevel = pref === 'auto' ? device.level : PRESET_LEVEL[pref as Tier];
+const tierOf = (lv: number): Tier => (lv <= 1 ? 'high' : lv <= 3 ? 'medium' : 'low');
+const quality: Tier = tierOf(startLevel);
+console.info(`[hl] quality ${pref} -> rung ${startLevel} ${LEVELS[startLevel].name} (${device.gpu}; ${device.reason})`);
 document.body.style.cssText = 'margin:0;background:#000;overflow:hidden;touch-action:none';
 const canvas = document.createElement('canvas'); canvas.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;display:block'; document.body.appendChild(canvas);
 const hud = new LifeHud(touchDev);
@@ -39,7 +48,8 @@ const LOOKS: Record<string, Partial<CharacterLook>> = {
 };
 Object.assign(PLAYER_LOOK, LOOKS[state.model] ?? {}, { model: state.model });
 
-let sim: LifeSim, view: LifeView, input: Input, store: RegionStore;
+let sim: LifeSim, view: LifeView, input: Input, store: RegionStore, gov: Governor;
+const perfHud = new PerfHud(() => view, () => gov);
 let started = false; let acc = 0; let last = performance.now();
 const jobs: PhoneCtx['jobs'] = [];
 let activeJob: { id: string; title: string; pay: number; stage: 0 | 1; a: { x: number; z: number }; b: { x: number; z: number }; t: number; needCar: boolean } | null = null;
@@ -71,7 +81,9 @@ async function boot() {
   const [tg, tw] = await Promise.all([loadTexSet('g', 8, size), loadTexSet('w', 8, size), preloadCars()]);
   sim = new LifeSim({ seed: (Math.random() * 1e9) | 0, name: 'You', look: PLAYER_LOOK, spawn, quality, potholes: potholesNear });
   sim.cash = save.cash ?? 1850;
-  view = new LifeView(canvas, sim, assets, store, tg, tw, quality, { hour: q.get('t') ? +q.get('t')! : undefined, weather: (q.get('w') as WeatherName) ?? undefined });
+  view = new LifeView(canvas, sim, assets, store, tg, tw, quality, { hour: q.get('t') ? +q.get('t')! : undefined, weather: (q.get('w') as WeatherName) ?? undefined, level: startLevel });
+  gov = new Governor(pref, startLevel, { level: (l) => view.applyLevel(l, gov.scale), scale: (s) => view.setRenderScale(s) });
+  view.applyLevel(startLevel, 1); gov.scale = 1;
   view.onTile = (t, built) => { if (built) sim.net.addRoads(t.roads); else sim.removeTile(t.key); };
   view.cam.yaw = Math.PI * 0.85;
   input = new Input(canvas, touchDev ? 'on' : 'off');
@@ -93,7 +105,7 @@ async function boot() {
   hud.onAction = onPhoneAction;
   hud.onBuy = (id) => { buyPlot(id); };
   bindLandmap();
-  (window as any).__hl = { sim, view, hud, state, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
+  (window as any).__hl = { sim, view, hud, state, gov, perf: perfHud, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
     // test hook: run the sim without rendering, holding a command
     simulate(secs: number, patch: Partial<Command> & { pulse?: string[] } = {}) { for (let i = 0; i < secs * 60; i++) { const c: any = { ...emptyCommand(), yaw: sim.local.yaw, ...patch }; for (const k of patch.pulse ?? []) c[k] = Math.floor(i / 12) % 2 === 0; sim.setCommand(0, c); sim.step(1 / 60); if (i % 30 === 0) { view.world.update(sim.local.pos.x, sim.local.pos.z); syncColliders(true); } } view.handleEvents(sim.events, hud); sim.events.length = 0; },
     stoppedCar() { const m = sim.local.pos; return sim.liveVehicles().filter((v) => Math.abs(v.ctrl.currentVehicleSpeed()) < 2 && v.kind !== 'okada').sort((a, b) => { const pa = a.body.translation(), pb = b.body.translation(); return Math.hypot(pa.x - m.x, pa.z - m.z) - Math.hypot(pb.x - m.x, pb.z - m.z); })[0]; },
@@ -188,7 +200,11 @@ function onPhoneAction(app: string, id: string) {
   if (app === 'Settings') {
     if (id === 'weather') { view.atmo.cycleWeather(); }
     if (id === 'hour') view.atmo.hour = (view.atmo.hour + 1) % 24;
-    if (id === 'quality') { const next = quality === 'high' ? 'medium' : quality === 'medium' ? 'low' : 'high'; const u = new URL(location.href); u.searchParams.set('q', next); location.href = u.toString(); }
+    if (id === 'quality') {
+      const order: Pref[] = ['auto', 'high', 'medium', 'low']; pref = order[(order.indexOf(pref) + 1) % order.length]; savePref(pref);
+      const lv = pref === 'auto' ? device.level : PRESET_LEVEL[pref as Tier];
+      gov.setPref(pref, lv); view.applyLevel(lv, 1); view.world.update(sim.local.pos.x, sim.local.pos.z);
+    }
   }
   hud.refreshApp();
 }
@@ -345,7 +361,9 @@ function command(f: ReturnType<Input['frame']>, aimDir: THREE.Vector3, pad: Retu
 
 let fps = 60, frames = 0, fpsT = 0;
 function loop(t: number) {
-  const dt = Math.min(0.1, (t - last) / 1000); last = t;
+  const rawDt = t - last; const dt = Math.min(0.1, rawDt / 1000); last = t;
+  if (gov && started && document.visibilityState === 'visible') gov.tick(rawDt, t); else if (gov) gov.reset();
+  perfHud.update(dt);
   frames++; fpsT += dt; if (fpsT > 1) { fps = frames / fpsT; frames = 0; fpsT = 0; }
   const phoneBtn = (input as any).tpressed?.has?.('phone');
   const f = input.frame(); const pad = gamepad();
@@ -426,7 +444,11 @@ function areaName(x: number, z: number) {
   return best;
 }
 function phoneCtx(): PhoneCtx {
-  return { time: view.atmo.timeString(), real: view.atmo.realString(), weather: view.atmo.weatherLabel, season: view.atmo.season.name, day: view.atmo.day, cash: sim.cash, bank: state.bank, plots: nearbyPlots(), jobs, texts, potholes: (potholeReports?.reports ?? []).map((r: any) => ({ name: r.name, road: r.road || (r.road_used ?? []).filter(Boolean).join(', '), area: r.area, reported: r.reported, placed: r.placed ?? 0, source: r.source })), quality };
+  return { time: view.atmo.timeString(), real: view.atmo.realString(), weather: view.atmo.weatherLabel, season: view.atmo.season.name, day: view.atmo.day, cash: sim.cash, bank: state.bank, plots: nearbyPlots(), jobs, texts, potholes: (potholeReports?.reports ?? []).map((r: any) => ({ name: r.name, road: r.road || (r.road_used ?? []).filter(Boolean).join(', '), area: r.area, reported: r.reported, placed: r.placed ?? 0, source: r.source })), quality: qualityLabel() };
+}
+function qualityLabel() {
+  const name = pref === 'auto' ? 'Auto' : pref[0].toUpperCase() + pref.slice(1);
+  return `${name} · ${LEVELS[view.level].name} · ${Math.round(gov.fps)} fps · ${Math.round(view.renderScale * 100)}% resolution`;
 }
 function drawPhoneMap() {
   const cv = document.getElementById('pmap') as HTMLCanvasElement | null; if (!cv) return; const g = cv.getContext('2d')!; const me = sim.local; const S = 0.18;
