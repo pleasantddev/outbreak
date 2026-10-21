@@ -35,14 +35,24 @@ export class WorldStreamer {
     this.asphalt = tl.load(`tex/g0_diff_${tg.size}.webp`); this.asphalt.wrapS = this.asphalt.wrapT = THREE.RepeatWrapping; this.asphalt.colorSpace = THREE.SRGBColorSpace;
     this.asphaltN = tl.load(`tex/g0_nor_${tg.size}.webp`); this.asphaltN.wrapS = this.asphaltN.wrapT = THREE.RepeatWrapping;
   }
+  private plotsPending = new Map<string, Region>();
   regionPlots(r: Region) {
     const k = `${r.i},${r.j}`; let p = this.plots.get(k); if (p) return p;
     const miss = { n: 0 }; p = plotsForRegion(r, this.store.bldById, miss);
-    // keep the result only when no parcel is waiting for a building in a neighbouring region that is still loading
-    let settled = miss.n === 0;
-    if (!settled) { settled = true; for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) if (this.store.has(r.i + di, r.j + dj) && !this.store.get(r.i + di, r.j + dj)) settled = false; }
-    if (settled) this.plots.set(k, p);
+    this.plots.set(k, p);
+    // parcels waiting on a building in a neighbouring region that is still loading are rebuilt once it arrives
+    if (miss.n > 0) this.plotsPending.set(k, r);
     return p;
+  }
+  private refreshPlots() {
+    for (const [k, r] of this.plotsPending) {
+      let ready = true; for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) if (this.store.has(r.i + di, r.j + dj) && !this.store.get(r.i + di, r.j + dj)) ready = false;
+      if (!ready) continue;
+      this.plotsPending.delete(k);
+      if (this.store.get(r.i, r.j) !== r) { this.plots.delete(k); continue; }
+      this.plots.delete(k); this.regionPlots(r);
+      if (this.plotsPending.get(k)) this.plotsPending.delete(k); // still missing after every neighbour loaded: those buildings are not in the map
+    }
   }
 
   private gather(x0: number, z0: number, size: number, margin: number) {
@@ -177,7 +187,7 @@ export class WorldStreamer {
 
   /** Call every frame. Loads regions, then builds at most one tile per call, nearest first. */
   update(cx: number, cz: number) {
-    const R = this.radius;
+    const R = this.radius; this.refreshPlots();
     void this.store.around(cx, cz, R + 300);
     const want: { ix: number; iz: number; d: number; res: number }[] = [];
     for (let ix = Math.floor((cx - R) / TILE); ix <= Math.floor((cx + R) / TILE); ix++) for (let iz = Math.floor((cz - R) / TILE); iz <= Math.floor((cz + R) / TILE); iz++) {
