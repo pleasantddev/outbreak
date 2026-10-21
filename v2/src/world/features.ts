@@ -248,6 +248,7 @@ export function buildFeatures(inp: FeatureInput): FeatureOut {
     const o = obb(a.pts);
     if (!inTile(o.cx, o.cz)) continue;
     const key = `${Math.round(o.cx)}:${Math.round(o.cz)}`; if (seenCourt.has(key)) continue; seenCourt.add(key);
+    if (inp.buildings.some((b) => Math.abs(b.cx - o.cx) < 25 && Math.abs(b.cz - o.cz) < 25 && b.area > 0.5 * o.hl * o.hw * 4 && pointInPoly(o.cx, o.cz, b.pts))) continue; // a sports hall, not an open court
     let L = o.hl * 2, W = o.hw * 2;
     const hsh = hash(Math.round(o.cx * 3.1 + o.cz * 1.7), 11);
     let kind: CourtKind;

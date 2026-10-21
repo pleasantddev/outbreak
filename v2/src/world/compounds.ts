@@ -15,6 +15,7 @@ export function buildCompounds(plots: Plot[], near: (x: number, z: number) => Bu
   const gates: { x: number; z: number; ang: number; w: number; c: [number, number, number]; h: number }[] = [];
   for (const pl of plots) {
     if (pl.zone === 'vacant' || pl.zone === 'industrial') continue;
+    if (pl.buildings.some((b) => b.kind === 14 || b.kind === 15 || b.kind === 16 || b.kind === 10) || pl.area > 6000) continue; // terminals, stations and markets stay open
     const r = hash(pl.buildings[0]?.id ?? 1, 21);
     if (pl.zone === 'commercial' && r < 0.6) continue; // shop fronts stay open to the street
     if (pl.rich < 0.25 && r < 0.45) continue; // poorer compounds often have no wall at all
