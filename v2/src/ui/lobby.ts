@@ -125,7 +125,7 @@ const CSS = `
 #fe .btn.ghost{background:rgba(255,255,255,.09);box-shadow:none}
 #fe .btn.sq{flex:0 0 48px;padding:0;display:flex;align-items:center;justify-content:center}#fe .btn.sq svg{width:22px;height:22px}
 #fe .btn[disabled]{opacity:.38;pointer-events:none;filter:grayscale(.6)}
-#fe .ctaw{position:sticky;bottom:-17px;margin:0 -18px -16px;padding:14px 18px 14px;background:linear-gradient(0deg,rgba(10,12,20,.96) 72%,rgba(10,12,20,0))}
+#fe .ctaw{position:sticky;bottom:-17px;margin:0 -18px -16px;padding:14px 18px 14px;background:linear-gradient(0deg,rgba(10,12,20,.99) 80%,rgba(10,12,20,0))}#fe .ctaw .btn.cta:disabled{background:#262a3a;color:#6d7488;opacity:1}
 #fe .cta{width:100%;height:60px;font-size:24px;letter-spacing:.14em;margin-top:6px;background:linear-gradient(100deg,#19c9b1,#6d3ef0 85%);box-shadow:0 12px 30px rgba(109,62,240,.45),inset 0 1px 0 rgba(255,255,255,.3)}
 #fe .seg{display:flex;gap:6px}
 #fe .seg button{flex:1;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-size:13px;font-weight:700}
@@ -311,7 +311,7 @@ export class FrontEnd {
   private stepModel(dir: number) {
     const d = this.cur(); const i = (ROSTER_IDS.indexOf(d.model) + dir + ROSTER_IDS.length) % ROSTER_IDS.length; this.setModel(ROSTER_IDS[i]);
   }
-  private setModel(id: RosterId) { this.patch({ model: id }); this.rebuildHero(true); this.refreshCustomizer(); audio.ui('click'); }
+  private setModel(id: RosterId) { this.patch({ model: id }); this.rebuildHero(true); this.refreshCustomizer(); this.updatePlate(); audio.ui('click'); }
   private patch(p: Partial<ProfileDraft>) {
     if (this.profile) { Object.assign(this.profile, p); window.clearTimeout(this.saveT); this.saveT = window.setTimeout(() => { void this.ctx.store.update({ model: this.profile!.model, skin: this.profile!.skin, outfit: this.profile!.outfit }).catch(() => {}); }, 350); }
     else Object.assign(this.draft, p);
@@ -531,7 +531,7 @@ export class FrontEnd {
     // name plate above the hero's head
     const st = this.ctx.stage; if (st.active && st.hero) {
       const v = st.localToWorld(new THREE.Vector3(0, 2.0, 0)).project(st.view.camera);
-      const x = (v.x * 0.5 + 0.5) * innerWidth, y = (-v.y * 0.5 + 0.5) * innerHeight; this.np.style.display = this.mode === 'lobby' && innerWidth < 760 && innerHeight > innerWidth ? 'none' : ''; this.np.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
+      const x = (v.x * 0.5 + 0.5) * innerWidth, y = (-v.y * 0.5 + 0.5) * innerHeight; this.np.style.display = innerWidth < 760 && innerHeight > innerWidth ? 'none' : ''; this.np.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
     }
     if (this.mode === 'lobby') {
       this.newsT += dt; if (this.newsT > 6) { this.newsT = 0; this.newsI = (this.newsI + 1) % NEWS.length; const tiles = [...this.root.querySelectorAll('.tile')] as HTMLElement[]; if (innerHeight <= 520 || innerWidth < 760) return; tiles.forEach((t, i) => (t.style.borderColor = i === this.newsI ? 'rgba(255,255,255,.3)' : '')); }
