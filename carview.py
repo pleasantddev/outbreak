@@ -31,7 +31,7 @@ VIEW = r"""
     for (let y = 0; y <= 2.0001; y += 0.1) { const big = Math.abs(y * 2 - Math.round(y * 2)) < 1e-6; (big ? b : a).push(new T.Vector3(X0, y, -2.6), new T.Vector3(X0, y, 2.6)); if (big) label(y.toFixed(1), X0, y, 2.55); }
     for (let z = -2.5; z <= 2.5001; z += 0.1) { const big = Math.abs(z * 2 - Math.round(z * 2)) < 1e-6; (big ? b : a).push(new T.Vector3(X0, 0, z), new T.Vector3(X0, 2.2, z)); if (big) label(z.toFixed(1), X0, 2.25, z); }
     lines(a, 0x445566); lines(b, 0xffcc33);
-    v.renderer.clippingPlanes = [new T.Plane(new T.Vector3(-1, 0, 0), X0 + 0.005)];
+    v.renderer.clippingPlanes = [new T.Plane(new T.Vector3(-1, 0, 0), p.x + X0 + 0.005)];
     v.debugCam = { x: p.x + 28, y: p.y + cm.m.offsetY + 1.0, z: p.z, tx: p.x, ty: p.y + cm.m.offsetY + 1.0, tz: p.z, fov: 11 };
   } else if (mode === 'top') {
     const a = [], b = [];
@@ -58,7 +58,7 @@ with sync_playwright() as p:
     print('ready')
     for sp in specs:
         kind, seed = sp.split(':'); name = sys.argv[6] if False else sp.replace(':', '_')
-        pg.evaluate(f"({JS})('{kind}', {seed})"); time.sleep(3)
+        pg.evaluate(f"({JS})('{kind}', {seed})"); time.sleep(8)
         for mode, cx, cy in [('side', 0.40, 0), ('top', 0, 0.95)]:
-            r = pg.evaluate(f"({VIEW})('{mode}', {cx}, {cy})"); time.sleep(3); pg.screenshot(path=f"{outdir}/{name}_{mode}.png", timeout=180000); print(sp, mode, r)
+            r = pg.evaluate(f"({VIEW})('{mode}', {cx}, {cy})"); time.sleep(9); pg.screenshot(path=f"{outdir}/{name}_{mode}.png", timeout=180000); print(sp, mode, r)
     b.close()

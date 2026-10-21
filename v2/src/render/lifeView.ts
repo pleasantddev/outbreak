@@ -7,6 +7,7 @@ import { LEVELS, type Level } from './quality';
 import { Fx } from './fx';
 import { HumanAssets, HumanView, officePerson, type CharState } from './humans';
 import { buildCar, poseCar, type CarModel } from './cars';
+import { seatTarget } from './seating';
 import { buildWeapon } from './weapons3d';
 import { ThirdPersonCamera } from './camera';
 import { WorldStreamer, type Tile } from '../world/streamer';
@@ -38,7 +39,7 @@ class Grade extends Effect {
   set(n: string, v: number) { (this.uniforms.get(n) as THREE.Uniform).value = v; }
 }
 
-interface ActorVis { ref: Actor; view: HumanView; last: THREE.Vector3; moveYaw: number; fireT: number; fireEdge: boolean; reloadEdge: boolean; meleeEdge: boolean; hit: number; phone: THREE.Mesh | null }
+interface ActorVis { ref: Actor; view: HumanView; last: THREE.Vector3; moveYaw: number; fireT: number; fireEdge: boolean; reloadEdge: boolean; meleeEdge: boolean; hit: number; acc: number; skip: number; phone: THREE.Mesh | null; seat?: import('./humans').SeatTarget }
 
 export class LifeView {
   renderer: THREE.WebGLRenderer; scene = new THREE.Scene(); camera: THREE.PerspectiveCamera;
@@ -123,7 +124,7 @@ export class LifeView {
     if (v) return v;
     const view = new HumanView(this.assets, a.look, a.id * 7.3);
     this.scene.add(view.root);
-    v = { ref: a, view, last: new THREE.Vector3(a.pos.x, a.pos.y, a.pos.z), moveYaw: a.yaw, fireT: 0, fireEdge: false, reloadEdge: false, meleeEdge: false, hit: 0, phone: null };
+    v = { ref: a, view, last: new THREE.Vector3(a.pos.x, a.pos.y, a.pos.z), moveYaw: a.yaw, fireT: 0, fireEdge: false, reloadEdge: false, meleeEdge: false, hit: 0, acc: 0, skip: 0, phone: null };
     view.root.position.set(a.pos.x, a.pos.y, a.pos.z);
     this.actors.set(a.id, v);
     return v;
@@ -159,10 +160,14 @@ export class LifeView {
 
   /** Test hook: pins the camera (and an optional clip plane for cutaway shots) regardless of the game camera. */
   debugCam: { x: number; y: number; z: number; tx: number; ty: number; tz: number; fov?: number } | null = null;
+  private tmpP = new THREE.Vector3(); private tmpD = new THREE.Vector3();
+  private fr = new THREE.Frustum(); private frM = new THREE.Matrix4(); private frS = new THREE.Sphere(); private frInv = new THREE.Matrix4();
+  private sphereInView(x: number, y: number, z: number, r: number) { this.frS.center.set(x, y, z); this.frS.radius = r; return this.fr.intersectsSphere(this.frS); }
   frame(dt: number) {
     this.time += dt;
     const sim = this.sim, me = sim.local; const cam = this.camera;
     if (this.debugCam) { const d = this.debugCam; cam.position.set(d.x, d.y, d.z); cam.lookAt(d.tx, d.ty, d.tz); if (d.fov && cam.fov !== d.fov) { cam.fov = d.fov; cam.updateProjectionMatrix(); } cam.updateMatrixWorld(); }
+    cam.updateMatrixWorld(); this.frM.multiplyMatrices(cam.projectionMatrix, this.frInv.copy(cam.matrixWorld).invert()); this.fr.setFromProjectionMatrix(this.frM);
     const L = this.landmap;
     const focus0 = me.vehicle !== null ? (() => { const t = sim.vehicles[me.vehicle!].body.translation(); return new THREE.Vector3(t.x, t.y, t.z); })() : new THREE.Vector3(me.pos.x, me.pos.y, me.pos.z);
     const focus = L.on ? new THREE.Vector3(L.x, 0, L.z) : focus0;
@@ -182,12 +187,17 @@ export class LifeView {
       const d = Math.hypot(a.pos.x - cam.position.x, a.pos.z - cam.position.z);
       if (d > 150) { const v = this.actors.get(a.id); if (v) v.view.root.visible = false; continue; }
       const v = this.actorVis(a);
-      v.view.root.visible = !(a.id === me.id && this.firstPerson && a.vehicle !== null);
-      const p = new THREE.Vector3(a.pos.x, a.pos.y, a.pos.z); const dp = p.clone().sub(v.last);
+      const self = a.id === me.id;
+      // off-screen people are not drawn or animated (skinned meshes are never frustum culled by three), unless close enough to cast a visible shadow
+      const inView = self || d < 14 || this.sphereInView(a.pos.x, a.pos.y + 0.9, a.pos.z, 1.6);
+      v.view.root.visible = inView && !(self && this.firstPerson && a.vehicle !== null);
+      if (!self) v.view.setLod(d > (v.view.lodOn ? 18 : 24));
+      const p = this.tmpP.set(a.pos.x, a.pos.y, a.pos.z); const dp = this.tmpD.copy(p).sub(v.last);
       const sp = Math.hypot(dp.x, dp.z) / Math.max(dt, 1e-3);
       if (Math.hypot(dp.x, dp.z) > 0.002) v.moveYaw = Math.atan2(dp.x, dp.z);
       v.last.copy(p);
       v.view.root.position.lerp(p, Math.min(1, dt * 30)); if (a.vehicle !== null) v.view.root.position.copy(p);
+      if (!inView) { v.fireEdge = v.reloadEdge = v.meleeEdge = false; v.hit = Math.max(0, v.hit - dt); v.acc += dt; continue; }
       const w = sim.currentWeapon(a);
       const wid: WeaponId | null = w && w.id !== 'fists' ? w.id : null;
       v.view.setWeapon(wid, w ? { skin: w.skin } : undefined);
@@ -198,8 +208,13 @@ export class LifeView {
         melee: !wid || wid === 'machete', dead: !a.alive || a.ko! > 0, driving: a.vehicle !== null, shadow: 0, awaken: 0, hit: v.hit, cast: false, healing: a.healT > 0,
       };
       v.fireEdge = v.reloadEdge = v.meleeEdge = false; v.hit = Math.max(0, v.hit - dt);
-      if (a.vehicle !== null) { const veh = sim.vehicles[a.vehicle]; const r = veh.body.rotation(); const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w)); st.aimYaw = Math.atan2(fw.x, fw.z); }
-      v.view.update(dt, st, this.time);
+      if (a.vehicle !== null) {
+        const veh = sim.vehicles[a.vehicle]; const r = veh.body.rotation(); const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w)); st.aimYaw = Math.atan2(fw.x, fw.z);
+        const cm = this.cars.get(veh.id)?.m; if (cm) { const t = seatTarget(cm, a.seat, veh.body.translation(), r, v.seat); if (t) { v.seat = t; st.seat = t; } }
+      } else v.seat = undefined;
+      // far people animate at a reduced rate (time is accumulated, so speed is unchanged); seated ones stay in step with their car
+      v.acc += dt; const every = self || a.vehicle !== null ? 1 : d < 28 ? 1 : d < 55 ? 2 : d < 95 ? 4 : 8;
+      if (++v.skip >= every || st.firing || st.reloading || v.acc > 0.25) { v.view.update(v.acc, st, this.time); v.acc = 0; v.skip = 0; }
       if (a.id === me.id) this.posePhone(v, dt);
     }
     for (const [id, v] of this.actors) if (!seen.has(id) || (sim.actors[id] as any)?._gone) { v.view.dispose(); this.actors.delete(id); }

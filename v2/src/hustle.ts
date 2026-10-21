@@ -13,6 +13,10 @@ import { loadTexSet } from './world/texsets';
 import { TILE } from './world/streamer';
 import { plotPrice, type Plot } from './world/plots';
 import { RoadNet } from './world/roadnet';
+import { RoadGraph } from './world/roadgraph';
+import { RouteGuide } from './world/routeguide';
+import { RouteLine } from './render/routeline';
+import { seatEye } from './render/seating';
 import { WEAPONS } from './data/balance';
 import { weaponStats, AMMO_STACK } from './sim/items';
 import { audio } from './audio/audio';
@@ -82,6 +86,7 @@ async function boot() {
   sim = new LifeSim({ seed: (Math.random() * 1e9) | 0, name: 'You', look: PLAYER_LOOK, spawn, quality, potholes: potholesNear });
   sim.cash = save.cash ?? 1850;
   view = new LifeView(canvas, sim, assets, store, tg, tw, quality, { hour: q.get('t') ? +q.get('t')! : undefined, weather: (q.get('w') as WeatherName) ?? undefined, level: startLevel });
+  routeLine = new RouteLine(view.scene, startLevel >= 4 ? 36 : 72);
   gov = new Governor(pref, startLevel, { level: (l) => view.applyLevel(l, gov.scale), scale: (s) => view.setRenderScale(s) });
   view.applyLevel(startLevel, 1); gov.scale = 1;
   view.onTile = (t, built) => { if (built) sim.net.addRoads(t.roads); else sim.removeTile(t.key); };
@@ -105,7 +110,7 @@ async function boot() {
   hud.onAction = onPhoneAction;
   hud.onBuy = (id) => { buyPlot(id); };
   bindLandmap();
-  (window as any).__hl = { sim, view, hud, state, gov, perf: perfHud, THREE, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
+  (window as any).__hl = { sim, view, hud, state, gov, perf: perfHud, THREE, graph, guide, store, startJob, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
     // test hook: run the sim without rendering, holding a command
     simulate(secs: number, patch: Partial<Command> & { pulse?: string[] } = {}) { for (let i = 0; i < secs * 60; i++) { const c: any = { ...emptyCommand(), yaw: sim.local.yaw, ...patch }; for (const k of patch.pulse ?? []) c[k] = Math.floor(i / 12) % 2 === 0; sim.setCommand(0, c); sim.step(1 / 60); if (i % 30 === 0) { view.world.update(sim.local.pos.x, sim.local.pos.z); syncColliders(true); } } view.handleEvents(sim.events, hud); sim.events.length = 0; },
     stoppedCar() { const m = sim.local.pos; return sim.liveVehicles().filter((v) => Math.abs(v.ctrl.currentVehicleSpeed()) < 2 && v.kind !== 'okada').sort((a, b) => { const pa = a.body.translation(), pb = b.body.translation(); return Math.hypot(pa.x - m.x, pa.z - m.z) - Math.hypot(pb.x - m.x, pb.z - m.z); })[0]; },
@@ -155,6 +160,7 @@ function startJob(id: string) {
   const me = sim.local; const a = walkPointAround(me.pos.x, me.pos.z, 60, 220); const b = walkPointAround(a.x, a.z, 350, 700);
   activeJob = { id, title: j.title, pay: j.pay, stage: 0, a, b, t: id === 'delivery' ? 240 : id === 'danfo' ? 300 : 360, needCar: id === 'danfo' };
   jobs.forEach((x) => (x.active = x.id === id));
+  loadRouteRegions(me.pos.x, me.pos.z, b.x, b.z); guide.clear();
   hud.title(j.title.toUpperCase(), 'Go to the green marker on the radar.', 4);
   if (id === 'parcel') { sim.wanted = Math.max(sim.wanted, 1); sim.lastSeen = sim.time; }
 }
@@ -211,26 +217,14 @@ function onPhoneAction(app: string, id: string) {
 
 // ---------------------------------------------------------------- input
 let firstPersonPressed = false;
-let route: number[] | null = null, routeT = 0, parcelT = 0, street = '';
+let route: number[] | null = null, parcelT = 0, street = '';
 
-// ---------------------------------------------------------------- GPS: A* over the lane graph
-function gpsRoute(x0: number, z0: number, x1: number, z1: number): number[] | null {
-  const net = sim.net; const near = (x: number, z: number, r: number) => net.near(x, z, r);
-  let start = -1, sd = 1e9; for (const id of near(x0, z0, 60)) { const pr = RoadNet.project(net.lanes[id].pts, x0, z0); if (pr.d < sd) { sd = pr.d; start = id; } }
-  const goals = new Set(near(x1, z1, 50)); if (start < 0 || !goals.size) return [x0, z0, x1, z1];
-  const end = (id: number) => { const p = net.lanes[id].pts; return [p[p.length - 2], p[p.length - 1]]; };
-  const h = (id: number) => { const [ex, ez] = end(id); return Math.hypot(ex - x1, ez - z1); };
-  const g = new Map<number, number>([[start, 0]]), from = new Map<number, number>(); const open: [number, number][] = [[h(start), start]]; let found = -1, n = 0;
-  while (open.length && n++ < 6000) {
-    let bi = 0; for (let i = 1; i < open.length; i++) if (open[i][0] < open[bi][0]) bi = i;
-    const [, cur] = open.splice(bi, 1)[0];
-    if (goals.has(cur)) { found = cur; break; }
-    for (const nx of net.lanes[cur].next) { const c = g.get(cur)! + net.lanes[nx].len; if (c < (g.get(nx) ?? 1e12)) { g.set(nx, c); from.set(nx, cur); open.push([c + h(nx), nx]); } }
-  }
-  if (found < 0) return [x0, z0, x1, z1];
-  const chain: number[] = []; for (let c: number | undefined = found; c !== undefined; c = from.get(c)) chain.unshift(c);
-  const out: number[] = [x0, z0]; for (const id of chain) { const p = net.lanes[id].pts; for (let k = 0; k < p.length; k += 2) out.push(p[k], p[k + 1]); }
-  out.push(x1, z1); return out;
+// ---------------------------------------------------------------- GPS: A* over the road graph (world/roadgraph.ts), followed by world/routeguide.ts
+const graph = new RoadGraph(); const guide = new RouteGuide(graph); let routeLine: RouteLine | null = null; let graphT = 0;
+/** Regions between you and the objective may not be loaded yet: ask for the ones along the way. */
+function loadRouteRegions(x0: number, z0: number, x1: number, z1: number) {
+  const n = Math.min(6, Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 900)));
+  for (let i = 0; i <= n; i++) { const t = i / n; void store.around(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, 250); }
 }
 function streetName(x: number, z: number) { let best = '', bd = 1e9; for (const id of sim.net.near(x, z, 40)) { const l = sim.net.lanes[id]; if (!l.road.name) continue; const pr = RoadNet.project(l.pts, x, z); if (pr.d < bd) { bd = pr.d; best = l.road.name; } } return best; }
 function temperature() { const h = view.atmo.hour; const wl = view.atmo.weatherLabel.toLowerCase(); return 25 + 7 * Math.max(0, Math.sin(((h - 8) / 12) * Math.PI)) - (/rain|storm/.test(wl) ? 3.5 : 0) - (/harmattan/.test(wl) && (h < 8 || h > 20) ? 4 : 0); }
@@ -410,12 +404,19 @@ function loop(t: number) {
     if (Math.random() < dt * 3) street = streetName(P.x, P.z);
     hud.update(dt, sim, { time: view.atmo.timeString(), real: view.atmo.realString(), weather: view.atmo.weatherLabel, temp: temperature(), area: areaName(P.x, P.z), street, weapon: w && w.id !== 'fists' ? WEAPONS[w.id].name : '', weaponKind: wk, mag: st ? String(w!.mag) : '', ammo: st ? String(me.inv.count(AMMO_STACK[st.ammo]!)) : '', aiming, inCar: me.vehicle !== null, bank: state.bank, kmh, gear: ms < -0.6 ? 'R' : kmh < 1 ? 'N' : String(gearN), rpm });
     void ammo;
-    routeT -= dt; if (activeJob && routeT <= 0) { routeT = 1.5; const tg = activeJob.stage === 0 ? activeJob.a : activeJob.b; route = gpsRoute(P.x, P.z, tg.x, tg.z); } if (!activeJob) route = null;
+    let note: string | null = null; const jobTg = activeJob ? (activeJob.stage === 0 ? activeJob.a : activeJob.b) : null;
+    if (jobTg) {
+      graphT -= dt; if (graphT <= 0) graphT = graph.sync(store.regions.values()) ? 0.15 : 0.6;
+      guide.update(dt, P.x, P.z, me.vehicle !== null ? 'drive' : 'walk', jobTg);
+      route = guide.remaining.length >= 4 ? guide.remaining : null;
+      if (guide.lost) note = 'No road route yet'; else if (guide.next) { const n = guide.next, d = n.dist >= 1000 ? `${(n.dist / 1000).toFixed(1)} km` : `${Math.round(n.dist / 10) * 10} m`; note = n.dir === 'arrive' ? `${d} to go` : `${n.dir === 'uturn' ? 'U-turn' : n.dir === 'left' ? 'Turn left' : 'Turn right'} in ${d}`; }
+    } else { if (guide.goal) guide.clear(); route = null; }
+    routeLine?.update(view.time, jobTg ? guide.remaining : null, jobTg, 0.07, me.vehicle === null);
     parcelT -= dt; if (parcelT <= 0 && me.vehicle === null) { parcelT = 0.4; hud.parcel(parcelAt(me.pos.x, me.pos.z)); } else if (me.vehicle !== null) hud.parcel(null);
     const blips: { x: number; z: number; c: string; r?: number }[] = [];
     if (activeJob) { const tg = activeJob.stage === 0 ? activeJob.a : activeJob.b; blips.push({ x: tg.x, z: tg.z, c: '#3ddc84', r: 11 }); }
     for (const a of sim.actors) if (a.alive && a.role === 'police' && !(a as any)._gone) blips.push({ x: a.pos.x, z: a.pos.z, c: '#3b6cff', r: 6 });
-    hud.drawRadar(sim.net, P.x, P.z, view.cam.yaw + Math.PI, blips, potholesNear(P.x, P.z, 160), state.owned.map((id) => state.ownedPts[id]).filter(Boolean), route);
+    hud.drawRadar(sim.net, P.x, P.z, view.cam.yaw + Math.PI, blips, potholesNear(P.x, P.z, 160), state.owned.map((id) => state.ownedPts[id]).filter(Boolean), route, note);
     // prompts
     let pr: string | null = null;
     if (me.vehicle === null) for (const v of sim.liveVehicles()) { const p = v.body.translation(); if (Math.hypot(p.x - me.pos.x, p.z - me.pos.z) < 4) { pr = v.seats[0] !== null ? '<kbd>E</kbd>Jack this car' : (v as any).locked ? '<kbd>E</kbd>Break in' : '<kbd>E</kbd>Get in'; break; } }
@@ -429,11 +430,13 @@ function loop(t: number) {
 }
 
 /** Cockpit camera: sit in the driver's seat and see the real interior. */
+const eyeTmp = new THREE.Vector3();
 function cockpit() {
   const me = sim.local; const v = sim.vehicles[me.vehicle!]; const p = v.body.translation(), r = v.body.rotation();
   const qn = new THREE.Quaternion(r.x, r.y, r.z, r.w);
-  const seat = new THREE.Vector3(me.seat % 2 === 0 ? 0.37 : -0.37, v.kind === 'okada' || v.kind === 'keke' ? 0.95 : v.kind === 'danfo' ? 0.75 : 0.62, v.kind === 'danfo' ? 1.45 : -0.3).applyQuaternion(qn);
-  view.camera.position.set(p.x + seat.x, p.y + seat.y, p.z + seat.z);
+  const cm = view.cars.get(v.id)?.m;
+  if (cm && seatEye(cm, me.seat, p, r, eyeTmp)) view.camera.position.copy(eyeTmp);
+  else { const seat = new THREE.Vector3(me.seat % 2 === 0 ? 0.37 : -0.37, v.kind === 'okada' || v.kind === 'keke' ? 0.95 : v.kind === 'danfo' ? 0.75 : 0.62, v.kind === 'danfo' ? 1.45 : -0.3).applyQuaternion(qn); view.camera.position.set(p.x + seat.x, p.y + seat.y, p.z + seat.z); }
   const look = new THREE.Vector3(Math.sin(view.cam.yaw) * Math.cos(view.cam.pitch), Math.sin(view.cam.pitch), Math.cos(view.cam.yaw) * Math.cos(view.cam.pitch));
   view.camera.lookAt(view.camera.position.clone().add(look));
 }
