@@ -19,12 +19,12 @@ jobs:
           curl -sSL -o ng.pbf https://download.geofabrik.de/africa/nigeria-latest.osm.pbf
           curl -sSL -o ng.state.txt https://download.geofabrik.de/africa/nigeria-updates/state.txt || true
           ls -la ng.pbf
-      - name: Cut the Sango Ota to Papa Ajao corridor
+      - name: Cut the Sango Ota to Third Mainland corridor
         run: |
           source export.cfg
           mkdir -p data
           osmium extract -b "$BBOX" ng.pbf -o corridor.pbf --overwrite -s smart
-          osmium tags-filter corridor.pbf nwr/highway nwr/building nwr/building:part nwr/landuse nwr/natural nwr/waterway nwr/railway nwr/amenity nwr/shop nwr/leisure nwr/place nwr/man_made nwr/public_transport nwr/craft nwr/office nwr/barrier nwr/bridge -o data/corridor.osm.pbf --overwrite
+          osmium tags-filter corridor.pbf nwr/highway nwr/building nwr/building:part nwr/landuse nwr/natural nwr/waterway nwr/railway nwr/amenity nwr/shop nwr/leisure nwr/place nwr/man_made nwr/public_transport nwr/craft nwr/office nwr/barrier nwr/bridge nwr/aeroway nwr/tourism nwr/healthcare nwr/historic nwr/emergency nwr/route -o data/corridor.osm.pbf --overwrite
           osmium fileinfo -e data/corridor.osm.pbf > data/fileinfo.txt
           cp ng.state.txt data/geofabrik_state.txt || true
           ls -la data
@@ -44,5 +44,5 @@ jobs:
           git config user.name "Pleasant"
           git config user.email "joylove.rightchoice@gmail.com"
           git add data tex hdri
-          git commit -m "Map export: Sango Ota to Papa Ajao corridor (OSM, ODbL) and CC0 textures" || echo nothing
+          git commit -m "Map export: Sango Ota to Third Mainland corridor (OSM, ODbL) and CC0 textures" || echo nothing
           git push
