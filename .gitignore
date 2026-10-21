@@ -1,0 +1,17 @@
+node_modules/
+v2/dist/
+v2/public/devm/
+chars_in/
+charbake/out/
+charbake/__pycache__/
+charbake/tex/
+pipe/*.pkl
+shots/
+peek*
+civ_*.blend
+civ_*.py
+game/
+rush/
+cars/*.raw.glb
+*.blend1
+__pycache__/

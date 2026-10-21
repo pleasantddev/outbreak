@@ -1,0 +1,7 @@
+[
+ {"js": "__hl.simulate(3); 'ok'"},
+ {"shot": "a", "settle": 4},
+ {"js": "__hl.landmap(); 'lm'"},
+ {"wait": 3},
+ {"shot": "b", "settle": 3}
+]

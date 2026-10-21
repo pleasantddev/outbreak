@@ -1,0 +1,10 @@
+[
+ {"js": "__hl.simulate(6); JSON.stringify({actors: __hl.sim.actors.filter(a=>a.alive&&!a._gone).map(a=>a.look.model).join(','), fps: __hl.fps})"},
+ {"shot": "a_street", "settle": 5},
+ {"js": "(() => { const a=__hl.sim.local; a.inv.secondary={kind:'weapon',id:'pistol',mag:12,att:{},skin:'factory'}; a.slot=1; __hl.simulate(1.5,{aim:true, slot:1, yaw:a.yaw}); return a.aiming; })()"},
+ {"shot": "b_aim", "settle": 4},
+ {"js": "(() => { const a=__hl.sim.local; __hl.simulate(2,{aim:true, slot:1, yaw:a.yaw}); return __hl.view.actors.get(0).view.bones.get('spine_03').quaternion.toArray().map(x=>x.toFixed(3)).join(','); })()"},
+ {"wait": 2},
+ {"js": "__hl.view.actors.get(0).view.bones.get('spine_03').quaternion.toArray().map(x=>x.toFixed(3)).join(',')"},
+ {"shot": "c_aim2", "settle": 2}
+]

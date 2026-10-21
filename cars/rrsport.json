@@ -1,0 +1,75 @@
+{
+ "paintMode": "color",
+ "paintHue": 0,
+ "paintSat": 0,
+ "paintVal": 0,
+ "length": 4.85,
+ "width": 1.99,
+ "height": 1.84,
+ "front": "+z",
+ "wheels": [
+  {
+   "q": 0,
+   "x": 0.669,
+   "y": 0.504,
+   "z": 1.733,
+   "r": 0.504,
+   "w": 0.483
+  },
+  {
+   "q": 1,
+   "x": -0.669,
+   "y": 0.504,
+   "z": 1.74,
+   "r": 0.504,
+   "w": 0.483
+  },
+  {
+   "q": 2,
+   "x": 0.775,
+   "y": 0.378,
+   "z": -1.28,
+   "r": 0.378,
+   "w": 0.271
+  },
+  {
+   "q": 3,
+   "x": -0.775,
+   "y": 0.378,
+   "z": -1.28,
+   "r": 0.378,
+   "w": 0.271
+  }
+ ],
+ "paint": true,
+ "paintTextured": false,
+ "tris": 31040,
+ "srcTris": 72342,
+ "materials": [
+  "range_3stop",
+  "range_alu",
+  "range_black",
+  "paint",
+  "range_carbon",
+  "range_chrome",
+  "glass",
+  "range_discs",
+  "range_fl_bulb",
+  "range_fl_frame",
+  "glass",
+  "glass",
+  "range_fl_mirror",
+  "range_fl_orange",
+  "glass",
+  "range_grid_side",
+  "range_inside_bright",
+  "range_inside_wood",
+  "range_mirror",
+  "range_oeange_side",
+  "range_red",
+  "range_shields",
+  "range_tire",
+  "range_ttr",
+  "range_wheel_inside"
+ ]
+}

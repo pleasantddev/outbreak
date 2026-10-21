@@ -1,0 +1,467 @@
+// HustleLife HUD, modern RP style: glass panels, money pills, toasts, an incoming-call card, a dark minimap with
+// a teal GPS route, a speed arc with the gear, a parcel card for the land under your feet, the LANDMAP overlay,
+// and the phone in the hand.
+import type { SimEvent } from '../sim/types';
+import type { LifeSim } from '../sim/life';
+import type { RoadNet } from '../world/roadnet';
+import type { Plot } from '../world/plots';
+
+const css = `
+:root{--glass:rgba(12,14,22,.56);--glass2:rgba(18,20,32,.72);--line:rgba(255,255,255,.09);--txt:#f3f5f8;--mut:#9ba3b4;--teal:#2de0c8;--pur:#8b5cf6;--pur2:#6d3ef0;--grn:#49e08a;--red:#ff4d5e;--gold:#ffc53d;--blue:#4aa8ff}
+#hlhud{position:fixed;inset:0;pointer-events:none;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--txt);z-index:5;user-select:none;-webkit-font-smoothing:antialiased}
+.gl{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.num{font-family:Rajdhani,Inter,sans-serif;font-weight:700;letter-spacing:.3px}
+.ts{text-shadow:0 1px 2px rgba(0,0,0,.7),0 0 10px rgba(0,0,0,.35)}
+#tr{position:absolute;right:max(18px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+.pills{display:flex;gap:7px}
+.pill{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px 0 6px;border-radius:999px;font-size:19px}
+.pill .ico{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.pill .ico svg{width:15px;height:15px;fill:none;stroke:#0b0d14;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#p-cash .ico{background:var(--grn)} #p-bank .ico{background:var(--blue)}
+#p-cash b{color:#c9f7da} #p-bank b{color:#d4e8ff}
+#p-time{height:30px;font-size:13px;font-weight:600;padding:0 12px;gap:8px;color:#dfe4ee}
+#p-time .num{font-size:17px;color:#fff}
+#stars{display:flex;gap:4px;padding:5px 10px;border-radius:999px}
+#stars svg{width:17px;height:17px;fill:rgba(255,255,255,.14)} #stars svg.on{fill:var(--gold);filter:drop-shadow(0 0 4px rgba(255,197,61,.6))}
+#stars.flash svg.on{animation:fl .45s steps(2) infinite} @keyframes fl{50%{fill:#fff}}
+#stars.none{display:none}
+#flash{font-size:22px;opacity:0;transition:opacity .4s;margin-right:6px}
+#toasts{position:absolute;left:max(18px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;width:min(330px,60vw)}
+.toast{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;border-radius:16px;animation:tin .35s cubic-bezier(.2,.9,.2,1);transition:opacity .4s,transform .4s}
+.toast.out{opacity:0;transform:translateX(-24px)}
+@keyframes tin{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
+.toast .ti{flex:0 0 34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center}
+.toast .ti svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.toast h4{margin:0 0 2px;font-size:13.5px;font-weight:700} .toast p{margin:0;font-size:12.5px;line-height:1.35;color:#cfd5e1}
+#call{position:absolute;left:50%;top:max(14px,env(safe-area-inset-top));transform:translate(-50%,-140%);transition:transform .45s cubic-bezier(.2,.9,.2,1);display:flex;align-items:center;gap:12px;padding:10px 12px 10px 10px;border-radius:22px;min-width:min(380px,88vw);pointer-events:auto}
+#call.on{transform:translate(-50%,0)}
+#call .av{width:46px;height:46px;border-radius:50%;background:linear-gradient(140deg,var(--pur),#e0578f);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px}
+#call .who{flex:1;min-width:0} #call .who b{display:block;font-size:15px} #call .who span{font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+#call button{width:44px;height:44px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#call button svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#call .no{background:var(--red)} #call .yes{background:#22c55e;animation:ring 1.2s ease-in-out infinite}
+@keyframes ring{0%,100%{transform:rotate(0)}10%,30%{transform:rotate(-12deg)}20%,40%{transform:rotate(12deg)}50%{transform:rotate(0)}}
+#mm{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));width:min(270px,34vw)}
+#mmhead{display:flex;flex-direction:column;gap:1px;margin:0 0 7px 4px;white-space:nowrap;overflow:hidden}
+#mmhead b{font-size:17px;font-weight:800;letter-spacing:.2px} #mmhead span{font-size:12.5px;color:#cfd5e1}
+#radarw{position:relative;border-radius:18px;overflow:hidden;padding:0;aspect-ratio:1.55}
+#radar{display:block;width:100%;height:100%}
+#mmdir{position:absolute;right:9px;top:8px;font-size:11px;font-weight:700;color:#cfd5e1;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.35)}
+#vitals{display:flex;gap:6px;margin-top:7px}
+#vitals .v{flex:1;height:7px;border-radius:999px;background:rgba(0,0,0,.45);overflow:hidden;border:1px solid var(--line)}
+#vitals .v i{display:block;height:100%;border-radius:999px;transition:width .25s}
+#hp{background:linear-gradient(90deg,#2fbf71,#5ff0a0)} #hp.low{background:linear-gradient(90deg,#e0303f,#ff6b78)} #ar{background:linear-gradient(90deg,#2f7fe0,#6ab8ff)}
+#wcard{position:absolute;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));display:none;align-items:center;gap:12px;padding:10px 16px 10px 12px;border-radius:18px}
+#wcard .wi{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center}
+#wcard .wi svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#wcard b{display:block;font-size:14px} #wcard .num{font-size:22px;line-height:1} #wcard .num small{font-size:14px;color:var(--mut)}
+#speedo{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));width:min(210px,30vw);aspect-ratio:1;display:none}
+#speedo svg{width:100%;height:100%;overflow:visible}
+#speedo .sv{position:absolute;left:0;right:0;top:36%;text-align:center}
+#speedo .sv .num{font-size:min(52px,7.4vw);line-height:.9;display:block} #speedo .sv small{font-size:11px;font-weight:700;color:var(--mut);letter-spacing:1.5px}
+#speedo .gear{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:19px;border:1.5px solid var(--teal);color:var(--teal);background:rgba(10,12,20,.6)}
+#parcel{position:absolute;left:calc(max(18px,env(safe-area-inset-left)) + min(270px,34vw) + 14px);bottom:max(16px,env(safe-area-inset-bottom));width:min(260px,40vw);padding:12px 14px;border-radius:18px;display:none;pointer-events:auto}
+#parcel .k{font-size:10.5px;font-weight:700;letter-spacing:1.4px;color:var(--teal);text-transform:uppercase}
+#parcel h5{margin:3px 0 8px;font-size:16px;font-weight:800}
+#parcel .own{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#cfd5e1;margin-bottom:9px}
+#parcel .own i{width:24px;height:24px;border-radius:50%;background:linear-gradient(140deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;font-size:11px;color:#fff}
+#parcel .row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mut);margin-top:3px} #parcel .row b{color:#fff;font-weight:600}
+#parcel .price{font-size:22px;color:#fff;margin-top:6px}
+.btn{pointer-events:auto;cursor:pointer;border:none;border-radius:12px;padding:10px 14px;font-family:Inter,sans-serif;font-weight:800;font-size:13px;color:#fff;background:linear-gradient(180deg,var(--pur),var(--pur2));box-shadow:0 6px 16px rgba(109,62,240,.4),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn.ghost{background:rgba(255,255,255,.08);box-shadow:none}
+.btn kbd{font-family:Rajdhani,sans-serif;font-size:12px;background:rgba(0,0,0,.3);border-radius:5px;padding:0 5px;margin-left:6px}
+#subs{position:absolute;left:50%;transform:translateX(-50%);bottom:24%;max-width:min(720px,86vw);text-align:center;font-size:20px;font-weight:600;line-height:1.3;padding:0}
+#subs:not(:empty){padding:8px 16px;border-radius:14px;background:rgba(8,10,16,.55);backdrop-filter:blur(8px)}
+#subs .who{color:var(--teal);font-weight:800}
+#help{position:absolute;left:50%;transform:translateX(-50%);top:max(64px,calc(env(safe-area-inset-top) + 60px));max-width:min(560px,80vw);padding:10px 16px;border-radius:14px;font-size:14px;font-weight:500;line-height:1.4;display:none;text-align:center}
+#help kbd,#prompt kbd{font-family:Rajdhani,sans-serif;font-weight:700;font-size:13px;background:#fff;color:#0b0d14;border-radius:6px;padding:1px 7px;margin:0 3px}
+#title{position:absolute;left:0;right:0;top:30%;text-align:center;opacity:0;transition:opacity .6s,transform .6s;transform:translateY(8px)}
+#title.on{opacity:1;transform:none}
+#title .t{display:inline-block;font-family:Anton,Impact,sans-serif;font-size:min(58px,9vw);letter-spacing:3px;background:linear-gradient(180deg,#fff,#cfd8ff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 10px rgba(0,0,0,.5))}
+#title small{display:block;font-size:15px;font-weight:600;color:#dfe4ee;letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+#title .bar{width:120px;height:3px;margin:10px auto 0;border-radius:2px;background:linear-gradient(90deg,transparent,var(--teal),transparent)}
+#title.danger .t{background:linear-gradient(180deg,#fff,#ff8a94);-webkit-background-clip:text;background-clip:text} #title.danger .bar{background:linear-gradient(90deg,transparent,var(--red),transparent)}
+#prompt{position:absolute;left:50%;top:63%;transform:translateX(-50%);font-size:14px;font-weight:600;padding:8px 14px;border-radius:999px;display:none}
+#xhair{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;display:none}
+#xhair:before,#xhair:after{content:'';position:absolute;background:#fff;box-shadow:0 0 2px #000}
+#xhair:before{left:10px;top:0;width:2px;height:22px;clip-path:polygon(0 0,100% 0,100% 30%,0 30%,0 70%,100% 70%,100% 100%,0 100%)}
+#xhair:after{top:10px;left:0;height:2px;width:22px;clip-path:polygon(0 0,30% 0,30% 100%,0 100%,0 0,70% 0,100% 0,100% 100%,70% 100%)}
+#phone{position:absolute;right:max(34px,env(safe-area-inset-right));bottom:-560px;width:min(232px,34vh);aspect-ratio:9/19;border-radius:34px;background:linear-gradient(145deg,#4a4a52,#16161a 35%,#0b0b0d);padding:7px;box-shadow:0 22px 50px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.14);transform:rotate(-4deg);transform-origin:100% 100%;transition:bottom .35s cubic-bezier(.2,.8,.2,1);pointer-events:auto}
+#phone.up{bottom:max(18px,env(safe-area-inset-bottom))}
+#scr{position:relative;width:100%;height:100%;border-radius:28px;overflow:hidden;color:#fff;background:radial-gradient(90% 55% at 80% 0%,rgba(139,92,246,.55),transparent 70%),radial-gradient(80% 50% at 0% 100%,rgba(45,224,200,.35),transparent 70%),#0d0f1a}
+#scr .isl{position:absolute;top:8px;left:50%;width:70px;height:19px;margin-left:-35px;background:#000;border-radius:10px;z-index:3}
+#scr .st{position:relative;display:flex;justify-content:space-between;padding:8px 18px 0;font-size:12px;font-weight:700}
+#scr .big{position:relative;padding:22px 0 0;text-align:center;font-family:Rajdhani,sans-serif;font-size:56px;font-weight:600;line-height:1}
+#scr .small{position:relative;text-align:center;font-size:11px;font-weight:600;opacity:.75;letter-spacing:1px;text-transform:uppercase}
+#apps{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:14px 4px;padding:22px 12px 0}
+#apps button{background:none;border:none;color:#fff;font-family:inherit;font-size:10.5px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:5px;padding:0;cursor:pointer}
+#apps button span{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.28);transition:transform .12s}
+#apps button span svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#apps button.sel span{transform:scale(1.12);box-shadow:0 0 0 2px #fff,0 4px 12px rgba(0,0,0,.4)}
+#appview{position:absolute;inset:0;background:#0f111b;color:#eef1f6;display:none;flex-direction:column;z-index:4}
+#appview h3{margin:0;padding:34px 16px 10px;font-size:22px;font-weight:800;background:linear-gradient(180deg,var(--ac,#222),transparent);color:#fff}
+#appview .list{padding:8px 9px;display:flex;flex-direction:column;gap:7px;overflow:auto;flex:1}
+#appview .row{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:9px 11px;font-size:12px;font-weight:500;line-height:1.3;color:#c9cfdb;pointer-events:auto}
+#appview .row b{display:block;font-size:13.5px;font-weight:700;margin-bottom:2px;color:#fff}
+#appview .row.sel{outline:2px solid var(--teal)}
+#appview .row button{margin-top:7px}
+#appview canvas{width:100%;border-radius:12px;background:#151826}
+#appview .back{margin:6px auto 10px;width:100px;height:5px;background:#fff;opacity:.7;border:none;border-radius:3px;padding:0;pointer-events:auto;cursor:pointer}
+#landmap{position:fixed;inset:0;z-index:6;display:none;pointer-events:none;font-family:Inter,sans-serif;color:var(--txt)}
+#landmap.on{display:block}
+#lm-top{position:absolute;left:max(18px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;pointer-events:auto}
+#lm-top b{font-family:Rajdhani,sans-serif;font-size:24px;letter-spacing:3px} #lm-top span{font-size:12.5px;color:var(--mut)}
+#lm-legend{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));display:flex;gap:12px;padding:9px 14px;border-radius:14px;font-size:12px;color:#cfd5e1}
+#lm-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+#lm-panel{position:absolute;right:max(18px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));bottom:max(16px,env(safe-area-inset-bottom));width:min(320px,44vw);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:10px;pointer-events:auto;overflow:auto}
+#lm-panel .k{font-size:10.5px;font-weight:700;letter-spacing:1.6px;color:var(--teal);text-transform:uppercase}
+#lm-panel h2{margin:0;font-size:22px;font-weight:800;line-height:1.15}
+#lm-panel .chips{display:flex;flex-wrap:wrap;gap:6px}
+#lm-panel .chip{font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--line)}
+#lm-panel .chip.g{color:#9ff0c2;border-color:rgba(73,224,138,.35)} #lm-panel .chip.r{color:#ffb0b8;border-color:rgba(255,77,94,.35)} #lm-panel .chip.p{color:#d4c2ff;border-color:rgba(139,92,246,.45)}
+#lm-panel .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#lm-panel .stat{background:rgba(255,255,255,.05);border-radius:12px;padding:9px 10px} #lm-panel .stat span{display:block;font-size:10.5px;color:var(--mut);font-weight:600;letter-spacing:.6px;text-transform:uppercase} #lm-panel .stat b{font-size:16px}
+#lm-panel .price{font-size:32px;line-height:1} #lm-panel .price small{font-size:13px;color:var(--mut);font-family:Inter,sans-serif;font-weight:600}
+#lm-panel .own{display:flex;align-items:center;gap:10px;font-size:13px}
+#lm-panel .own i{width:34px;height:34px;border-radius:50%;background:linear-gradient(140deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;color:#fff}
+#lm-panel .btn{width:100%;padding:14px;font-size:15px;margin-top:auto}
+#lm-panel .empty{color:var(--mut);font-size:14px;line-height:1.5;margin:auto 0;text-align:center}
+#tc{position:fixed;inset:0;z-index:4;pointer-events:none}
+#tc .tb{position:absolute;width:62px;height:62px;border-radius:50%;background:rgba(14,16,26,.45);border:1.5px solid rgba(255,255,255,.28);backdrop-filter:blur(6px);color:#fff;display:flex;align-items:center;justify-content:center;pointer-events:auto;font-family:Inter,sans-serif;font-size:10px;font-weight:800;letter-spacing:.6px}
+#tc .tb svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#tc .tb.pri{background:linear-gradient(180deg,rgba(139,92,246,.85),rgba(109,62,240,.85));border-color:rgba(255,255,255,.4);box-shadow:0 6px 18px rgba(109,62,240,.45)}
+#tc .tb.down{transform:scale(.92);background:rgba(255,255,255,.3)}
+#joy-base{position:fixed;left:0;top:0;width:124px;height:124px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);background:radial-gradient(circle,rgba(45,224,200,.12),rgba(10,12,20,.25));transform:translate(-999px,-999px);pointer-events:none;z-index:4}
+#joy-knob{position:fixed;left:0;top:0;width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 0 0 6px rgba(45,224,200,.25);transform:translate(-999px,-999px);pointer-events:none;z-index:4}
+#boot{position:fixed;inset:0;z-index:20;background:radial-gradient(80% 60% at 70% 20%,rgba(139,92,246,.28),transparent 60%),radial-gradient(70% 60% at 10% 100%,rgba(45,224,200,.18),transparent 60%),#07080d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#f3f5f8;font-family:Inter,sans-serif;padding:20px;box-sizing:border-box}
+#boot h1{margin:0;font-family:Anton,Impact,sans-serif;font-weight:400;font-size:min(110px,17vw);letter-spacing:3px;line-height:.9}
+#boot h1 em{font-style:normal;background:linear-gradient(90deg,var(--teal),var(--pur));-webkit-background-clip:text;background-clip:text;color:transparent}
+#boot .load{width:min(360px,70vw);height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+#boot .load i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--pur));transition:width .3s}
+#boot p{margin:0;font-size:15px;font-weight:500;color:var(--mut)}
+#boot .cr{position:absolute;bottom:12px;left:16px;right:16px;text-align:center;font-size:11px;color:rgba(255,255,255,.35)}
+#boot #start{display:none;padding:15px 40px;font-size:16px;letter-spacing:1.5px}
+#boot .keys{font-size:12.5px;color:rgba(255,255,255,.45);text-align:center;max-width:620px;line-height:1.6}
+#pick{display:none;gap:10px;flex-wrap:wrap;justify-content:center;max-width:860px;pointer-events:auto}
+#boot.picking h1{font-size:min(64px,11vw)}#boot.picking .keys{display:none}#boot.picking{gap:12px}
+#pick.on{display:flex}
+#pick .av{width:min(132px,17vw);box-sizing:border-box;border-radius:18px;padding:8px 8px 10px;cursor:pointer;text-align:left;transition:transform .15s,box-shadow .15s}
+#pick .av img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:12px;display:block;background:radial-gradient(circle at 50% 30%,#2b2f45,#12141f)}
+#pick .av b{display:block;font-size:13.5px;margin-top:7px} #pick .av span{display:block;font-size:11px;color:var(--mut);line-height:1.3;margin-top:2px}
+#pick .av.sel{box-shadow:0 0 0 2px var(--teal),0 10px 30px rgba(45,224,200,.25);transform:translateY(-3px)}
+#picklbl{display:none;font-size:12px;font-weight:700;letter-spacing:2px;color:var(--teal);text-transform:uppercase}
+@media (max-width:760px){.pill{height:30px;font-size:15px;padding:0 11px 0 5px}.pill .ico{width:21px;height:21px}#p-time{height:26px;font-size:11px}#p-time .num{font-size:14px}#stars svg{width:13px;height:13px}
+  #toasts{width:min(250px,56vw)}.toast{padding:8px 10px;border-radius:13px}.toast .ti{flex-basis:28px;height:28px}.toast h4{font-size:12px}.toast p{font-size:11px}
+  #mm{width:min(190px,42vw)}#mmhead b{font-size:14px}#mmhead span{font-size:11px}#parcel{display:none!important}
+  #subs{font-size:14px;bottom:36%}#title .t{font-size:min(40px,10vw)}#title small{font-size:12px}#help{font-size:12px}
+  #wcard{bottom:auto;top:calc(max(14px,env(safe-area-inset-top)) + 118px);padding:7px 11px 7px 8px}#wcard .wi{width:30px;height:30px}#wcard .num{font-size:17px}#wcard b{font-size:12px}
+  #speedo{width:min(150px,36vw);right:auto;left:50%;transform:translateX(-50%);bottom:max(8px,env(safe-area-inset-bottom))}
+  #call{min-width:88vw}#lm-panel{top:auto;height:52%;width:auto;left:max(12px,env(safe-area-inset-left))}}
+@media (max-height:520px){#mm{width:min(200px,26vw)}#radarw{aspect-ratio:1.7}#mmhead b{font-size:13px}#mmhead span{font-size:10.5px}#vitals{margin-top:5px}
+  .pill{height:28px;font-size:14px;padding:0 10px 0 4px}.pill .ico{width:20px;height:20px}.pill .ico svg{width:12px;height:12px}#p-time{height:24px;font-size:10.5px}#p-time .num{font-size:13px}
+  #title{top:16%}#title .t{font-size:min(38px,8vh)}#title small{font-size:11px}#subs{font-size:13px;bottom:30%}#parcel{display:none!important}
+  #wcard{padding:6px 10px 6px 7px;border-radius:14px}#wcard .wi{width:28px;height:28px}#wcard b{font-size:11.5px}#wcard .num{font-size:16px}
+  #speedo{width:min(130px,32vh)}#lm-panel{width:min(300px,36vw);padding:12px;gap:7px}#lm-panel h2{font-size:17px}#lm-panel .price{font-size:24px}#lm-top span{display:none}#lm-top{padding:7px 10px}#lm-top b{font-size:18px}
+  #call{min-width:min(360px,60vw);padding:7px 9px 7px 7px}#call .av{width:36px;height:36px;font-size:15px}#call button{width:36px;height:36px}
+  #toasts{width:min(260px,40vw)}.toast{padding:7px 9px}.toast h4{font-size:11.5px}.toast p{font-size:10.5px}}
+`;
+const svg = (d: string) => `<svg viewBox="0 0 24 24"><path d="${d}"/></svg>`;
+const I = {
+  wallet: 'M3 7h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zm0 0 12-3v3M16 13.5h2',
+  bank: 'M3 10h18M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18M12 3 3 8h18z',
+  star: 'M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4L2.8 9.5l6.4-.8z',
+  phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2',
+  hang: 'M3 14c5-5 13-5 18 0l-2.5 3-3.5-1.5V13a10 10 0 0 0-6 0v2.5L5.5 17z',
+  cash: 'M3 6h18v12H3zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 9v.01M18 15v.01',
+  siren: 'M7 18v-6a5 5 0 0 1 10 0v6M5 18h14v3H5zM12 3v2M4.5 6.5 6 8M19.5 6.5 18 8',
+  pin: 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  msg: 'M4 5h16v11H10l-5 4v-4H4z',
+  land: 'M3 20h18M5 20V10l7-5 7 5v10M10 20v-5h4v5',
+  gun: 'M3 9h14l2-2h2v4h-3l-1 2h-4l-1 5H8l1-5H3z',
+  fist: 'M7 11V7.5a1.5 1.5 0 0 1 3 0V11m0-4a1.5 1.5 0 0 1 3 0v4m0-3.5a1.5 1.5 0 0 1 3 0V12m0-2a1.5 1.5 0 0 1 3 0v4a7 7 0 0 1-7 7h-1a6 6 0 0 1-6-6v-3a1.5 1.5 0 0 1 3 0',
+  blade: 'M4 20 15 9l3-6 3 3-6 3L4 20zM7 17l-2-2',
+  car: 'M5 16h14M5 16v3h3v-3m8 0v3h3v-3M3 16v-4l2-5h14l2 5v4M7 12h.01M17 12h.01',
+  jump: 'M12 19V5M6 11l6-6 6 6',
+  reload: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5',
+  aim: 'M12 3v4M12 17v4M3 12h4M17 12h4M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  swap: 'M7 7h12l-3-3M17 17H5l3 3',
+  crouch: 'M12 5a2 2 0 1 0 0 .01M9 21l2-7 4 1 1 6M8 11l4-2 3 2 2 3',
+  map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14',
+};
+export const APPS: [string, string, string][] = [
+  ['Map', svg(I.map), 'linear-gradient(160deg,#2de0c8,#139a8a)'],
+  ['Hustles', svg('M4 8h16v11H4zM9 8V5h6v3M4 13h16'), 'linear-gradient(160deg,#f6c453,#d98a12)'],
+  ['Texts', svg(I.msg), 'linear-gradient(160deg,#59a8ff,#1f62d6)'],
+  ['Land', svg(I.land), 'linear-gradient(160deg,#a78bfa,#6d3ef0)'],
+  ['Bank', svg('M3.5 7.5h17v12h-17zM3.5 7.5 15 4.5v3M15.5 13.5h3'), 'linear-gradient(160deg,#3a3f52,#151824)'],
+  ['Weather', svg('M7 18h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 6.8 11 3.5 3.5 0 0 0 7 18z'), 'linear-gradient(160deg,#7cc4ff,#3a86e0)'],
+  ['Roads', svg('M12 3v4M12 10v4M12 17v4M5 21 8 3M19 21 16 3'), 'linear-gradient(160deg,#ff8a5c,#d1452c)'],
+  ['Contacts', svg('M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20c1.4-3.6 4.2-5.5 7.5-5.5s6.1 1.9 7.5 5.5'), 'linear-gradient(160deg,#9aa3ad,#59616b)'],
+  ['Settings', svg('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-1-3-2 .2-1.3-1.3.2-2-3-1-1 2h-1.8l-1-2-3 1 .2 2L6 7.2 4 7l-1 3 2 1v1.8l-2 1 1 3 2-.2 1.3 1.3-.2 2 3 1 1-2h1.8l1 2 3-1-.2-2 1.3-1.3 2 .2 1-3-2-1z'), 'linear-gradient(160deg,#70757c,#3a3d42)'],
+];
+
+export interface PhoneCtx { time: string; real: string; weather: string; season: string; day: number; cash: number; bank: number; plots: { plot: Plot; price: number; owned: boolean; dist: number }[]; jobs: { id: string; title: string; pay: number; desc: string; active: boolean }[]; texts: [string, string][]; potholes: { name: string; road: string; area: string; reported: string; placed: number; source: string }[]; quality: string }
+export interface ParcelInfo { id: string; title: string; area: string; owner: string; size: number; zone: string; price: number; owned: boolean; traits: [string, 'g' | 'r' | 'p' | ''][]; stats: [string, string][] }
+export interface HudFrame { time: string; real: string; weather: string; temp: number; area: string; street: string; weapon: string; weaponKind: 'none' | 'melee' | 'gun'; ammo: string; mag: string; aiming: boolean; inCar: boolean; bank: number; kmh: number; gear: string; rpm: number }
+
+const fmt = (n: number) => '₦' + Math.round(n).toLocaleString();
+const initials = (s: string) => s.split(/\s+/).filter(Boolean).slice(-2).map((w) => w[0]).join('').toUpperCase();
+
+export class LifeHud {
+  root: HTMLElement; el = (id: string) => document.getElementById(id)!;
+  subQueue: { who: string; text: string; secs: number }[] = []; subT = 0; titleT = 0; flashT = 0;
+  shown = 0; sel = 0; phoneUp = false; appOpen: string | null = null; rowSel = 0;
+  ctx: PhoneCtx | null = null;
+  onAction?: (app: string, id: string) => void;
+  onBuy?: (id: string) => void;
+  radarCv: HTMLCanvasElement; radarG: CanvasRenderingContext2D;
+  private callCb: { yes: () => void; no?: () => void } | null = null; private callT = 0;
+  private parcelId = ''; private lastFrame: HudFrame | null = null;
+  private speedArc: SVGPathElement; private rpmArc: SVGPathElement;
+  constructor(touch: boolean) {
+    const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
+    this.root = document.createElement('div'); document.body.appendChild(this.root);
+    const tb = (id: string, icon: string, style: string, pri = false, label = '') => `<div class="tb${pri ? ' pri' : ''}" data-tbtn="${id}" style="${style}">${icon ? svg(icon) : label}</div>`;
+    this.root.innerHTML = `
+<div id="boot"><h1>HUSTLE<em>LIFE</em></h1><div class="load"><i id="loadbar"></i></div><p id="loadtxt">Loading Lagos</p>
+  <div id="picklbl">Choose your hustler</div><div id="pick"></div>
+  <button id="start" class="btn">ENTER LAGOS</button>
+  <div class="keys" id="keys">WASD move · mouse look · Shift run · Space jump · E get in, out or jack a car · left click punch or shoot · right click aim · R reload · 1 2 3 weapons · T phone · M land map · V cockpit · gamepad supported</div>
+  <div class="cr">Map data © OpenStreetMap contributors (ODbL) · Vehicles CC BY, Sketchfab artists (cars/CREDITS.json) · People from the studio's Fab library · Animation CC0 Quaternius · Textures CC0 Poly Haven</div></div>
+<div id="hlhud">
+  <div id="toasts"></div>
+  <div id="call" class="gl"><div class="av" id="call-av">?</div><div class="who"><b id="call-n"></b><span id="call-l"></span></div>
+    <button class="no" id="call-no" aria-label="Decline">${svg(I.hang)}</button><button class="yes" id="call-yes" aria-label="Answer">${svg(I.phone)}</button></div>
+  <div id="tr">
+    <div class="pills"><div class="pill gl" id="p-bank"><span class="ico">${svg(I.bank)}</span><b class="num" id="bank">₦0</b></div>
+      <div class="pill gl" id="p-cash"><span class="ico">${svg(I.wallet)}</span><b class="num" id="money">₦0</b></div></div>
+    <div class="pills"><span id="flash" class="num ts"></span><div class="pill gl" id="p-time"><span class="num" id="clock">07:10</span><span id="sub2"></span></div></div>
+    <div id="stars" class="gl none">${[0, 1, 2, 3, 4].map(() => svg(I.star)).join('')}</div>
+  </div>
+  <div id="mm"><div id="mmhead" class="ts"><b id="area"></b><span id="street"></span></div>
+    <div id="radarw" class="gl"><canvas id="radar" width="540" height="348"></canvas><div id="mmdir"></div></div>
+    <div id="vitals"><div class="v"><i id="hp" style="width:100%"></i></div><div class="v"><i id="ar" style="width:0%"></i></div></div></div>
+  <div id="parcel" class="gl"></div>
+  <div id="wcard" class="gl"><div class="wi" id="w-ico"></div><div><b id="w-name"></b><span class="num" id="w-ammo"></span></div></div>
+  <div id="speedo"><svg viewBox="0 0 200 200">
+      <defs><linearGradient id="sg" x1="0" x2="1"><stop offset="0" stop-color="#2de0c8"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+      <circle cx="100" cy="100" r="92" fill="rgba(10,12,20,.55)" stroke="rgba(255,255,255,.08)"/>
+      <path d="${this.arc(100, 100, 80, -130, 130)}" stroke="rgba(255,255,255,.1)" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <path id="spd-arc" d="" stroke="url(#sg)" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <path d="${this.arc(100, 100, 66, -130, 130)}" stroke="rgba(255,255,255,.06)" stroke-width="4" fill="none" stroke-dasharray="2 6"/>
+      <path id="rpm-arc" d="" stroke="#ff4d5e" stroke-width="4" fill="none" stroke-dasharray="2 6"/>
+    </svg><div class="sv"><span class="num" id="kmh">0</span><small>KM/H</small></div><div class="gear num" id="gear">N</div></div>
+  <div id="help" class="gl"></div><div id="subs" class="ts"></div><div id="title"><span class="t" id="title-t"></span><small id="title-s"></small><div class="bar"></div></div>
+  <div id="prompt" class="gl"></div><div id="xhair"></div>
+  <div id="phone"><div id="scr"><div class="isl"></div><div class="st"><span id="ph-t"></span><span id="ph-b">5G · 64%</span></div><div class="big" id="ph-big"></div><div class="small" id="ph-s"></div><div id="apps"></div>
+    <div id="appview"><h3 id="av-h"></h3><div class="list" id="av-l"></div><button class="back" id="av-back" aria-label="Home"></button></div></div></div>
+</div>
+<div id="landmap"><div id="lm-catch" style="position:absolute;inset:0;pointer-events:auto;touch-action:none;cursor:grab"></div><div id="lm-top" class="gl"><b>LANDMAP</b><span>Drag to move · scroll or pinch to zoom · tap a plot</span><button class="btn ghost" id="lm-x">Close<kbd>M</kbd></button></div>
+  <div id="lm-legend" class="gl"><span><i style="background:#8b5cf6"></i>Yours</span><span><i style="background:#49e08a"></i>Vacant</span><span><i style="background:#f59e0b"></i>Unfinished</span><span><i style="background:#9ba3b4"></i>Built</span></div>
+  <div id="lm-panel" class="gl"><div class="empty">Tap any plot on the map to see who owns it, what it is worth, and to buy it.</div></div></div>
+${touch ? `<div id="tc">
+  ${tb('fire', I.fist, 'right:24px;bottom:104px;width:78px;height:78px', true)}
+  ${tb('aim', I.aim, 'right:114px;bottom:150px')}
+  ${tb('jump', I.jump, 'right:24px;bottom:22px;width:60px;height:60px')}
+  ${tb('interact', I.car, 'right:110px;bottom:62px')}
+  ${tb('reload', I.reload, 'right:190px;bottom:22px;width:50px;height:50px')}
+  ${tb('crouch', I.crouch, 'right:190px;bottom:92px;width:50px;height:50px')}
+  ${tb('swap', I.swap, 'right:24px;top:210px;width:50px;height:50px')}
+  ${tb('phone', I.phone, 'right:84px;top:210px;width:50px;height:50px;border-radius:15px')}
+  ${tb('map', I.land, 'right:144px;top:210px;width:50px;height:50px;border-radius:15px')}
+</div><div id="joy-base"></div><div id="joy-knob"></div>` : ''}`;
+    this.radarCv = this.el('radar') as HTMLCanvasElement; this.radarG = this.radarCv.getContext('2d')!;
+    this.speedArc = this.el('spd-arc') as unknown as SVGPathElement; this.rpmArc = this.el('rpm-arc') as unknown as SVGPathElement;
+    this.renderApps();
+    this.el('av-back').onclick = () => this.closeApp();
+    this.el('call-yes').onclick = () => this.answer(true); this.el('call-no').onclick = () => this.answer(false);
+  }
+  private arc(cx: number, cy: number, r: number, a0: number, a1: number) {
+    const p = (a: number) => [cx + r * Math.sin((a * Math.PI) / 180), cy - r * Math.cos((a * Math.PI) / 180)];
+    const [x0, y0] = p(a0), [x1, y1] = p(a1);
+    return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+  }
+
+  // ---------------------------------------------------------------- boot
+  setLoad(p: number, txt?: string) { (this.el('loadbar') as HTMLElement).style.width = `${Math.round(p * 100)}%`; if (txt) this.el('loadtxt').textContent = txt; }
+  /** Avatar grid on the boot screen. */
+  pickCharacter(list: { id: string; name: string; blurb: string; img: string }[], sel: string, onPick: (id: string) => void) {
+    const P = this.el('pick');
+    P.innerHTML = list.map((c) => `<div class="av gl${c.id === sel ? ' sel' : ''}" data-id="${c.id}"><img src="${c.img}" alt=""><b>${c.name}</b><span>${c.blurb}</span></div>`).join('');
+    P.classList.add('on'); this.el('picklbl').style.display = 'block'; this.el('boot').classList.add('picking');
+    P.querySelectorAll('.av').forEach((a) => ((a as HTMLElement).onclick = (e) => { e.stopPropagation(); P.querySelectorAll('.av').forEach((x) => x.classList.toggle('sel', x === a)); onPick((a as HTMLElement).dataset.id!); }));
+  }
+  ready(onStart: () => void, auto = false) {
+    const b = this.el('start'); b.style.display = 'block'; this.el('loadtxt').textContent = 'Lagos is ready';
+    let done = false;
+    const go = (e?: Event) => { if (done) return; done = true; e?.preventDefault?.(); this.el('boot').remove(); window.removeEventListener('keydown', k); onStart(); };
+    const k = (e: KeyboardEvent) => { if (e.code === 'Enter' || e.code === 'Space') go(); };
+    b.addEventListener('click', go); b.addEventListener('pointerup', go); b.addEventListener('touchend', go, { passive: false });
+    window.addEventListener('keydown', k); if (auto) go();
+  }
+
+  // ---------------------------------------------------------------- messages
+  say(who: string, text: string, secs = 3.4) { this.subQueue.push({ who, text, secs }); }
+  help(html: string | null) { const h = this.el('help'); if (!html) { h.style.display = 'none'; return; } h.innerHTML = html; h.style.display = 'block'; }
+  title(t: string, small?: string, secs = 4, danger = false) { this.el('title-t').textContent = t; this.el('title-s').textContent = small ?? ''; const e = this.el('title'); e.classList.add('on'); e.classList.toggle('danger', danger); this.titleT = secs; }
+  money(d: number) { const f = this.el('flash'); f.textContent = `${d > 0 ? '+' : '-'}${fmt(Math.abs(d))}`; f.style.color = d > 0 ? 'var(--grn)' : 'var(--red)'; f.style.opacity = '1'; this.flashT = 2.2; }
+  prompt(html: string | null) { const p = this.el('prompt'); if (!html) { p.style.display = 'none'; return; } p.innerHTML = html; p.style.display = 'block'; }
+  toast(title: string, body: string, color = 'var(--pur)', icon: keyof typeof I = 'msg', secs = 4.5) {
+    const T = this.el('toasts'); const d = document.createElement('div'); d.className = 'toast gl';
+    d.innerHTML = `<div class="ti" style="background:${color}">${svg(I[icon])}</div><div><h4>${title}</h4><p>${body}</p></div>`;
+    T.prepend(d); while (T.children.length > 3) T.lastElementChild!.remove();
+    setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 450); }, secs * 1000);
+  }
+  /** Incoming call card. Answer with the button, Y / Enter, or gamepad A; decline with N or B. */
+  call(name: string, line: string, yes: () => void, no?: () => void, ringSecs = 14) {
+    this.el('call-av').textContent = initials(name); this.el('call-n').textContent = name; this.el('call-l').textContent = line;
+    this.el('call').classList.add('on'); this.callCb = { yes, no }; this.callT = ringSecs;
+  }
+  get ringing() { return !!this.callCb; }
+  answer(yes: boolean) { const c = this.callCb; if (!c) return; this.callCb = null; this.el('call').classList.remove('on'); if (yes) c.yes(); else c.no?.(); }
+  event(e: SimEvent) {
+    if (e.t === 'announce') this.title(e.title, e.sub, 4.5, e.tone === 'danger');
+    if (e.t === 'cash') this.money(e.amount);
+    if (e.t === 'crime' && e.kind !== 'cooled') { const st = this.el('stars'); st.classList.add('flash'); setTimeout(() => st.classList.remove('flash'), 2500); this.toast('Wahala', 'Somebody saw that. Police are on the way.', 'var(--red)', 'siren', 3.5); }
+    if (e.t === 'crime' && e.kind === 'cooled') this.toast('You lost them', 'The police have stopped looking. For now.', '#22c55e', 'siren', 3.5);
+  }
+
+  // ---------------------------------------------------------------- parcel under your feet
+  parcel(p: ParcelInfo | null) {
+    const c = this.el('parcel');
+    if (!p) { c.style.display = 'none'; this.parcelId = ''; return; }
+    c.style.display = 'block';
+    if (p.id === this.parcelId) return; this.parcelId = p.id;
+    c.innerHTML = `<div class="k">Parcel · ${p.area}</div><h5>${p.title}</h5><div class="own"><i>${initials(p.owner)}</i>${p.owned ? 'Owned by <b>you</b>' : `Owner · <b>${p.owner}</b>`}</div>
+      <div class="row"><span>Size</span><b>${Math.round(p.size)} m²</b></div><div class="row"><span>Zoning</span><b>${p.zone}</b></div>
+      ${p.owned ? '' : `<div class="price num">${fmt(p.price)}</div><button class="btn" id="pc-buy" style="width:100%;margin-top:8px">View on LANDMAP<kbd>M</kbd></button>`}`;
+    const b = c.querySelector('#pc-buy') as HTMLElement | null; if (b) b.onclick = () => this.onAction?.('Landmap', p.id);
+  }
+
+  // ---------------------------------------------------------------- landmap
+  landmapOpen(on: boolean) { this.el('landmap').classList.toggle('on', on); this.el('hlhud').style.display = on ? 'none' : ''; }
+  get landmapOn() { return this.el('landmap').classList.contains('on'); }
+  landmapPanel(p: ParcelInfo | null, canAfford = true) {
+    const P = this.el('lm-panel');
+    if (!p) { P.innerHTML = `<div class="empty">Tap any plot on the map to see who owns it, what it is worth, and to buy it.</div>`; return; }
+    P.innerHTML = `<div class="k">${p.area}</div><h2>${p.title}</h2>
+      <div class="own"><i>${initials(p.owner)}</i><div><b>${p.owned ? 'You' : p.owner}</b><br><span style="color:var(--mut);font-size:12px">${p.owned ? 'Your name is on the papers' : 'Current owner'}</span></div></div>
+      <div class="chips">${p.traits.map(([t, c]) => `<span class="chip ${c}">${t}</span>`).join('')}</div>
+      <div class="stats">${p.stats.map(([k, v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('')}</div>
+      ${p.owned ? '<div class="empty" style="margin:8px 0">This one is yours. Building comes next.</div>' : `<div class="price num">${fmt(p.price)} <small>+ C of O</small></div>
+      <button class="btn" id="lm-buy">${canAfford ? 'BUY PLOT' : 'NOT ENOUGH MONEY'}</button>`}`;
+    const b = P.querySelector('#lm-buy') as HTMLElement | null; if (b) b.onclick = () => this.onBuy?.(p.id);
+  }
+
+  // ---------------------------------------------------------------- phone
+  renderApps() { this.el('apps').innerHTML = APPS.map(([n, s, c], i) => `<button data-i="${i}" class="${i === this.sel ? 'sel' : ''}"><span style="background:${c}">${s}</span>${n}</button>`).join(''); [...this.el('apps').children].forEach((b) => ((b as HTMLElement).onclick = () => { this.sel = +(b as HTMLElement).dataset.i!; this.openApp(); })); }
+  togglePhone(on?: boolean) { this.phoneUp = on ?? !this.phoneUp; this.el('phone').classList.toggle('up', this.phoneUp); if (!this.phoneUp) this.closeApp(); return this.phoneUp; }
+  phoneNav(dx: number, dy: number) {
+    if (this.appOpen) { const rows = this.el('av-l').querySelectorAll('.row'); if (!rows.length) return; this.rowSel = (this.rowSel + dy + rows.length) % rows.length; rows.forEach((r, i) => r.classList.toggle('sel', i === this.rowSel)); (rows[this.rowSel] as HTMLElement).scrollIntoView({ block: 'nearest' }); return; }
+    this.sel = (this.sel + dx + dy * 3 + APPS.length) % APPS.length; this.renderApps();
+  }
+  phoneSelect() {
+    if (!this.appOpen) { this.openApp(); return; }
+    const rows = this.el('av-l').querySelectorAll('.row'); const b = rows[this.rowSel]?.querySelector('button') as HTMLButtonElement | null; b?.click();
+  }
+  phoneBack() { if (this.appOpen) this.closeApp(); else this.togglePhone(false); }
+  openApp() {
+    const [name, , color] = APPS[this.sel];
+    if (name === 'Land') { this.togglePhone(false); this.onAction?.('Landmap', ''); return; }
+    this.appOpen = name; this.rowSel = 0;
+    this.el('appview').style.setProperty('--ac', color.replace(/linear-gradient\(160deg,([^,]+),.*/, '$1')); this.el('av-h').textContent = name;
+    this.refreshApp(); this.el('appview').style.display = 'flex';
+  }
+  refreshApp() {
+    const name = this.appOpen; if (!name) return; const L = this.el('av-l'); const c = this.ctx; if (!c) return;
+    const row = (b: string, s: string, btn?: [string, string, string]) => `<div class="row"><b>${b}</b>${s}${btn ? `<br><button class="btn" data-app="${btn[0]}" data-id="${btn[1]}">${btn[2]}</button>` : ''}</div>`;
+    let html = '';
+    if (name === 'Hustles') html = c.jobs.map((j) => row(`${j.title} · ${fmt(j.pay)}`, j.desc, j.active ? ['Hustles', 'cancel:' + j.id, 'Drop it'] : ['Hustles', j.id, 'Take it'])).join('') || row('Nothing now', 'Check back when the city wakes up.');
+    else if (name === 'Texts') html = c.texts.map(([w, t]) => row(w, t)).join('');
+    else if (name === 'Bank') html = row('Cash in hand', fmt(c.cash)) + row('Account', fmt(c.bank), ['Bank', 'deposit', 'Deposit ₦10,000']) + row('Withdraw', 'Any POS stand on the street will do. Small charge.', ['Bank', 'withdraw', 'Withdraw ₦10,000']);
+    else if (name === 'Weather') html = row('Now', `${c.weather}, ${c.season}`) + row('Game time', `${c.time} · day ${c.day}`) + row('Lagos time', `${c.real} WAT`) + row('Potholes', 'Rain fills them. Sun and harmattan dry them. Drive accordingly.');
+    else if (name === 'Roads') html = row('Pothole reports', 'From news reports and residents, 2023 to October 2026. Each report is snapped to the named road.') + c.potholes.map((p) => row(`${p.name}`, `${p.road} · ${p.area}<br>Reported ${p.reported} · ${p.placed} potholes placed`)).join('');
+    else if (name === 'Contacts') html = row('Mama Put', 'Under the bridge, Oshodi') + row('Conductor Sule', 'Oshodi park') + row('Baba Landlord', 'Sells land. Asks no questions. Charges for C of O.');
+    else if (name === 'Settings') html = row('Graphics', `Quality: ${c.quality}`, ['Settings', 'quality', 'Change']) + row('Weather', 'Cycle the weather (testing)', ['Settings', 'weather', 'Next']) + row('Time', 'Jump one hour', ['Settings', 'hour', '+1 hour']);
+    else html = `<canvas id="pmap" width="400" height="400"></canvas>` + row('Legend', 'Teal: your route · Red dots: reported potholes · Purple: your land');
+    L.innerHTML = html;
+    L.querySelectorAll('button[data-app]').forEach((b) => ((b as HTMLElement).onclick = () => this.onAction?.((b as HTMLElement).dataset.app!, (b as HTMLElement).dataset.id!)));
+    L.querySelectorAll('.row').forEach((r, i) => r.classList.toggle('sel', i === this.rowSel));
+  }
+  closeApp() { this.appOpen = null; this.el('appview').style.display = 'none'; }
+
+  // ---------------------------------------------------------------- per frame
+  update(dt: number, sim: LifeSim, s: HudFrame) {
+    this.lastFrame = s;
+    this.el('clock').textContent = s.time;
+    this.el('sub2').textContent = `${s.weather} · ${Math.round(s.temp)}°`;
+    const cash = sim.cash;
+    if (this.shown !== cash) { this.shown += Math.sign(cash - this.shown) * Math.max(1, Math.round(Math.abs(cash - this.shown) * dt * 6)); if (Math.abs(cash - this.shown) < 2) this.shown = cash; }
+    this.el('money').textContent = fmt(this.shown); this.el('bank').textContent = fmt(s.bank);
+    const me = sim.local;
+    const hp = Math.max(0, me.hp / me.maxHp); const H = this.el('hp') as HTMLElement; H.style.width = `${hp * 100}%`; H.classList.toggle('low', hp < 0.3);
+    (this.el('ar') as HTMLElement).style.width = `${me.inv.armor ? me.inv.armor.hp : 0}%`;
+    const st = this.el('stars'); st.classList.toggle('none', sim.wanted <= 0); [...st.children].forEach((b, i) => b.classList.toggle('on', i < sim.wanted));
+    this.el('area').textContent = s.area; this.el('street').textContent = s.street;
+    (this.el('xhair') as HTMLElement).style.display = s.aiming && !s.inCar ? 'block' : 'none';
+    // weapon card on foot, speedo in a car
+    const W = this.el('wcard') as HTMLElement, S = this.el('speedo') as HTMLElement;
+    W.style.display = !s.inCar ? 'flex' : 'none'; S.style.display = s.inCar ? 'block' : 'none';
+    if (!s.inCar) {
+      this.el('w-name').textContent = s.weapon || 'Fists';
+      this.el('w-ico').innerHTML = svg(s.weaponKind === 'gun' ? I.gun : s.weaponKind === 'melee' ? I.blade : I.fist);
+      this.el('w-ammo').innerHTML = s.weaponKind === 'gun' ? `${s.mag} <small>/ ${s.ammo}</small>` : '';
+    } else {
+      this.el('kmh').textContent = String(Math.round(s.kmh)); this.el('gear').textContent = s.gear;
+      const f = Math.min(1, s.kmh / 180); this.speedArc.setAttribute('d', f > 0.004 ? this.arc(100, 100, 80, -130, -130 + 260 * f) : '');
+      this.rpmArc.setAttribute('d', s.rpm > 0.01 ? this.arc(100, 100, 66, -130, -130 + 260 * Math.min(1, s.rpm)) : '');
+      this.rpmArc.setAttribute('stroke', s.rpm > 0.85 ? '#ff4d5e' : '#2de0c8');
+    }
+    this.el('ph-t').textContent = s.time; this.el('ph-big').textContent = s.time; this.el('ph-s').textContent = `${s.weather} · ${s.area}`;
+    if (this.subT > 0) { this.subT -= dt; if (this.subT <= 0) this.el('subs').innerHTML = ''; }
+    if (this.subT <= 0 && this.subQueue.length) { const n = this.subQueue.shift()!; this.el('subs').innerHTML = `<span class="who">${n.who}</span> ${n.text}`; this.subT = n.secs; }
+    if (this.titleT > 0) { this.titleT -= dt; if (this.titleT <= 0) this.el('title').classList.remove('on'); }
+    if (this.flashT > 0) { this.flashT -= dt; if (this.flashT <= 0) this.el('flash').style.opacity = '0'; }
+    if (this.callCb) { this.callT -= dt; if (this.callT <= 0) this.answer(false); }
+  }
+
+  /** Dark GPS minimap: rotates with the camera, roads by class, a teal route, blips, potholes, your land. */
+  drawRadar(net: RoadNet, px: number, pz: number, heading: number, blips: { x: number; z: number; c: string; r?: number }[], potholes: { x: number; z: number }[], owned: number[][], route: number[] | null = null) {
+    const g = this.radarG, W = 540, H = 348, S = 1.25;
+    g.save(); g.clearRect(0, 0, W, H);
+    const bg = g.createRadialGradient(W / 2, H * 0.62, 20, W / 2, H * 0.62, W * 0.7); bg.addColorStop(0, '#1b2233'); bg.addColorStop(1, '#0d111b');
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    g.translate(W / 2, H * 0.62); g.rotate(heading); g.translate(-px * S, -pz * S);
+    for (const o of owned) { g.fillStyle = 'rgba(139,92,246,0.45)'; g.strokeStyle = '#a78bfa'; g.lineWidth = 2; g.beginPath(); for (let k = 0; k < o.length; k += 2) (k ? g.lineTo : g.moveTo).call(g, o[k] * S, o[k + 1] * S); g.closePath(); g.fill(); g.stroke(); }
+    const lanes = net.near(px, pz, 300); const done = new Set<number>();
+    const roads = lanes.map((id) => net.lanes[id]).filter((l) => { if (done.has(l.road.id)) return false; done.add(l.road.id); return true; });
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const pass of [0, 1]) for (const l of roads) {
+      const major = l.cls <= 4; g.strokeStyle = pass === 0 ? 'rgba(0,0,0,.55)' : major ? '#5d6a86' : '#3a4459';
+      g.lineWidth = (major ? 14 : 8) + (pass === 0 ? 4 : 0);
+      g.beginPath(); const p = l.road.pts; for (let k = 0; k < p.length; k += 2) (k ? g.lineTo : g.moveTo).call(g, p[k] * S, p[k + 1] * S); g.stroke();
+    }
+    if (route && route.length >= 4) {
+      g.strokeStyle = 'rgba(45,224,200,.25)'; g.lineWidth = 16; g.beginPath(); for (let k = 0; k < route.length; k += 2) (k ? g.lineTo : g.moveTo).call(g, route[k] * S, route[k + 1] * S); g.stroke();
+      g.strokeStyle = '#2de0c8'; g.lineWidth = 6; g.stroke();
+    }
+    g.fillStyle = '#ff4d5e'; for (const h of potholes) { g.beginPath(); g.arc(h.x * S, h.z * S, 2.4, 0, 6.28); g.fill(); }
+    for (const b of blips) { g.fillStyle = b.c; g.strokeStyle = '#0b0d14'; g.lineWidth = 3; g.beginPath(); g.arc(b.x * S, b.z * S, b.r ?? 9, 0, 6.28); g.fill(); g.stroke(); }
+    g.restore();
+    // off-map blips pinned to the edge
+    for (const b of blips) {
+      if ((b.r ?? 9) < 10) continue;
+      const dx = (b.x - px) * S, dz = (b.z - pz) * S; const c = Math.cos(heading), s = Math.sin(heading);
+      const x = dx * c - dz * s + W / 2, y = dx * s + dz * c + H * 0.62;
+      if (x > 14 && x < W - 14 && y > 14 && y < H - 14) continue;
+      const cx = Math.max(16, Math.min(W - 16, x)), cy = Math.max(16, Math.min(H - 16, y));
+      g.fillStyle = b.c; g.strokeStyle = '#0b0d14'; g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, 10, 0, 6.28); g.fill(); g.stroke();
+    }
+    // player
+    g.save(); g.translate(W / 2, H * 0.62);
+    g.fillStyle = 'rgba(45,224,200,.18)'; g.beginPath(); g.arc(0, 0, 26, 0, 6.28); g.fill();
+    g.fillStyle = '#fff'; g.strokeStyle = '#0b0d14'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, -15); g.lineTo(11, 12); g.lineTo(0, 6); g.lineTo(-11, 12); g.closePath(); g.fill(); g.stroke(); g.restore();
+    const deg = ((-heading * 180) / Math.PI + 360 * 4) % 360;
+    const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']; this.el('mmdir').textContent = `${dirs[Math.round(deg / 45) % 8]} ${Math.round(deg)}°`;
+  }
+}

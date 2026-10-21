@@ -1,0 +1,13 @@
+[
+ {"js": "__hl.simulate(4); __hl.job('delivery'); __hl.simulate(2); 'ok'"},
+ {"wait": 3},
+ {"shot": "a_hud", "settle": 4},
+ {"js": "__hl.call(); 'ring'"},
+ {"shot": "b_call", "settle": 2},
+ {"js": "(() => { const s=__hl.sim; const v=__hl.stoppedCar(); if(!v) return 'no car'; const p=v.body.translation(); s.local.pos={x:p.x+2.5,y:0.05,z:p.z}; s.local.body.setTranslation({x:p.x+2.5,y:1,z:p.z},true); s.enterVehicle(s.local, v); __hl.simulate(3,{mz:1}); return v.kind; })()"},
+ {"shot": "c_drive", "settle": 3},
+ {"js": "(() => { const s=__hl.sim; if (s.local.vehicle!==null) s.exitVehicle(s.local); __hl.simulate(1); __hl.landmap(); return __hl.hud.landmapOn; })()"},
+ {"wait": 4},
+ {"shot": "d_landmap", "settle": 4},
+ {"js": "(() => { const L=__hl.view.landmap; const p=__hl.view.landmapPick(0.1,0.1); return p ? p.id : 'none'; })()"}
+]

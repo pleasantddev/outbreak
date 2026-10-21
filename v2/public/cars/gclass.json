@@ -1,0 +1,62 @@
+{
+ "paintMode": "color",
+ "paintHue": 0,
+ "paintSat": 0,
+ "paintVal": 0,
+ "length": 4.6,
+ "width": 2.055,
+ "height": 1.925,
+ "front": "+z",
+ "wheels": [
+  {
+   "q": 0,
+   "x": 0.711,
+   "y": 0.482,
+   "z": 1.649,
+   "r": 0.482,
+   "w": 0.376
+  },
+  {
+   "q": 1,
+   "x": -0.711,
+   "y": 0.482,
+   "z": 1.649,
+   "r": 0.482,
+   "w": 0.376
+  },
+  {
+   "q": 2,
+   "x": 0.712,
+   "y": 0.395,
+   "z": -1.455,
+   "r": 0.395,
+   "w": 0.375
+  },
+  {
+   "q": 3,
+   "x": -0.712,
+   "y": 0.395,
+   "z": -1.455,
+   "r": 0.395,
+   "w": 0.375
+  }
+ ],
+ "paint": true,
+ "paintTextured": false,
+ "tris": 12028,
+ "srcTris": 12284,
+ "materials": [
+  "paint",
+  "Material.002",
+  "glass",
+  "Material.003",
+  "glass",
+  "Material.009",
+  "Material.012",
+  "Material.013",
+  "Material.014",
+  "Material.006",
+  "Material.007",
+  "Material.008"
+ ]
+}
