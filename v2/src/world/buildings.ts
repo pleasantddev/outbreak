@@ -18,6 +18,10 @@ const ROOFC: [number, number, number][] = [[0.55, 0.58, 0.62], [0.2, 0.35, 0.6],
 export interface BuildingTile { mesh: THREE.Mesh; roofProps: { tanks: number[]; bars: number[] }; heights: Map<number, number> }
 
 export function buildingHeight(b: Building) {
+  if (b.height > 0) return Math.max(2.4, b.height);
+  if (b.kind === BK.terminal) return 8.5;
+  if (b.kind === BK.market) return 5.5 + hash(b.id, 6) * 1.5;
+  if (b.kind === BK.station) return 5.2;
   if (b.kind === BK.shed) return 2.6;
   if (b.kind === BK.warehouse) return 6.5 + hash(b.id, 4) * 3;
   if (b.kind === BK.church || b.kind === BK.mosque) return 7 + hash(b.id, 5) * 4;
@@ -36,17 +40,21 @@ export function buildBuildings(list: Building[], ox: number, oz: number): { geo:
     const r1 = hash(b.id, 1), r2 = hash(b.id, 2), r3 = hash(b.id, 3);
     const H = buildingHeight(b);
     const unfinished = b.kind === BK.unfinished;
-    const shed = b.kind === BK.shed || b.kind === BK.canopy;
+    const shed = b.kind === BK.shed || b.kind === BK.canopy || b.kind === BK.terminal || b.kind === BK.market;
+    const lv = b.height > 0 ? Math.max(1, Math.round((H - PLINTH) / FLOOR)) : b.levels;
     // wall material layer: 0 paint, 1 worn paint, 2 plaster, 3 block, 4 brick, 5 concrete, 6 zinc
     let mat = r1 < 0.7 ? 0 : r1 < 0.8 ? 1 : 2;
     if (unfinished) mat = 3; else if (shed) mat = r2 < 0.6 ? 6 : 3; else if (b.kind === BK.warehouse) mat = r2 < 0.5 ? 5 : 6; else if (b.kind === BK.church && r2 < 0.4) mat = 4;
-    const tint = unfinished || mat >= 3 ? [1, 1, 1] : PAINT[Math.floor(r2 * PAINT.length)];
+    const rgb = (c: number) => [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
+    const tint = b.wallRGB != null ? rgb(b.wallRGB) : unfinished || mat >= 3 ? [1, 1, 1] : PAINT[Math.floor(r2 * PAINT.length)];
     const kind = b.kind;
     const ob = obb(p);
     const rect = Math.abs(polyArea(p)) / (4 * ob.hl * ob.hw) > 0.86 && n <= 8;
-    const hipRoof = !unfinished && rect && b.levels <= 2 && (kind === BK.house) && b.area < 420 && r3 < 0.72;
+    const tagged = b.roof >= 1 && b.roof <= 3 && rect && !shed && b.area < 1500;
+    const hipRoof = tagged || (!unfinished && b.roof === 0 && rect && lv <= 2 && (kind === BK.house) && b.area < 420 && r3 < 0.72);
+    const gable = tagged && b.roof === 1, pyramid = tagged && b.roof === 3;
     const parapet = !hipRoof && !shed && !unfinished && kind !== BK.warehouse ? 0.95 : 0;
-    const info = [b.levels, r3 * 100, kind, 1];
+    const info = [lv, r3 * 100, kind, 1];
     // walls
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n; const ax = p[i * 2], az = p[i * 2 + 1], bx = p[j * 2], bz = p[j * 2 + 1];
@@ -77,9 +85,9 @@ export function buildBuildings(list: Building[], ox: number, oz: number): { geo:
       const ca = Math.cos(ob.ang), sa = Math.sin(ob.ang);
       const ov = 0.5, hl = ob.hl + ov, hw = ob.hw + ov, rise = Math.tan((20 + r1 * 8) * Math.PI / 180) * hw;
       const W = (lx: number, lz: number, y: number): [number, number, number] => [ob.cx + lx * ca - lz * sa, y, ob.cz + lx * sa + lz * ca];
-      const y0 = H - 0.15, rl = Math.max(0, hl - hw);
+      const y0 = H - 0.15, rl = gable ? hl : pyramid ? 0 : Math.max(0, hl - hw);
       const tiles = r2 > 0.8;
-      const rc = tiles ? [0.75, 0.42, 0.3] : ROOFC[Math.floor(r3 * ROOFC.length)];
+      const rc = b.roofRGB != null ? rgb(b.roofRGB) : tiles ? [0.75, 0.42, 0.3] : ROOFC[Math.floor(r3 * ROOFC.length)];
       const rmat = tiles ? 7 : 6;
       const c0 = W(-hl, -hw, y0), c1 = W(hl, -hw, y0), c2 = W(hl, hw, y0), c3 = W(-hl, hw, y0), q0 = W(-rl, 0, y0 + rise), q1 = W(rl, 0, y0 + rise);
       const face = (pts: [number, number, number][]) => {
@@ -101,14 +109,14 @@ export function buildBuildings(list: Building[], ox: number, oz: number): { geo:
       let tris: number[][] = [];
       try { tris = THREE.ShapeUtils.triangulateShape(contour, []); } catch { tris = []; }
       const rmat = shed ? 6 : 5;
-      const rt = shed ? ROOFC[Math.floor(r3 * ROOFC.length)] : [0.78, 0.77, 0.74];
+      const rt = b.roofRGB != null ? rgb(b.roofRGB) : shed ? ROOFC[Math.floor(r3 * ROOFC.length)] : [0.78, 0.77, 0.74];
       const base = G.count;
       for (let k = 0; k < n; k++) G.v([p[k * 2], H + (shed ? 0.25 : 0), p[k * 2 + 1]], [0, 1, 0], [p[k * 2], p[k * 2 + 1]], { aMat: [rmat], aTint: rt, aInfo: [0, r3 * 100, 0, 3], aEdge: [0, 0] });
       for (const t of tris) G.tri(base + t[0], base + t[2], base + t[1]);
       // rooftop life: black water tanks, satellite dishes, starter bars on unfinished storeys
-      if (!shed && b.area > 60 && b.levels >= 2 && !unfinished && r1 > 0.3) tanks.push(ob.cx + ox + Math.cos(ob.ang) * ob.hl * 0.5, H, ob.cz + oz + Math.sin(ob.ang) * ob.hl * 0.5, r2);
+      if (!shed && b.area > 60 && lv >= 2 && !unfinished && r1 > 0.3) tanks.push(ob.cx + ox + Math.cos(ob.ang) * ob.hl * 0.5, H, ob.cz + oz + Math.sin(ob.ang) * ob.hl * 0.5, r2);
       if (!shed && !unfinished && r2 > 0.55) dishes.push(ob.cx + ox - Math.cos(ob.ang) * ob.hl * 0.6, H + parapet, ob.cz + oz - Math.sin(ob.ang) * ob.hl * 0.6, r3 * 6.28);
-      if (unfinished || (b.levels >= 1 && r3 > 0.86 && kind === BK.house)) {
+      if (unfinished || (lv >= 1 && r3 > 0.86 && kind === BK.house)) {
         const ca = Math.cos(ob.ang), sa = Math.sin(ob.ang);
         const nx = Math.max(1, Math.round(ob.hl / 2.2)), nz = Math.max(1, Math.round(ob.hw / 2.2));
         for (let ix = 0; ix <= nx; ix++) for (let iz = 0; iz <= nz; iz++) {
@@ -176,6 +184,18 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
     float fy = (v - 0.45) / 3.1; float fi = floor(fy); float ff = fract(fy) * 3.1;
     float streak = bh(vec2(ci, seed)) * smoothstep(1.0, 0.0, ff - 0.9) * step(0.9, ff) * inCols;
     BC *= 1.0 - streak * 0.18 * smoothstep(0.42, 0.58, abs(cf - 0.5) < 0.2 ? 1.0 : 0.0);
+    bool glassBk = (kind > 12.5 && kind < 13.5) || (kind > 14.5 && kind < 15.5);
+    if (glassBk && v > 0.6 && v < H - 0.35) {
+      // curtain wall: tinted glass in 1.5 m bays, dark mullions, spandrel at each slab
+      float bay = fract(u / 1.5); float mul1 = step(bay, 0.04) + step(0.96, bay);
+      float sp = fract((v - 0.45) / 3.1) * 3.1; float spand = step(sp, 0.35) + step(2.95, sp);
+      float fx2 = u * 0.7 + v * 0.35;
+      vec3 gl = mix(vec3(0.07, 0.17, 0.22), vec3(0.34, 0.52, 0.6), 0.5 + 0.5 * sin(fx2 + bn(vec2(u * 0.4, v * 0.3)) * 3.0));
+      float fr = min(1.0, mul1 + spand);
+      BC = mix(gl, vec3(0.2, 0.21, 0.23), fr); BR = mix(0.05, 0.5, fr); BM = mix(0.75, 0.6, fr); BGL = 1.0 - fr;
+      BN = vec3(0.0, 0.0, 1.0);
+      BE += (1.0 - fr) * uNight * 0.55; BEC = vec3(0.85, 0.95, 1.0);
+    }
     bool shop = kind > 1.5 && kind < 2.5 && fi < 1.0 && fi >= 0.0;
     float rnd = bh(vec2(ci, fi + seed));
     if (shop && inCols > 0.5) {
@@ -190,7 +210,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
       float sign = step(2.6, ff) * step(ff, 3.05);
       vec3 sc = vec3(bh(vec2(ci, 7.0 + seed)), bh(vec2(ci, 8.0 + seed)), bh(vec2(ci, 9.0 + seed)));
       BC = mix(BC, mix(sc, vec3(0.95), step(0.6, bn(vec2(u * 6.0, v * 9.0)))), sign * 0.9);
-    } else if (fi >= 0.0 && fi < levels && inCols > 0.5 && kind != 6.0 && kind != 7.0 && kind != 5.0 && kind != 11.0 && kind != 10.0) {
+    } else if (fi >= 0.0 && fi < levels && inCols > 0.5 && kind != 6.0 && kind != 7.0 && kind != 5.0 && kind != 11.0 && kind != 10.0 && kind != 14.0 && kind != 16.0 && kind != 13.0 && kind != 15.0) {
       bool unfinished = kind > 8.5 && kind < 9.5;
       bool door = fi < 0.5 && ci == floor(bh(vec2(seed, 3.0)) * nC);
       float ww = door ? 0.18 : 0.21, wb = door ? 0.0 : 0.95, wt = door ? 2.25 : 2.3;

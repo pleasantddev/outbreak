@@ -1,6 +1,8 @@
 # Bundles region files into 4 km packs and texture sets into one file per map, so the artifact ships ~100 files.
 import os, json, struct, glob, collections
-W = '/home/claude/hl/v2/public/world'
+import os
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+W = os.path.join(ROOT, 'v2', 'public', 'world')
 man = json.load(open(f'{W}/manifest.json'))
 groups = collections.defaultdict(list)
 for k, meta in man['regions'].items():
@@ -19,8 +21,9 @@ for (I, J), items in groups.items():
 for f in glob.glob(f'{W}/r*_*.wasm'): os.remove(f)
 json.dump(man, open(f'{W}/manifest.json', 'w'))
 print('packs', len(groups))
-T = '/home/claude/hl/v2/public/tex'
-for grp in ('g', 'w'):
+T = os.path.join(ROOT, 'v2', 'public', 'tex')
+if glob.glob(f'{T}/g1_diff_1024.webp'):
+  for grp in ('g', 'w'):
     for m in ('diff', 'nor', 'arm'):
         for sz in (1024, 512):
             files = [f'{T}/{grp}{k}_{m}_{sz}.webp' for k in range(8)]
@@ -28,6 +31,6 @@ for grp in ('g', 'w'):
             head = b'HLT1' + struct.pack('<H', len(data)); off = 6 + len(data) * 8; body = b''
             for d in data: head += struct.pack('<II', off + len(body), len(d)); body += d
             open(f'{T}/{grp}_{m}_{sz}.wasm', 'wb').write(head + body)
-for f in glob.glob(f'{T}/*.webp'):
+for f in (glob.glob(f'{T}/*.webp') if glob.glob(f'{T}/g1_diff_1024.webp') else []):
     if not os.path.basename(f).startswith('g0_'): os.remove(f)
 print('tex', sorted(os.listdir(T)))

@@ -1,7 +1,8 @@
 // Streams the corridor around the camera in 250 m tiles: road field, ground, buildings, compounds, props, bridges.
 import * as THREE from 'three';
-import { RegionStore, type Region, type Road, type Building, type Pothole, type Area, RF } from './region';
-import { buildTileField, areaSurfaces, SURF, type TileField } from './roadField';
+import { RegionStore, type Region, type Road, type Building, type Pothole, type Area, type Rail, type Poi, type Water, RF, RAIL } from './region';
+import { buildTileField, areaSurfaces, waterSurfaces, mechanicSurfaces, SURF, type TileField } from './roadField';
+import { buildFeatures } from './features';
 import { makeGroundMaterial } from './ground';
 import { buildBuildings, makeBuildingMaterial } from './buildings';
 import { plotsForRegion, type Plot } from './plots';
@@ -11,6 +12,7 @@ import { buildBridges, deckCollision, deckProfile } from './bridges';
 import type { TileCol } from '../sim/life';
 import { buildingHeight } from './buildings';
 import { hash, pointInPoly } from './geo';
+import { halfWidth, verge } from './roadspec';
 import type { TexSet } from './texsets';
 
 export const TILE = 250;
@@ -33,10 +35,11 @@ export class WorldStreamer {
     this.asphalt = tl.load(`tex/g0_diff_${tg.size}.webp`); this.asphalt.wrapS = this.asphalt.wrapT = THREE.RepeatWrapping; this.asphalt.colorSpace = THREE.SRGBColorSpace;
     this.asphaltN = tl.load(`tex/g0_nor_${tg.size}.webp`); this.asphaltN.wrapS = this.asphaltN.wrapT = THREE.RepeatWrapping;
   }
-  regionPlots(r: Region) { const k = `${r.i},${r.j}`; let p = this.plots.get(k); if (!p) { p = plotsForRegion(r); this.plots.set(k, p); } return p; }
+  regionPlots(r: Region) { const k = `${r.i},${r.j}`; let p = this.plots.get(k); if (!p) { p = plotsForRegion(r, this.store.bldById); this.plots.set(k, p); } return p; }
 
   private gather(x0: number, z0: number, size: number, margin: number) {
-    const roads: Road[] = [], blds: Building[] = [], ph: Pothole[] = [], areas: Area[] = [], plots: Plot[] = [];
+    const roads: Road[] = [], blds: Building[] = [], ph: Pothole[] = [], areas: Area[] = [], plots: Plot[] = [], rails: Rail[] = [], pois: Poi[] = [], waters: (Water & { bx0: number; bx1: number; bz0: number; bz1: number })[] = [];
+    const seenR = new Set<string>(), seenA = new Set<string>(), seenW = new Set<string>();
     const seen = new Set<string>();
     const [a, b] = this.store.regionOf(x0 - margin, z0 - margin), [c, d] = this.store.regionOf(x0 + size + margin, z0 + size + margin);
     for (let i = a; i <= c; i++) for (let j = b; j <= d; j++) {
@@ -48,19 +51,24 @@ export class WorldStreamer {
       }
       for (const bd of r.buildings) if (bd.cx >= x0 - margin && bd.cx < x0 + size + margin && bd.cz >= z0 - margin && bd.cz < z0 + size + margin) blds.push(bd);
       for (const p of r.potholes) ph.push(p);
-      for (const ar of r.areas) areas.push(ar);
+      for (const ar of r.areas) { const k = `${ar.kind}:${ar.sub}:${ar.pts[0]}:${ar.pts[1]}:${ar.pts.length}`; if (seenA.has(k)) continue; seenA.add(k); areas.push(ar); }
+      for (const rl of r.rail) { const k = `${rl.kind}:${rl.pts[0]}:${rl.pts[1]}:${rl.pts.length}`; if (seenR.has(k)) continue; seenR.add(k); rails.push(rl); }
+      for (const po of r.pois) if (po.x >= x0 - margin && po.x < x0 + size + margin && po.z >= z0 - margin && po.z < z0 + size + margin) pois.push(po);
+      const rs = this.store.manifest.regionSize;
+      for (const w of r.water) { const k = `${w.kind}:${w.rings[0][0]}:${w.rings[0][1]}:${w.rings[0].length}:${r.i}:${r.j}`; if (seenW.has(k)) continue; seenW.add(k); waters.push(Object.assign({}, w, { bx0: r.i * rs - 40, bx1: (r.i + 1) * rs + 40, bz0: r.j * rs - 40, bz1: (r.j + 1) * rs + 40 })); }
       for (const pl of this.regionPlots(r)) if (pl.cx >= x0 - margin && pl.cx < x0 + size + margin && pl.cz >= z0 - margin && pl.cz < z0 + size + margin) plots.push(pl);
     }
-    return { roads, blds, ph, areas, plots };
+    return { roads, blds, ph, areas, plots, rails, pois, waters };
   }
 
   private buildTile(ix: number, iz: number, res: number): Tile {
     const x0 = ix * TILE, z0 = iz * TILE; const key = `${ix},${iz}`;
-    const { roads, blds, ph, areas, plots } = this.gather(x0, z0, TILE, 40);
+    const { roads, blds, ph, areas, plots, rails, pois, waters } = this.gather(x0, z0, TILE, 40);
     const inTile = (x: number, z: number) => x >= x0 && x < x0 + TILE && z >= z0 && z < z0 + TILE;
     // ground surfaces: landuse plus compounds (paved for the rich, swept sand for the rest) and bush on vacant plots
     const surfaces = areaSurfaces(areas);
     for (const pl of plots) surfaces.push({ code: pl.zone === 'vacant' ? SURF.bush : pl.zone === 'industrial' ? SURF.concrete : pl.rich > 0.6 ? SURF.interlock : SURF.compound, pts: new Float32Array(pl.pts) });
+    surfaces.push(...waterSurfaces(waters, x0, z0, TILE), ...mechanicSurfaces(areas));
     const field = buildTileField(this.renderer, { x0, z0, size: TILE, roads, potholes: ph, surfaces }, res);
     const group = new THREE.Group(); group.position.set(x0, 0, z0);
     const gm = makeGroundMaterial(this.tg);
@@ -98,13 +106,33 @@ export class WorldStreamer {
     // bridges whose first point is in this tile own their deck
     const br = roads.filter((r) => (r.flags & RF.bridge) && inTile(r.pts[0], r.pts[1]));
     if (br.length) { const b = buildBridges(br, x0, z0, this.asphalt, this.asphaltN); group.add(b.group); }
+    // rails, platforms, courts, banks, mechanic villages
+    const onRoad = (x: number, z: number) => { for (const r of roads) { if (r.flags & RF.bridge) continue; const hw = halfWidth(r) + verge(r); for (let k = 0; k < r.pts.length / 2 - 1; k++) { const ax = r.pts[k * 2], az = r.pts[k * 2 + 1], bx = r.pts[k * 2 + 2], bz = r.pts[k * 2 + 3]; if (Math.abs(ax - x) > 300 && Math.abs(bx - x) > 300) continue; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); if (Math.hypot(ax + dx * t - x, az + dz * t - z) < hw) return true; } } return false; };
+    const ft = buildFeatures({ x0, z0, size: TILE, rails, areas, pois, buildings: blds, roads, blocked, onRoad });
+    group.add(ft.group);
     this.group.add(group);
     // collision for the sim: building prisms, compound walls, poles and trunks, bridge decks
     const convex = (p: Float32Array) => { const n = p.length / 2; let sgn = 0; for (let i = 0; i < n; i++) { const a = i, b = (i + 1) % n, c = (i + 2) % n; const cr = (p[b * 2] - p[a * 2]) * (p[c * 2 + 1] - p[b * 2 + 1]) - (p[b * 2 + 1] - p[a * 2 + 1]) * (p[c * 2] - p[b * 2]); if (Math.abs(cr) < 1e-6) continue; const s2 = Math.sign(cr); if (sgn && s2 !== sgn) return false; sgn = s2; } return true; };
     const col: TileCol = { hulls: own.map((b) => ({ pts: Array.from(b.pts), h: buildingHeight(b) + 0.9, convex: convex(b.pts) })), walls: cp.segs, poles: [], decks: [] };
     for (let i = 0; i < props.lamps.length; i += 3) col.poles.push(props.lamps[i], props.lamps[i + 1], 0.12);
     for (const t of trees) if (inTile(t.x, t.z)) col.poles.push(t.x, t.z, t.palm ? 0.2 : 0.25);
-    if (br.length) { const dc = deckCollision(br.map((r) => deckProfile(r))); col.decks.push(dc); }
+    const railDecks = rails.filter((r) => r.elev && (r.flags & 1) && inTile(r.pts[0], r.pts[1]) && (r.kind === RAIL.standard || r.kind === RAIL.narrow || r.kind === RAIL.light || r.kind === RAIL.disused)).map((r) => ({ pts: r.pts, ys: Float32Array.from(r.elev!, (e) => e + 0.1), hw: r.gauge / 2000 + 1.3 }));
+    if (br.length || railDecks.length) { const dc = deckCollision([...br.map((r) => deckProfile(r)), ...railDecks]); col.decks.push(dc); }
+    for (const f of ft.fenceWalls) col.walls.push({ ax: f.ax, az: f.az, bx: f.bx, bz: f.bz, h: f.h });
+    // the shore is a wall: nobody drives or walks into the lagoon
+    for (const w of waters) {
+      if (w.line) continue;
+      for (const ring of w.rings) {
+        const n = ring.length / 2; let skip = 0;
+        for (let k = 0; k < n; k++) {
+          const j = (k + 1) % n; const ax = ring[k * 2], az = ring[k * 2 + 1], bx = ring[j * 2], bz = ring[j * 2 + 1];
+          const mx = (ax + bx) / 2, mz = (az + bz) / 2; if (!inTile(mx, mz)) continue;
+          const onClip = (Math.abs(ax - w.bx0) < 0.3 && Math.abs(bx - w.bx0) < 0.3) || (Math.abs(ax - w.bx1) < 0.3 && Math.abs(bx - w.bx1) < 0.3) || (Math.abs(az - w.bz0) < 0.3 && Math.abs(bz - w.bz0) < 0.3) || (Math.abs(az - w.bz1) < 0.3 && Math.abs(bz - w.bz1) < 0.3);
+          if (onClip) { skip++; continue; }
+          col.walls.push({ ax, az, bx, bz, h: 1.2 });
+        }
+      }
+    }
     const nt: Tile = { key, x0, z0, res, field, group, ground, lamps: props.lamps, dist: 0, col, roads };
     this.onTile?.(nt, true);
     return nt;

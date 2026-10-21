@@ -133,21 +133,21 @@ def voronoi_alloc(groups, domain):
     """groups: list of polygons. Returns list of the domain part nearest to each group."""
     pts = []; own = []
     for gi, g in enumerate(groups):
-        gg = shapely.segmentize(g, 3.0)
+        gg = shapely.segmentize(g, 1.2)
         for ring in [gg.exterior] + list(gg.interiors):
             c = np.asarray(ring.coords)[:-1]
             pts.append(c); own.append(np.full(len(c), gi))
     P = np.vstack(pts); O = np.concatenate(own)
-    key = np.round(P, 2)
+    key = np.round(P / 0.4)
     _, uniq = np.unique(key, axis=0, return_index=True)
     P = P[uniq]; O = O[uniq]
     if len(P) < 2:
         return [domain] * len(groups)
     env = box(*domain.bounds).buffer(50)
-    cells = shapely.voronoi_polygons(shapely.multipoints(P), extend_to=env)
+    cells = shapely.voronoi_polygons(shapely.multipoints(P), tolerance=0.05, extend_to=env)
     cells = list(shapely.get_parts(cells))
     ct = STRtree(cells)
-    ci, pj = ct.query(shapely.points(P), predicate='within')
+    pj, ci = ct.query(shapely.points(P), predicate='within')
     # point k -> cell ci
     owner_cells = collections.defaultdict(list)
     for c, p in zip(ci, pj): owner_cells[int(O[p])].append(cells[int(c)])
@@ -155,8 +155,12 @@ def voronoi_alloc(groups, domain):
     for gi in range(len(groups)):
         cl = owner_cells.get(gi)
         if not cl: out.append(Polygon()); continue
-        u = shapely.union_all(cl)
-        out.append(u.intersection(domain))
+        try: u = shapely.coverage_union_all(cl)
+        except Exception:
+            try: u = shapely.union_all(cl, grid_size=0.02)
+            except Exception: u = shapely.union_all([c.buffer(0.001) for c in cl])
+        try: out.append(u.intersection(domain))
+        except Exception: out.append(shapely.make_valid(u).intersection(shapely.make_valid(domain)))
     return out
 
 def subdivide(poly, uid_prefix):
@@ -194,7 +198,7 @@ def subdivide(poly, uid_prefix):
         outp.append(affinity.rotate(kp, ang, origin=origin))
     return outp
 
-def simplify_pts(p, tol=0.5):
+def simplify_pts(p, tol=1.0):
     p = p.simplify(tol)
     if p.geom_type != 'Polygon' or p.is_empty: p = biggest(p)
     if p is None: return None
@@ -317,9 +321,9 @@ def process_face(fi):
         cells = voronoi_alloc(gunion, D) if len(groups) > 1 else [D]
         for g, u, cell in zip(groups, gunion, cells):
             A = sum(float(AREA[i]) for i in g)
-            R = min(14.0, max(5.5, 0.45 * math.sqrt(A) + 3.5))
+            R = min(16.0, max(6.5, 0.5 * math.sqrt(A) + 4.5))
             reach = u.buffer(R, join_style='mitre', mitre_limit=2.0)
-            pp = clean(cell.intersection(reach))
+            pp = clean(cell if cell.area <= 1500 + 2 * A else cell.intersection(reach))
             pp = clean(shapely.union_all([pp, u]))
             # the piece that holds the building; fragments fall back to the leftover
             pb = None
@@ -334,6 +338,7 @@ def process_face(fi):
         left = clean(D.difference(used.buffer(0.01)))
     else: left = D
     vac = []
+    ttree = STRtree([t['poly'] for t in taken]) if taken else None
     if not left.is_empty:
         # vacant plots only in the frontage zone
         fl = ftree_r.query(F.buffer(5))
@@ -345,10 +350,11 @@ def process_face(fi):
             rest = clean(comp.difference(core)) if not core.is_empty else comp
             # slivers to the neighbour with the longest shared edge
             for s in parts_of(rest):
-                if s.area < 6: continue
-                best = None; bl = 0
+                if s.area < 6 or ttree is None: continue
                 sb = s.buffer(0.6)
-                for t in taken:
+                best = None; bl = 0
+                for k in ttree.query(sb):
+                    t = taken[int(k)]
                     l = t['poly'].boundary.intersection(sb).length
                     if l > bl: bl = l; best = t
                 if best is not None and bl > 2.5 and s.area < 900: best['poly'] = biggest(clean(shapely.union_all([best['poly'], s]))) or best['poly']
@@ -393,7 +399,9 @@ def process_face(fi):
 def work(chunk):
     res = []
     for fi in chunk:
-        try: res.extend(process_face(fi))
+        try:
+            t1 = time.time(); res.extend(process_face(fi))
+            if time.time() - t1 > 60: print('slow face', fi, len(face_blds.get(fi, [])), f'{time.time()-t1:.0f}s', flush=True)
         except Exception as e:
             print('face fail', fi, repr(e)[:200], flush=True)
     return res

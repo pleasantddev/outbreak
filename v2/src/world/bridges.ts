@@ -8,6 +8,7 @@ export interface Deck { pts: Float32Array; ys: Float32Array; hw: number }
 export function deckProfile(r: Road): Deck {
   const p = r.pts; const n = p.length / 2; const s = new Float32Array(n);
   for (let k = 1; k < n; k++) s[k] = s[k - 1] + Math.hypot(p[k * 2] - p[k * 2 - 2], p[k * 2 + 1] - p[k * 2 - 1]);
+  if (r.elev && r.elev.length === n) { const ye = new Float32Array(n); for (let k = 0; k < n; k++) ye[k] = r.elev[k] + 0.15; return { pts: p, ys: ye, hw: halfWidth(r) + 0.45 }; }
   const L = s[n - 1] || 1; const peak = Math.max(1, r.layer || 1) * 6.4; const ramp = Math.min(L * 0.35, 90);
   const ys = new Float32Array(n);
   for (let k = 0; k < n; k++) { const t = Math.min(s[k], L - s[k]); ys[k] = peak * Math.min(1, t / ramp) ** 0.85 + 0.15; }
