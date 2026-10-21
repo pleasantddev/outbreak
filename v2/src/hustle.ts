@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { initPhysics } from './sim/physics';
 import { LifeSim } from './sim/life';
 import { emptyCommand, type Command } from './sim/types';
-import { HumanAssets, HumanView, ROSTER, ROSTER_IDS, type RosterId } from './render/humans';
+import { HumanAssets } from './render/humans';
 import { LifeView } from './render/lifeView';
 import { preloadCars } from './render/cars';
 import { LifeHud, type PhoneCtx, type ParcelInfo } from './ui/lifeHud';
@@ -24,6 +24,10 @@ import { WEATHER_ORDER, type WeatherName } from './render/sky';
 import type { CharacterLook } from './data/cosmetics';
 import { Governor, LEVELS, PRESET_LEVEL, detectDevice, loadPref, savePref, type Pref, type Tier } from './render/quality';
 import { PerfHud } from './render/perfhud';
+import { intro as loadScreen } from './ui/intro';
+import { FrontEnd, readSettings, type PlayChoice } from './ui/lobby';
+import { LobbyStage } from './render/lobbyScene';
+import { BASE_LOOKS as LOOKS, LocalProfileStore, ephemeralProfile, levelOf, lookFor, shortId, type Profile } from './profile';
 
 const q = new URLSearchParams(location.search);
 const touchDev = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -43,14 +47,7 @@ const persist = (o: any) => { try { localStorage.setItem('hustlelife', JSON.stri
 const state: { bank: number; owned: string[]; ownedPts: Record<string, number[]>; model: string } = { bank: save.bank ?? 0, owned: save.owned ?? [], ownedPts: save.ownedPts ?? {}, model: save.model ?? 'survivor' };
 
 const PLAYER_LOOK: CharacterLook = { name: 'You', body: 'male', skin: 1, hair: 'buzzed', beard: false, top: 'tee', topPattern: 'solid', topColor: '#e8e0d0', topAccent: '#141414', pants: 'solid', pantsColor: '#1e2b3a', shoes: '#141414', head: 'none', vest: false, backpack: false, scars: 0, facePaint: 'none', model: 'survivor' } as CharacterLook;
-const LOOKS: Record<string, Partial<CharacterLook>> = {
-  survivor: { body: 'male', topColor: '#2c3a2a', topAccent: '#141414', pantsColor: '#1e2b3a', shoes: '#141414', topPattern: 'solid' },
-  rogue: { body: 'male', topColor: '#1d1f24', pantsColor: '#2a2622', shoes: '#2a1d14' },
-  trooper: { body: 'male' },
-  girl: { body: 'female', topColor: '#b0332a', topAccent: '#e8c34a', pantsColor: '#141414', shoes: '#e8e0d0', topPattern: 'ankara_sun' },
-  farah: { body: 'female', topColor: '#d9a441', topAccent: '#355070', pantsColor: '#1e2b3a', shoes: '#5a3d2b', topPattern: 'ankara_wave' },
-};
-Object.assign(PLAYER_LOOK, LOOKS[state.model] ?? {}, { model: state.model });
+Object.assign(PLAYER_LOOK, (LOOKS as any)[state.model] ?? {}, { model: state.model });
 
 let sim: LifeSim, view: LifeView, input: Input, store: RegionStore, gov: Governor;
 const perfHud = new PerfHud(() => view, () => gov);
@@ -107,12 +104,11 @@ async function boot() {
   hud.setLoad(0.97, 'Compiling shaders');
   { const t0 = performance.now(); await view.precompile(); console.info(`[hl] precompile ${Math.round(performance.now() - t0)} ms, ${view.renderer.info.programs?.length ?? 0} programs`); }
   hud.setLoad(1);
-  try { hud.pickCharacter(await thumbs(assets), state.model, (id) => setPlayerModel(id)); } catch (e) { console.warn('thumbs', e); }
   makeJobs();
   hud.onAction = onPhoneAction;
   hud.onBuy = (id) => { buyPlot(id); };
   bindLandmap();
-  (window as any).__hl = { sim, view, hud, state, gov, perf: perfHud, THREE, graph, guide, store, startJob, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
+  (window as any).__hl = { sim, view, hud, state, get stage() { return stage; }, get profile() { return profile; }, gov, perf: perfHud, THREE, graph, guide, store, startJob, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
     // test hook: run the sim without rendering, holding a command
     simulate(secs: number, patch: Partial<Command> & { pulse?: string[] } = {}) { for (let i = 0; i < secs * 60; i++) { const c: any = { ...emptyCommand(), yaw: sim.local.yaw, ...patch }; for (const k of patch.pulse ?? []) c[k] = Math.floor(i / 12) % 2 === 0; sim.setCommand(0, c); sim.step(1 / 60); if (i % 30 === 0) { view.world.update(sim.local.pos.x, sim.local.pos.z, true); syncColliders(true); } } view.handleEvents(sim.events, hud); sim.events.length = 0; },
     stoppedCar() { const m = sim.local.pos; return sim.liveVehicles().filter((v) => Math.abs(v.ctrl.currentVehicleSpeed()) < 2 && v.kind !== 'okada').sort((a, b) => { const pa = a.body.translation(), pb = b.body.translation(); return Math.hypot(pa.x - m.x, pa.z - m.z) - Math.hypot(pb.x - m.x, pb.z - m.z); })[0]; },
@@ -120,10 +116,61 @@ async function boot() {
   };
   (window as any).__w = { get tiles() { return view.world.tiles.size; }, frames: 0 };
   requestAnimationFrame(loop);
-  hud.ready(() => { started = true; audio.init(); intro(); }, q.has('auto'));
+  await frontEnd(spawn, assets);
 }
 
-function intro() {
+// ---------------------------------------------------------------- front end: profile, lobby, then the game
+const profileStore = new LocalProfileStore();
+let profile: Profile | null = null; let profileLive = false;
+let stage: LobbyStage | null = null; let front: FrontEnd | null = null;
+let playerLook: CharacterLook | null = null;
+
+async function frontEnd(spawn: { x: number; z: number }, assets: HumanAssets) {
+  const keyart = q.get('keyart');
+  // automated runs (?auto=1) skip everything and never touch a real account
+  if (q.has('auto') && !keyart) { loadScreen.drop(); profile = ephemeralProfile((state.model as any) ?? 'survivor'); applyProfile(profile); beginGame(false); return; }
+  stage = new LobbyStage(view, sim, assets, store, spawn); await stage.build();
+  const owned = () => state.owned.length;
+  front = new FrontEnd({ stage, store: profileStore, baseLook: PLAYER_LOOK, touch: touchDev, quality, cash: () => sim.cash, bank: () => state.bank, ownedPlots: owned });
+  (window as any).__hl.front = front;
+  if (keyart !== null) { loadScreen.drop(); document.getElementById('hlhud')!.style.display = 'none'; document.getElementById('tc')?.remove(); await stage.enter('keyart', { shot: +keyart || 0 }); await stage.keyart(+keyart || 0, PLAYER_LOOK); (window as any).__keyart = { stage, shot: (i: number) => stage!.keyart(i, PLAYER_LOOK) }; return; }
+  profile = await profileStore.load();
+  await stage.enter('lobby');
+  let lobby: Promise<PlayChoice>;
+  if (!profile) {
+    // first launch on this account: the creator appears behind the loading screen, which then fades away
+    front.seed(state.model in LOOKS ? state.model : 'survivor');
+    const made = front.onboard(); await loadScreen.finish();
+    profile = await made; profileLive = true; applyProfile(profile);
+    lobby = front.lobby(profile);
+  } else {
+    profileLive = true; applyProfile(profile); lobby = front.lobby(profile); await loadScreen.finish();
+  }
+  const choice = await lobby;
+  stage.leave(); applyProfile(choice.profile);
+  beginGame(choice.landmap);
+  await front.release();
+}
+function applyProfile(p: Profile) {
+  profile = p; state.model = p.model;
+  const look = lookFor(p, PLAYER_LOOK); playerLook = look;
+  Object.assign(PLAYER_LOOK, look); Object.assign(sim.local.look, look); sim.local.name = p.name;
+  const v = view.actors.get(sim.local.id); if (v) { v.view.dispose(); view.actors.delete(sim.local.id); }
+  hud.setProfile(p.name, levelOf(p.xp), shortId(p.accountId));
+}
+function beginGame(landmap: boolean) {
+  const st = readSettings(); audio.init(); audio.setVolume(st.vol, st.mus);
+  started = true; introLines();
+  if (landmap) setTimeout(() => { if (!hud.landmapOn) toggleLandmap(); }, 1200);
+}
+function grantXp(n: number) {
+  if (!profile) return; const before = levelOf(profile.xp); profile = { ...profile, xp: profile.xp + n };
+  if (profileLive) void profileStore.update({ xp: profile.xp }).catch(() => {});
+  const after = levelOf(profile.xp); hud.setProfile(profile.name, after, shortId(profile.accountId));
+  hud.toast(after > before ? `Level ${after}` : `+${n} XP`, after > before ? 'You are moving up in Lagos.' : 'Hustle respect.', after > before ? 'linear-gradient(160deg,#f6c453,#d98a12)' : 'linear-gradient(160deg,#a78bfa,#6d3ef0)', 'star' as any, after > before ? 5 : 3);
+}
+
+function introLines() {
   hud.title('HUSTLE LIFE', 'Oshodi, Lagos', 5);
   hud.say('Conductor', 'Oshodi! Oshodi! Last stop, everybody come down!');
   hud.say('You', 'Na here? Ehen. Lagos, I don land.');
@@ -176,7 +223,7 @@ function tickJob(dt: number) {
   if (activeJob.needCar && activeJob.stage === 1 && !(me.vehicle !== null && sim.vehicles[me.vehicle].kind === 'danfo')) return;
   if (d < 6) {
     if (activeJob.stage === 0) { activeJob.stage = 1; hud.title('PICKED UP', `Now deliver it. ${Math.round(activeJob.t)}s left.`, 3); audio.ui('click'); }
-    else { sim.cash += activeJob.pay; hud.money(activeJob.pay); hud.title('HUSTLE DONE', `+₦${activeJob.pay.toLocaleString()}`, 3); activeJob = null; jobs.forEach((x) => (x.active = false)); persist({ ...state, cash: sim.cash }); }
+    else { sim.cash += activeJob.pay; hud.money(activeJob.pay); hud.title('HUSTLE DONE', `+₦${activeJob.pay.toLocaleString()}`, 3); grantXp(Math.max(10, Math.round(activeJob.pay / 100))); activeJob = null; jobs.forEach((x) => (x.active = false)); persist({ ...state, cash: sim.cash }); }
   }
 }
 
@@ -206,6 +253,7 @@ function onPhoneAction(app: string, id: string) {
     persist({ ...state, cash: sim.cash });
   }
   if (app === 'Settings') {
+    if (id === 'lobby') { persist({ ...state, cash: sim.cash }); const u = new URL(location.href); u.searchParams.delete('auto'); location.href = u.toString(); return; }
     if (id === 'weather') { view.atmo.cycleWeather(); }
     if (id === 'hour') view.atmo.hour = (view.atmo.hour + 1) % 24;
     if (id === 'quality') {
@@ -305,27 +353,11 @@ function offerCall(who: string, job: string, line: string) {
 }
 setInterval(() => { if (!started || activeJob || hud.ringing || hud.landmapOn) return; if (Math.random() < 0.5) { const j = [['Mama Put', 'delivery', 'My pikin, take this food go customer for me. I go pay you well.'], ['Conductor Sule', 'danfo', 'My driver no show. Carry the bus go the next park, you go collect your share.'], ['Unknown number', 'parcel', 'I get small package. No ask question. Police dey around so shine your eye.']][Math.floor(Math.random() * 3)]; offerCall(j[0], j[1], j[2]); } }, 150000);
 
-// ---------------------------------------------------------------- choose your hustler
-async function thumbs(assets: HumanAssets) {
-  const W = 256, H = 320; const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(W, H, false); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping;
-  const out: { id: string; name: string; blurb: string; img: string }[] = [];
-  for (const id of ROSTER_IDS) {
-    const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xcfd8ff, 0x2a2018, 1.4)); const key = new THREE.DirectionalLight(0xfff0dc, 2.6); key.position.set(1.5, 2.5, 3); sc.add(key); const rim = new THREE.DirectionalLight(0x8b5cf6, 2.2); rim.position.set(-2, 2, -2); sc.add(rim);
-    const look = { ...PLAYER_LOOK, ...(LOOKS[id] ?? {}), model: id } as CharacterLook; const v = new HumanView(assets, look, 0);
-    v.root.rotation.y = 0; sc.add(v.root);
-    v.update(0.6, { anim: 'idle', speed: 0, moveYaw: 0, aimYaw: 0.25, pitch: 0, aiming: false, armed: false, weapon: null, firing: false, reloading: false, melee: false, dead: false, driving: false, shadow: 0, awaken: 0, hit: 0, cast: false, healing: false }, 0);
-    v.root.rotation.y = 0.25; v.root.updateMatrixWorld(true);
-    const head = v.bones.get('Head'); const hy = head ? head.getWorldPosition(new THREE.Vector3()).y : 1.6;
-    const cam = new THREE.PerspectiveCamera(28, W / H, 0.05, 20); cam.position.set(0.22, hy - 0.08, 1.75); cam.lookAt(0, hy - 0.32, 0);
-    r.render(sc, cam); out.push({ id, name: ROSTER[id as RosterId].name, blurb: ROSTER[id as RosterId].blurb, img: r.domElement.toDataURL('image/webp', 0.9) });
-    v.dispose(); await new Promise((res) => setTimeout(res, 0));
-  }
-  r.dispose(); r.forceContextLoss();
-  return out;
-}
+// ---------------------------------------------------------------- hustler choice lives in the profile now (ui/lobby.ts)
 function setPlayerModel(id: string) {
   state.model = id; persist({ ...state, cash: sim.cash });
-  Object.assign(sim.local.look, LOOKS[id] ?? {}, { model: id });
+  Object.assign(sim.local.look, (LOOKS as any)[id] ?? {}, { model: id });
+  if (profile) { profile = { ...profile, model: id as any }; if (profileLive) void profileStore.update({ model: id as any }).catch(() => {}); }
   const v = view.actors.get(sim.local.id); if (v) { v.view.dispose(); view.actors.delete(sim.local.id); }
 }
 function gamepad() {
@@ -379,7 +411,8 @@ function loop(t: number) {
   if (pad?.back && !prevPad?.back) view.atmo.cycleWeather();
   const lookX = f.lookX + (pad ? pad.rx * 900 * dt : 0), lookY = f.lookY + (pad ? pad.ry * 650 * dt : 0);
   const aiming = started && (f.aim || (pad?.lt ?? 0) > 0.4) && sim.local.alive && sim.local.vehicle === null && !view.phoneUp;
-  const camInfo = view.cam.update(dt, sim as any, started ? lookX : 0, started ? lookY : 0, aiming);
+  const stageOn = !!stage?.active;
+  const camInfo = stageOn ? ({ aimDir: new THREE.Vector3(0, 0, 1) } as ReturnType<typeof view.cam.update>) : view.cam.update(dt, sim as any, started ? lookX : 0, started ? lookY : 0, aiming);
   if (view.firstPerson && sim.local.vehicle !== null) cockpit();
   if (started && !hud.landmapOn) {
     const cmd = command(f, camInfo.aimDir, pad);
@@ -394,7 +427,9 @@ function loop(t: number) {
   }
   syncColliders();
   view.phoneUp = hud.phoneUp;
+  if (stageOn) { stage!.update(dt); front?.update(dt); }
   view.frame(dt);
+  if (stageOn) stage!.showPlayer(false);
   if (started) {
     const me = sim.local; const w = sim.currentWeapon(me);
     const st = w && w.id !== 'fists' && WEAPONS[w.id].slot !== 'melee' ? weaponStats(w) : null;
@@ -418,6 +453,7 @@ function loop(t: number) {
     const blips: { x: number; z: number; c: string; r?: number }[] = [];
     if (activeJob) { const tg = activeJob.stage === 0 ? activeJob.a : activeJob.b; blips.push({ x: tg.x, z: tg.z, c: '#3ddc84', r: 11 }); }
     for (const a of sim.actors) if (a.alive && a.role === 'police' && !(a as any)._gone) blips.push({ x: a.pos.x, z: a.pos.z, c: '#3b6cff', r: 6 });
+    plateUpdate();
     hud.drawRadar(sim.net, P.x, P.z, view.cam.yaw + Math.PI, blips, potholesNear(P.x, P.z, 160), state.owned.map((id) => state.ownedPts[id]).filter(Boolean), route, note);
     // prompts
     let pr: string | null = null;
@@ -429,6 +465,16 @@ function loop(t: number) {
   prevPad = pad;
   (window as any).__w.frames++;
   requestAnimationFrame(loop);
+}
+
+/** Name above the player's head, projected to the screen. */
+const plateV = new THREE.Vector3();
+function plateUpdate() {
+  const me = sim.local; const v = view.actors.get(me.id);
+  if (!v || me.vehicle !== null || view.firstPerson || !me.alive) { hud.plate(null); return; }
+  plateV.set(v.view.root.position.x, v.view.root.position.y + 2.12, v.view.root.position.z).project(view.camera);
+  if (plateV.z > 1 || Math.abs(plateV.x) > 1.1 || Math.abs(plateV.y) > 1.1) { hud.plate(null); return; }
+  hud.plate({ x: (plateV.x * 0.5 + 0.5) * innerWidth, y: (-plateV.y * 0.5 + 0.5) * innerHeight });
 }
 
 /** Cockpit camera: sit in the driver's seat and see the real interior. */

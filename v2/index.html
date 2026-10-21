@@ -3,13 +3,86 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0a0708">
+<meta name="theme-color" content="#07080d">
 <title>HustleLife</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap">
-<style>:root{color-scheme:dark}html,body{margin:0;height:100%;background:#000;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}</style>
+<style>
+/* type that ships with the game (SIL OFL): the loading screen and lobby must not depend on a font CDN */
+@font-face{font-family:Oswald;font-weight:600;font-display:swap;src:url(fonts/oswald-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:Oswald;font-weight:700;font-display:swap;src:url(fonts/oswald-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:Teko;font-weight:500;font-display:swap;src:url(fonts/teko-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:Teko;font-weight:600;font-display:swap;src:url(fonts/teko-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:Teko;font-weight:700;font-display:swap;src:url(fonts/teko-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:Inter;font-weight:400;font-display:swap;src:url(fonts/inter-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:Inter;font-weight:500;font-display:swap;src:url(fonts/inter-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:Inter;font-weight:600;font-display:swap;src:url(fonts/inter-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:Inter;font-weight:700;font-display:swap;src:url(fonts/inter-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:Inter;font-weight:800;font-display:swap;src:url(fonts/inter-latin-800-normal.woff2) format('woff2')}
+:root{color-scheme:dark;--teal:#2de0c8;--pur:#8b5cf6;--pur2:#6d3ef0;--mut:#9ba3b4}
+html,body{margin:0;height:100%;background:#000;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+
+/* ---- loading screen: our own Lagos, shot at night, behind the logo ---- */
+#boot{position:fixed;inset:0;z-index:20;background:#07080d;color:#f3f5f8;font-family:Inter,system-ui,sans-serif;overflow:hidden;transition:opacity .9s ease;-webkit-font-smoothing:antialiased}
+#boot.out{opacity:0;pointer-events:none}
+#boot .bk{position:absolute;inset:0;background:radial-gradient(90% 70% at 70% 20%,rgba(109,62,240,.35),transparent 60%),radial-gradient(70% 60% at 10% 100%,rgba(45,224,200,.2),transparent 60%),#07080d}
+#boot .slide{position:absolute;inset:-3%;background-size:cover;background-position:var(--fx,50%) 56%;opacity:0;transition:opacity 1.6s ease;will-change:transform,opacity;animation:kb 18s ease-in-out infinite alternate}
+#boot .slide.on{opacity:1}
+#boot .slide:nth-child(2){--fx:42%;animation-delay:-6s;animation-direction:alternate-reverse}
+#boot .slide:nth-child(3){--fx:58%;animation-delay:-12s}
+@keyframes kb{from{transform:scale(1.02) translate3d(-1.2%,.6%,0)}to{transform:scale(1.13) translate3d(1.4%,-1%,0)}}
+#boot .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(4,5,9,.82) 0%,rgba(4,5,9,.45) 34%,rgba(4,5,9,0) 62%),linear-gradient(0deg,rgba(4,5,9,.94) 0%,rgba(4,5,9,.55) 20%,rgba(4,5,9,0) 46%),linear-gradient(180deg,rgba(4,5,9,.6),rgba(4,5,9,0) 22%)}
+#boot .grain{position:absolute;inset:0;opacity:.09;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");animation:gr .6s steps(3) infinite}
+@keyframes gr{0%{transform:translate(0,0)}33%{transform:translate(-3%,2%)}66%{transform:translate(2%,-3%)}100%{transform:translate(0,0)}}
+#boot .brand{position:absolute;left:max(5vw,env(safe-area-inset-left));bottom:calc(max(96px,13vh) + 56px);display:flex;flex-direction:column;gap:14px}
+#boot .logo{display:flex;align-items:stretch;transform:skewX(-9deg);transform-origin:0 100%;filter:drop-shadow(0 12px 34px rgba(0,0,0,.6));font-family:Oswald,Impact,'Arial Narrow',sans-serif;font-weight:700;font-size:clamp(46px,min(10.5vw,17vh),168px);line-height:.88;letter-spacing:.012em;text-transform:uppercase;animation:lg 1s cubic-bezier(.2,.8,.2,1) both}
+@keyframes lg{from{opacity:0;transform:skewX(-9deg) translateX(-40px)}to{opacity:1;transform:skewX(-9deg)}}
+#boot .logo .h{color:#fff;padding:.02em .08em .0 0;text-shadow:0 .035em 0 rgba(0,0,0,.4)}
+#boot .logo .l{color:#07080d;background:linear-gradient(100deg,var(--teal),var(--pur));padding:.02em .17em 0;margin-left:.04em;box-shadow:0 0 .5em rgba(45,224,200,.35),.05em .05em 0 rgba(255,255,255,.12)}
+#boot .tag{display:flex;align-items:center;gap:14px;font-size:clamp(10px,1.5vw,15px);font-weight:600;letter-spacing:.42em;text-transform:uppercase;color:#d5dae6;text-shadow:0 1px 8px rgba(0,0,0,.8)}
+#boot .tag .ng{display:inline-flex;height:11px;width:44px;border-radius:2px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.15)}
+#boot .tag .ng i{flex:1;background:#0a9a52}#boot .tag .ng i:nth-child(2){background:#f3f5f8}
+#boot .foot{position:absolute;left:max(5vw,env(safe-area-inset-left));right:max(5vw,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:9px}
+#boot .tip{display:flex;gap:12px;align-items:baseline;font-size:clamp(12px,1.5vw,16px);font-weight:500;color:#e5e9f2;max-width:min(760px,90vw);min-height:2.7em;text-shadow:0 1px 8px rgba(0,0,0,.9);transition:opacity .45s}
+#boot .tip b{font-family:Oswald,sans-serif;font-weight:700;letter-spacing:.22em;font-size:.8em;color:var(--teal);flex:0 0 auto}
+#boot .stat{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+#boot #loadtxt{font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#cfd5e1}
+#boot #loadpct{font-family:Teko,Oswald,sans-serif;font-weight:600;font-size:34px;line-height:.8;letter-spacing:.04em;color:#fff}
+#boot .bar{height:4px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden;box-shadow:0 0 22px rgba(45,224,200,.18)}
+#boot .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--pur));box-shadow:0 0 14px var(--teal);transition:width .35s ease-out}
+#boot .cr{font-size:10.5px;line-height:1.5;color:rgba(255,255,255,.4);margin-top:2px}
+#boot .ver{position:absolute;top:max(14px,env(safe-area-inset-top));left:max(5vw,env(safe-area-inset-left));font-family:Oswald,sans-serif;font-weight:600;font-size:11px;letter-spacing:.32em;color:rgba(255,255,255,.55)}
+@media (max-width:760px) and (orientation:portrait){
+  #boot .brand{left:0;right:0;align-items:center;bottom:calc(max(120px,17vh) + 70px)}
+  #boot .logo{transform-origin:50% 100%;font-size:min(21vw,110px)}
+  #boot .tag{letter-spacing:.3em}
+  #boot .shade{background:linear-gradient(0deg,rgba(4,5,9,.95) 0%,rgba(4,5,9,.6) 30%,rgba(4,5,9,0) 58%),linear-gradient(180deg,rgba(4,5,9,.55),rgba(4,5,9,0) 25%)}
+  #boot .slide{background-position:var(--fp,50%) 50%}
+}
+@media (max-height:520px) and (orientation:landscape){
+  #boot .brand{bottom:calc(58px + 74px);gap:8px}
+  #boot .tip{min-height:0}
+  #boot .cr{display:none}
+  #boot #loadpct{font-size:26px}
+}
+</style>
 </head>
 <body>
+<div id="boot" role="status" aria-label="Loading HustleLife">
+  <div class="bk"><div class="slide on" style="background-image:url(ui/keyart-1.webp)"></div><div class="slide" style="background-image:url(ui/keyart-2.webp)"></div><div class="slide" style="background-image:url(ui/keyart-3.webp)"></div></div>
+  <div class="shade"></div><div class="grain"></div>
+  <div class="ver">EARLY BUILD</div>
+  <div class="brand">
+    <div class="logo"><span class="h">Hustle</span><span class="l">Life</span></div>
+    <div class="tag"><span>Oshodi · Lagos · Nigeria</span><span class="ng"><i></i><i></i><i></i></span></div>
+  </div>
+  <div class="foot">
+    <div class="tip" id="tip"><b>TIP</b><span id="tiptxt">Press T for your phone. Hustles, bank and land all live in there.</span></div>
+    <div class="stat"><span id="loadtxt">Starting up</span><span id="loadpct">0%</span></div>
+    <div class="bar"><i id="loadbar"></i></div>
+    <div class="cr">Map data © OpenStreetMap contributors (ODbL) · Vehicles CC BY, Sketchfab artists (cars/CREDITS.json) · People from the studio's Fab library · Animation CC0 Quaternius · Textures CC0 Poly Haven · Type: Oswald, Teko, Inter (SIL OFL)</div>
+  </div>
+</div>
 <script type="module" src="./src/hustle.ts"></script>
 </body>
 </html>
