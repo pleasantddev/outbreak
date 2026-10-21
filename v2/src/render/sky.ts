@@ -6,6 +6,7 @@ import { groundShared } from '../world/ground';
 import { buildingShared } from '../world/buildings';
 import { propShared, setPropNight } from '../world/props';
 import { LEVELS, type Level } from './quality';
+import { setSignNight } from '../world/signs';
 
 export type WeatherName = 'clear' | 'hot' | 'harmattan' | 'fog' | 'rain' | 'storm';
 interface W { label: string; cover: number; dens: number; haze: number; fog: number; tint: [number, number, number]; sun: number; rain: number; wetRate: number; dry: number; dust: number; low: number }
@@ -297,7 +298,7 @@ export class Atmosphere {
     this.water = THREE.MathUtils.clamp(this.water + dt * (W.wetRate * 0.5) - dt * W.dry * 0.04 * (0.3 + day), 0, 1);
     groundShared.uWet.value = this.wet; groundShared.uWater.value = this.water; groundShared.uRain.value = W.rain; groundShared.uTime.value += dt; groundShared.uDust.value = W.dust;
     buildingShared.uWet.value = this.wet; buildingShared.uNight.value = night; buildingShared.uDust.value = W.dust;
-    propShared.uNight.value = night; setPropNight(night);
+    propShared.uNight.value = night; setPropNight(night); setSignNight(night);
     const rm = this.rain.material as THREE.LineBasicMaterial;
     rm.opacity = Math.min(0.55, W.rain * 0.4); this.rain.visible = W.rain > 0.03;
     if (this.rain.visible) {

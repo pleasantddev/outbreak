@@ -1,142 +1,256 @@
-# Packs the corridor into 2 km region files (gzip binary) for streaming, plus a manifest and the pothole field.
+# Packs the corridor into 2 km region files (HLR2, gzip binary) for streaming, plus a manifest and the pothole field.
+# Inputs: raw.pkl (extract.py), bclass.pkl (bclass.py), parcels.pkl (parcels.py), data/potholes_reports.json, sites.json.
 # Map data (c) OpenStreetMap contributors, ODbL 1.0.
 import pickle, math, struct, gzip, json, os, re, time, random, collections
-import numpy as np
+import numpy as np, shapely
 from shapely.geometry import Polygon, LineString, Point, box
 from shapely.strtree import STRtree
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import dijkstra, connected_components
+from common import *
+import bclass as BC
+
+HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 t0 = time.time()
-d = pickle.load(open('/home/claude/hl/pipe/raw.pkl', 'rb'))
-B = pickle.load(open('/home/claude/hl/pipe/blocks.pkl', 'rb'))
-OUT = '/home/claude/hl/v2/public/world'; os.makedirs(OUT, exist_ok=True)
+def log(*a): print(*a, f'{time.time()-t0:.0f}s', flush=True)
+d = pickle.load(open(os.path.join(HERE, 'raw.pkl'), 'rb'))
+OUT = os.path.join(ROOT, 'v2', 'public', 'world'); os.makedirs(OUT, exist_ok=True)
 for f in os.listdir(OUT):
-    if f.startswith('r') and f.endswith('.wasm'): os.remove(os.path.join(OUT, f))
+    if f.endswith('.wasm') or f == 'manifest.json': os.remove(os.path.join(OUT, f))
 LAT0, LON0 = d['origin']; KX = math.cos(math.radians(LAT0)) * 111320.0; KZ = 110574.0
 def P(lon, lat): return ((lon - LON0) * KX, -(lat - LAT0) * KZ)
 lon0, lat0, lon1, lat1 = d['bbox']
 X0, Z0 = P(lon0, lat1); X1, Z1 = P(lon1, lat0)
 RS = 2000.0
 rx0, rz0, rx1, rz1 = math.floor(X0 / RS), math.floor(Z0 / RS), math.floor(X1 / RS), math.floor(Z1 / RS)
-print('world', round(X0), round(Z0), round(X1), round(Z1), 'regions', (rx1 - rx0 + 1) * (rz1 - rz0 + 1))
 rkey = lambda x, z: (math.floor(x / RS), math.floor(z / RS))
 def inside_corr(x, z): return X0 <= x <= X1 and Z0 <= z <= Z1
+CORR = box(X0, Z0, X1, Z1)
+def sid(bid): return (0x80000000 | (bid - 10_000_000_000)) if bid >= 10_000_000_000 else bid
 
-CLS = {'motorway': 1, 'trunk': 2, 'primary': 3, 'secondary': 4, 'tertiary': 5, 'unclassified': 6, 'residential': 7, 'living_street': 7, 'service': 8, 'motorway_link': 9, 'trunk_link': 9, 'primary_link': 10, 'secondary_link': 10, 'tertiary_link': 10, 'busway': 11, 'track': 12, 'footway': 13, 'path': 13, 'pedestrian': 13, 'steps': 14, 'construction': 15, 'road': 7}
 PAVED_HINT = {'asphalt', 'paved', 'concrete', 'paving_stones', 'concrete:plates', 'sett', 'interlock'}
 UNPAVED = {'unpaved', 'dirt', 'ground', 'earth', 'gravel', 'sand', 'compacted', 'laterite', 'mud', 'fine_gravel'}
-def h01(n, salt=0):
-    x = (n * 2654435761 + salt * 97531) & 0xffffffff; x ^= x >> 15; x = (x * 2246822519) & 0xffffffff; x ^= x >> 13; return x / 4294967295.0
+def isbridge(v): return v not in (None, 'no')
 
 # ---------- strings
 strings, sidx = [], {}
-def S(s):
-    if not s: return 0xffff
-    s = s[:60]
-    if s not in sidx: sidx[s] = len(strings); strings.append(s)
-    return sidx[s]
 
 # ---------- roads
 roads = []
 for r in d['roads']:
     c = CLS.get(r['hw'])
     if not c: continue
+    if r.get('tunnel') not in (None, 'no'): continue
     lanes = 0
-    try: lanes = int(float((r['lanes'] or '0').split(';')[0]))
-    except: pass
-    surf = (r['surface'] or '').lower()
+    try: lanes = int(float((r.get('lanes') or '0').split(';')[0]))
+    except Exception: pass
+    surf = (r.get('surface') or '').lower()
     unp = surf in UNPAVED or (surf not in PAVED_HINT and c in (7, 8, 12) and h01(r['id'], 3) < (0.42 if c == 7 else 0.25 if c == 8 else 0.9))
     if c == 12: unp = True
-    flags = (1 if r['oneway'] in ('yes', '1', 'true', '-1') else 0) | (2 if r['bridge'] and r['bridge'] != 'no' else 0) | (4 if r['tunnel'] and r['tunnel'] != 'no' else 0) | (8 if r['junction'] == 'roundabout' else 0) | (16 if unp else 0) | (32 if r['oneway'] == '-1' else 0)
-    try: layer = int(float(r['layer'] or 0))
-    except: layer = 0
-    roads.append({'id': r['id'], 'c': c, 'lanes': lanes, 'flags': flags, 'layer': max(-5, min(5, layer)), 'name': r['name'], 'pts': r['pts']})
-print('roads', len(roads))
+    br = isbridge(r.get('bridge'))
+    flags = (1 if r.get('oneway') in ('yes', '1', 'true', '-1') else 0) | (2 if br else 0) | (8 if r.get('junction') == 'roundabout' else 0) | (16 if unp else 0) | (32 if r.get('oneway') == '-1' else 0)
+    try: layer = int(float(r.get('layer') or 0))
+    except Exception: layer = 0
+    wd = parse_num(r.get('width'))
+    roads.append({'id': r['id'], 'c': c, 'lanes': lanes, 'flags': flags, 'layer': max(-5, min(5, layer)), 'name': r.get('name'), 'pts': r['pts'], 'wd': int(min(120, round(wd * 2))) if 0.8 < wd < 60 else 0, 'bridge': br, 'bridge_kind': r.get('bridge')})
+log('roads', len(roads))
 
-# ---------- landuse lookup for buildings
-area_polys, area_kind = [], []
-AK = {'residential': 1, 'commercial': 2, 'retail': 2, 'industrial': 3, 'school': 4, 'university': 4, 'college': 4, 'hospital': 5, 'marketplace': 6, 'religious': 7, 'place_of_worship': 7, 'park': 8, 'grass': 8, 'pitch': 9, 'fuel': 10, 'parking': 11, 'bus_station': 12, 'farmland': 13, 'scrub': 14, 'wood': 14, 'forest': 14, 'grassland': 14, 'cemetery': 15, 'landfill': 16, 'brownfield': 17, 'construction': 17, 'military': 18, 'swimming_pool': 19, 'sports_centre': 9, 'stadium': 9, 'platform': 20, 'wetland': 21, 'aerodrome': 22, 'railway': 23, 'police': 24}
+# ---------- rails
+rails = []
+for r in d['rail']:
+    rw = r['railway']
+    if r.get('tunnel') not in (None, 'no') and rw != 'platform': continue
+    if rw in ('construction', 'proposed', 'signal', 'buffer_stop', 'switch', 'crossing', 'level_crossing'): continue
+    if rw == 'platform' or rw == 'platform_edge': kind = 6
+    elif rw == 'station': kind = 7
+    elif rw in ('disused', 'abandoned'): kind = 5
+    elif rw in ('light_rail', 'subway', 'tram', 'monorail'): kind = 3
+    elif rw == 'narrow_gauge': kind = 2
+    elif rw == 'rail': kind = 1 if (r.get('gauge') or '') in ('1435', '1432', '1437') else 2
+    else: continue
+    try: gauge = int(float((r.get('gauge') or '0').split(';')[0]))
+    except Exception: gauge = 0
+    if gauge == 0: gauge = 1435 if kind == 1 else 1067 if kind in (2, 5) else 1435
+    br = isbridge(r.get('bridge')) and kind in (1, 2, 3, 5)
+    try: layer = int(float(r.get('layer') or 0))
+    except Exception: layer = 0
+    if kind == 3 and layer >= 2 and r.get('bridge') in ('viaduct', 'yes'): br = True
+    svc = r.get('service')
+    flags = (1 if br else 0) | (4 if svc else 0) | (8 if r['closed'] else 0) | (16 if (r.get('electrified') or 'no') != 'no' else 0)
+    rails.append({'id': r['id'], 'kind': kind, 'flags': flags, 'gauge': gauge, 'name': r.get('name'), 'pts': r['pts'], 'layer': layer, 'bridge': br, 'bridge_kind': r.get('bridge'), 'service': svc})
+log('rails', len(rails), collections.Counter(r['kind'] for r in rails))
+
+# ---------- water
+water_polys = []
+bigwater = []
+for w in d['water']:
+    if w['line'] or len(w['pts']) < 3: continue
+    p = Polygon(w['pts'], w['holes'])
+    if not p.is_valid: p = p.buffer(0)
+    if p.is_empty: continue
+    p = p.simplify(1.5)
+    water_polys.append((w, p))
+    if p.area > 100000 and w['kind'] in ('water', 'riverbank'): bigwater.append(p)
+lagoon = shapely.union_all(bigwater) if bigwater else None
+if lagoon is not None: shapely.prepare(lagoon)
+
+# ---------- bridge elevation (roads and rails share one graph; ground nodes are where bridges descend)
+def kq(x, z): return (int(round(x * 2)), int(round(z * 2)))
+def compute_elev():
+    ways = []  # (kind, ref, pts, layer, bridge_kind)
+    for r in roads:
+        if r['bridge']: ways.append(('r', r, r['pts'], r['layer'], r['bridge_kind']))
+    for r in rails:
+        if r['bridge']: ways.append(('l', r, r['pts'], r['layer'], r['bridge_kind']))
+    if not ways: return
+    ground = set()
+    glines = []
+    for r in roads:
+        if not r['bridge'] and r['c'] <= 10:
+            for p in r['pts']: ground.add(kq(*p))
+            glines.append(LineString(r['pts']))
+    for r in rails:
+        if not r['bridge'] and r['kind'] in (1, 2, 3, 5) and not (r['flags'] & 8):
+            for p in r['pts']: ground.add(kq(*p))
+            glines.append(LineString(r['pts']))
+    gt = STRtree(glines)
+    wlines = [LineString(w['pts']) for w in d['water'] if w['line'] and w['kind'] in ('canal', 'river', 'drain', 'stream') and len(w['pts']) > 1]
+    wtree = STRtree(wlines)
+    nid = {}; edges = []; nodeway = collections.defaultdict(set)
+    def N(p):
+        k = kq(*p)
+        if k not in nid: nid[k] = len(nid)
+        return nid[k]
+    wcap = []
+    for wi, (kd, ref, pts, layer, bk) in enumerate(ways):
+        ls = LineString(pts)
+        cap = 0.0
+        # what does it cross
+        hit = gt.query(ls)
+        cr = any(ls.crosses(glines[int(i)]) for i in hit)
+        if cr: cap = max(cap, 6.4)
+        if lagoon is not None and ls.intersects(lagoon) and ls.intersection(lagoon).length > 250: cap = max(cap, 14.0)
+        else:
+            wh = wtree.query(ls)
+            if any(ls.crosses(wlines[int(i)]) for i in wh): cap = max(cap, 2.6)
+        if layer >= 2: cap = max(cap, 6.4 * layer)
+        if bk == 'viaduct': cap = max(cap, 6.0 if kd == 'r' else 7.5)
+        wcap.append(cap)
+        prev = None
+        for p in pts:
+            n = N(p); nodeway[n].add(wi)
+            if prev is not None and prev != n:
+                edges.append((prev, n, math.hypot(p[0] - pp[0], p[1] - pp[1])))
+            prev = n; pp = p
+    n = len(nid)
+    rows = [e[0] for e in edges] + [e[1] for e in edges]; cols = [e[1] for e in edges] + [e[0] for e in edges]; w = [e[2] for e in edges] * 2
+    G = coo_matrix((w, (rows, cols)), shape=(n, n)).tocsr()
+    srcs = [i for k, i in nid.items() if k in ground]
+    # bridge ends with no ground road attached still descend
+    deg = np.asarray((G > 0).sum(axis=1)).ravel()
+    for i in range(n):
+        if deg[i] <= 1 and i not in srcs: srcs.append(i)
+    dist = dijkstra(G, directed=False, indices=srcs, min_only=True) if srcs else np.full(n, 0.0)
+    ncomp, lab = connected_components(G, directed=False)
+    comp_cap = collections.defaultdict(float)
+    for wi, (kd, ref, pts, layer, bk) in enumerate(ways):
+        comp_cap[lab[N(pts[0])]] = max(comp_cap[lab[N(pts[0])]], wcap[wi])
+    for wi, (kd, ref, pts, layer, bk) in enumerate(ways):
+        cap = comp_cap[lab[N(pts[0])]] or (1.5 if layer >= 1 else 1.0)
+        ys = []
+        for p in pts:
+            dd = dist[N(p)]
+            if not np.isfinite(dd): dd = 0
+            ys.append(max(0.2, min(cap, 0.055 * dd + 0.15)))
+        ref['elev'] = [int(round(y * 10)) for y in ys]
+    log('bridge ways', len(ways), 'components', len(comp_cap))
+compute_elev()
+
+# ---------- buildings
+BCL = pickle.load(open(os.path.join(HERE, 'bclass.pkl'), 'rb'))
+log('bclass loaded', len(BCL['kind']))
+KIND = BCL['kind']; LV = BCL['lv']; HDM = BCL['hdm']; ROOFS = BCL['roof']; AREAS = BCL['area']; CX = BCL['cx']; CZ = BCL['cz']; IDS = BCL['ids']; NAMES = BCL['names']
+
+# ---------- areas
+AREA_SPORT = {'basketball': 1, 'soccer': 2, 'football': 2, 'tennis': 3, 'athletics': 4, 'volleyball': 5, 'cricket': 6, 'multi': 7, 'swimming': 8, 'futsal': 2, 'handball': 5, 'netball': 1, 'running': 4}
 areas = []
 for a in d['areas']:
-    t = a['tags']; k = 0
-    for key in ('amenity', 'leisure', 'landuse', 'natural', 'public_transport', 'aeroway'):
-        if key in t and t[key] in AK: k = AK[t[key]]; break
+    t = a['tags']; k = BC.area_kind(t)
     if not k or len(a['pts']) < 3: continue
     try:
-        p = Polygon(a['pts']);
+        p = Polygon(a['pts'])
         if not p.is_valid: p = p.buffer(0)
         if p.geom_type != 'Polygon' or p.area < 20: continue
     except Exception: continue
-    areas.append({'k': k, 'name': t.get('name'), 'poly': p})
-    area_polys.append(p); area_kind.append(k)
-atree = STRtree(area_polys) if area_polys else None
-# major roads for "street front" commercial inference
-major = [LineString(r['pts']) for r in roads if r['c'] in (1, 2, 3, 4, 9, 10) and len(r['pts']) > 1]
-mtree = STRtree(major)
-print('areas', len(areas), f'{time.time()-t0:.0f}s')
+    sub = 0
+    if k == 9: sub = AREA_SPORT.get((t.get('sport') or '').split(';')[0], 0)
+    areas.append({'k': k, 'sub': sub, 'name': t.get('name'), 'poly': p, 'tags': t})
+# hand-placed sites (mechanic villages and similar) that OSM does not map as areas
+SITES = os.path.join(HERE, 'sites.json')
+if os.path.exists(SITES):
+    for s in json.load(open(SITES)):
+        pts = [P(lo, la) for la, lo in s['poly']]
+        areas.append({'k': s['kind'], 'sub': 0, 'name': s['name'], 'poly': Polygon(pts), 'tags': {}})
+# sports pitches mapped as buildings (leisure=pitch + building=yes): draw them as pitches, not as boxes
+SKIP_B = set()
+for i, t in enumerate(BCL['tags']):
+    if not t or 'sport' not in t: continue
+    sp = AREA_SPORT.get(t['sport'].split(';')[0], 0)
+    if not sp or sp in (4, 6, 8) or t.get('leisure') not in ('pitch', 'sports_centre', None): continue
+    if t.get('leisure') != 'pitch' and not t.get('building'): continue
+    g = shapely.from_wkb(BCL['wkb'][i])
+    if g.geom_type != 'Polygon' or g.area < 40 or g.area > 6000: continue
+    if t.get('leisure') == 'pitch': SKIP_B.add(i)
+    areas.append({'k': 9, 'sub': sp, 'name': t.get('name'), 'poly': g, 'tags': t})
+log('pitch buildings', len(SKIP_B))
+log('areas', len(areas))
 
-# ---------- buildings: kind, levels
-BK = {'construction': 9, 'constructions': 9, 'church': 6, 'mosque': 7, 'hotel': 4, 'apartments': 3, 'commercial': 2, 'retail': 2, 'industrial': 5, 'warehouse': 5, 'school': 8, 'hospital': 8, 'roof': 10, 'hut': 11, 'shed': 11, 'kiosk': 11, 'garage': 11, 'grandstand': 12}
-def poly_area(pts):
-    a = 0
-    for i in range(len(pts)):
-        x1, z1 = pts[i]; x2, z2 = pts[(i + 1) % len(pts)]; a += x1 * z2 - x2 * z1
-    return a / 2
-bld = []
-cent = []
-for b in d['bld']:
-    pts = b['pts']
-    if len(pts) < 3: continue
-    A = abs(poly_area(pts))
-    if A < 4: continue
-    cx = sum(p[0] for p in pts) / len(pts); cz = sum(p[1] for p in pts) / len(pts)
-    if not inside_corr(cx, cz): continue
-    kind = BK.get(b['b'], 1)  # 1 generic house
-    if b['amenity'] == 'place_of_worship': kind = 6
-    lv = 0
-    try: lv = int(float(b['lv'])) if b['lv'] else 0
-    except: lv = 0
-    if not lv and b['h']:
-        try: lv = max(1, round(float(re.sub('[^0-9.]', '', b['h'])) / 3.2))
-        except: pass
-    land = 0
-    if atree is not None:
-        for i in atree.query(Point(cx, cz)):
-            if area_polys[i].contains(Point(cx, cz)): land = area_kind[i]; break
-    near_major = False
-    if A > 25:
-        q = mtree.query(Point(cx, cz).buffer(35))
-        near_major = any(major[i].distance(Point(cx, cz)) < 35 for i in q)
-    r = h01(b['id'], 1)
-    if kind == 1:
-        if land == 3 or (A > 1500 and not near_major): kind = 5
-        elif A < 18: kind = 11
-        elif near_major: kind = 2
-        elif land in (4, 5): kind = 8
-    if not lv:
-        if kind == 11: lv = 1
-        elif kind == 5: lv = 1
-        elif kind == 9: lv = 1 + int(r * 3)
-        elif kind == 2: lv = 1 + int(r * 3) + (1 if A > 300 else 0) + (2 if A > 1200 and r > 0.6 else 0)
-        elif kind == 8: lv = 1 + int(r * 2)
-        elif kind in (6, 7): lv = 1
-        else:
-            if A < 70: lv = 1
-            elif A < 160: lv = 1 if r < 0.6 else 2
-            elif A < 400: lv = 1 if r < 0.3 else 2 if r < 0.75 else 3
-            else: lv = 2 + int(r * 3)
-    lv = max(1, min(40, lv))
-    bld.append((cx, cz, kind, lv, pts, b['id'], b['name']))
-print('buildings kept', len(bld), f'{time.time()-t0:.0f}s')
+# ---------- POIs
+PK = {'bus_stop': 1, 'fuel': 2, 'marketplace': 3, 'school': 4, 'hospital': 5, 'clinic': 5, 'pharmacy': 6, 'bank': 7, 'restaurant': 8, 'fast_food': 8, 'cafe': 8, 'bar': 9, 'pub': 9, 'nightclub': 9, 'place_of_worship': 10, 'police': 11, 'car_repair': 12, 'car_parts': 12, 'tyres': 12, 'mechanic': 12, 'supermarket': 13, 'convenience': 13, 'mall': 13, 'hotel': 14, 'traffic_signals': 15, 'station': 16, 'halt': 16, 'bus_station': 17, 'street_lamp': 18, 'atm': 19, 'car_wash': 20, 'ferry_terminal': 21}
+pois = []
+for p in d['poi']:
+    t = p['tags']; k = 0
+    for key in ('highway', 'amenity', 'shop', 'craft', 'railway', 'tourism', 'public_transport'):
+        if key in t and t[key] in PK: k = PK[t[key]]; break
+    if t.get('place'): k = 30 + {'city': 0, 'town': 1, 'suburb': 2, 'neighbourhood': 3, 'quarter': 3, 'village': 4, 'hamlet': 5, 'locality': 5}.get(t['place'], 5)
+    if not k: k = 99 if t.get('name') else 0
+    if not k: continue
+    pois.append((p['p'][0], p['p'][1], k, t.get('name') or t.get('brand') or t.get('operator')))
+log('pois', len(pois))
 
-# ---------- potholes: reported clusters snapped to the named road + background wear
-rep = json.load(open('/home/claude/hl/data/potholes_reports.json'))
-def lonlat_to(lat, lon): return P(lon, lat)
-named = [(r, LineString(r['pts'])) for r in roads if len(r['pts']) > 1 and r['c'] <= 10 or (r['c'] in (7, 8) and r['name'])]
+# ---------- bank branches: a bank node claims the building it stands in (or the closest within 25 m); otherwise a small branch is added
+from scipy.spatial import cKDTree
+_tree = cKDTree(np.c_[CX, CZ]); EXTRA = []; _claimed = set(); _nb = [0, 0, 0]
+_rl = [LineString(r['pts']) for r in roads if r['c'] <= 8 and len(r['pts']) > 1]; _rt = shapely.STRtree(_rl) if _rl else None
+for x, z, k, name in pois:
+    if k != 7 or not inside_corr(x, z): continue
+    pt = Point(x, z); best = None; bd = 1e9
+    for ci in _tree.query_ball_point([x, z], 30):
+        if AREAS[ci] < 25 or AREAS[ci] > 2500 or ci in _claimed: continue
+        g = shapely.from_wkb(BCL['wkb'][ci]); dd = 0.0 if g.contains(pt) else g.distance(pt)
+        if dd < bd: bd = dd; best = ci
+    if best is not None and bd <= 25:
+        _claimed.add(best); KIND[best] = 13
+        if name and not NAMES[best]: NAMES[best] = name
+        if LV[best] < 1: LV[best] = 1
+        _nb[0 if bd == 0 else 1] += 1; continue
+    ang = 0.0
+    if _rt is not None:
+        ni = _rt.nearest(pt); ln = _rl[int(ni)]; q = ln.project(pt); a0 = ln.interpolate(max(0, q - 1)); a1 = ln.interpolate(q + 1); ang = math.atan2(a1.y - a0.y, a1.x - a0.x)
+    c, s_ = math.cos(ang), math.sin(ang); hl, hw = 6.5, 4.5
+    ring = [(x + lx * c - lz * s_, z + lx * s_ + lz * c) for lx, lz in ((-hl, -hw), (hl, -hw), (hl, hw), (-hl, hw))]
+    EXTRA.append({'kind': 13, 'lv': 1, 'ring': ring, 'name': name, 'id': 0x7ff00000 + len(EXTRA), 'x': x, 'z': z}); _nb[2] += 1
+log('bank branches: in building', _nb[0], 'nearest building', _nb[1], 'synthetic', _nb[2])
+
+# ---------- potholes (reported clusters snapped to the named road, plus background wear)
+rep = json.load(open(os.path.join(ROOT, 'data', 'potholes_reports.json')))
+named = [(r, LineString(r['pts'])) for r in roads if len(r['pts']) > 1 and not r['bridge'] and (r['c'] <= 10 or (r['c'] in (7, 8) and r['name']))]
 ntree = STRtree([g for _, g in named])
-potholes = []  # (x, z, radius, depth, reportIndex)
+potholes = []
 rng = random.Random(2026)
 report_out = []
 for ri, R in enumerate(rep['reports']):
-    x, z = lonlat_to(R['lat'], R['lon'])
+    x, z = P(R['lon'], R['lat'])
     rad = R.get('radius', 200)
     pat = re.compile(R['match'], re.I) if R.get('match') else None
     wide = [named[i] for i in ntree.query(Point(x, z).buffer(3000))]
@@ -171,14 +285,12 @@ for ri, R in enumerate(rep['reports']):
         size = 0.35 + rng.random() ** 2 * (2.6 if sev == 3 else 1.6)
         depth = 0.06 + rng.random() * (0.22 if sev == 3 else 0.14)
         potholes.append((px, pz, size, depth, ri)); placed += 1
-        # craters spawn satellites
         if size > 1.6 and rng.random() < 0.7:
             for _ in range(rng.randrange(1, 4)):
                 a = rng.random() * 6.283; dd = size * (0.9 + rng.random())
                 potholes.append((px + math.cos(a) * dd, pz + math.sin(a) * dd, 0.3 + rng.random() * 0.8, 0.05 + rng.random() * 0.1, ri))
     report_out.append({**R, 'placed': placed, 'snap_m': round(moved), 'x': round(x, 1), 'z': round(z, 1), 'road_used': sorted({c[0]['name'] or '' for c in pick})[:3]})
 nrep = len(potholes)
-# background wear on paved roads (unreported but plausible): rate per km by class
 RATE = {3: 1.2, 4: 1.6, 5: 2.2, 6: 2.4, 7: 3.0, 8: 1.0, 10: 0.8}
 for r in roads:
     if r['flags'] & 16 or r['flags'] & 2: continue
@@ -190,24 +302,15 @@ for r in roads:
         cx, cz = p.x, p.y
         if not inside_corr(cx, cz): continue
         potholes.append((cx + (rng.random() - 0.5) * 3, cz + (rng.random() - 0.5) * 3, 0.25 + rng.random() ** 3 * 1.2, 0.04 + rng.random() * 0.08, 255))
-print('potholes reported', nrep, 'background', len(potholes) - nrep, f'{time.time()-t0:.0f}s')
+log('potholes reported', nrep, 'background', len(potholes) - nrep)
 json.dump({'compiled': rep['compiled'], 'reports': report_out, 'outside_current_map': rep['outside_current_map'], 'excluded': rep['excluded']}, open(f'{OUT}/potholes.json', 'w'), indent=1)
 
-# ---------- POIs
-PK = {'bus_stop': 1, 'fuel': 2, 'marketplace': 3, 'school': 4, 'hospital': 5, 'clinic': 5, 'pharmacy': 6, 'bank': 7, 'atm': 7, 'restaurant': 8, 'fast_food': 8, 'cafe': 8, 'bar': 9, 'pub': 9, 'nightclub': 9, 'place_of_worship': 10, 'police': 11, 'car_repair': 12, 'car_parts': 12, 'mechanic': 12, 'supermarket': 13, 'convenience': 13, 'mall': 13, 'hotel': 14, 'traffic_signals': 15, 'station': 16, 'bus_station': 17, 'street_lamp': 18}
-pois = []
-for p in d['poi']:
-    t = p['tags']; k = 0
-    for key in ('highway', 'amenity', 'shop', 'craft', 'railway', 'tourism', 'public_transport'):
-        if key in t and t[key] in PK: k = PK[t[key]]; break
-    if t.get('place'): k = 30 + {'city': 0, 'town': 1, 'suburb': 2, 'neighbourhood': 3, 'quarter': 3, 'village': 4, 'hamlet': 5, 'locality': 5}.get(t['place'], 5)
-    if not k: k = 99 if t.get('name') else 0
-    if not k: continue
-    pois.append((p['p'][0], p['p'][1], k, t.get('name')))
-print('pois', len(pois))
+# ---------- parcels
+PARCELS = pickle.load(open(os.environ.get('HL_PARCELS') or os.path.join(HERE, 'parcels.pkl'), 'rb'))
+log('parcels', len(PARCELS))
 
-# ---------- regions
-reg = collections.defaultdict(lambda: {'roads': [], 'bld': [], 'blocks': [], 'areas': [], 'water': [], 'rail': [], 'poi': [], 'ph': []})
+# ---------- bucket everything by region
+reg = collections.defaultdict(lambda: {'roads': [], 'bld': [], 'parcels': [], 'areas': [], 'water': [], 'rail': [], 'poi': [], 'ph': []})
 def regions_touching(pts, margin=60):
     xs = [p[0] for p in pts]; zs = [p[1] for p in pts]
     a = rkey(min(xs) - margin, min(zs) - margin); b = rkey(max(xs) + margin, max(zs) + margin)
@@ -215,32 +318,49 @@ def regions_touching(pts, margin=60):
         for j in range(a[1], b[1] + 1):
             if rx0 <= i <= rx1 and rz0 <= j <= rz1: yield (i, j)
 for r in roads:
-    # split long roads into pieces of <= 120 points so a region only carries what touches it
     pts = r['pts']
     for k in range(0, len(pts) - 1, 120):
         seg = pts[k:k + 121]
-        for key in regions_touching(seg): reg[key]['roads'].append((r, seg))
-for b in bld: reg[rkey(b[0], b[1])]['bld'].append(b)
-for bl in B['blocks']:
-    cx = sum(p[0] for p in bl) / len(bl); cz = sum(p[1] for p in bl) / len(bl)
-    if inside_corr(cx, cz): reg[rkey(cx, cz)]['blocks'].append(bl)
+        el = r['elev'][k:k + 121] if r.get('elev') else None
+        for key in regions_touching(seg): reg[key]['roads'].append((r, seg, el))
+for r in rails:
+    for key in regions_touching(r['pts'], 30): reg[key]['rail'].append(r)
+for pc in PARCELS:
+    if inside_corr(pc['cx'], pc['cz']): reg[rkey(pc['cx'], pc['cz'])]['parcels'].append(pc)
 for a in areas:
     for key in regions_touching(list(a['poly'].exterior.coords), 0): reg[key]['areas'].append(a)
+for w, p in water_polys:
+    for key in regions_touching(list(p.exterior.coords), 0): reg[key]['water'].append((w, p))
 for w in d['water']:
-    for key in regions_touching(w['pts'], 0): reg[key]['water'].append(w)
-for r in d['rail']:
-    for key in regions_touching(r['pts'], 0): reg[key]['rail'].append(r)
+    if w['line']:
+        for key in regions_touching(w['pts'], 0): reg[key]['water'].append((w, None))
 for p in pois:
     if inside_corr(p[0], p[1]): reg[rkey(p[0], p[1])]['poi'].append(p)
 for ph in potholes: reg[rkey(ph[0], ph[1])]['ph'].append(ph)
+nb = 0
+valid = np.nonzero((AREAS >= 4) & (CX >= X0) & (CX <= X1) & (CZ >= Z0) & (CZ <= Z1))[0]
+for i in valid:
+    if int(i) in SKIP_B: continue
+    reg[rkey(CX[i], CZ[i])]['bld'].append(int(i)); nb += 1
+for k, e in enumerate(EXTRA):
+    if inside_corr(e['x'], e['z']): reg[rkey(e['x'], e['z'])]['bld'].append(-1 - k); nb += 1
+log('bucketed buildings', nb, 'regions', len(reg))
 
 def q16(v): return max(-32767, min(32767, int(round(v * 10))))
-manifest = {'origin': {'lat': LAT0, 'lon': LON0}, 'regionSize': RS, 'bounds': [X0, Z0, X1, Z1], 'regions': {}, 'attribution': 'Map data (c) OpenStreetMap contributors, ODbL 1.0', 'osm_timestamp': '2026-10-16'}
+def i32(v): return int(round(v * 10))
+WK = {'drain': 1, 'ditch': 1, 'stream': 2, 'canal': 3, 'river': 4, 'water': 5, 'wetland': 6, 'reservoir': 5, 'basin': 5, 'bay': 5, 'riverbank': 4, 'dock': 5}
+def encode_id(pid, S):
+    if pid[0] == 'B' and pid[1:].isdigit() and int(pid[1:]) < 2**31 - 1: return 0, int(pid[1:]), 0
+    m = re.fullmatch(r'([LV])(-?\d+)_(-?\d+)', pid)
+    if m: return (1 if m.group(1) == 'L' else 2), int(m.group(2)), int(m.group(3))
+    return 3, S(pid), 0
+
+manifest = {'version': 2, 'origin': {'lat': LAT0, 'lon': LON0}, 'regionSize': RS, 'bounds': [X0, Z0, X1, Z1], 'regions': {}, 'attribution': 'Map data (c) OpenStreetMap contributors, ODbL 1.0', 'osm_timestamp': '2026-10-20'}
 total = 0
 for (i, j), R in sorted(reg.items()):
     ox, oz = (i + 0.5) * RS, (j + 0.5) * RS
     rb = box(i * RS - 5, j * RS - 5, (i + 1) * RS + 5, (j + 1) * RS + 5)
-    out = bytearray(); w = out.extend
+    wb = box(i * RS - 40, j * RS - 40, (i + 1) * RS + 40, (j + 1) * RS + 40)
     loc = {}; lstr = []
     def LS(s):
         if not s: return 0xffff
@@ -248,61 +368,83 @@ for (i, j), R in sorted(reg.items()):
         if s not in loc: loc[s] = len(lstr); lstr.append(s)
         return loc[s]
     body = bytearray()
-    # roads (int32 dm relative to region centre)
     body += struct.pack('<I', len(R['roads']))
-    for r, seg in R['roads']:
-        body += struct.pack('<BBBbHH', r['c'], min(255, r['lanes']), r['flags'], r['layer'], LS(r['name']), len(seg))
-        body += struct.pack(f'<I', r['id'] & 0xffffffff)
-        for x, z in seg: body += struct.pack('<ii', int(round((x - ox) * 10)), int(round((z - oz) * 10)))
-    # buildings
+    for r, seg, el in R['roads']:
+        body += struct.pack('<BBBbHHI', r['c'], min(255, r['lanes']), r['flags'], r['layer'], LS(r['name']), len(seg), r['id'] & 0xffffffff)
+        body += struct.pack('<B', r['wd'])
+        for x, z in seg: body += struct.pack('<ii', i32(x - ox), i32(z - oz))
+        if r['flags'] & 2:
+            body += struct.pack(f'<{len(seg)}h', *(el or [10] * len(seg)))
     body += struct.pack('<I', len(R['bld']))
-    for cx, cz, kind, lv, pts, bid, name in R['bld']:
-        pts = pts[:250]
-        body += struct.pack('<BBBH', kind, lv, len(pts), LS(name)); body += struct.pack('<I', bid & 0xffffffff)
+    for bi in R['bld']:
+        if bi < 0:
+            e = EXTRA[-1 - bi]; ring = np.asarray(e['ring'])
+            body += struct.pack('<BBBBHBHI', 13, 1, len(ring), 0, 0, 0, LS(e['name']), e['id'])
+            for x, z in ring: body += struct.pack('<hh', q16(x - ox), q16(z - oz))
+            continue
+        g = shapely.from_wkb(BCL['wkb'][bi])
+        ring = np.asarray(g.exterior.coords)[:-1] if g.geom_type == 'Polygon' else np.zeros((0, 2))
+        if len(ring) > 60:
+            gs = g.simplify(0.2)
+            if gs.geom_type == 'Polygon' and not gs.is_empty: ring = np.asarray(gs.exterior.coords)[:-1]
+        ring = ring[:250]
+        wc = BCL['wcol'][bi]; rc = BCL['rcol'][bi]
+        cf = (1 if wc else 0) | (2 if rc else 0)
+        body += struct.pack('<BBBBHBHI', int(KIND[bi]), int(LV[bi]), len(ring), int(ROOFS[bi]), int(HDM[bi]), cf, LS(NAMES[bi]), sid(int(IDS[bi])) & 0xffffffff)
+        for x, z in ring: body += struct.pack('<hh', q16(x - ox), q16(z - oz))
+        if wc: body += bytes(wc)
+        if rc: body += bytes(rc)
+    body += struct.pack('<I', len(R['parcels']))
+    for pc in R['parcels']:
+        idt, a, b = encode_id(pc['id'], LS)
+        pts = pc['pts'][:120]
+        body += struct.pack('<BiiBBBHH', idt, a, b, pc['zone'], min(255, int(pc['rich'] * 255)), len(pts), LS(pc['name']), len(pc['bids']))
+        if pc['bids']: body += struct.pack(f"<{len(pc['bids'])}I", *[sid(x) & 0xffffffff for x in pc['bids']])
         for x, z in pts: body += struct.pack('<hh', q16(x - ox), q16(z - oz))
-    # blocks
-    body += struct.pack('<I', len(R['blocks']))
-    for bl in R['blocks']:
-        bl = bl[:2000]
-        body += struct.pack('<H', len(bl))
-        for x, z in bl: body += struct.pack('<ii', int(round((x - ox) * 10)), int(round((z - oz) * 10)))
-    # areas (clipped)
     al = []
     for a in R['areas']:
         g = a['poly'].intersection(rb)
         for gg in getattr(g, 'geoms', [g]):
-            if gg.geom_type == 'Polygon' and gg.area > 10: al.append((a['k'], a['name'], list(gg.exterior.coords)[:-1]))
+            if gg.geom_type == 'Polygon' and gg.area > 10: al.append((a['k'], a['sub'], a['name'], list(gg.exterior.coords)[:-1]))
     body += struct.pack('<I', len(al))
-    for k, name, pts in al:
+    for k, sub, name, pts in al:
         pts = pts[:4000]
-        body += struct.pack('<BHH', k, LS(name), len(pts))
+        body += struct.pack('<BBHH', k, sub, LS(name), len(pts))
         for x, z in pts: body += struct.pack('<hh', q16(x - ox), q16(z - oz))
-    # water: lines and polys
-    body += struct.pack('<I', len(R['water']))
-    WK = {'drain': 1, 'ditch': 1, 'stream': 2, 'canal': 3, 'river': 4, 'water': 5, 'wetland': 6, 'reservoir': 5, 'basin': 5}
-    for wv in R['water']:
-        pts = wv['pts'][:4000]
-        body += struct.pack('<BBHH', WK.get(wv['kind'], 2), 1 if wv['line'] else 0, LS(wv['name']), len(pts))
-        for x, z in pts: body += struct.pack('<ii', int(round((x - ox) * 10)), int(round((z - oz) * 10)))
-    # rail
+    wl = []
+    for w, p in R['water']:
+        if p is None:
+            wl.append((WK.get(w['kind'], 2), 1, w['name'], [w['pts'][:4000]]))
+        else:
+            g = shapely.clip_by_rect(p, i * RS - 40, j * RS - 40, (i + 1) * RS + 40, (j + 1) * RS + 40)
+            for gg in getattr(g, 'geoms', [g]):
+                if gg.geom_type == 'Polygon' and gg.area > 15:
+                    rings = [list(gg.exterior.coords)[:-1]] + [list(r.coords)[:-1] for r in gg.interiors if Polygon(r).area > 15]
+                    wl.append((WK.get(w['kind'], 5), 0, w['name'], rings))
+    body += struct.pack('<I', len(wl))
+    for k, ln, name, rings in wl:
+        body += struct.pack('<BBHB', k, ln, LS(name), len(rings))
+        for ring in rings:
+            body += struct.pack('<H', len(ring))
+            for x, z in ring: body += struct.pack('<ii', i32(x - ox), i32(z - oz))
     body += struct.pack('<I', len(R['rail']))
     for rv in R['rail']:
-        pts = rv['pts']
-        body += struct.pack('<BBHH', {'rail': 1, 'platform': 2}.get(rv['kind'], 3), 1 if rv['bridge'] else 0, LS(rv['name']), len(pts))
-        for x, z in pts: body += struct.pack('<ii', int(round((x - ox) * 10)), int(round((z - oz) * 10)))
-    # pois
+        pts = rv['pts'][:4000]
+        body += struct.pack('<BBHHH', rv['kind'], rv['flags'], rv['gauge'], LS(rv['name']), len(pts))
+        for x, z in pts: body += struct.pack('<ii', i32(x - ox), i32(z - oz))
+        if rv['flags'] & 1: body += struct.pack(f'<{len(pts)}h', *(rv.get('elev') or [60] * len(pts))[:len(pts)])
     body += struct.pack('<I', len(R['poi']))
     for x, z, k, name in R['poi']: body += struct.pack('<BHhh', k, LS(name), q16(x - ox), q16(z - oz))
-    # potholes
     body += struct.pack('<I', len(R['ph']))
     for x, z, s, dp, ri in R['ph']: body += struct.pack('<hhBBB', q16(x - ox), q16(z - oz), min(255, int(s * 40)), min(255, int(dp * 400)), ri)
-    head = bytearray(b'HLR1') + struct.pack('<hhH', i, j, len(lstr))
+    head = bytearray(b'HLR2') + struct.pack('<hhH', i, j, len(lstr))
     for s in lstr:
         e = s.encode('utf8'); head += struct.pack('<H', len(e)) + e
     blob = gzip.compress(bytes(head + body), 6)
     fn = f'r{i}_{j}.wasm'
     open(f'{OUT}/{fn}', 'wb').write(blob)
     total += len(blob)
-    manifest['regions'][f'{i},{j}'] = {'f': fn, 'b': len(R['bld']), 'r': len(R['roads']), 'kb': round(len(blob) / 1024)}
+    manifest['regions'][f'{i},{j}'] = {'f': fn, 'b': len(R['bld']), 'r': len(R['roads']), 'kb': round(len(blob) / 1024), 'p': len(R['parcels'])}
+    print('region', i, j, 'bld', len(R['bld']), 'parcels', len(R['parcels']), 'kb', round(len(blob) / 1024), f'{time.time()-t0:.0f}s', flush=True)
 json.dump(manifest, open(f'{OUT}/manifest.json', 'w'))
-print('regions written', len(reg), 'total MB', round(total / 1e6, 1), f'{time.time()-t0:.0f}s')
+log('regions written', len(reg), 'total MB', round(total / 1e6, 1))

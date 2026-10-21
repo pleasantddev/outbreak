@@ -1,4 +1,4 @@
-node_modules/
+node_modules
 v2/dist/
 v2/public/devm/
 chars_in/
@@ -18,3 +18,6 @@ __pycache__/
 node_modules
 shots_review/
 v2/vite.frozen.config.ts
+pipe/*.pkl
+shots_work/
+pipe/parcels_parts/

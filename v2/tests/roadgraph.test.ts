@@ -3,7 +3,7 @@ import { RoadGraph } from '../src/world/roadgraph';
 import { RF, ROAD, type Road } from '../src/world/region';
 
 let id = 1;
-const road = (pts: number[], cls: number = ROAD.residential, flags = 0): Road => ({ cls, lanes: 0, flags, layer: 0, name: null, id: id++, pts: new Float32Array(pts) });
+const road = (pts: number[], cls: number = ROAD.residential, flags = 0): Road => ({ cls, lanes: 0, flags, layer: 0, name: null, id: id++, pts: new Float32Array(pts), width: 0, elev: null });
 const len = (p: number[]) => { let l = 0; for (let i = 0; i < p.length - 2; i += 2) l += Math.hypot(p[i + 2] - p[i], p[i + 3] - p[i + 1]); return l; };
 
 describe('RoadGraph', () => {

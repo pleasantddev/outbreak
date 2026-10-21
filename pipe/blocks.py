@@ -1,72 +1,55 @@
-# City blocks from the road graph, then Lagos-standard plots (18 m x 36 m) inside each block.
-import pickle, math, time, numpy as np, shapely
-from shapely.geometry import LineString, Polygon, Point, box
-from shapely import affinity
+# City blocks: the faces of the road + rail + canal + shoreline graph, minus open water. Output is a list of
+# shapely polygons (WKB) that parcels.py cuts into properties.
+import pickle, math, time, os, sys
+import numpy as np, shapely
+from shapely.geometry import LineString, Polygon, box
 from shapely.strtree import STRtree
+from common import SPLIT
+HERE = os.path.dirname(os.path.abspath(__file__))
 t0 = time.time()
-d = pickle.load(open('/home/claude/hl/pipe/raw.pkl', 'rb'))
-SPLIT = {'motorway','trunk','primary','secondary','tertiary','unclassified','residential','living_street','motorway_link','trunk_link','primary_link','secondary_link','tertiary_link','busway','road'}
-lines = [LineString(r['pts']) for r in d['roads'] if r['hw'] in SPLIT and not r['bridge'] and not r['tunnel'] and len(r['pts']) >= 2]
-lines += [LineString(r['pts']) for r in d['rail'] if r['kind'] == 'rail' and not r['bridge']]
+d = pickle.load(open(os.path.join(HERE, 'raw.pkl'), 'rb'))
+lines = [LineString(r['pts']) for r in d['roads'] if r['hw'] in SPLIT and r.get('bridge') in (None, 'no') and r.get('tunnel') in (None, 'no') and len(r['pts']) >= 2]
+nroad = len(lines)
+lines += [LineString(r['pts']) for r in d['rail'] if r['railway'] in ('rail', 'narrow_gauge') and r.get('bridge') in (None, 'no') and r.get('tunnel') in (None, 'no') and not r.get('service') and not r['closed'] and len(r['pts']) >= 2]
 lines += [LineString(w['pts']) for w in d['water'] if w['line'] and w['kind'] in ('canal', 'river')]
-print('split lines', len(lines))
-noded = shapely.union_all(shapely.GeometryCollection(lines), grid_size=0.05)
-print('noded', f'{time.time()-t0:.0f}s')
-polys = list(shapely.get_parts(shapely.polygonize(shapely.get_parts(noded))))
-print('raw faces', len(polys), f'{time.time()-t0:.0f}s')
-# clip faces to the corridor (projected bbox)
+# shoreline of every big water body
+water = []
+for w in d['water']:
+    if w['line'] or w['kind'] == 'wetland' or len(w['pts']) < 3: continue
+    p = Polygon(w['pts'], w['holes'])
+    if not p.is_valid: p = p.buffer(0)
+    if p.area < 8000: continue
+    water.append(p)
+    for ring in [p.exterior] + list(p.interiors): lines.append(LineString(ring.coords))
+print('lines', len(lines), 'roads', nroad, 'water polys', len(water), f'{time.time()-t0:.0f}s', flush=True)
 LAT0, LON0 = d['origin']; KX = math.cos(math.radians(LAT0)) * 111320.0; KZ = 110574.0
 lon0, lat0, lon1, lat1 = d['bbox']
 corr = box((lon0 - LON0) * KX, -(lat1 - LAT0) * KZ, (lon1 - LON0) * KX, -(lat0 - LAT0) * KZ)
+# only keep line parts inside the corridor (plus margin) so polygonize stays small
+big = corr.buffer(60)
+lines = [g for g in (l.intersection(big) for l in lines) if not g.is_empty]
+flat = []
+for g in lines:
+    flat.extend(shapely.get_parts(g) if g.geom_type != 'LineString' else [g])
+flat = [g for g in flat if g.geom_type == 'LineString' and g.length > 0.2]
+noded = shapely.union_all(shapely.GeometryCollection(flat), grid_size=0.05)
+print('noded', f'{time.time()-t0:.0f}s', flush=True)
+polys = list(shapely.get_parts(shapely.polygonize(shapely.get_parts(noded))))
+print('raw faces', len(polys), f'{time.time()-t0:.0f}s', flush=True)
+wt = STRtree(water) if water else None
 blocks = []
 for p in polys:
     if not p.is_valid: p = p.buffer(0)
-    if p.area < 60: continue
-    if not p.intersects(corr): continue
-    blocks.append(p)
-print('blocks', len(blocks), 'area km2', sum(b.area for b in blocks) / 1e6)
-pickle.dump({'blocks': [list(b.exterior.coords)[:-1] for b in blocks if b.geom_type == 'Polygon'], 'corr': list(corr.exterior.coords)}, open('/home/claude/hl/pipe/blocks.pkl', 'wb'))
+    if p.area < 40 or not p.intersects(corr): continue
+    if wt is not None:
+        hit = wt.query(p)
+        if len(hit):
+            w = shapely.union_all([water[i] for i in hit])
+            # a face whose interior is mostly water is open water
+            if p.intersection(w).area > 0.5 * p.area: continue
+            p = p.difference(w)
+    for g in shapely.get_parts(p):
+        if g.geom_type == 'Polygon' and g.area >= 40: blocks.append(g)
+print('blocks', len(blocks), 'area km2', round(sum(b.area for b in blocks) / 1e6, 1), f'{time.time()-t0:.0f}s', flush=True)
+pickle.dump({'blocks': [shapely.to_wkb(b) for b in blocks], 'corr': list(corr.exterior.coords)}, open(os.path.join(HERE, 'blocks.pkl'), 'wb'))
 print(f'done {time.time()-t0:.0f}s')
-
-# ---- inset every block by the carriageway and verge of the roads around it, so plots start at the kerb line
-from shapely.strtree import STRtree
-CLS = {'motorway': 1, 'trunk': 2, 'primary': 3, 'secondary': 4, 'tertiary': 5, 'unclassified': 6, 'residential': 7, 'living_street': 7, 'service': 8, 'motorway_link': 9, 'trunk_link': 9, 'primary_link': 10, 'secondary_link': 10, 'tertiary_link': 10, 'busway': 11, 'track': 12, 'road': 7}
-def lanes_of(c, lanes, one):
-    if lanes: return min(8, lanes)
-    return {1: 3 if one else 6, 2: 3 if one else 4, 3: 2 if one else 4, 4: 2, 5: 2, 9: 1, 10: 1, 11: 1, 6: 2}.get(c, 1)
-def half_width(c, lanes, one):
-    if c == 7: return 2.9
-    if c == 8: return 1.9
-    if c == 12: return 1.7
-    if c == 11: return 2.0
-    return max(2.8, lanes_of(c, lanes, one) * 3.3 / 2 + (0.6 if c <= 2 else 0.2))
-def verge(c):
-    if c <= 4 or c in (9, 10): return 4.6
-    if c in (5, 6): return 2.4
-    if c == 7: return 1.2
-    return 0.6
-rl, rw = [], []
-for r in d['roads']:
-    c = CLS.get(r['hw'])
-    if not c or r['bridge'] or r['tunnel'] or len(r['pts']) < 2: continue
-    try: ln = int(float((r['lanes'] or '0').split(';')[0]))
-    except: ln = 0
-    one = r['oneway'] in ('yes', '1', 'true', '-1')
-    rl.append(LineString(r['pts'])); rw.append(half_width(c, ln, one) + verge(c) + 0.3)
-tree = STRtree(rl)
-inset = []
-t1 = time.time()
-for k, bpts in enumerate(pickle.load(open('/home/claude/hl/pipe/blocks.pkl', 'rb'))['blocks']):
-    P = Polygon(bpts)
-    if not P.is_valid: P = P.buffer(0)
-    near = tree.query(P.buffer(12))
-    if len(near):
-        cut = shapely.union_all([rl[i].buffer(rw[i], cap_style='flat' if False else 'round', quad_segs=2) for i in near])
-        Q = P.difference(cut)
-    else: Q = P
-    for g in getattr(Q, 'geoms', [Q]):
-        if g.geom_type == 'Polygon' and g.area > 80:
-            g = g.simplify(0.4)
-            if g.geom_type == 'Polygon' and g.area > 80: inset.append(list(g.exterior.coords)[:-1])
-print('inset blocks', len(inset), f'{time.time()-t1:.0f}s')
-pickle.dump({'blocks': inset}, open('/home/claude/hl/pipe/blocks.pkl', 'wb'))

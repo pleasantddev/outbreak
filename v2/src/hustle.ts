@@ -76,7 +76,7 @@ async function boot() {
   store = new RegionStore('world/'); await store.init();
   hud.setLoad(0.12, 'Reading the map of Lagos');
   potholeReports = await (await fetch('world/potholes.json')).json();
-  const spawn = q.get('lat') ? store.project(+q.get('lat')!, +q.get('lon')!) : { x: +(q.get('x') ?? -38), z: +(q.get('z') ?? 52) };
+  const spawn = q.get('lat') ? store.project(+q.get('lat')!, +q.get('lon')!) : { x: +(q.get('x') ?? 868), z: +(q.get('z') ?? -262) };
   await store.around(spawn.x, spawn.z, 900);
   hud.setLoad(0.3, 'Loading people');
   const assets = new HumanAssets(); await assets.load((f) => hud.setLoad(0.3 + f * 0.3));

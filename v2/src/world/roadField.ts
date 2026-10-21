@@ -68,7 +68,7 @@ void main(){ vCode = aCode; gl_Position = vec4(position.xy / uSize * 2.0 - 1.0, 
 const polyFS = /* glsl */ `precision highp float; varying float vCode; void main(){ gl_FragColor = vec4(0.0, 0.0, 0.0, vCode / 255.0); }`;
 
 /** Surface codes written to detail.a (x/255). */
-export const SURF = { soil: 0, grass: 20, pitch: 30, bush: 40, concrete: 60, market: 70, compound: 90, interlock: 100, parking: 120, wet: 140, sand: 160 } as const;
+export const SURF = { soil: 0, grass: 20, pitch: 30, bush: 40, concrete: 60, market: 70, compound: 90, interlock: 100, parking: 120, wet: 140, sand: 160, water: 200, oil: 220 } as const;
 
 export function roadCode(r: Road) {
   const unp = r.flags & RF.unpaved ? 1 : 0, one = r.flags & RF.oneway ? 1 : 0;
@@ -88,7 +88,8 @@ const cam = new THREE.Camera();
 
 export interface TileField { field: THREE.WebGLRenderTarget; detail: THREE.WebGLRenderTarget; res: number; dispose(): void }
 
-export interface FieldInput { x0: number; z0: number; size: number; roads: Road[]; potholes: Pothole[]; surfaces: { code: number; pts: Float32Array }[] }
+export interface Surface { code: number; pts: Float32Array; holes?: Float32Array[] }
+export interface FieldInput { x0: number; z0: number; size: number; roads: Road[]; potholes: Pothole[]; surfaces: Surface[] }
 
 export function buildTileField(renderer: THREE.WebGLRenderer, inp: FieldInput, res: number): TileField {
   const field = new THREE.WebGLRenderTarget(res, res, { type: THREE.HalfFloatType, format: THREE.RGBAFormat, depthBuffer: true, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false });
@@ -134,9 +135,11 @@ export function buildTileField(renderer: THREE.WebGLRenderer, inp: FieldInput, r
     for (const s of inp.surfaces) {
       const n = s.pts.length / 2; if (n < 3) continue;
       const v = Array.from({ length: n }, (_, k) => new THREE.Vector2(s.pts[k * 2] - inp.x0, s.pts[k * 2 + 1] - inp.z0));
+      const hs = (s.holes ?? []).map((h) => Array.from({ length: h.length / 2 }, (_, k) => new THREE.Vector2(h[k * 2] - inp.x0, h[k * 2 + 1] - inp.z0)));
       let tris: number[][] = [];
-      try { tris = THREE.ShapeUtils.triangulateShape(v, []); } catch { continue; }
-      for (const t of tris) for (const k of t) { pos.push(v[k].x, v[k].y, 0); code.push(s.code); }
+      try { tris = THREE.ShapeUtils.triangulateShape(v, hs); } catch { continue; }
+      const all = hs.length ? v.concat(...hs) : v;
+      for (const t of tris) for (const k of t) { pos.push(all[k].x, all[k].y, 0); code.push(s.code); }
     }
     if (pos.length) {
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('aCode', new THREE.Float32BufferAttribute(code, 1));
@@ -157,9 +160,33 @@ export function buildTileField(renderer: THREE.WebGLRenderer, inp: FieldInput, r
   return { field, detail, res, dispose() { field.dispose(); detail.dispose(); } };
 }
 
+function a_isHard(sub: number) { return sub === 1 || sub === 3 || sub === 5; }
+/** Mechanic villages: oil-stained ground, drawn over the plots. */
+export function mechanicSurfaces(areas: Area[]): Surface[] { return areas.filter((a) => a.kind === 25).map((a) => ({ code: SURF.oil, pts: a.pts })); }
+
+/** Water: lagoon, rivers and canals rasterised into the ground (the ground shader paints the surface). Lines become ribbons. */
+export function waterSurfaces(water: { kind: number; line: boolean; rings: Float32Array[] }[], x0: number, z0: number, size: number): Surface[] {
+  const out: Surface[] = []; const M = 80;
+  for (const w of water) {
+    if (!w.line) {
+      if (w.kind === 6) { out.push({ code: SURF.wet, pts: w.rings[0] }); continue; }
+      const r = w.rings[0]; let a = 1e9, b = -1e9, c = 1e9, d = -1e9; for (let k = 0; k < r.length; k += 2) { a = Math.min(a, r[k]); b = Math.max(b, r[k]); c = Math.min(c, r[k + 1]); d = Math.max(d, r[k + 1]); }
+      if (b < x0 - M || a > x0 + size + M || d < z0 - M || c > z0 + size + M) continue;
+      out.push({ code: SURF.water, pts: r, holes: w.rings.slice(1).filter((h) => h.length >= 6) }); continue;
+    }
+    const width = w.kind === 4 ? 16 : w.kind === 3 ? 7 : w.kind === 2 ? 3 : 1.4; const code = w.kind >= 2 ? SURF.water : SURF.wet; const p = w.rings[0];
+    for (let k = 0; k < p.length / 2 - 1; k++) {
+      const ax = p[k * 2], az = p[k * 2 + 1], bx = p[k * 2 + 2], bz = p[k * 2 + 3]; if (Math.max(ax, bx) < x0 - M || Math.min(ax, bx) > x0 + size + M || Math.max(az, bz) < z0 - M || Math.min(az, bz) > z0 + size + M) continue;
+      const L = Math.hypot(bx - ax, bz - az); if (L < 0.1) continue; const nx = -(bz - az) / L * width / 2, nz = (bx - ax) / L * width / 2; const tx = (bx - ax) / L * width * 0.25, tz = (bz - az) / L * width * 0.25;
+      out.push({ code, pts: new Float32Array([ax - tx + nx, az - tz + nz, bx + tx + nx, bz + tz + nz, bx + tx - nx, bz + tz - nz, ax - tx - nx, az - tz - nz]) });
+    }
+  }
+  return out;
+}
 /** Surface polygons for a tile from landuse areas. Plots add their own later. */
-export function areaSurfaces(areas: Area[]): { code: number; pts: Float32Array }[] {
+export function areaSurfaces(areas: Area[]): Surface[] {
   const map: Record<number, number> = { 8: SURF.grass, 9: SURF.pitch, 14: SURF.bush, 13: SURF.bush, 3: SURF.concrete, 2: SURF.concrete, 6: SURF.market, 11: SURF.parking, 10: SURF.parking, 12: SURF.parking, 21: SURF.wet, 15: SURF.grass, 4: SURF.sand, 16: SURF.sand, 17: SURF.bush, 22: SURF.grass, 23: SURF.sand };
-  return areas.filter((a) => map[a.kind] !== undefined).map((a) => ({ code: map[a.kind], pts: a.pts }));
+  const hard = a_isHard;
+  return areas.filter((a) => map[a.kind] !== undefined).map((a) => ({ code: a.kind === 9 && hard(a.sub) ? SURF.concrete : map[a.kind], pts: a.pts }));
 }
 export { ROAD };

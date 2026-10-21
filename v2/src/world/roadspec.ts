@@ -18,6 +18,7 @@ export function lanesOf(r: Road) {
   }
 }
 export function halfWidth(r: Road) {
+  if (r.width > 0) return Math.max(1.2, Math.min(30, r.width / 2));
   switch (r.cls) {
     case ROAD.residential: return r.flags & RF.unpaved ? 2.6 : 2.9;
     case ROAD.service: return 1.9;

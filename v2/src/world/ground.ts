@@ -44,7 +44,7 @@ Surf ground(vec3 wp, out float waterOut){
   Surf grass = sampleL(4.0, w / 4.5);
   grass.col *= vec3(0.86, 0.98, 0.78) * mix(0.75, 1.1, micro);
   float gmask = smoothstep(0.52, 0.72, fbm(w * 0.09 + 11.0));
-  Surf g = soil;
+  Surf g = soil; float lagoon = 0.0;
   if (surf < 10.0) g = mixS(soil, grass, gmask * 0.85);
   else if (surf < 25.0) g = mixS(grass, soil, smoothstep(0.62, 0.8, macro) * 0.6);
   else if (surf < 35.0) g = mixS(grass, soil, 0.25);
@@ -55,9 +55,13 @@ Surf ground(vec3 wp, out float waterOut){
   else if (surf < 110.0) g = sampleL(6.0, w / 2.4);
   else if (surf < 130.0) g = sampleL(1.0, w / 4.0);
   else if (surf < 150.0) g = sampleL(5.0, w / 3.0);
-  else { g = soil; g.col = mix(g.col, vec3(0.78, 0.66, 0.52), 0.4); }
+  else if (surf < 190.0) { g = soil; g.col = mix(g.col, vec3(0.78, 0.66, 0.52), 0.4); }
+  else if (surf < 215.0) { g = soil; g.col = vec3(0.06, 0.11, 0.1); lagoon = 1.0; }
+  else { // mechanic village: packed earth soaked in engine oil
+    g = mixS(soil, sampleL(5.0, w / 3.0), 0.5); float oil = smoothstep(0.38, 0.62, fbm(w * 0.22 + 31.0));
+    g.col = mix(g.col * 0.7, vec3(0.045, 0.04, 0.035), oil * 0.85); g.rough = mix(g.rough, 0.3, oil); }
   g.wetk = 1.2;
-  float water = 0.0;
+  float water = lagoon;
   Surf o = g;
   bool road = e < 60.0;
   if (road) {
@@ -144,12 +148,13 @@ Surf ground(vec3 wp, out float waterOut){
   o.col = mix(o.col, vec3(0.62, 0.5, 0.38), uDust * 0.25);
   // standing water: murky brown mirror with rain rings
   if (water > 0.02) {
-    vec3 wc = vec3(0.10, 0.085, 0.06);
+    vec3 wc = lagoon > 0.5 ? mix(vec3(0.045, 0.1, 0.095), vec3(0.11, 0.19, 0.16), fbm(w * 0.04 + uTime * 0.01)) : vec3(0.10, 0.085, 0.06);
     float ring = 0.0;
     if (uRain > 0.05) { vec2 cell = floor(w * 2.0); vec2 f = fract(w * 2.0) - 0.5; float ph2 = fract(gh(cell) + uTime * 0.9); ring = smoothstep(0.05, 0.0, abs(length(f) - ph2 * 0.5)) * (1.0 - ph2) * uRain; }
     o.col = mix(o.col, wc, water * 0.9);
     o.rough = mix(o.rough, 0.03, water);
     o.nrm = normalize(mix(o.nrm, vec3(0.0, 1.0, 0.0), water) + vec3(ring * 0.3, 0.0, ring * 0.2));
+    if (lagoon > 0.5) { vec2 rp = w * 0.12 + vec2(uTime * 0.04, uTime * 0.03); float fz = 1.0 / (1.0 + length(vWP - cameraPosition) * 0.004); o.nrm = normalize(vec3(((gn(rp) - 0.5) * 0.16 + (gn(rp * 3.1 - uTime * 0.08) - 0.5) * 0.06) * fz, 1.0, ((gn(rp + 17.0) - 0.5) * 0.16 + (gn(rp * 2.7 + 5.0) - 0.5) * 0.06) * fz)); o.rough = 0.06; }
   }
   waterOut = water;
   return o;
