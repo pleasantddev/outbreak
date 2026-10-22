@@ -5,6 +5,7 @@ import type { LifeSim } from '../sim/life';
 import type { LifeView } from '../render/lifeView';
 import type { LifeHud } from '../ui/lifeHud';
 import type { SimEvent } from '../sim/types';
+import type { RegionStore } from '../world/region';
 
 export interface GameCtx {
   sim: LifeSim; view: LifeView; hud: LifeHud; THREE: typeof THREE;
@@ -16,7 +17,15 @@ export interface GameCtx {
   startJob?: (id: string) => void;
   /** other systems, by id, for cross-system calls */
   systems: Map<string, GameSystem>;
+  /** the loaded map (project(lat, lon) gives world metres) */
+  store?: RegionStore;
+  /** ask the streamer for the regions between two points so the GPS can route across the city */
+  loadRoute?: (x0: number, z0: number, x1: number, z1: number) => void;
+  /** profile XP and level */
+  grantXp?: (n: number) => void; playerLevel?: () => number;
 }
+export interface Blip { x: number; z: number; c: string; r?: number }
+export interface GoalPoint { x: number; z: number; label?: string }
 
 export interface GameSystem {
   id: string;
@@ -32,4 +41,8 @@ export interface GameSystem {
   onEvent?(ctx: GameCtx, e: SimEvent): void;
   /** phone app actions routed by app name */
   onAction?(ctx: GameCtx, app: string, id: string): boolean;
+  /** the current GPS destination, if this system has one (first system that returns a point wins) */
+  goal?(ctx: GameCtx): GoalPoint | null;
+  /** extra blips on the minimap */
+  blips?(ctx: GameCtx, out: Blip[]): void;
 }

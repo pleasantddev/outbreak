@@ -44,6 +44,11 @@ export class LifeSim {
   private potholeCd = new Map<number, number>();
   maxPeds: number; maxTraffic: number; maxParked: number;
   ready = false;
+  /** gameplay multipliers written by the skills system (content/schema STAT_KEYS); missing keys mean 1 */
+  mods: Record<string, number> = {};
+  /** set by the skills system when the sprint stamina is spent */
+  noSprint = false;
+  mod(k: string) { return this.mods[k] ?? 1; }
 
   constructor(public opts: LifeOptions) {
     this.rng = new Rng(opts.seed);
@@ -246,7 +251,7 @@ export class LifeSim {
   // ---------------------------------------------------------------- wahala
   crime(kind: string, add: number, at: Vec3) {
     // only counts if someone saw it: a pedestrian or police within 45 m with a clear line
-    const witness = this.actors.some((x) => x.alive && x.role !== 'player' && x.ko! <= 0 && dist3(x.pos, at) < 45 && this.phys.lineOfSight({ x: x.pos.x, y: x.pos.y + 1.5, z: x.pos.z }, { x: at.x, y: at.y + 1.2, z: at.z }));
+    const witness = this.actors.some((x) => x.alive && x.role !== 'player' && x.ko! <= 0 && dist3(x.pos, at) < 45 * this.mod('heat.witness') && this.phys.lineOfSight({ x: x.pos.x, y: x.pos.y + 1.5, z: x.pos.z }, { x: at.x, y: at.y + 1.2, z: at.z }));
     if (!witness && kind !== 'police') return;
     if (add > 0) { this.wanted = Math.min(5, this.wanted + add); this.wantedCool = 0; this.lastSeen = this.time; this.events.push({ t: 'crime', kind, wanted: this.wanted }); }
   }
@@ -256,7 +261,7 @@ export class LifeSim {
   step(dt: number) {
     this.time += dt;
     this.population(dt);
-    for (const a of this.actors) if (a.alive && a.role !== 'player' && !(a as any)._gone) this.think(a, dt);
+    for (const a of this.actors) if (a.alive && a.role !== 'player' && !(a as any)._gone && !(a as any)._script) this.think(a, dt);
     for (const v of this.vehicles) if (v && !(v as any).gone && v.seats[0] !== null && this.actors[v.seats[0]!].role !== 'player') this.drive(v, dt);
     for (const a of this.actors) if (a.alive && !(a as any)._gone) this.updateActor(a, dt);
     for (const v of this.vehicles) if (v && !(v as any).gone) this.updateVehicle(v, dt);
@@ -271,7 +276,7 @@ export class LifeSim {
     const me = this.local;
     const seen = this.actors.some((p) => p.alive && p.role === 'police' && dist3(p.pos, me.pos) < 60 && this.phys.lineOfSight({ x: p.pos.x, y: p.pos.y + 1.5, z: p.pos.z }, { x: me.pos.x, y: me.pos.y + 1.2, z: me.pos.z }));
     if (seen) this.lastSeen = this.time;
-    const cool = 18 + this.wanted * 8;
+    const cool = (18 + this.wanted * 8) * this.mod('heat.cool');
     if (this.time - this.lastSeen > cool) { this.wanted = Math.max(0, this.wanted - 1); this.lastSeen = this.time; this.events.push({ t: 'crime', kind: 'cooled', wanted: this.wanted }); }
   }
 
@@ -280,9 +285,9 @@ export class LifeSim {
     this.spawnT -= dt; if (this.spawnT > 0) return; this.spawnT = 0.4;
     const me = this.local; const P = me.vehicle !== null ? (() => { const t = this.vehicles[me.vehicle!].body.translation(); return { x: t.x, y: t.y, z: t.z }; })() : me.pos;
     // despawn far
-    for (const a of this.actors) if (a.alive && a.role !== 'player' && !(a as any)._gone && a.vehicle === null && Math.hypot(a.pos.x - P.x, a.pos.z - P.z) > 175) this.despawnActor(a);
+    for (const a of this.actors) if (a.alive && a.role !== 'player' && !(a as any)._gone && !(a as any)._keep && a.vehicle === null && Math.hypot(a.pos.x - P.x, a.pos.z - P.z) > 175) this.despawnActor(a);
     for (const a of this.actors) if (!a.alive && !(a as any)._gone && this.time - (a as any)._diedAt > 40) this.despawnActor(a);
-    for (const v of this.liveVehicles()) { const t = v.body.translation(); const d = Math.hypot(t.x - P.x, t.z - P.z); if (d > 280 && !v.seats.some((s) => s !== null && this.actors[s].role === 'player') && v.id !== (this as any).playerCar) this.removeVehicle(v); }
+    for (const v of this.liveVehicles()) { const t = v.body.translation(); const d = Math.hypot(t.x - P.x, t.z - P.z); if (d > 280 && !(v as any)._keep && !v.seats.some((s) => s !== null && this.actors[s].role === 'player') && v.id !== (this as any).playerCar) this.removeVehicle(v); }
     const peds = this.actors.filter((a) => a.alive && !(a as any)._gone && a.role !== 'player' && a.vehicle === null).length;
     if (peds < this.maxPeds) {
       const walks = this.net.nearWalks(P.x, P.z, 130);
@@ -404,11 +409,35 @@ export class LifeSim {
   }
   private arrest() {
     this.busted = 0;
-    const fine = Math.min(this.cash, 5000 + this.wanted * 5000);
+    const fine = Math.min(this.cash, Math.round((5000 + this.wanted * 5000) * this.mod('heat.fine')));
     this.cash -= fine; this.wanted = 0;
     this.events.push({ t: 'announce', title: 'BUSTED', sub: `Settlement at the station: ₦${fine.toLocaleString()}. Abeg, go home.`, tone: 'danger' });
     for (const a of this.actors) if (a.role === 'police' && a.alive) { const b = this.brains.get(a.id); if (b) b.kind = 'walk'; }
   }
+
+  // ---------------------------------------------------------------- content scripting (systems/missions)
+  /** Take over an NPC for a mission. 'fight' makes it attack the target, 'flee' runs, 'free' removes the brain so the caller drives a.cmd. */
+  script(a: Actor, mode: 'fight' | 'flee' | 'idle' | 'free', target = 0) {
+    (a as any)._keep = true;
+    if (mode === 'free') { this.brains.delete(a.id); (a as any)._script = true; return; }
+    (a as any)._script = false;
+    this.brains.set(a.id, { kind: mode, walk: 0, s: 0, dir: 1, t: 999, target, from: mode === 'flee' ? { ...this.actors[target].pos } : null });
+  }
+  /** A traffic vehicle with a driver that follows the road network from the lane nearest (x, z). */
+  spawnTraffic(kind: VehicleKind, x: number, z: number, speedMul = 1): Vehicle | null {
+    let best = -1, bd = 1e9, bs = 0;
+    for (const id of this.net.near(x, z, 80)) { const l = this.net.lanes[id]; const pr = RoadNet.project(l.pts, x, z); if (pr.d < bd && l.len > 40) { bd = pr.d; best = id; bs = pr.s; } }
+    if (best < 0) return null;
+    const ln = this.net.lanes[best]; const at = RoadNet.at(ln.pts, Math.min(bs, Math.max(0, ln.len - 30)));
+    const v = this.addVehicle(kind, { x: at.x, y: 0.1, z: at.z }, at.yaw);
+    const drv = this.spawnActor('driver', { x: at.x, y: 0.1, z: at.z }); (drv as any)._keep = true; (v as any)._keep = true;
+    this.enterVehicle(drv, v);
+    this.drivers.set(v.id, { lane: best, s: bs, speed: ln.speed * speedMul, lateral: 0, stuck: 0, honk: 0, wait: 0 });
+    return v;
+  }
+  /** Let a traffic vehicle go back to normal despawn rules. */
+  setTrafficSpeed(v: Vehicle, mul: number) { const d = this.drivers.get(v.id); if (d) d.speed = (this.net.lanes[d.lane]?.speed ?? 12) * mul; }
+  isTraffic(v: Vehicle) { return this.drivers.has(v.id); }
 
   // ---------------------------------------------------------------- traffic driving
   private drive(v: Vehicle, dt: number) {
@@ -482,7 +511,7 @@ export class LifeSim {
     this.combat(a, dt, pressed('reload'), pressed('fire'));
     if (a.role === 'player') this.autoPickup(a);
     // slow health regen out of combat
-    if (this.time - a.lastHurt > 10 && a.hp < a.maxHp * 0.5) a.hp = Math.min(a.maxHp * 0.5, a.hp + dt * 2);
+    if (a.role === 'player' && this.time - a.lastHurt > 10 && a.hp < a.maxHp * 0.5 * this.mod('body.regen')) a.hp = Math.min(a.maxHp * 0.5 * this.mod('body.regen'), a.hp + dt * 2 * this.mod('body.regen')); else if (a.role !== 'player' && this.time - a.lastHurt > 10 && a.hp < a.maxHp * 0.5) a.hp = Math.min(a.maxHp * 0.5, a.hp + dt * 2);
   }
 
   private moveActor(a: Actor, dt: number) {
@@ -490,9 +519,10 @@ export class LifeSim {
     a.crouch = cmd.crouch;
     a.aiming = cmd.aim;
     const moving = Math.hypot(cmd.mx, cmd.mz) > 0.05;
-    a.sprinting = cmd.sprint && moving && !a.aiming && !a.crouch && a.healT <= 0;
+    a.sprinting = cmd.sprint && moving && !a.aiming && !a.crouch && a.healT <= 0 && !(a.role === 'player' && this.noSprint);
     let speed = a.crouch ? PLAYER.crouch : a.aiming ? PLAYER.aimMove : a.sprinting ? PLAYER.sprint : PLAYER.jog;
     if (w && WEAPONS[w.id]) speed *= weaponStats(w).moveMult;
+    if (a.role === 'player') speed *= a.sprinting ? this.mod('move.sprint') : this.mod('move.jog');
     if (a.healT > 0) speed = Math.min(speed, PLAYER.walk);
     if (a.ko! > 0) speed = 0;
     if ((a as any)._phone) speed = Math.min(speed, PLAYER.walk * 0.85);
@@ -553,14 +583,14 @@ export class LifeSim {
     }
     const st = weaponStats(w); const stack = AMMO_STACK[st.ammo]!;
     if (a.reloadT > 0) { a.reloadT -= dt; if (a.reloadT <= 0) { const need = st.mag - w.mag; w.mag += a.inv.take(stack, need); } return; }
-    if ((reloadPressed || (w.mag === 0 && a.cmd.fire)) && w.mag < st.mag && a.inv.count(stack) > 0) { a.reloadT = a.reloadTotal = st.reload; this.events.push({ t: 'reload', actor: a.id }); return; }
+    if ((reloadPressed || (w.mag === 0 && a.cmd.fire)) && w.mag < st.mag && a.inv.count(stack) > 0) { a.reloadT = a.reloadTotal = st.reload * (a.role === 'player' ? this.mod('gun.reload') : 1); this.events.push({ t: 'reload', actor: a.id }); return; }
     const trigger = st.auto ? a.cmd.fire : (firePressed || (a.bot && a.cmd.fire));
     if (!trigger || a.fireCd > 0 || w.mag <= 0 || a.healT > 0 || a.sprinting) return;
     a.fireCd = 60 / st.rpm; w.mag--; a.lastShot = this.time; a.recoil += st.recoil;
     this.noises.push({ pos: { ...a.pos }, r: st.noise, t: this.time, by: a.id });
     if (a.role === 'player') this.crime('shooting', this.wanted < 2 ? 1 : 0, a.pos);
     const eye = this.eye(a); const dir = this.aimDir(a);
-    const spread = (a.aiming ? st.adsSpread : st.hipSpread) * (a.speed > 1 ? 1.6 : 1) * (a.bot ? 3.2 : 1) + (a.bot ? 0.02 : 0);
+    const spread = (a.aiming ? st.adsSpread : st.hipSpread) * (a.speed > 1 ? 1.6 : 1) * (a.bot ? 3.2 : 1) * (a.role === 'player' ? this.mod('gun.spread') : 1) + (a.bot ? 0.02 : 0);
     for (let p = 0; p < st.pellets; p++) this.hitscan(a, eye, this.jitter(dir, spread), st, w, p === 0);
   }
   private jitter(d: Vec3, s: number): Vec3 {
@@ -580,13 +610,14 @@ export class LifeSim {
     if (hit) {
       const fall = hit.t <= st.range ? 1 : Math.max(0.45, 1 - ((hit.t - st.range) / (st.maxRange - st.range)) * 0.55);
       const owner = this.ownerOf(hit.collider);
-      if (owner?.kind === 'actor') { const t = this.actors[owner.id]; const head = to.y > t.pos.y + (t.crouch ? 1.0 : 1.48); this.damageActor(t, st.damage * fall * (head ? st.headMult : 1), a, head, st.name); kind = 'flesh'; }
+      if (owner?.kind === 'actor') { const t = this.actors[owner.id]; const head = to.y > t.pos.y + (t.crouch ? 1.0 : 1.48); this.damageActor(t, st.damage * fall * (head ? st.headMult : 1) * (a.role === 'player' ? this.mod('gun.damage') : 1), a, head, st.name); kind = 'flesh'; }
       else if (owner?.kind === 'vehicle') { this.damageVehicle(this.vehicles[owner.id], st.damage * fall, to, a.id); kind = 'metal'; }
       else if (hit.tag?.mat === 'metal') kind = 'metal';
     }
     if (emit || st.pellets > 1) this.events.push({ t: 'shot', actor: a.id, weapon: w.id, from: eye, to, suppressed: false, hit: kind, normal: hit?.normal ? { x: hit.normal.x, y: hit.normal.y, z: hit.normal.z } : undefined });
   }
   private melee(a: Actor, dmg: number, range: number, cd: number, label: string) {
+    const pl = a.role === 'player'; if (pl) { dmg *= this.mod('melee.damage'); cd *= this.mod('melee.cooldown'); }
     a.fireCd = cd; this.events.push({ t: 'melee', actor: a.id });
     const f = { x: Math.sin(a.yaw), z: Math.cos(a.yaw) };
     for (const t of this.actors) {
@@ -596,7 +627,7 @@ export class LifeSim {
       if ((dx * f.x + dz * f.z) / (d || 1) < 0.4) continue;
       this.damageActor(t, dmg * this.rng.range(0.8, 1.2), a, false, label);
       t.ext.x += (dx / (d || 1)) * 5; t.ext.z += (dz / (d || 1)) * 5;
-      if (label === 'Fists' && t.hp < 35 && t.hp > 0 && this.rng.chance(0.45)) t.ko = 4; // knocked down, not dead
+      if (label === 'Fists' && t.hp < 35 && t.hp > 0 && this.rng.chance(0.45 * (pl ? this.mod('melee.ko') : 1))) t.ko = 4; // knocked down, not dead
     }
   }
   damageActor(t: Actor, dmg: number, by: Actor | null, head: boolean, label: string) {
@@ -680,10 +711,11 @@ export class LifeSim {
     if (throttle !== 0 && Math.sign(throttle) !== Math.sign(speed) && Math.abs(speed) > 1.5) { brake = def.brake; throttle = 0; }
     const engineK = Math.max(0.15, v.engine / def.engine);
     const flat = v.tires.filter((t) => t <= 0).length;
-    const top = def.topSpeed * (1 - flat * 0.18) * (v.engine <= 0 ? 0 : 1);
+    const plr = !!driver && driver.role === 'player'; const rider = v.kind === 'okada' || v.kind === 'keke';
+    const top = def.topSpeed * (1 - flat * 0.18) * (v.engine <= 0 ? 0 : 1) * (plr ? this.mod(rider ? 'ride.top' : 'drive.top') : 1);
     if (v.fuel <= 0 || v.engine <= 0) throttle = 0;
     let force = throttle * def.engineForce * engineK; if (Math.abs(speed) > top) force = 0; if (throttle < 0) force *= 0.55;
-    v.fuel = Math.max(0, v.fuel - Math.abs(throttle) * def.fuelBurn * dt * 0.2);
+    v.fuel = Math.max(0, v.fuel - Math.abs(throttle) * def.fuelBurn * dt * 0.2 * (plr ? this.mod('drive.fuel') : 1));
     const steerAmt = steer * def.maxSteer * (1 - Math.min(0.6, Math.abs(speed) / (def.topSpeed * 1.3)));
     v.steer += (steerAmt - v.steer) * Math.min(1, dt * 8); v.throttle = throttle;
     const rwd = v.kind === 'sedan' || v.kind === 'jeep' || v.kind === 'police' || v.kind === 'danfo';
@@ -692,7 +724,7 @@ export class LifeSim {
       v.ctrl.setWheelSteering(i, front ? v.steer : 0);
       v.ctrl.setWheelEngineForce(i, (front && rwd) || (!front && !rwd && v.kind !== 'okada' && v.kind !== 'keke') ? 0 : force);
       v.ctrl.setWheelBrake(i, brake);
-      v.ctrl.setWheelFrictionSlip(i, (v.kind === 'okada' ? 3.2 : 2.2) * (v.tires[i] <= 0 ? 0.35 : 1) * (1 - 0.25 * ((this as any).wet ?? 0)));
+      v.ctrl.setWheelFrictionSlip(i, (v.kind === 'okada' ? 3.2 : 2.2) * (v.tires[i] <= 0 ? 0.35 : 1) * (1 - 0.25 * ((this as any).wet ?? 0)) * (plr ? this.mod(rider ? 'ride.grip' : 'drive.grip') : 1));
     }
     v.ctrl.updateVehicle(dt, undefined, groups(G.VEHICLE, G.WORLD | G.SHIELD));
     v.wheelSteer = v.steer; for (let i = 0; i < 4; i++) v.wheelSpin[i] = v.ctrl.wheelRotation(i) ?? 0;
@@ -718,7 +750,7 @@ export class LifeSim {
             const j = Math.min(1, h.depth * 4) * Math.min(1.5, sp / 10);
             v.body.applyImpulseAtPoint({ x: 0, y: -def.mass * 1.6 * j, z: 0 }, { x, y: p.y, z }, true);
             v.body.applyImpulse({ x: -fw.x * def.mass * 0.35 * j, y: 0, z: -fw.z * def.mass * 0.35 * j }, true);
-            v.tires[i] = Math.max(0, v.tires[i] - j * 6);
+            v.tires[i] = Math.max(0, v.tires[i] - j * 6 * (plr ? this.mod('drive.tire') : 1));
             this.events.push({ t: 'pothole', vehicle: v.id, at: { x, y: 0, z }, strength: j, wet: (this as any).water ?? 0 });
             break;
           }

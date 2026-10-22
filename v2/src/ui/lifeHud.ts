@@ -188,6 +188,7 @@ export const APPS: [string, string, string][] = [
   ['Bank', svg('M3.5 7.5h17v12h-17zM3.5 7.5 15 4.5v3M15.5 13.5h3'), 'linear-gradient(160deg,#3a3f52,#151824)'],
   ['Weather', svg('M7 18h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 6.8 11 3.5 3.5 0 0 0 7 18z'), 'linear-gradient(160deg,#7cc4ff,#3a86e0)'],
   ['Roads', svg('M12 3v4M12 10v4M12 17v4M5 21 8 3M19 21 16 3'), 'linear-gradient(160deg,#ff8a5c,#d1452c)'],
+  ['Skills', svg('M4 20V10M10 20V4M16 20v-8M22 20H2M7 7l3-3 3 4 4-5'), 'linear-gradient(160deg,#ff7a9a,#d1306a)'],
   ['Contacts', svg('M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20c1.4-3.6 4.2-5.5 7.5-5.5s6.1 1.9 7.5 5.5'), 'linear-gradient(160deg,#9aa3ad,#59616b)'],
   ['Settings', svg('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-1-3-2 .2-1.3-1.3.2-2-3-1-1 2h-1.8l-1-2-3 1 .2 2L6 7.2 4 7l-1 3 2 1v1.8l-2 1 1 3 2-.2 1.3 1.3-.2 2 3 1 1-2h1.8l1 2 3-1-.2-2 1.3-1.3 2 .2 1-3-2-1z'), 'linear-gradient(160deg,#70757c,#3a3d42)'],
 ];
@@ -204,6 +205,8 @@ export class LifeHud {
   subQueue: { who: string; text: string; secs: number }[] = []; subT = 0; titleT = 0; flashT = 0;
   shown = 0; sel = 0; phoneUp = false; appOpen: string | null = null; rowSel = 0;
   ctx: PhoneCtx | null = null;
+  /** Systems draw their own phone apps: return the rows' html (same .row markup, buttons with data-app and data-id). */
+  appRenderers: Record<string, (c: PhoneCtx) => string> = {};
   onAction?: (app: string, id: string) => void;
   onBuy?: (id: string) => void;
   radarCv: HTMLCanvasElement; radarG: CanvasRenderingContext2D;
@@ -368,7 +371,8 @@ ${touch ? `<div id="tc">
     const name = this.appOpen; if (!name) return; const L = this.el('av-l'); const c = this.ctx; if (!c) return;
     const row = (b: string, s: string, btn?: [string, string, string]) => `<div class="row"><b>${b}</b>${s}${btn ? `<br><button class="btn" data-app="${btn[0]}" data-id="${btn[1]}">${btn[2]}</button>` : ''}</div>`;
     let html = '';
-    if (name === 'Hustles') html = c.jobs.map((j) => row(`${j.title} · ${fmt(j.pay)}`, j.desc, j.active ? ['Hustles', 'cancel:' + j.id, 'Drop it'] : ['Hustles', j.id, 'Take it'])).join('') || row('Nothing now', 'Check back when the city wakes up.');
+    if (this.appRenderers[name]) html = this.appRenderers[name](c);
+    else if (name === 'Hustles') html = c.jobs.map((j) => row(`${j.title} · ${fmt(j.pay)}`, j.desc, j.active ? ['Hustles', 'cancel:' + j.id, 'Drop it'] : ['Hustles', j.id, 'Take it'])).join('') || row('Nothing now', 'Check back when the city wakes up.');
     else if (name === 'Texts') html = c.texts.map(([w, t]) => row(w, t)).join('');
     else if (name === 'Bank') html = row('Cash in hand', fmt(c.cash)) + row('Account', fmt(c.bank), ['Bank', 'deposit', 'Deposit ₦10,000']) + row('Withdraw', 'Any POS stand on the street will do. Small charge.', ['Bank', 'withdraw', 'Withdraw ₦10,000']);
     else if (name === 'Weather') html = row('Now', `${c.weather}, ${c.season}`) + row('Game time', `${c.time} · day ${c.day}`) + row('Lagos time', `${c.real} WAT`) + row('Potholes', 'Rain fills them. Sun and harmattan dry them. Drive accordingly.');
