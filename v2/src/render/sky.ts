@@ -212,6 +212,10 @@ export class Atmosphere {
     this.envT = 99;
   }
   shadowOn = false;
+  /** set by the view: a tile appeared or went away, or something that casts a shadow is moving. The map is only redrawn while one of these (or the sun, or the player) has changed. */
+  shadowDirty = true; shadowDynamic = false; private shadowFocus = new THREE.Vector3(1e9, 0, 0); private shadowLd = new THREE.Vector3(0, 1, 0);
+  /** shadow map redraws since the page loaded (for the perf overlay and the benchmarks) */
+  shadowDraws = 0;
 
   setWeather(n: WeatherName, lock = true) { this.target = n; this.lockedWeather = lock; }
   cycleWeather() { const i = WEATHER_ORDER.indexOf(this.target); this.setWeather(WEATHER_ORDER[(i + 1) % WEATHER_ORDER.length]); this.envT = 99; }
@@ -285,7 +289,16 @@ export class Atmosphere {
     const fx = Math.round(focus.dot(rt) / tex) * tex - focus.dot(rt), fy = Math.round(focus.dot(up2) / tex) * tex - focus.dot(up2);
     this.sun.target.position.copy(focus).addScaledVector(rt, fx).addScaledVector(up2, fy);
     this.sun.position.copy(this.sun.target.position).addScaledVector(ld, 400);
-    if (this.shadowOn) { if (this.shadowFrame++ % this.L.shadowEvery === 0) this.sun.shadow.needsUpdate = true; }
+    // three only draws a shadow map when the renderer-level flag is set as well as the light's own (autoUpdate is off), so both are raised here
+    if (this.shadowOn) {
+      const due = this.shadowFrame++ % this.L.shadowEvery === 0;
+      const moved = focus.distanceToSquared(this.shadowFocus) > 36 || ld.dot(this.shadowLd) < 0.99998;
+      if (due && (this.shadowDirty || this.shadowDynamic || moved)) {
+        this.sun.shadow.needsUpdate = true; this.renderer.shadowMap.needsUpdate = true; this.shadowDraws++;
+        if (moved || this.shadowDirty) { this.shadowFocus.copy(focus); this.shadowLd.copy(ld); }
+        this.shadowDirty = false;
+      }
+    }
     this.hemi.color.copy(zen).lerp(K.white, 0.25);
     this.hemi.groundColor.setRGB(0.36, 0.28, 0.22).multiplyScalar(0.25 + 0.75 * day);
     this.hemi.intensity = 0.25 + 1.25 * day * (0.6 + 0.4 * W.cover) + night * 0.35 + this.lightning * 3;

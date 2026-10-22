@@ -4,14 +4,14 @@ import { RegionStore, type Region, type Road, type Building, type Pothole, type 
 import { buildTileField, areaSurfaces, waterSurfaces, mechanicSurfaces, SURF, type TileField } from './roadField';
 import { buildFeatures } from './features';
 import { makeGroundMaterial } from './ground';
-import { buildBuildings, makeBuildingMaterial } from './buildings';
+import { buildBuildingsG, makeBuildingMaterial } from './buildings';
 import { plotsForRegion, type Plot } from './plots';
-import { buildCompounds } from './compounds';
+import { buildCompoundsG } from './compounds';
 import { buildProps } from './props';
 import { buildBridges, deckCollision, deckProfile } from './bridges';
 import type { TileCol } from '../sim/life';
 import { buildingHeight } from './buildings';
-import { hash, pointInPoly } from './geo';
+import { hash, pointInPoly, slice } from './geo';
 import { halfWidth, verge } from './roadspec';
 import type { TexSet } from './texsets';
 
@@ -82,37 +82,55 @@ export class WorldStreamer {
   /** Builds a tile in slices (one per frame, each a few ms) so streaming never stalls a frame. */
   private *buildTile(ix: number, iz: number, res: number): Generator<void, Tile, void> {
     const x0 = ix * TILE, z0 = iz * TILE; const key = `${ix},${iz}`;
-    let t0 = performance.now(); const lap = (n: string) => { const t = performance.now(); this.slices.push([n, t - t0]); t0 = t; };
+    this.stage = 'gather';
     const { roads, blds, ph, areas, plots, rails, pois, waters } = this.gather(x0, z0, TILE, 40);
     const inTile = (x: number, z: number) => x >= x0 && x < x0 + TILE && z >= z0 && z < z0 + TILE;
+    this.stage = 'field'; yield;
     // ground surfaces: landuse plus compounds (paved for the rich, swept sand for the rest) and bush on vacant plots
     const surfaces = areaSurfaces(areas);
     for (const pl of plots) surfaces.push({ code: pl.zone === 'vacant' ? SURF.bush : pl.zone === 'industrial' ? SURF.concrete : pl.rich > 0.6 ? SURF.interlock : SURF.compound, pts: new Float32Array(pl.pts) });
     for (const b of blds) if (b.kind === 14) surfaces.push({ code: SURF.concrete, pts: b.pts });
     surfaces.push(...waterSurfaces(waters, x0, z0, TILE), ...mechanicSurfaces(areas));
     const field = buildTileField(this.renderer, { x0, z0, size: TILE, roads, potholes: ph, surfaces }, res);
-    lap('field'); yield;
-    t0 = performance.now();
+    this.stage = 'buildings'; yield;
     const group = new THREE.Group(); group.position.set(x0, 0, z0);
     const gm = makeGroundMaterial(this.tg);
     const u = (gm as any).hlUniforms; u.uField.value = field.field.texture; u.uDetail.value = field.detail.texture; u.uTile.value.set(x0, z0, TILE);
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(TILE, TILE).rotateX(-Math.PI / 2).translate(TILE / 2, 0, TILE / 2), gm);
     ground.receiveShadow = true; group.add(ground);
     const own = blds.filter((b) => inTile(b.cx, b.cz));
-    const bb = buildBuildings(own, x0, z0);
+    const bb = yield* buildBuildingsG(own, x0, z0);
     const bm = new THREE.Mesh(bb.geo, this.buildMat); bm.castShadow = true; bm.receiveShadow = true; group.add(bm);
-    lap('buildings'); yield;
-    t0 = performance.now();
+    this.stage = 'compounds'; yield;
     // compounds for the plots whose centre is in this tile
     const near = (x: number, z: number) => blds.filter((b) => Math.abs(b.cx - x) < 60 && Math.abs(b.cz - z) < 60);
-    const segs: number[] = [];
-    for (const r of roads) { if (r.flags & RF.bridge) continue; for (let k = 0; k < r.pts.length / 2 - 1; k++) segs.push(r.pts[k * 2], r.pts[k * 2 + 1], r.pts[k * 2 + 2], r.pts[k * 2 + 3]); }
-    const roadDist = (x: number, z: number) => { let best = 1e9; for (let k = 0; k < segs.length; k += 4) { const ax = segs[k], az = segs[k + 1], bx = segs[k + 2], bz = segs[k + 3]; const dx = bx - ax, dz = bz - az; const L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); const d = Math.hypot(ax + dx * t - x, az + dz * t - z); if (d < best) best = d; } return best; };
+    // nearest road segment lookup: segments are bucketed by their box grown 16 m (the only range the gate placement cares about)
+    const CELL = 24, GROW = 20; const grid = new Map<number, number[]>(); const segs: number[] = []; const segHw: number[] = [];
+    for (const r of roads) {
+      if (r.flags & RF.bridge) continue;
+      const hwR = halfWidth(r) + verge(r);
+      for (let k = 0; k < r.pts.length / 2 - 1; k++) {
+        const ax = r.pts[k * 2], az = r.pts[k * 2 + 1], bx = r.pts[k * 2 + 2], bz = r.pts[k * 2 + 3]; const si = segs.length; segs.push(ax, az, bx, bz); segHw.push(hwR);
+        const i0 = Math.floor((Math.min(ax, bx) - GROW) / CELL), i1 = Math.floor((Math.max(ax, bx) + GROW) / CELL), j0 = Math.floor((Math.min(az, bz) - GROW) / CELL), j1 = Math.floor((Math.max(az, bz) + GROW) / CELL);
+        for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const key = i * 65536 + j; let l = grid.get(key); if (!l) grid.set(key, l = []); l.push(si); }
+      }
+    }
+    const roadDist = (x: number, z: number) => {
+      const l = grid.get(Math.floor(x / CELL) * 65536 + Math.floor(z / CELL)); if (!l) return 99;
+      let best = 99;
+      for (let q = 0; q < l.length; q++) { const k = l[q]; const ax = segs[k], az = segs[k + 1], bx = segs[k + 2], bz = segs[k + 3]; const dx = bx - ax, dz = bz - az; const L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); const d = Math.hypot(ax + dx * t - x, az + dz * t - z); if (d < best) best = d; }
+      return best;
+    };
+    /** true for points on the carriageway or its verge (same rule as before, now through the bucket grid) */
+    const onRoad = (x: number, z: number) => {
+      const l = grid.get(Math.floor(x / CELL) * 65536 + Math.floor(z / CELL)); if (!l) return false;
+      for (let q = 0; q < l.length; q++) { const k = l[q]; const ax = segs[k], az = segs[k + 1], bx = segs[k + 2], bz = segs[k + 3]; const dx = bx - ax, dz = bz - az; const L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); if (Math.hypot(ax + dx * t - x, az + dz * t - z) < segHw[k >> 2]) return true; }
+      return false;
+    };
     const ownPlots = plots.filter((p) => inTile(p.cx, p.cz));
-    const cp = buildCompounds(ownPlots, near, roadDist, x0, z0);
+    const cp = yield* buildCompoundsG(ownPlots, near, roadDist, x0, z0);
     if (cp.geo) { const cm = new THREE.Mesh(cp.geo, this.buildMat); cm.castShadow = true; cm.receiveShadow = true; group.add(cm); }
-    lap('compounds'); yield;
-    t0 = performance.now();
+    this.stage = 'props'; yield;
     // trees: a few per plot, more on vacant land, never inside a building
     const trees: { x: number; z: number; palm: boolean; s: number }[] = [];
     for (const pl of ownPlots) {
@@ -130,8 +148,7 @@ export class WorldStreamer {
     const blocked = (x: number, z: number) => own.some((b) => Math.abs(b.cx - x) < 30 && Math.abs(b.cz - z) < 30 && pointInPoly(x, z, b.pts));
     const props = buildProps({ x0, z0, size: TILE, roads: roads.filter((r) => r.pts.length), trees, tanks: bb.tanks, bars: bb.bars, dishes: bb.dishes, blocked });
     props.group.position.set(-x0, 0, -z0); group.add(props.group);
-    lap('props'); yield;
-    t0 = performance.now();
+    this.stage = 'finish'; yield;
     // bridges whose first point is in this tile own their deck
     // every bridge segment whose midpoint lies in this tile belongs to this tile (long viaducts span many tiles)
     const br: Road[] = [];
@@ -145,10 +162,11 @@ export class WorldStreamer {
       }
     }
     if (br.length) { const b = buildBridges(br, x0, z0, this.asphalt, this.asphaltN); group.add(b.group); }
+    if (slice.due()) yield;
     // rails, platforms, courts, banks, mechanic villages
-    const onRoad = (x: number, z: number) => { for (const r of roads) { if (r.flags & RF.bridge) continue; const hw = halfWidth(r) + verge(r); for (let k = 0; k < r.pts.length / 2 - 1; k++) { const ax = r.pts[k * 2], az = r.pts[k * 2 + 1], bx = r.pts[k * 2 + 2], bz = r.pts[k * 2 + 3]; if (Math.abs(ax - x) > 300 && Math.abs(bx - x) > 300) continue; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); if (Math.hypot(ax + dx * t - x, az + dz * t - z) < hw) return true; } } return false; };
     const ft = buildFeatures({ x0, z0, size: TILE, rails, areas, pois, buildings: blds, roads, blocked, onRoad });
     group.add(ft.group);
+    if (slice.due()) yield;
     this.group.add(group);
     // collision for the sim: building prisms, compound walls, poles and trunks, bridge decks
     const convex = (p: Float32Array) => { const n = p.length / 2; let sgn = 0; for (let i = 0; i < n; i++) { const a = i, b = (i + 1) % n, c = (i + 2) % n; const cr = (p[b * 2] - p[a * 2]) * (p[c * 2 + 1] - p[b * 2 + 1]) - (p[b * 2 + 1] - p[a * 2 + 1]) * (p[c * 2] - p[b * 2]); if (Math.abs(cr) < 1e-6) continue; const s2 = Math.sign(cr); if (sgn && s2 !== sgn) return false; sgn = s2; } return true; };
@@ -184,11 +202,12 @@ export class WorldStreamer {
     }
     const nt: Tile = { key, x0, z0, res, field, group, ground, lamps: props.lamps, dist: 0, col, roads, props: props.group };
     this.onTile?.(nt, true);
-    lap('finish');
     return nt;
   }
 
   onTile?: (t: Tile, built: boolean) => void;
+  /** name of the build step the next slice belongs to (the work of each gen.next() is booked under it) */
+  stage = 'gather';
   /** timing of the last slices, for the perf overlay */
   slices: [string, number][] = [];
   private job: { key: string; res: number; old?: Tile; gen: Generator<void, Tile, void> } | null = null;
@@ -228,8 +247,11 @@ export class WorldStreamer {
         break;
       }
     }
+    const frameT0 = performance.now();
     while (this.job) {
+      const w0 = performance.now(); slice.t0 = w0; const stage = this.stage;
       const r = this.job.gen.next();
+      this.slices.push([stage, performance.now() - w0]);
       if (r.done) {
         const { key, old } = this.job; this.job = null;
         if (old) this.disposeTile(old);
@@ -237,8 +259,10 @@ export class WorldStreamer {
         this.lamps = [...this.tiles.values()].flatMap((x) => x.lamps);
         break;
       }
-      if (!burst) break;
+      if (!burst && performance.now() - frameT0 >= this.budgetMs) break;
     }
   }
+  /** main-thread milliseconds streaming may use per frame (every step is also cut into pieces of about slice.ms) */
+  budgetMs = 4;
   get pending() { let n = 0; return n; }
 }

@@ -1,6 +1,6 @@
 // Compound walls and gates. Most Lagos houses sit behind a block wall with a metal gate onto the street.
 import * as THREE from 'three';
-import { Geo, hash, pointInPoly } from './geo';
+import { Geo, hash, pointInPoly, slice } from './geo';
 import type { Plot } from './plots';
 import type { Building } from './region';
 
@@ -9,11 +9,14 @@ const WALL_PAINT: [number, number, number][] = [[0.95, 0.92, 0.84], [0.93, 0.85,
 
 export interface WallSeg { ax: number; az: number; bx: number; bz: number; h: number }
 
-export function buildCompounds(plots: Plot[], near: (x: number, z: number) => Building[], roadDist: (x: number, z: number) => number, ox: number, oz: number) {
+export interface CompoundOut { geo: THREE.BufferGeometry | null; segs: WallSeg[]; gates: { x: number; z: number; ang: number; w: number; c: [number, number, number]; h: number }[] }
+export function buildCompounds(plots: Plot[], near: (x: number, z: number) => Building[], roadDist: (x: number, z: number) => number, ox: number, oz: number): CompoundOut { const g = buildCompoundsG(plots, near, roadDist, ox, oz); for (;;) { const r = g.next(); if (r.done) return r.value; } }
+export function* buildCompoundsG(plots: Plot[], near: (x: number, z: number) => Building[], roadDist: (x: number, z: number) => number, ox: number, oz: number): Generator<void, CompoundOut, void> {
   const G = new Geo({ aMat: 1, aTint: 3, aInfo: 4, aEdge: 2 });
   const segs: WallSeg[] = [];
   const gates: { x: number; z: number; ang: number; w: number; c: [number, number, number]; h: number }[] = [];
   for (const pl of plots) {
+    if (slice.due()) yield;
     if (pl.zone === 'vacant' || pl.zone === 'industrial') continue;
     if (pl.buildings.some((b) => b.kind === 14 || b.kind === 15 || b.kind === 16 || b.kind === 10) || pl.area > 6000) continue; // terminals, stations and markets stay open
     const r = hash(pl.buildings[0]?.id ?? 1, 21);
@@ -27,7 +30,15 @@ export function buildCompounds(plots: Plot[], near: (x: number, z: number) => Bu
     // inset the wall line 0.15 m into the plot
     let cx = pl.cx, cz = pl.cz;
     const P = (k: number) => { const x = pl.pts[(k % n) * 2], z = pl.pts[(k % n) * 2 + 1]; const dx = cx - x, dz = cz - z, l = Math.hypot(dx, dz) || 1; return [x + (dx / l) * 0.15, z + (dz / l) * 0.15]; };
-    const blds = near(pl.cx, pl.cz);
+    // only buildings whose box touches the plot's box can block one of its walls (the old list was everything within 60 m)
+    let px0 = Infinity, px1 = -Infinity, pz0 = Infinity, pz1 = -Infinity;
+    for (let k = 0; k < n; k++) { const x = pl.pts[k * 2], z = pl.pts[k * 2 + 1]; if (x < px0) px0 = x; if (x > px1) px1 = x; if (z < pz0) pz0 = z; if (z > pz1) pz1 = z; }
+    const blds: Building[] = [];
+    for (const b of near(pl.cx, pl.cz)) {
+      let bx0 = Infinity, bx1 = -Infinity, bz0 = Infinity, bz1 = -Infinity;
+      for (let k = 0; k < b.pts.length; k += 2) { const x = b.pts[k], z = b.pts[k + 1]; if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (z < bz0) bz0 = z; if (z > bz1) bz1 = z; }
+      if (bx1 >= px0 - 1 && bx0 <= px1 + 1 && bz1 >= pz0 - 1 && bz0 <= pz1 + 1) blds.push(b);
+    }
     // which edge gets the gate: the one closest to a road
     let gateEdge = -1, gd = 1e9;
     for (let k = 0; k < n; k++) { const [ax, az] = P(k), [bx, bz] = P(k + 1); const L = Math.hypot(bx - ax, bz - az); if (L < 4.5) continue; const d = roadDist((ax + bx) / 2, (az + bz) / 2); if (d < gd) { gd = d; gateEdge = k; } }
@@ -63,7 +74,7 @@ export function buildCompounds(plots: Plot[], near: (x: number, z: number) => Bu
       for (let s = 0; s <= L + 0.001; s += 0.6) {
         const x = ax + tx * s, z = az + tz * s;
         let blocked = Math.abs(s - gateAt) < gw / 2;
-        if (!blocked) for (const b of blds) { if (Math.abs(b.cx - x) < 40 && Math.abs(b.cz - z) < 40 && pointInPoly(x, z, b.pts)) { blocked = true; break; } }
+        if (!blocked) for (const b of blds) { if (pointInPoly(x, z, b.pts)) { blocked = true; break; } }
         if (!blocked && s0 < 0) s0 = s;
         if (blocked && s0 >= 0) { emit(s0, s - 0.3); s0 = -1; }
       }

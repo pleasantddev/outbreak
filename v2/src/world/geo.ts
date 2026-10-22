@@ -1,13 +1,19 @@
 // Small helpers for building merged geometry.
 import * as THREE from 'three';
+/**
+ * Cooperative time slicing for the tile builders. The streamer stamps `t0` before every step of a build; a builder that is
+ * a generator checks `due()` between items and yields, so no single step of streaming holds the main thread for long.
+ */
+export const slice = { t0: 0, ms: 2.5, due() { return performance.now() - this.t0 > this.ms; } };
 export class Geo {
   pos: number[] = []; nrm: number[] = []; uv: number[] = []; idx: number[] = [];
   extra: Record<string, { size: number; data: number[] }> = {};
-  constructor(extras: Record<string, number> = {}) { for (const [k, s] of Object.entries(extras)) this.extra[k] = { size: s, data: [] }; }
+  private exList: { k: string; size: number; data: number[] }[] = [];
+  constructor(extras: Record<string, number> = {}) { for (const [k, s] of Object.entries(extras)) { this.extra[k] = { size: s, data: [] }; this.exList.push({ k, size: s, data: this.extra[k].data }); } }
   get count() { return this.pos.length / 3; }
   v(p: [number, number, number], n: [number, number, number], uv: [number, number], ex: Record<string, number[]> = {}) {
     this.pos.push(p[0], p[1], p[2]); this.nrm.push(n[0], n[1], n[2]); this.uv.push(uv[0], uv[1]);
-    for (const [k, e] of Object.entries(this.extra)) { const d = ex[k]; if (d) e.data.push(...d); else for (let i = 0; i < e.size; i++) e.data.push(0); }
+    for (let j = 0; j < this.exList.length; j++) { const e = this.exList[j]; const d = ex[e.k]; if (d) for (let i = 0; i < e.size; i++) e.data.push(d[i] ?? 0); else for (let i = 0; i < e.size; i++) e.data.push(0); }
     return this.count - 1;
   }
   tri(a: number, b: number, c: number) { this.idx.push(a, b, c); }

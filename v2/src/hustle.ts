@@ -85,10 +85,10 @@ async function boot() {
   const [tg, tw] = await Promise.all([loadTexSet('g', 8, size), loadTexSet('w', 8, size), preloadCars()]);
   sim = new LifeSim({ seed: (Math.random() * 1e9) | 0, name: 'You', look: PLAYER_LOOK, spawn, quality, potholes: potholesNear });
   sim.cash = save.cash ?? 1850;
-  view = new LifeView(canvas, sim, assets, store, tg, tw, quality, { hour: q.get('t') ? +q.get('t')! : undefined, weather: (q.get('w') as WeatherName) ?? undefined, level: startLevel });
+  view = new LifeView(canvas, sim, assets, store, tg, tw, quality, { hour: q.get('t') ? +q.get('t')! : undefined, weather: (q.get('w') as WeatherName) ?? undefined, level: startLevel, mobile: device.mobile });
   routeLine = new RouteLine(view.scene, startLevel >= 4 ? 36 : 72);
-  gov = new Governor(pref, startLevel, { level: (l) => view.applyLevel(l, gov.scale), scale: (s) => view.setRenderScale(s) });
-  view.applyLevel(startLevel, 1); gov.scale = 1;
+  gov = new Governor(pref, startLevel, { level: (l) => view.applyLevel(l) });
+  view.applyLevel(startLevel);
   view.onTile = (t, built) => { if (built) sim.net.addRoads(t.roads); else sim.removeTile(t.key); };
   view.cam.yaw = Math.PI * 0.85;
   input = new Input(canvas, touchDev ? 'on' : 'off');
@@ -264,7 +264,7 @@ function onPhoneAction(app: string, id: string) {
     if (id === 'quality') {
       const order: Pref[] = ['auto', 'high', 'medium', 'low']; pref = order[(order.indexOf(pref) + 1) % order.length]; savePref(pref);
       const lv = pref === 'auto' ? device.level : PRESET_LEVEL[pref as Tier];
-      gov.setPref(pref, lv); view.applyLevel(lv, 1); view.world.update(sim.local.pos.x, sim.local.pos.z);
+      gov.setPref(pref, lv); view.applyLevel(lv); view.world.update(sim.local.pos.x, sim.local.pos.z);
     }
   }
   hud.refreshApp();
@@ -507,7 +507,7 @@ function phoneCtx(): PhoneCtx {
 }
 function qualityLabel() {
   const name = pref === 'auto' ? 'Auto' : pref[0].toUpperCase() + pref.slice(1);
-  return `${name} · ${LEVELS[view.level].name} · ${Math.round(gov.fps)} fps · ${Math.round(view.renderScale * 100)}% resolution`;
+  return `${name} · ${LEVELS[view.level].name} · ${Math.round(gov.fps)} fps · ${view.renderer.getPixelRatio().toFixed(2)}x native`;
 }
 function drawPhoneMap() {
   const cv = document.getElementById('pmap') as HTMLCanvasElement | null; if (!cv) return; const g = cv.getContext('2d')!; const me = sim.local; const S = 0.18;

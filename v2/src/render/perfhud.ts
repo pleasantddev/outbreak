@@ -20,7 +20,7 @@ export class PerfHud {
     const L = LEVELS[v.level];
     this.el.textContent = [
       `${g ? g.fps.toFixed(0) : '?'} fps  ${g ? g.ft.toFixed(1) : '?'} ms  mode ${g ? g.pref : '?'}`,
-      `rung ${v.level} ${L.name}  scale ${v.renderScale.toFixed(2)}  dpr ${v.renderer.getPixelRatio().toFixed(2)}`,
+      `rung ${v.level} ${L.name}  dpr ${v.renderer.getPixelRatio().toFixed(2)} (native)  ${v.renderer.domElement.width}x${v.renderer.domElement.height}`,
       `calls ${I.render.calls}  tris ${(I.render.triangles / 1000).toFixed(0)}k  prog ${I.programs?.length ?? 0}`,
       `geo ${I.memory.geometries}  tex ${I.memory.textures}  tiles ${v.world.tiles.size}  actors ${v.actors.size}  cars ${v.cars.size}`,
       mem ? `heap ${(mem.usedJSHeapSize / 1048576).toFixed(0)} MB` : '',

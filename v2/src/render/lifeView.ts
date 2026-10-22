@@ -1,9 +1,9 @@
 // Mirrors the LifeSim into the scene: streamed Lagos, sky and weather, people, cars with opening doors, effects.
 import * as THREE from 'three';
 import { N8AOPostPass } from 'n8ao';
-import { EffectComposer, RenderPass, EffectPass, BloomEffect, VignetteEffect, ToneMappingEffect, ToneMappingMode, SMAAEffect, Effect } from 'postprocessing';
+import { EffectComposer, RenderPass, EffectPass, BloomEffect, VignetteEffect, ToneMappingEffect, ToneMappingMode, SMAAEffect, FXAAEffect, Effect } from 'postprocessing';
 import { Atmosphere, type WeatherName } from './sky';
-import { LEVELS, type Level } from './quality';
+import { LEVELS, pixelRatioFor, type Level } from './quality';
 import { Fx } from './fx';
 import { HumanAssets, HumanView, officePerson, type CharState } from './humans';
 import { buildCar, poseCar, type CarModel } from './cars';
@@ -43,8 +43,13 @@ interface ActorVis { ref: Actor; view: HumanView; last: THREE.Vector3; moveYaw: 
 
 export class LifeView {
   renderer: THREE.WebGLRenderer; scene = new THREE.Scene(); camera: THREE.PerspectiveCamera;
-  composer: EffectComposer; grade = new Grade(); bloom: BloomEffect | null = null; ao: any = null;
-  private smaaPass: EffectPass | null = null; private bloomPass: EffectPass | null = null; private finalPass!: EffectPass; private renderPass!: RenderPass;
+  composer: EffectComposer; ao: any = null;
+  /** every final-pass variant shares these grade uniforms: set() writes them all */
+  private grades: Grade[] = []; grade = { set: (n: string, v: number) => { for (const g of this.grades) g.set(n, v); } };
+  /** one merged full-screen pass at the end of the chain: [AA, bloom, grade, tone map, vignette], built per (aa, bloom) combination the ladder uses */
+  private finals = new Map<string, EffectPass>(); private blooms = new Map<string, BloomEffect>(); private finalKey = '';
+  /** the active bloom effect (null when the rung has none); the lobby reads and sets its intensity */
+  get bloom(): BloomEffect | null { return this.blooms.get(this.finalKey) ?? null; } private renderPass!: RenderPass;
   atmo: Atmosphere; world: WorldStreamer; fx: Fx; cam: ThirdPersonCamera;
   actors = new Map<number, ActorVis>();
   cars = new Map<number, { m: CarModel | null; loading: boolean; key: string }>();
@@ -56,31 +61,31 @@ export class LifeView {
   landmap = { on: false, x: 0, z: 0, h: 320, sel: '', builtAt: { x: 1e9, z: 1e9 }, owned: [] as string[], lines: null as THREE.LineSegments | null, fill: null as THREE.Mesh | null };
   onTile?: (t: Tile, built: boolean) => void;
   /** quality ladder state */
-  level: number; L: Level; renderScale = 1; baseDpr: number;
-  constructor(canvas: HTMLCanvasElement, public sim: LifeSim, public assets: HumanAssets, store: RegionStore, tg: TexSet, tw: TexSet, public quality: 'low' | 'medium' | 'high', opts: { hour?: number; weather?: WeatherName; level?: number }) {
+  level: number; L: Level; mobile: boolean;
+  constructor(canvas: HTMLCanvasElement, public sim: LifeSim, public assets: HumanAssets, store: RegionStore, tg: TexSet, tw: TexSet, public quality: 'low' | 'medium' | 'high', opts: { hour?: number; weather?: WeatherName; level?: number; mobile?: boolean }) {
     this.level = opts.level ?? (quality === 'high' ? 0 : quality === 'medium' ? 2 : 5); this.L = LEVELS[this.level];
     const L = this.L;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false });
-    this.baseDpr = window.devicePixelRatio || 1;
-    this.renderer.setPixelRatio(Math.min(this.baseDpr, L.dprCap));
+    this.mobile = !!opts.mobile;
+    // native resolution, always (see quality.ts pixelRatioFor); no rung and no governor ever changes it
+    this.renderer.setPixelRatio(pixelRatioFor(this.mobile));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace; this.renderer.toneMapping = THREE.NoToneMapping;
     // shadow shaders are compiled in only when the starting rung has shadows; later rungs just switch the map off
     this.renderer.shadowMap.enabled = L.shadowSize > 0; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; this.renderer.shadowMap.autoUpdate = false;
     this.camera = new THREE.PerspectiveCamera(65, 1, 0.1, 2600);
     this.composer = new EffectComposer(this.renderer, { frameBufferType: THREE.HalfFloatType });
     this.renderPass = new RenderPass(this.scene, this.camera); this.composer.addPass(this.renderPass);
-    this.finalPass = new EffectPass(this.camera, this.grade, new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC }), new VignetteEffect({ offset: 0.35, darkness: 0.45 }));
-    this.composer.addPass(this.finalPass);
+    this.composer.autoRenderToScreen = false;
     this.atmo = new Atmosphere(this.scene, this.renderer, this.level, opts);
     this.world = new WorldStreamer(this.renderer, store, tg, tw, quality);
     this.world.radius = L.radius;
-    this.world.onTile = (t, b) => this.onTile?.(t, b);
+    this.world.onTile = (t, b) => { this.atmo.shadowDirty = true; this.onTile?.(t, b); };
     this.scene.add(this.world.group);
     this.fx = new Fx(this.scene, quality); this.fx.rainOn = false;
     this.cam = new ThirdPersonCamera(this.camera);
     this.headlight = new THREE.SpotLight(0xfff4d0, 0, 70, 0.55, 0.5, 1.2); this.scene.add(this.headlight, this.headlight.target);
     for (let i = 0; i < (this.level >= 4 ? 3 : this.level >= 2 ? 4 : 6); i++) { const l = new THREE.PointLight(0xffb060, 0, 34, 1.5); this.scene.add(l); this.lightPool.push(l); }
-    this.applyLevel(this.level, 1);
+    this.applyLevel(this.level);
     window.addEventListener('resize', () => this.resize()); this.resize();
   }
   /** Passes are built the first time a rung needs them, then only toggled. */
@@ -92,31 +97,36 @@ export class LifeView {
       (ao as any).autoDetectTransparency = false; ao.configuration.transparencyAware = false;
       C.addPass(ao, 1); this.ao = ao;
     }
-    if (L.smaa && !this.smaaPass) { this.smaaPass = new EffectPass(this.camera, new SMAAEffect()); C.addPass(this.smaaPass, C.passes.indexOf(this.bloomPass ?? this.finalPass)); }
-    if (L.bloom && !this.bloomPass) { this.bloom = new BloomEffect({ intensity: 0.75, luminanceThreshold: 0.85, luminanceSmoothing: 0.2, mipmapBlur: true, radius: 0.7 }); this.bloomPass = new EffectPass(this.camera, this.bloom); C.addPass(this.bloomPass, C.passes.indexOf(this.finalPass)); }
+    // exactly one final pass runs, and it is the one that draws to the canvas
+    const key = `${L.aa}${L.bloom ? 1 : 0}`;
+    let fp = this.finals.get(key);
+    if (!fp) {
+      const grade = new Grade(); this.grades.push(grade);
+      const fx: Effect[] = [];
+      if (L.aa === 2) fx.push(new SMAAEffect()); else if (L.aa === 1) fx.push(new FXAAEffect());
+      if (L.bloom) { const b = new BloomEffect({ intensity: this.bloom?.intensity ?? 0.75, luminanceThreshold: 0.85, luminanceSmoothing: 0.2, mipmapBlur: true, radius: 0.7 }); this.blooms.set(key, b); fx.push(b); }
+      fx.push(grade, new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC }), new VignetteEffect({ offset: 0.35, darkness: 0.45 }));
+      fp = new EffectPass(this.camera, ...fx); fp.enabled = false; fp.renderToScreen = false; C.addPass(fp);
+      this.finals.set(key, fp);
+    }
+    if (key !== this.finalKey) {
+      const prev = this.finals.get(this.finalKey); if (prev) { prev.enabled = false; prev.renderToScreen = false; }
+      const carry = this.bloom?.intensity; fp.enabled = true; fp.renderToScreen = true; this.finalKey = key; const nb = this.bloom; if (nb && carry !== undefined) nb.intensity = carry;
+    }
   }
-  /** Moves the whole renderer and its population caps to a rung of the ladder (live, no reload). */
-  applyLevel(level: number, scale = this.renderScale) {
+  /** Moves the whole renderer and its population caps to a rung of the ladder (live, no reload). Resolution is not part of a rung. */
+  applyLevel(level: number) {
     this.level = level; const L = this.L = LEVELS[level];
     this.ensurePasses(L);
     if (this.ao) {
       this.ao.enabled = L.ao > 0;
       if (L.ao > 0) { this.ao.setQualityMode(L.ao === 3 ? 'Medium' : L.ao === 2 ? 'Low' : 'Performance'); this.ao.configuration.halfRes = L.ao < 3; }
     }
-    if (this.smaaPass) this.smaaPass.enabled = L.smaa;
-    if (this.bloomPass) this.bloomPass.enabled = L.bloom;
     this.atmo.applyLevel(level);
     this.world.radius = L.radius;
     const sim = this.sim as any; sim.maxPeds = L.peds; sim.maxTraffic = L.traffic; sim.maxParked = L.parked;
-    this.setRenderScale(scale);
   }
-  /** Dynamic resolution: pixel ratio = min(device ratio, rung cap) x scale. Rate limited by the governor. */
-  setRenderScale(scale: number) {
-    this.renderScale = scale;
-    const pr = Math.max(0.35, Math.min(this.baseDpr, this.L.dprCap) * scale);
-    if (Math.abs(pr - this.renderer.getPixelRatio()) > 0.004) { this.renderer.setPixelRatio(pr); this.resize(); }
-  }
-  resize() { const w = window.innerWidth, h = window.innerHeight; this.renderer.setSize(w, h, false); this.composer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
+  resize() { const pr = pixelRatioFor(this.mobile); if (Math.abs(pr - this.renderer.getPixelRatio()) > 0.004) this.renderer.setPixelRatio(pr); const w = window.innerWidth, h = window.innerHeight; this.renderer.setSize(w, h, false); this.composer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
 
   private actorVis(a: Actor): ActorVis {
     let v = this.actors.get(a.id);
@@ -189,6 +199,7 @@ export class LifeView {
 
     this.updateCrowd(dt, focus);
     // people
+    let shadowDyn = false; const shR2 = (this.L.shadowHalf + 25) ** 2;
     const seen = new Set<number>();
     for (const a of sim.actors) {
       if ((a as any)._gone) continue;
@@ -203,7 +214,7 @@ export class LifeView {
       if (!self) v.view.setLod(d > (v.view.lodOn ? 18 : 24));
       const p = this.tmpP.set(a.pos.x, a.pos.y, a.pos.z); const dp = this.tmpD.copy(p).sub(v.last);
       const sp = Math.hypot(dp.x, dp.z) / Math.max(dt, 1e-3);
-      if (Math.hypot(dp.x, dp.z) > 0.002) v.moveYaw = Math.atan2(dp.x, dp.z);
+      if (Math.hypot(dp.x, dp.z) > 0.002) { v.moveYaw = Math.atan2(dp.x, dp.z); if (d * d < shR2) shadowDyn = true; }
       v.last.copy(p);
       v.view.root.position.lerp(p, Math.min(1, dt * 30)); if (a.vehicle !== null) v.view.root.position.copy(p);
       if (!inView) { v.fireEdge = v.reloadEdge = v.meleeEdge = false; v.hit = Math.max(0, v.hit - dt); v.acc += dt; continue; }
@@ -248,6 +259,7 @@ export class LifeView {
       const siren = (m.root as any).siren; if (siren && sim.wanted > 0) { const f = Math.sin(this.time * 14) > 0; siren[0].emissiveIntensity = f ? 8 : 0; siren[1].emissiveIntensity = f ? 0 : 8; }
       if (veh.destroyed && !(m as any)._burnt) { (m as any)._burnt = true; m.body.traverse((o) => { const mesh = o as THREE.Mesh; if (mesh.isMesh) { const mt = (mesh.material as THREE.MeshStandardMaterial).clone(); mt.color?.multiplyScalar(0.12); mt.map = null; mesh.material = mt; } }); }
       const dist = Math.hypot(p.x - cam.position.x, p.z - cam.position.z);
+      if (dist * dist < shR2 && (Math.abs(veh.ctrl.currentVehicleSpeed()) > 0.25 || veh.destroyed)) shadowDyn = true;
       if ((veh.engine <= 0 || veh.bodyHp <= 0 || veh.destroyed) && dist < 120 && Math.random() < dt * 20) { const sp = m.smoke.clone().applyQuaternion(m.root.quaternion).add(m.root.position); this.fx.smoke.emit({ pos: sp, vel: new THREE.Vector3((Math.random() - 0.5) * 0.6, 1.5 + Math.random(), (Math.random() - 0.5) * 0.6), life: 3, max: 3, size: 1.4, color: new THREE.Color(0.05, 0.05, 0.05), drag: 0.6 }); }
       const ek = veh.kind === 'keke' || veh.kind === 'okada' ? 'okada' : veh.kind === 'danfo' ? 'danfo' : 'suv';
       if (driven && dist < 70) audio.engine(veh.id, { x: p.x, y: p.y, z: p.z }, Math.min(1, Math.abs(veh.ctrl.currentVehicleSpeed()) / VEHICLES[veh.kind].topSpeed + Math.abs(veh.throttle) * 0.2), ek as any);
@@ -259,6 +271,7 @@ export class LifeView {
         this.headlight.target.position.copy(this.headlight.position).addScaledVector(fw, 20); this.headlight.intensity = 160;
       }
     }
+    this.atmo.shadowDynamic = shadowDyn;
     if (!hl) this.headlight.intensity = 0;
     for (const [id, c] of this.cars) if (!live.has(id)) { c.m?.root.removeFromParent(); audio.engine(id, null, 0, 'suv'); this.cars.delete(id); }
 

@@ -3,7 +3,7 @@
 // unfinished shells with starter bars. One merged mesh per tile, PBR from the wall texture array.
 import * as THREE from 'three';
 import { BK, type Building } from './region';
-import { Geo, hash, polyArea, obb } from './geo';
+import { Geo, hash, polyArea, obb, slice } from './geo';
 import type { TexSet } from './texsets';
 
 export const buildingShared = { uNight: { value: 0 }, uWet: { value: 0 }, uDust: { value: 0 } };
@@ -29,10 +29,14 @@ export function buildingHeight(b: Building) {
   return PLINTH + b.levels * FLOOR + (b.kind === BK.shops ? 0.5 : 0);
 }
 
-export function buildBuildings(list: Building[], ox: number, oz: number): { geo: THREE.BufferGeometry; tanks: number[]; bars: number[]; dishes: number[] } {
+export interface BuildingOut { geo: THREE.BufferGeometry; tanks: number[]; bars: number[]; dishes: number[] }
+export function buildBuildings(list: Building[], ox: number, oz: number): BuildingOut { const g = buildBuildingsG(list, ox, oz); for (;;) { const r = g.next(); if (r.done) return r.value; } }
+/** Same as buildBuildings, but a generator that yields whenever the current time slice is used up. */
+export function* buildBuildingsG(list: Building[], ox: number, oz: number): Generator<void, BuildingOut, void> {
   const G = new Geo({ aMat: 1, aTint: 3, aInfo: 4, aEdge: 2 });
   const tanks: number[] = [], bars: number[] = [], dishes: number[] = [];
   for (const b of list) {
+    if (slice.due()) yield;
     let p = Array.from(b.pts).map((v, i) => v - (i % 2 === 0 ? ox : oz));
     if (p.length < 6) continue;
     if (polyArea(p) < 0) { const q: number[] = []; for (let i = p.length / 2 - 1; i >= 0; i--) q.push(p[i * 2], p[i * 2 + 1]); p = q; }
@@ -92,12 +96,16 @@ export function buildBuildings(list: Building[], ox: number, oz: number): { geo:
       const rmat = tiles ? 7 : 6;
       const c0 = W(-hl, -hw, y0), c1 = W(hl, -hw, y0), c2 = W(hl, hw, y0), c3 = W(-hl, hw, y0), q0 = W(-rl, 0, y0 + rise), q1 = W(rl, 0, y0 + rise);
       const face = (pts: [number, number, number][]) => {
-        const e1 = new THREE.Vector3(...pts[1]).sub(new THREE.Vector3(...pts[0])), e2 = new THREE.Vector3(...pts[2]).sub(new THREE.Vector3(...pts[0]));
-        const nr = e1.clone().cross(e2).normalize(); if (nr.y < 0) nr.negate();
-        const ax = e1.clone().normalize(); const up = nr.clone().cross(ax).normalize();
-        const ids = pts.map((pt) => { const v = new THREE.Vector3(...pt).sub(new THREE.Vector3(...pts[0])); return G.v(pt, [nr.x, nr.y, nr.z], [v.dot(ax), v.dot(up)], { aMat: [rmat], aTint: rc, aInfo: [0, r3 * 100, 0, 3], aEdge: [0, 0] }); });
+        // plain arithmetic: this runs for every roof face of every house, so no Vector3 allocations
+        const [p0, p1, p2] = pts;
+        const e1x = p1[0] - p0[0], e1y = p1[1] - p0[1], e1z = p1[2] - p0[2], e2x = p2[0] - p0[0], e2y = p2[1] - p0[1], e2z = p2[2] - p0[2];
+        let nx = e1y * e2z - e1z * e2y, ny = e1z * e2x - e1x * e2z, nz = e1x * e2y - e1y * e2x; let nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
+        if (ny < 0) { nx = -nx; ny = -ny; nz = -nz; }
+        const al = Math.hypot(e1x, e1y, e1z) || 1; const axx = e1x / al, axy = e1y / al, axz = e1z / al;
+        let ux = ny * axz - nz * axy, uy = nz * axx - nx * axz, uz = nx * axy - ny * axx; nl = Math.hypot(ux, uy, uz) || 1; ux /= nl; uy /= nl; uz /= nl;
+        const ids = pts.map((pt) => { const vx = pt[0] - p0[0], vy = pt[1] - p0[1], vz = pt[2] - p0[2]; return G.v(pt, [nx, ny, nz], [vx * axx + vy * axy + vz * axz, vx * ux + vy * uy + vz * uz], { aMat: [rmat], aTint: rc, aInfo: [0, r3 * 100, 0, 3], aEdge: [0, 0] }); });
         // winding: make the face point up
-        const tri = (a: number, b: number, c: number) => { const pa = new THREE.Vector3(...pts[a]), pb = new THREE.Vector3(...pts[b]), pc = new THREE.Vector3(...pts[c]); const nn = pb.sub(pa).cross(pc.sub(pa)); if (nn.y >= 0) G.tri(ids[a], ids[b], ids[c]); else G.tri(ids[a], ids[c], ids[b]); };
+        const tri = (a: number, b: number, c: number) => { const pa = pts[a], pb = pts[b], pc = pts[c]; const ny2 = (pb[2] - pa[2]) * (pc[0] - pa[0]) - (pb[0] - pa[0]) * (pc[2] - pa[2]); if (ny2 >= 0) G.tri(ids[a], ids[b], ids[c]); else G.tri(ids[a], ids[c], ids[b]); };
         if (pts.length === 3) tri(0, 1, 2); else { tri(0, 1, 2); tri(0, 2, 3); }
       };
       face([c0, c1, q1, q0]); face([c2, c3, q0, q1]); face([c1, c2, q1]); face([c3, c0, q0]);
