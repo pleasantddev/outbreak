@@ -282,7 +282,7 @@ export class LifeSim {
     // despawn far
     for (const a of this.actors) if (a.alive && a.role !== 'player' && !(a as any)._gone && a.vehicle === null && Math.hypot(a.pos.x - P.x, a.pos.z - P.z) > 175) this.despawnActor(a);
     for (const a of this.actors) if (!a.alive && !(a as any)._gone && this.time - (a as any)._diedAt > 40) this.despawnActor(a);
-    for (const v of this.liveVehicles()) { const t = v.body.translation(); const d = Math.hypot(t.x - P.x, t.z - P.z); if (d > 280 && !v.seats.some((s) => s !== null && this.actors[s].role === 'player') && v.id !== (this as any).playerCar) this.removeVehicle(v); }
+    for (const v of this.liveVehicles()) { const t = v.body.translation(); const d = Math.hypot(t.x - P.x, t.z - P.z); if (d > 280 && !v.seats.some((s) => s !== null && this.actors[s].role === 'player') && v.id !== (this as any).playerCar && !(v as any).keep) this.removeVehicle(v); }
     const peds = this.actors.filter((a) => a.alive && !(a as any)._gone && a.role !== 'player' && a.vehicle === null).length;
     if (peds < this.maxPeds) {
       const walks = this.net.nearWalks(P.x, P.z, 130);

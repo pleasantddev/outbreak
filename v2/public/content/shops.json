@@ -1,0 +1,2111 @@
+{
+ "version": 1,
+ "items": [
+  {
+   "kind": "site",
+   "id": "cappa",
+   "site": "paint",
+   "name": "Cappa Mechanic Village",
+   "lat": 6.5521,
+   "lon": 3.345,
+   "blurb": "Ilupeju. Spray, plates, trackers and a car mart. The real thing.",
+   "carMart": true
+  },
+  {
+   "kind": "site",
+   "id": "ladipo",
+   "site": "paint",
+   "name": "Ladipo Auto Spares, Mushin",
+   "lat": 6.5422,
+   "lon": 3.3458,
+   "blurb": "Parts by the thousand and a spray shop at the back."
+  },
+  {
+   "kind": "site",
+   "id": "ojota",
+   "site": "paint",
+   "name": "Ojota Mechanic Village",
+   "lat": 6.5857,
+   "lon": 3.3833,
+   "blurb": "Ikorodu Road side. Big yard, loud compressors.",
+   "carMart": true
+  },
+  {
+   "kind": "site",
+   "id": "popoola",
+   "site": "paint",
+   "name": "Popoola Battery Clinic",
+   "lat": 6.5683,
+   "lon": 3.3343,
+   "blurb": "Batteries, trackers and quick resprays."
+  },
+  {
+   "kind": "site",
+   "id": "lga-oshodi",
+   "site": "lga",
+   "name": "Oshodi-Isolo Local Government Secretariat",
+   "lga": "Oshodi-Isolo",
+   "lat": 6.5527,
+   "lon": 3.3325,
+   "blurb": "NIN enrolment, vehicle registry and licence desk. Oshodi-Isolo LGA."
+  },
+  {
+   "kind": "site",
+   "id": "lga-ikeja",
+   "site": "lga",
+   "name": "Ikeja Local Government Secretariat",
+   "lga": "Ikeja",
+   "lat": 6.5985,
+   "lon": 3.3445,
+   "blurb": "NIN enrolment, vehicle registry and licence desk. Ikeja LGA."
+  },
+  {
+   "kind": "site",
+   "id": "lga-mushin",
+   "site": "lga",
+   "name": "Mushin Local Government Secretariat",
+   "lga": "Mushin",
+   "lat": 6.5339,
+   "lon": 3.3557,
+   "blurb": "NIN enrolment, vehicle registry and licence desk. Mushin LGA."
+  },
+  {
+   "kind": "site",
+   "id": "lga-agege",
+   "site": "lga",
+   "name": "Agege Local Government Secretariat",
+   "lga": "Agege",
+   "lat": 6.6196,
+   "lon": 3.324,
+   "blurb": "NIN enrolment, vehicle registry and licence desk. Agege LGA."
+  },
+  {
+   "kind": "site",
+   "id": "lga-ifako",
+   "site": "lga",
+   "name": "Ifako-Ijaiye Local Government Secretariat",
+   "lga": "Ifako-Ijaiye",
+   "lat": 6.67,
+   "lon": 3.315,
+   "blurb": "NIN enrolment, vehicle registry and licence desk. Ifako-Ijaiye LGA."
+  },
+  {
+   "kind": "site",
+   "id": "lga-alimosho",
+   "site": "lga",
+   "name": "Alimosho Local Government Secretariat",
+   "lga": "Alimosho",
+   "lat": 6.5485,
+   "lon": 3.2316,
+   "blurb": "NIN enrolment, vehicle registry and licence desk. Alimosho LGA."
+  },
+  {
+   "kind": "site",
+   "id": "lga-surulere",
+   "site": "lga",
+   "name": "Surulere Local Government Secretariat",
+   "lga": "Surulere",
+   "lat": 6.4985,
+   "lon": 3.356,
+   "blurb": "NIN enrolment, vehicle registry and licence desk. Surulere LGA."
+  },
+  {
+   "kind": "site",
+   "id": "lga-island",
+   "site": "lga",
+   "name": "Lagos Island Local Government Secretariat",
+   "lga": "Lagos Island",
+   "lat": 6.45678,
+   "lon": 3.39994,
+   "blurb": "NIN enrolment, vehicle registry and licence desk. Lagos Island LGA."
+  },
+  {
+   "kind": "finish",
+   "id": "gloss",
+   "name": "Gloss",
+   "desc": "Wet, deep shine. The default showroom look.",
+   "mult": 1.0,
+   "secs": 18,
+   "metalness": 0.35,
+   "roughness": 0.18,
+   "clearcoat": 1.0
+  },
+  {
+   "kind": "finish",
+   "id": "matte",
+   "name": "Matte",
+   "desc": "Flat and mean. Hides nothing, shows everything.",
+   "mult": 1.2,
+   "secs": 24,
+   "metalness": 0.1,
+   "roughness": 0.88,
+   "clearcoat": 0.0
+  },
+  {
+   "kind": "finish",
+   "id": "metallic",
+   "name": "Metallic",
+   "desc": "Fine metal flake that catches the sun at Third Mainland.",
+   "mult": 1.5,
+   "secs": 26,
+   "metalness": 0.85,
+   "roughness": 0.3,
+   "clearcoat": 0.8,
+   "flake": 1
+  },
+  {
+   "kind": "finish",
+   "id": "pearl",
+   "name": "Pearl",
+   "desc": "Colour that shifts with the light. Expensive and worth it.",
+   "mult": 2.4,
+   "secs": 34,
+   "metalness": 0.45,
+   "roughness": 0.2,
+   "clearcoat": 1.0,
+   "iridescence": 0.9
+  },
+  {
+   "kind": "finish",
+   "id": "chrome",
+   "name": "Chrome",
+   "desc": "Mirror wrap. Everybody on the road will look.",
+   "mult": 4.2,
+   "secs": 55,
+   "metalness": 1.0,
+   "roughness": 0.05,
+   "clearcoat": 0.0,
+   "envBoost": 1.6
+  },
+  {
+   "kind": "colour",
+   "id": "white",
+   "name": "Showroom white",
+   "hex": "#f2f2f0"
+  },
+  {
+   "kind": "colour",
+   "id": "black",
+   "name": "Midnight black",
+   "hex": "#0d0d0f"
+  },
+  {
+   "kind": "colour",
+   "id": "silver",
+   "name": "Silver",
+   "hex": "#b8b9bb"
+  },
+  {
+   "kind": "colour",
+   "id": "grey",
+   "name": "Gunmetal",
+   "hex": "#4a4d52"
+  },
+  {
+   "kind": "colour",
+   "id": "red",
+   "name": "Wine red",
+   "hex": "#6e0f12"
+  },
+  {
+   "kind": "colour",
+   "id": "fire",
+   "name": "Fire red",
+   "hex": "#c4161c"
+  },
+  {
+   "kind": "colour",
+   "id": "orange",
+   "name": "Lagos orange",
+   "hex": "#e8650f"
+  },
+  {
+   "kind": "colour",
+   "id": "danfo",
+   "name": "Danfo yellow",
+   "hex": "#e3a21a"
+  },
+  {
+   "kind": "colour",
+   "id": "lemon",
+   "name": "Lemon",
+   "hex": "#f0dc3c"
+  },
+  {
+   "kind": "colour",
+   "id": "lime",
+   "name": "Lime",
+   "hex": "#8cc63f"
+  },
+  {
+   "kind": "colour",
+   "id": "green",
+   "name": "Forest green",
+   "hex": "#24402a"
+  },
+  {
+   "kind": "colour",
+   "id": "naija",
+   "name": "Naija green",
+   "hex": "#008751"
+  },
+  {
+   "kind": "colour",
+   "id": "teal",
+   "name": "Teal",
+   "hex": "#0e7c86"
+  },
+  {
+   "kind": "colour",
+   "id": "sky",
+   "name": "Sky blue",
+   "hex": "#4aa8ff"
+  },
+  {
+   "kind": "colour",
+   "id": "blue",
+   "name": "Royal blue",
+   "hex": "#1b3f9f"
+  },
+  {
+   "kind": "colour",
+   "id": "navy",
+   "name": "Navy",
+   "hex": "#1b2f4f"
+  },
+  {
+   "kind": "colour",
+   "id": "purple",
+   "name": "Purple",
+   "hex": "#5b2a86"
+  },
+  {
+   "kind": "colour",
+   "id": "violet",
+   "name": "Violet",
+   "hex": "#8b5cf6"
+  },
+  {
+   "kind": "colour",
+   "id": "pink",
+   "name": "Hot pink",
+   "hex": "#e0457b"
+  },
+  {
+   "kind": "colour",
+   "id": "champagne",
+   "name": "Champagne",
+   "hex": "#c9b37a"
+  },
+  {
+   "kind": "colour",
+   "id": "gold",
+   "name": "Gold",
+   "hex": "#a07a28"
+  },
+  {
+   "kind": "colour",
+   "id": "bronze",
+   "name": "Bronze",
+   "hex": "#6d4a2a"
+  },
+  {
+   "kind": "colour",
+   "id": "cream",
+   "name": "Cream",
+   "hex": "#c9c1b0"
+  },
+  {
+   "kind": "colour",
+   "id": "brown",
+   "name": "Chocolate",
+   "hex": "#3b2417"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-ikj",
+   "lga": "Ikeja",
+   "code": "IKJ"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-osd",
+   "lga": "Oshodi-Isolo",
+   "code": "OSD"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-mus",
+   "lga": "Mushin",
+   "code": "MUS"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-agg",
+   "lga": "Agege",
+   "code": "AGG"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-ifk",
+   "lga": "Ifako-Ijaiye",
+   "code": "IFK"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-alm",
+   "lga": "Alimosho",
+   "code": "ALM"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-srl",
+   "lga": "Surulere",
+   "code": "SRL"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-lgi",
+   "lga": "Lagos Island",
+   "code": "LGI"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-ksf",
+   "lga": "Kosofe",
+   "code": "KSF"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-app",
+   "lga": "Apapa",
+   "code": "APP"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-ikr",
+   "lga": "Ikorodu",
+   "code": "IKR"
+  },
+  {
+   "kind": "plate-code",
+   "id": "pc-eto",
+   "lga": "Eti-Osa",
+   "code": "ETO"
+  },
+  {
+   "kind": "plate-tier",
+   "id": "vanity-long",
+   "name": "Long vanity (6 to 8)",
+   "minLen": 6,
+   "maxLen": 8,
+   "price": 150000
+  },
+  {
+   "kind": "plate-tier",
+   "id": "vanity-mid",
+   "name": "Vanity (4 to 5)",
+   "minLen": 4,
+   "maxLen": 5,
+   "price": 450000
+  },
+  {
+   "kind": "plate-tier",
+   "id": "vanity-short",
+   "name": "Short vanity (2 to 3)",
+   "minLen": 2,
+   "maxLen": 3,
+   "price": 1500000
+  },
+  {
+   "kind": "tracker",
+   "id": "tag",
+   "name": "SIM tag",
+   "desc": "Cheap tag with a SIM inside. Updates every 30 seconds. Loses signal under flyovers.",
+   "price": 25000,
+   "ping": 30,
+   "range": 0,
+   "battery": "7 days"
+  },
+  {
+   "kind": "tracker",
+   "id": "gps",
+   "name": "GPS tracker",
+   "desc": "Hard-wired, hidden behind the dash. Updates every 5 seconds, shows on the map and LANDMAP.",
+   "price": 65000,
+   "ping": 5,
+   "range": 0,
+   "battery": "car battery"
+  },
+  {
+   "kind": "tracker",
+   "id": "pro",
+   "name": "Pro tracker + immobiliser",
+   "desc": "Live track every second. Police get the location the moment you report. Engine cut-off on theft.",
+   "price": 140000,
+   "ping": 1,
+   "range": 0,
+   "battery": "backup cell"
+  },
+  {
+   "kind": "fee",
+   "id": "nin",
+   "name": "NIN enrolment fee",
+   "price": 500,
+   "desc": "Official fee. Queue is free, the wait is not."
+  },
+  {
+   "kind": "fee",
+   "id": "nin-skip",
+   "name": "\"Small something\" to skip the queue",
+   "price": 3500,
+   "desc": "An officer will find your file quicker. Do not call it a bribe."
+  },
+  {
+   "kind": "fee",
+   "id": "reg",
+   "name": "Vehicle registration",
+   "price": 12000,
+   "desc": "Number plate, particulars and licence, in your name."
+  },
+  {
+   "kind": "fee",
+   "id": "papers",
+   "name": "Customs papers (from the mechanic)",
+   "price": 40000,
+   "desc": "Baba Papers has a way. Police take longer to believe papers like these."
+  },
+  {
+   "kind": "fee",
+   "id": "replate",
+   "name": "Standard re-plate",
+   "price": 8000,
+   "desc": "New plate in the standard Lagos format."
+  },
+  {
+   "kind": "fee",
+   "id": "studio",
+   "name": "Paint studio booking",
+   "price": 6000,
+   "desc": "A bay, a compressor and as much time on the 3D editor as you like."
+  },
+  {
+   "kind": "fee",
+   "id": "repair",
+   "name": "Panel beating and respray (wreck)",
+   "price": 120000,
+   "desc": "Brings a wreck back from the dead."
+  },
+  {
+   "kind": "fee",
+   "id": "recovery",
+   "name": "Impound release",
+   "price": 25000,
+   "desc": "Collect your car from the police compound."
+  },
+  {
+   "kind": "car",
+   "id": "car-corolla",
+   "name": "Tokunbo saloon",
+   "vehicle": "sedan",
+   "price": 1450000,
+   "blurb": "Clean, foreign used, nothing spoilt. Receipt included."
+  },
+  {
+   "kind": "car",
+   "id": "car-golf",
+   "name": "Hatchback, one owner",
+   "vehicle": "hatch",
+   "price": 1100000,
+   "blurb": "Small and quick through traffic."
+  },
+  {
+   "kind": "car",
+   "id": "car-jeep",
+   "name": "SUV, Lekki owner",
+   "vehicle": "jeep",
+   "price": 3400000,
+   "blurb": "Big boy jeep. Fuel is your wahala."
+  },
+  {
+   "kind": "car",
+   "id": "car-bus",
+   "name": "Danfo bus, ready to work",
+   "vehicle": "danfo",
+   "price": 2100000,
+   "blurb": "Yellow with the black stripe. Conductor sold separately."
+  },
+  {
+   "kind": "wallpaint",
+   "id": "cream",
+   "name": "Magnolia",
+   "hex": "#f1e6c8"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "white",
+   "name": "Plain white",
+   "hex": "#f5f3ee"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "peach",
+   "name": "Peach",
+   "hex": "#f4c9a4"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "rose",
+   "name": "Dusty rose",
+   "hex": "#e5b4b0"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "mint",
+   "name": "Mint",
+   "hex": "#b9e0c9"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "sage",
+   "name": "Sage",
+   "hex": "#9db89a"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "sky",
+   "name": "Sky",
+   "hex": "#a9cdea"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "aqua",
+   "name": "Aqua",
+   "hex": "#79cfc8"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "lemon",
+   "name": "Lemon",
+   "hex": "#f6e27a"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "gold",
+   "name": "Gold ochre",
+   "hex": "#d9a441"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "terra",
+   "name": "Terracotta",
+   "hex": "#c0714b"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "brick",
+   "name": "Brick red",
+   "hex": "#9a3b2e"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "wine",
+   "name": "Wine",
+   "hex": "#6e1f2e"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "navy",
+   "name": "Navy",
+   "hex": "#1f3150"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "slate",
+   "name": "Slate",
+   "hex": "#5b6672"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "charcoal",
+   "name": "Charcoal",
+   "hex": "#2c2f35"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "olive",
+   "name": "Olive",
+   "hex": "#6d7342"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "naija",
+   "name": "Naija green",
+   "hex": "#0a7a45"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "purple",
+   "name": "Royal purple",
+   "hex": "#5b3a8c"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "lilac",
+   "name": "Lilac",
+   "hex": "#c1aee0"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "black",
+   "name": "Black",
+   "hex": "#141416"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "orange",
+   "name": "Burnt orange",
+   "hex": "#d2691e"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "lime",
+   "name": "Lime",
+   "hex": "#b5d65a"
+  },
+  {
+   "kind": "wallpaint",
+   "id": "pink",
+   "name": "Pink",
+   "hex": "#f0a8c5"
+  },
+  {
+   "kind": "walltex",
+   "id": "plain",
+   "name": "Plain",
+   "pattern": "plain",
+   "price": 0
+  },
+  {
+   "kind": "walltex",
+   "id": "dado",
+   "name": "Two tone dado",
+   "pattern": "dado",
+   "price": 9000
+  },
+  {
+   "kind": "walltex",
+   "id": "stripes",
+   "name": "Vertical stripes",
+   "pattern": "stripes",
+   "price": 12000
+  },
+  {
+   "kind": "walltex",
+   "id": "panels",
+   "name": "Raised panels",
+   "pattern": "panels",
+   "price": 15000
+  },
+  {
+   "kind": "walltex",
+   "id": "brick",
+   "name": "Brick pattern",
+   "pattern": "brick",
+   "price": 18000
+  },
+  {
+   "kind": "walltex",
+   "id": "ankara",
+   "name": "Ankara print",
+   "pattern": "ankara",
+   "price": 22000
+  },
+  {
+   "kind": "walltex",
+   "id": "adire",
+   "name": "Adire indigo",
+   "pattern": "adire",
+   "price": 22000
+  },
+  {
+   "kind": "walltex",
+   "id": "chevron",
+   "name": "Chevron",
+   "pattern": "chevron",
+   "price": 14000
+  },
+  {
+   "kind": "walltex",
+   "id": "tiles",
+   "name": "Glazed tiles",
+   "pattern": "tiles",
+   "price": 20000
+  },
+  {
+   "kind": "walltex",
+   "id": "stone",
+   "name": "Stone cladding",
+   "pattern": "stone",
+   "price": 26000
+  },
+  {
+   "kind": "walltex",
+   "id": "stucco",
+   "name": "Stucco rough",
+   "pattern": "stucco",
+   "price": 8000
+  },
+  {
+   "kind": "floor",
+   "id": "terrazzo",
+   "name": "Terrazzo",
+   "pattern": "terrazzo",
+   "hex": "#d7d2c8",
+   "price": 30000
+  },
+  {
+   "kind": "floor",
+   "id": "wood",
+   "name": "Hardwood",
+   "pattern": "wood",
+   "hex": "#8a5a34",
+   "price": 42000
+  },
+  {
+   "kind": "floor",
+   "id": "tile-white",
+   "name": "White tile",
+   "pattern": "tile",
+   "hex": "#eceae4",
+   "price": 26000
+  },
+  {
+   "kind": "floor",
+   "id": "tile-black",
+   "name": "Chequer tile",
+   "pattern": "chequer",
+   "hex": "#2a2a2a",
+   "price": 32000
+  },
+  {
+   "kind": "floor",
+   "id": "concrete",
+   "name": "Screed",
+   "pattern": "concrete",
+   "hex": "#9a9a96",
+   "price": 6000
+  },
+  {
+   "kind": "floor",
+   "id": "marble",
+   "name": "Marble",
+   "pattern": "marble",
+   "hex": "#e9e6e1",
+   "price": 90000
+  },
+  {
+   "kind": "floor",
+   "id": "rug-red",
+   "name": "Carpet red",
+   "pattern": "carpet",
+   "hex": "#7a1f24",
+   "price": 24000
+  },
+  {
+   "kind": "decor",
+   "id": "gen-small",
+   "name": "Generator 2.5 kVA",
+   "cat": "Power",
+   "where": "out",
+   "mount": "floor",
+   "price": 185000,
+   "size": [
+    0.6,
+    0.55,
+    0.45
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true,
+   "blurb": "I pass my neighbour. Loud, thirsty, loved."
+  },
+  {
+   "kind": "decor",
+   "id": "gen-big",
+   "name": "Soundproof generator 20 kVA",
+   "cat": "Power",
+   "where": "out",
+   "mount": "floor",
+   "price": 2600000,
+   "size": [
+    2.1,
+    1.5,
+    0.9
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true,
+   "blurb": "Canopy type. NEPA can take light, you will not notice."
+  },
+  {
+   "kind": "decor",
+   "id": "solar-panel",
+   "name": "Solar panel on frame",
+   "cat": "Power",
+   "where": "out",
+   "mount": "floor",
+   "price": 95000,
+   "size": [
+    1.0,
+    1.5,
+    1.7
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": false
+  },
+  {
+   "kind": "decor",
+   "id": "solar-array",
+   "name": "Solar array, 3 panels",
+   "cat": "Power",
+   "where": "out",
+   "mount": "roof",
+   "price": 260000,
+   "size": [
+    3.1,
+    1.2,
+    1.7
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "blurb": "Fits flat roofs and open ground."
+  },
+  {
+   "kind": "decor",
+   "id": "inverter",
+   "name": "Inverter and battery rack",
+   "cat": "Power",
+   "where": "both",
+   "mount": "floor",
+   "price": 420000,
+   "size": [
+    0.8,
+    1.1,
+    0.4
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "pole",
+   "name": "Power pole and meter",
+   "cat": "Power",
+   "where": "out",
+   "mount": "floor",
+   "price": 60000,
+   "size": [
+    0.4,
+    6.0,
+    0.4
+   ],
+   "scale": [
+    0.8,
+    1.3
+   ],
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "tank-poly",
+   "name": "Black water tank on stand",
+   "cat": "Water",
+   "where": "out",
+   "mount": "floor",
+   "price": 120000,
+   "size": [
+    1.2,
+    2.9,
+    1.2
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "tank-roof",
+   "name": "Roof water tank",
+   "cat": "Water",
+   "where": "out",
+   "mount": "roof",
+   "price": 90000,
+   "size": [
+    1.1,
+    1.4,
+    1.1
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "pump-house",
+   "name": "Borehole pump house",
+   "cat": "Water",
+   "where": "out",
+   "mount": "floor",
+   "price": 380000,
+   "size": [
+    1.6,
+    1.6,
+    1.6
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "drum",
+   "name": "Water drums",
+   "cat": "Water",
+   "where": "out",
+   "mount": "floor",
+   "price": 18000,
+   "size": [
+    0.9,
+    0.9,
+    0.6
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "palm",
+   "name": "Palm tree",
+   "cat": "Garden",
+   "where": "out",
+   "mount": "floor",
+   "price": 45000,
+   "size": [
+    2.2,
+    6.0,
+    2.2
+   ],
+   "scale": [
+    0.6,
+    1.5
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "mango",
+   "name": "Mango tree",
+   "cat": "Garden",
+   "where": "out",
+   "mount": "floor",
+   "price": 60000,
+   "size": [
+    4.5,
+    6.5,
+    4.5
+   ],
+   "scale": [
+    0.6,
+    1.4
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "shrub",
+   "name": "Garden shrub",
+   "cat": "Garden",
+   "where": "out",
+   "mount": "floor",
+   "price": 8000,
+   "size": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "scale": [
+    0.5,
+    2.0
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "flowerbed",
+   "name": "Flower bed",
+   "cat": "Garden",
+   "where": "out",
+   "mount": "floor",
+   "price": 15000,
+   "size": [
+    2.0,
+    0.5,
+    0.7
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "pot-plant",
+   "name": "Potted plant",
+   "cat": "Garden",
+   "where": "both",
+   "mount": "floor",
+   "price": 7000,
+   "size": [
+    0.5,
+    0.9,
+    0.5
+   ],
+   "scale": [
+    0.5,
+    2.0
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "hedge",
+   "name": "Hedge, 3 m",
+   "cat": "Garden",
+   "where": "out",
+   "mount": "floor",
+   "price": 22000,
+   "size": [
+    3.0,
+    1.2,
+    0.7
+   ],
+   "scale": [
+    0.5,
+    1.5
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "lawn",
+   "name": "Grass patch",
+   "cat": "Garden",
+   "where": "out",
+   "mount": "floor",
+   "price": 12000,
+   "size": [
+    3.0,
+    0.05,
+    3.0
+   ],
+   "scale": [
+    0.5,
+    3.0
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "plastic-chair",
+   "name": "Plastic chair",
+   "cat": "Seating",
+   "where": "both",
+   "mount": "floor",
+   "price": 6500,
+   "size": [
+    0.5,
+    0.85,
+    0.5
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "bench",
+   "name": "Garden bench",
+   "cat": "Seating",
+   "where": "out",
+   "mount": "floor",
+   "price": 48000,
+   "size": [
+    1.6,
+    0.85,
+    0.55
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "table-umbrella",
+   "name": "Table with umbrella",
+   "cat": "Seating",
+   "where": "out",
+   "mount": "floor",
+   "price": 70000,
+   "size": [
+    2.4,
+    2.4,
+    2.4
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "hammock",
+   "name": "Hammock stand",
+   "cat": "Seating",
+   "where": "out",
+   "mount": "floor",
+   "price": 55000,
+   "size": [
+    3.2,
+    1.6,
+    1.1
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "canopy",
+   "name": "Canopy tent 3 x 3",
+   "cat": "Shade",
+   "where": "out",
+   "mount": "floor",
+   "price": 85000,
+   "size": [
+    3.0,
+    2.6,
+    3.0
+   ],
+   "scale": [
+    0.7,
+    2.0
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "carport",
+   "name": "Car port",
+   "cat": "Shade",
+   "where": "out",
+   "mount": "floor",
+   "price": 650000,
+   "size": [
+    3.2,
+    2.8,
+    5.6
+   ],
+   "scale": [
+    0.8,
+    1.5
+   ],
+   "tint": true,
+   "blurb": "Room for one car and a keke."
+  },
+  {
+   "kind": "decor",
+   "id": "pergola",
+   "name": "Pergola",
+   "cat": "Shade",
+   "where": "out",
+   "mount": "floor",
+   "price": 320000,
+   "size": [
+    3.5,
+    2.6,
+    3.5
+   ],
+   "scale": [
+    0.7,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "gate",
+   "name": "Sliding metal gate",
+   "cat": "Security",
+   "where": "out",
+   "mount": "floor",
+   "price": 280000,
+   "size": [
+    4.0,
+    2.0,
+    0.2
+   ],
+   "scale": [
+    0.6,
+    2.0
+   ],
+   "tint": true,
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "fence",
+   "name": "Iron fence 3 m",
+   "cat": "Security",
+   "where": "out",
+   "mount": "floor",
+   "price": 90000,
+   "size": [
+    3.0,
+    1.8,
+    0.12
+   ],
+   "scale": [
+    0.5,
+    2.5
+   ],
+   "tint": true,
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "block-wall",
+   "name": "Block wall 3 m",
+   "cat": "Security",
+   "where": "out",
+   "mount": "floor",
+   "price": 140000,
+   "size": [
+    3.0,
+    2.2,
+    0.25
+   ],
+   "scale": [
+    0.5,
+    2.5
+   ],
+   "tint": true,
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "gatehouse",
+   "name": "Security post",
+   "cat": "Security",
+   "where": "out",
+   "mount": "floor",
+   "price": 240000,
+   "size": [
+    1.6,
+    2.4,
+    1.6
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true,
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "cctv",
+   "name": "CCTV camera",
+   "cat": "Security",
+   "where": "both",
+   "mount": "wall",
+   "price": 35000,
+   "size": [
+    0.3,
+    0.25,
+    0.5
+   ],
+   "scale": [
+    0.8,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "razor-wire",
+   "name": "Razor wire coil",
+   "cat": "Security",
+   "where": "out",
+   "mount": "floor",
+   "price": 16000,
+   "size": [
+    3.0,
+    0.5,
+    0.5
+   ],
+   "scale": [
+    0.5,
+    2.5
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "bollard",
+   "name": "Concrete bollard",
+   "cat": "Security",
+   "where": "out",
+   "mount": "floor",
+   "price": 12000,
+   "size": [
+    0.3,
+    0.8,
+    0.3
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "dish",
+   "name": "Satellite dish",
+   "cat": "Comms",
+   "where": "out",
+   "mount": "wall",
+   "price": 28000,
+   "size": [
+    0.8,
+    0.8,
+    0.7
+   ],
+   "scale": [
+    0.6,
+    1.8
+   ],
+   "blurb": "Mounts on walls and roofs."
+  },
+  {
+   "kind": "decor",
+   "id": "mast",
+   "name": "Antenna mast",
+   "cat": "Comms",
+   "where": "out",
+   "mount": "roof",
+   "price": 65000,
+   "size": [
+    0.4,
+    6.0,
+    0.4
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "signboard",
+   "name": "Signboard",
+   "cat": "Signs",
+   "where": "out",
+   "mount": "floor",
+   "price": 40000,
+   "size": [
+    2.4,
+    2.2,
+    0.2
+   ],
+   "scale": [
+    0.6,
+    2.5
+   ],
+   "text": true,
+   "tint": true,
+   "blurb": "Your name in lights, almost."
+  },
+  {
+   "kind": "decor",
+   "id": "wall-sign",
+   "name": "Wall sign",
+   "cat": "Signs",
+   "where": "both",
+   "mount": "wall",
+   "price": 30000,
+   "size": [
+    1.8,
+    0.6,
+    0.1
+   ],
+   "scale": [
+    0.5,
+    2.5
+   ],
+   "text": true,
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "lamp-pole",
+   "name": "Garden lamp pole",
+   "cat": "Light",
+   "where": "out",
+   "mount": "floor",
+   "price": 55000,
+   "size": [
+    0.3,
+    3.4,
+    0.3
+   ],
+   "scale": [
+    0.6,
+    1.4
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "flood",
+   "name": "Floodlight",
+   "cat": "Light",
+   "where": "out",
+   "mount": "wall",
+   "price": 42000,
+   "size": [
+    0.4,
+    0.35,
+    0.3
+   ],
+   "scale": [
+    0.8,
+    1.5
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "string-lights",
+   "name": "String lights",
+   "cat": "Light",
+   "where": "out",
+   "mount": "floor",
+   "price": 24000,
+   "size": [
+    5.0,
+    2.6,
+    0.2
+   ],
+   "scale": [
+    0.5,
+    2.0
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "lantern",
+   "name": "Lantern",
+   "cat": "Light",
+   "where": "both",
+   "mount": "floor",
+   "price": 9000,
+   "size": [
+    0.3,
+    0.5,
+    0.3
+   ],
+   "scale": [
+    0.6,
+    2.0
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "wall-lamp",
+   "name": "Wall lamp",
+   "cat": "Light",
+   "where": "both",
+   "mount": "wall",
+   "price": 14000,
+   "size": [
+    0.25,
+    0.3,
+    0.2
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "grill",
+   "name": "Suya grill",
+   "cat": "Outdoor",
+   "where": "out",
+   "mount": "floor",
+   "price": 65000,
+   "size": [
+    1.2,
+    1.1,
+    0.55
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "kiosk",
+   "name": "Provision kiosk",
+   "cat": "Outdoor",
+   "where": "out",
+   "mount": "floor",
+   "price": 420000,
+   "size": [
+    2.4,
+    2.6,
+    2.4
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true,
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "bin",
+   "name": "Dustbin",
+   "cat": "Outdoor",
+   "where": "out",
+   "mount": "floor",
+   "price": 9000,
+   "size": [
+    0.5,
+    0.9,
+    0.5
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "washline",
+   "name": "Clothes line",
+   "cat": "Outdoor",
+   "where": "out",
+   "mount": "floor",
+   "price": 14000,
+   "size": [
+    4.0,
+    2.0,
+    0.3
+   ],
+   "scale": [
+    0.5,
+    2.0
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "swing",
+   "name": "Swing set",
+   "cat": "Outdoor",
+   "where": "out",
+   "mount": "floor",
+   "price": 160000,
+   "size": [
+    2.6,
+    2.2,
+    1.6
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "goal",
+   "name": "Football goal",
+   "cat": "Outdoor",
+   "where": "out",
+   "mount": "floor",
+   "price": 120000,
+   "size": [
+    3.6,
+    1.8,
+    1.2
+   ],
+   "scale": [
+    0.7,
+    2.0
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "flagpole",
+   "name": "Flag pole",
+   "cat": "Outdoor",
+   "where": "out",
+   "mount": "floor",
+   "price": 45000,
+   "size": [
+    0.3,
+    7.0,
+    0.3
+   ],
+   "scale": [
+    0.6,
+    1.4
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "sofa",
+   "name": "Three seater sofa",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 320000,
+   "size": [
+    2.1,
+    0.85,
+    0.95
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "armchair",
+   "name": "Armchair",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 140000,
+   "size": [
+    0.95,
+    0.9,
+    0.95
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "bed",
+   "name": "Double bed",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 380000,
+   "size": [
+    1.9,
+    1.0,
+    2.1
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "bed-single",
+   "name": "Single bed",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 180000,
+   "size": [
+    1.0,
+    0.9,
+    2.0
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "wardrobe",
+   "name": "Wardrobe",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 290000,
+   "size": [
+    1.6,
+    2.1,
+    0.65
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true,
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "dining",
+   "name": "Dining table and chairs",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 340000,
+   "size": [
+    1.9,
+    0.95,
+    1.1
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "coffee-table",
+   "name": "Centre table",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 85000,
+   "size": [
+    1.1,
+    0.45,
+    0.65
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "tv-stand",
+   "name": "TV and stand",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 210000,
+   "size": [
+    1.5,
+    1.2,
+    0.5
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "fridge",
+   "name": "Fridge",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 310000,
+   "size": [
+    0.75,
+    1.75,
+    0.7
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "cooker",
+   "name": "Gas cooker",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 130000,
+   "size": [
+    0.6,
+    0.9,
+    0.6
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "solid": true
+  },
+  {
+   "kind": "decor",
+   "id": "bookshelf",
+   "name": "Bookshelf",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 130000,
+   "size": [
+    1.0,
+    1.9,
+    0.35
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "desk",
+   "name": "Desk and chair",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 150000,
+   "size": [
+    1.4,
+    1.1,
+    0.8
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "rug",
+   "name": "Rug",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 60000,
+   "size": [
+    2.0,
+    0.02,
+    3.0
+   ],
+   "scale": [
+    0.5,
+    2.0
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "ceiling-fan",
+   "name": "Ceiling fan",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "roof",
+   "price": 38000,
+   "size": [
+    1.2,
+    0.4,
+    1.2
+   ],
+   "scale": [
+    0.7,
+    1.4
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "standing-fan",
+   "name": "Standing fan",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 25000,
+   "size": [
+    0.5,
+    1.2,
+    0.5
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "ac",
+   "name": "Split AC unit",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "wall",
+   "price": 320000,
+   "size": [
+    0.95,
+    0.3,
+    0.25
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "frame",
+   "name": "Picture frame",
+   "cat": "Decor",
+   "where": "in",
+   "mount": "wall",
+   "price": 12000,
+   "size": [
+    0.7,
+    0.5,
+    0.04
+   ],
+   "scale": [
+    0.5,
+    3.0
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "clock",
+   "name": "Wall clock",
+   "cat": "Decor",
+   "where": "in",
+   "mount": "wall",
+   "price": 8000,
+   "size": [
+    0.4,
+    0.4,
+    0.05
+   ],
+   "scale": [
+    0.6,
+    2.5
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "mirror",
+   "name": "Wall mirror",
+   "cat": "Decor",
+   "where": "in",
+   "mount": "wall",
+   "price": 45000,
+   "size": [
+    0.7,
+    1.5,
+    0.04
+   ],
+   "scale": [
+    0.5,
+    2.0
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "curtain",
+   "name": "Curtain pair",
+   "cat": "Decor",
+   "where": "in",
+   "mount": "wall",
+   "price": 34000,
+   "size": [
+    1.8,
+    2.1,
+    0.12
+   ],
+   "scale": [
+    0.6,
+    1.8
+   ],
+   "tint": true
+  },
+  {
+   "kind": "decor",
+   "id": "table-lamp",
+   "name": "Table lamp",
+   "cat": "Decor",
+   "where": "in",
+   "mount": "floor",
+   "price": 16000,
+   "size": [
+    0.3,
+    0.5,
+    0.3
+   ],
+   "scale": [
+    0.6,
+    2.0
+   ]
+  },
+  {
+   "kind": "decor",
+   "id": "shoe-rack",
+   "name": "Shoe rack",
+   "cat": "Furniture",
+   "where": "in",
+   "mount": "floor",
+   "price": 24000,
+   "size": [
+    0.8,
+    0.6,
+    0.3
+   ],
+   "scale": [
+    0.6,
+    1.6
+   ]
+  }
+ ]
+}
