@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "ev.police.checkpoint",
+      "name": "Police checkpoint",
+      "kind": "street",
+      "weight": 8,
+      "chance": 0.12,
+      "duration": 600,
+      "cooldown": 900,
+      "at": {
+        "x": -684,
+        "z": -4750,
+        "r": 120
+      },
+      "hours": [
+        6,
+        22
+      ],
+      "effects": {
+        "trafficSlow": 0.5,
+        "bribeChance": 0.6
+      },
+      "desc": "Officers stop vehicles at Ikeja flyover. Papers or small something."
+    },
+    {
+      "id": "ev.flood.ikorodu",
+      "name": "Flood on Ikorodu Road",
+      "kind": "weather",
+      "weight": 5,
+      "chance": 0.06,
+      "duration": 1800,
+      "cooldown": 3600,
+      "at": {
+        "x": 2929,
+        "z": -2399,
+        "r": 300
+      },
+      "season": "rain",
+      "effects": {
+        "roadClosed": true,
+        "carDamagePerSec": 2
+      },
+      "desc": "Water up to the knee. Okada riders carry people across for a fee."
+    },
+    {
+      "id": "ev.fuel.scarcity",
+      "name": "Fuel scarcity",
+      "kind": "economy",
+      "weight": 3,
+      "chance": 0.03,
+      "duration": 3600,
+      "cooldown": 14400,
+      "effects": {
+        "fuelPriceMult": 2.4,
+        "queueLength": 40
+      },
+      "desc": "Black market petrol. Queues at every station."
+    },
+    {
+      "id": "ev.danfo.strike",
+      "name": "Danfo strike",
+      "kind": "transport",
+      "weight": 2,
+      "chance": 0.02,
+      "duration": 2400,
+      "cooldown": 21600,
+      "effects": {
+        "danfoActive": 0.1,
+        "okadaFareMult": 1.8
+      },
+      "desc": "Drivers park in protest. Everyone is walking."
+    },
+    {
+      "id": "ev.crusade.ikeja",
+      "name": "Open-air crusade",
+      "kind": "crowd",
+      "weight": 4,
+      "chance": 0.05,
+      "duration": 1500,
+      "cooldown": 7200,
+      "at": {
+        "x": -30,
+        "z": -4463,
+        "r": 200
+      },
+      "hours": [
+        16,
+        23
+      ],
+      "effects": {
+        "crowd": 3,
+        "trafficSlow": 0.4
+      },
+      "desc": "Loudspeakers, plastic chairs, and a jam that reaches Allen."
+    },
+    {
+      "id": "ev.market.rush",
+      "name": "Computer Village rush",
+      "kind": "economy",
+      "weight": 6,
+      "chance": 0.1,
+      "duration": 1200,
+      "cooldown": 3600,
+      "at": {
+        "x": -346,
+        "z": -4500,
+        "r": 150
+      },
+      "hours": [
+        9,
+        17
+      ],
+      "effects": {
+        "deliveryPayMult": 1.5
+      },
+      "desc": "New phones arrived. Everybody needs a rider."
+    },
+    {
+      "id": "ev.blackout",
+      "name": "NEPA blackout",
+      "kind": "city",
+      "weight": 7,
+      "chance": 0.2,
+      "duration": 2700,
+      "cooldown": 1800,
+      "effects": {
+        "lightsOut": true,
+        "generatorSales": 2
+      },
+      "desc": "Light don go. Generators start to roar."
+    }
+  ]
+}

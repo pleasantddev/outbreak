@@ -1,0 +1,290 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "start.cash",
+      "label": "Starting cash",
+      "category": "start",
+      "value": 25000,
+      "unit": "NGN",
+      "min": 0,
+      "max": 500000,
+      "integer": true
+    },
+    {
+      "id": "start.bank",
+      "label": "Starting bank balance",
+      "category": "start",
+      "value": 0,
+      "unit": "NGN",
+      "min": 0,
+      "max": 500000,
+      "integer": true
+    },
+    {
+      "id": "wage.danfo.per-passenger",
+      "label": "Danfo fare per passenger",
+      "category": "wages",
+      "value": 150,
+      "unit": "NGN",
+      "min": 20,
+      "max": 2000,
+      "integer": true
+    },
+    {
+      "id": "wage.okada.per-km",
+      "label": "Okada fare per km",
+      "category": "wages",
+      "value": 120,
+      "unit": "NGN",
+      "min": 20,
+      "max": 2000,
+      "integer": true
+    },
+    {
+      "id": "wage.delivery.base",
+      "label": "Delivery base pay",
+      "category": "wages",
+      "value": 1800,
+      "unit": "NGN",
+      "min": 200,
+      "max": 50000,
+      "integer": true
+    },
+    {
+      "id": "wage.delivery.per-km",
+      "label": "Delivery pay per km",
+      "category": "wages",
+      "value": 260,
+      "unit": "NGN",
+      "min": 20,
+      "max": 5000,
+      "integer": true
+    },
+    {
+      "id": "wage.mechanic.hourly",
+      "label": "Mechanic job hourly pay",
+      "category": "wages",
+      "value": 3500,
+      "unit": "NGN",
+      "min": 500,
+      "max": 30000,
+      "integer": true
+    },
+    {
+      "id": "wage.factory.daily",
+      "label": "Factory daily wage",
+      "category": "wages",
+      "value": 6500,
+      "unit": "NGN",
+      "min": 1000,
+      "max": 40000,
+      "integer": true
+    },
+    {
+      "id": "price.fuel.litre",
+      "label": "Petrol per litre",
+      "category": "prices",
+      "value": 650,
+      "unit": "NGN",
+      "min": 100,
+      "max": 3000,
+      "integer": true
+    },
+    {
+      "id": "price.food.jollof",
+      "label": "Plate of jollof",
+      "category": "prices",
+      "value": 1500,
+      "unit": "NGN",
+      "min": 200,
+      "max": 10000,
+      "integer": true
+    },
+    {
+      "id": "price.food.water",
+      "label": "Sachet of water",
+      "category": "prices",
+      "value": 50,
+      "unit": "NGN",
+      "min": 10,
+      "max": 500,
+      "integer": true
+    },
+    {
+      "id": "price.transport.bus-base",
+      "label": "Public bus base fare",
+      "category": "prices",
+      "value": 200,
+      "unit": "NGN",
+      "min": 50,
+      "max": 2000,
+      "integer": true
+    },
+    {
+      "id": "price.vehicle.okada",
+      "label": "Okada (used)",
+      "category": "prices",
+      "value": 450000,
+      "unit": "NGN",
+      "min": 100000,
+      "max": 3000000,
+      "integer": true
+    },
+    {
+      "id": "price.vehicle.danfo",
+      "label": "Danfo bus (used)",
+      "category": "prices",
+      "value": 3800000,
+      "unit": "NGN",
+      "min": 1000000,
+      "max": 15000000,
+      "integer": true
+    },
+    {
+      "id": "price.vehicle.corolla",
+      "label": "Toyota Corolla (tokunbo)",
+      "category": "prices",
+      "value": 5200000,
+      "unit": "NGN",
+      "min": 1000000,
+      "max": 30000000,
+      "integer": true
+    },
+    {
+      "id": "price.vehicle.suv",
+      "label": "SUV (tokunbo)",
+      "category": "prices",
+      "value": 14500000,
+      "unit": "NGN",
+      "min": 3000000,
+      "max": 80000000,
+      "integer": true
+    },
+    {
+      "id": "price.plot.base-mult",
+      "label": "Plot price multiplier",
+      "category": "prices",
+      "value": 1.0,
+      "unit": "x",
+      "min": 0.2,
+      "max": 5.0,
+      "help": "Applied on top of the area price formula."
+    },
+    {
+      "id": "sink.repair.mult",
+      "label": "Repair cost multiplier",
+      "category": "sinks",
+      "value": 1.0,
+      "unit": "x",
+      "min": 0.2,
+      "max": 5.0
+    },
+    {
+      "id": "sink.police.bribe",
+      "label": "Checkpoint bribe",
+      "category": "sinks",
+      "value": 2000,
+      "unit": "NGN",
+      "min": 0,
+      "max": 50000,
+      "integer": true
+    },
+    {
+      "id": "sink.nepa.monthly",
+      "label": "Electricity bill per month",
+      "category": "sinks",
+      "value": 18000,
+      "unit": "NGN",
+      "min": 0,
+      "max": 200000,
+      "integer": true
+    },
+    {
+      "id": "sink.generator.fuel-hour",
+      "label": "Generator fuel per hour",
+      "category": "sinks",
+      "value": 900,
+      "unit": "NGN",
+      "min": 0,
+      "max": 10000,
+      "integer": true
+    },
+    {
+      "id": "sink.rent.mult",
+      "label": "Rent multiplier",
+      "category": "sinks",
+      "value": 1.0,
+      "unit": "x",
+      "min": 0.2,
+      "max": 5.0
+    },
+    {
+      "id": "sink.tax.vehicle-reg",
+      "label": "Vehicle registration fee",
+      "category": "sinks",
+      "value": 32000,
+      "unit": "NGN",
+      "min": 0,
+      "max": 500000,
+      "integer": true
+    },
+    {
+      "id": "sink.nin.fee",
+      "label": "NIN issuance fee",
+      "category": "sinks",
+      "value": 0,
+      "unit": "NGN",
+      "min": 0,
+      "max": 50000,
+      "integer": true
+    },
+    {
+      "id": "rate.bank.loan-apr",
+      "label": "Bank loan APR",
+      "category": "rates",
+      "value": 0.28,
+      "unit": "fraction",
+      "min": 0.0,
+      "max": 1.0
+    },
+    {
+      "id": "rate.bank.saving-apr",
+      "label": "Savings APR",
+      "category": "rates",
+      "value": 0.06,
+      "unit": "fraction",
+      "min": 0.0,
+      "max": 0.5
+    },
+    {
+      "id": "rate.inflation.daily",
+      "label": "Daily price drift",
+      "category": "rates",
+      "value": 0.0004,
+      "unit": "fraction",
+      "min": 0.0,
+      "max": 0.01
+    },
+    {
+      "id": "xp.mult",
+      "label": "XP multiplier",
+      "category": "progression",
+      "value": 1.0,
+      "unit": "x",
+      "min": 0.1,
+      "max": 10.0
+    },
+    {
+      "id": "cap.cash.carry",
+      "label": "Cash you can carry",
+      "category": "progression",
+      "value": 5000000,
+      "unit": "NGN",
+      "min": 100000,
+      "max": 100000000,
+      "integer": true,
+      "help": "Anything over this is at risk of pickpockets."
+    }
+  ]
+}
