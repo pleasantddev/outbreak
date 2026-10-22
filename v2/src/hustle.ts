@@ -5,6 +5,8 @@ import { LifeSim } from './sim/life';
 import { emptyCommand, type Command } from './sim/types';
 import { HumanAssets } from './render/humans';
 import { LifeView } from './render/lifeView';
+import { SYSTEMS } from './systems';
+import type { GameCtx, GameSystem } from './systems/registry';
 import { preloadCars } from './render/cars';
 import { LifeHud, type PhoneCtx, type ParcelInfo } from './ui/lifeHud';
 import { Input } from './input/input';
@@ -43,12 +45,13 @@ document.body.style.cssText = 'margin:0;background:#000;overflow:hidden;touch-ac
 const canvas = document.createElement('canvas'); canvas.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;display:block'; document.body.appendChild(canvas);
 const hud = new LifeHud(touchDev);
 const save = (() => { try { return JSON.parse(localStorage.getItem('hustlelife') ?? '{}'); } catch { return {}; } })();
-const persist = (o: any) => { try { localStorage.setItem('hustlelife', JSON.stringify(o)); } catch { /* private mode */ } };
+const persist = (o: any) => { try { Object.assign(save, o); localStorage.setItem('hustlelife', JSON.stringify(save)); } catch { /* private mode */ } };
 const state: { bank: number; owned: string[]; ownedPts: Record<string, number[]>; model: string } = { bank: save.bank ?? 0, owned: save.owned ?? [], ownedPts: save.ownedPts ?? {}, model: save.model ?? 'survivor' };
 
 const PLAYER_LOOK: CharacterLook = { name: 'You', body: 'male', skin: 1, hair: 'buzzed', beard: false, top: 'tee', topPattern: 'solid', topColor: '#e8e0d0', topAccent: '#141414', pants: 'solid', pantsColor: '#1e2b3a', shoes: '#141414', head: 'none', vest: false, backpack: false, scars: 0, facePaint: 'none', model: 'survivor' } as CharacterLook;
 Object.assign(PLAYER_LOOK, (LOOKS as any)[state.model] ?? {}, { model: state.model });
 
+let ctx: GameCtx | null = null;
 let sim: LifeSim, view: LifeView, input: Input, store: RegionStore, gov: Governor;
 const perfHud = new PerfHud(() => view, () => gov);
 let started = false; let acc = 0; let last = performance.now();
@@ -105,7 +108,9 @@ async function boot() {
   { const t0 = performance.now(); await view.precompile(); console.info(`[hl] precompile ${Math.round(performance.now() - t0)} ms, ${view.renderer.info.programs?.length ?? 0} programs`); }
   hud.setLoad(1);
   makeJobs();
-  hud.onAction = onPhoneAction;
+  hud.onAction = (app, id) => { for (const s of SYSTEMS) if (s.onAction?.(ctx!, app, id)) return; onPhoneAction(app, id); };
+  ctx = { sim, view, hud, THREE, save, persist: () => persist({ ...state, cash: sim.cash }), get profile() { return profile ? { name: profile.name, accountId: (profile as any).accountId ?? (profile as any).id ?? '' } : null; }, startJob, systems: new Map(SYSTEMS.map((s) => [s.id, s] as [string, GameSystem])) } as GameCtx;
+  for (const s of SYSTEMS) await s.init?.(ctx);
   hud.onBuy = (id) => { buyPlot(id); };
   bindLandmap();
   (window as any).__hl = { sim, view, hud, state, get stage() { return stage; }, get profile() { return profile; }, gov, perf: perfHud, THREE, graph, guide, store, startJob, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
@@ -160,7 +165,7 @@ function applyProfile(p: Profile) {
 }
 function beginGame(landmap: boolean) {
   const st = readSettings(); audio.init(); audio.setVolume(st.vol, st.mus);
-  started = true; introLines();
+  started = true; introLines(); if (ctx) for (const s of SYSTEMS) s.start?.(ctx);
   if (landmap) setTimeout(() => { if (!hud.landmapOn) toggleLandmap(); }, 1200);
 }
 function grantXp(n: number) {
@@ -419,9 +424,11 @@ function loop(t: number) {
     acc += Math.min(dt, 0.1); let steps = 0;
     while (acc >= 1 / 60 && steps < 4) {
       sim.setCommand(0, cmd); sim.step(1 / 60);
+      if (ctx) for (const s of SYSTEMS) s.step?.(ctx, 1 / 60);
       cmd.interact = false; cmd.reload = false; cmd.heal = false;
       acc -= 1 / 60; steps++;
     }
+    if (ctx) for (const e of sim.events) for (const s of SYSTEMS) s.onEvent?.(ctx, e);
     view.handleEvents(sim.events, hud); sim.events.length = 0;
     tickJob(dt);
   }
@@ -429,6 +436,7 @@ function loop(t: number) {
   view.phoneUp = hud.phoneUp;
   if (stageOn) { stage!.update(dt); front?.update(dt); }
   view.frame(dt);
+  if (ctx && started) for (const s of SYSTEMS) s.frame?.(ctx, dt);
   if (stageOn) stage!.showPlayer(false);
   if (started) {
     const me = sim.local; const w = sim.currentWeapon(me);
