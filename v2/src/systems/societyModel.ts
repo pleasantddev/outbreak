@@ -60,7 +60,7 @@ export class WorldIndex {
     const key = `${r.i},${r.j}`; if (this.done.has(key)) return; this.done.add(key);
     let n0 = 0;
     for (const b of r.buildings) {
-      if (++n0 % 500 === 0) yield;
+      if (++n0 % 120 === 0) yield;
       const k = cellKey(cellOf(b.cx), cellOf(b.cz)); this.area.set(k, (this.area.get(k) ?? 0) + 1);
       switch (b.kind) {
         case BK.church: this.addSite('church', b.cx, b.cz, b.name); break;
@@ -75,7 +75,7 @@ export class WorldIndex {
       }
     }
     for (const p of r.pois) {
-      if (++n0 % 500 === 0) yield;
+      if (++n0 % 120 === 0) yield;
       if (p.kind >= 30 && p.kind <= 35 && p.name) { this.names.push({ x: p.x, z: p.z, name: p.name }); continue; }
       switch (p.kind) {
         case POI.busStop: case POI.busStation: this.addSite('busStop', p.x, p.z, p.name); break;
@@ -93,6 +93,7 @@ export class WorldIndex {
       }
     }
     for (const a of r.areas) {
+      if (++n0 % 120 === 0) yield;
       const n = a.pts.length / 2; if (n < 3) continue; let cx = 0, cz = 0; for (let q = 0; q < n; q++) { cx += a.pts[q * 2]; cz += a.pts[q * 2 + 1]; } cx /= n; cz /= n;
       switch (a.kind) {
         case AREA.market: this.addSite('market', cx, cz, a.name); break;
@@ -105,7 +106,7 @@ export class WorldIndex {
       }
     }
     for (const pc of r.parcels) {
-      if (++n0 % 500 === 0) yield;
+      if (++n0 % 120 === 0) yield;
       if (pc.zone !== 1 && pc.zone !== 5 && pc.zone !== 2) continue; // residential, unfinished (people live in them), shop houses
       const n = pc.pts.length / 2; if (n < 3) continue; let cx = 0, cz = 0; for (let q = 0; q < n; q++) { cx += pc.pts[q * 2]; cz += pc.pts[q * 2 + 1]; } cx /= n; cz /= n;
       const k = cellKey(cellOf(cx), cellOf(cz)); let l = this.homes.get(k); if (!l) { l = []; this.homes.set(k, l); }

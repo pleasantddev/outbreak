@@ -30,6 +30,8 @@ export interface LifeHooks {
   onDespawn?(a: Actor): void;
   /** a traffic car is about to spawn: return a citizen id to put behind the wheel */
   trafficDriver?(kind: VehicleKind, x: number, z: number): number | null;
+  /** the driver body for that citizen now exists */
+  bound?(a: Actor): void;
 }
 interface Driver { lane: number; s: number; speed: number; lateral: number; stuck: number; honk: number; wait: number }
 
@@ -350,7 +352,7 @@ export class LifeSim {
           const v = this.addVehicle(kind, { x: at.x, y: 0.1, z: at.z }, at.yaw);
           const cid = this.hooks.trafficDriver?.(kind, at.x, at.z) ?? null;
           const drv = this.spawnActor('driver', { x: at.x, y: 0.1, z: at.z });
-          if (cid !== null) drv.cid = cid;
+          if (cid !== null) { drv.cid = cid; this.hooks.bound?.(drv); }
           this.enterVehicle(drv, v);
           if (kind === 'danfo') for (let k = 1; k < 4; k++) if (this.rng.chance(0.6)) { const p = this.spawnActor('ped', { x: at.x, y: 0.1, z: at.z }); this.enterVehicle(p, v, false); }
           this.drivers.set(v.id, { lane: ln.id, s, speed: ln.speed * this.rng.range(0.75, 1.05) * this.trafficSlow, lateral: 0, stuck: 0, honk: 0, wait: 0 });

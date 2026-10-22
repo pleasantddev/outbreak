@@ -845,7 +845,7 @@
    "id": "occ.student",
    "kind": "occupation",
    "label": "Student",
-   "weight": 9,
+   "weight": 5,
    "role": "ped",
    "wage": "wage.student",
    "sites": [
@@ -974,7 +974,7 @@
    "id": "occ.pastor",
    "kind": "occupation",
    "label": "Pastor",
-   "weight": 1,
+   "weight": 0.5,
    "role": "ped",
    "wage": "wage.pastor",
    "sites": [
@@ -1016,7 +1016,7 @@
    "id": "occ.imam",
    "kind": "occupation",
    "label": "Imam",
-   "weight": 1,
+   "weight": 0.4,
    "role": "ped",
    "wage": "wage.imam",
    "sites": [
@@ -1106,7 +1106,7 @@
    "id": "occ.landlord",
    "kind": "occupation",
    "label": "Landlord",
-   "weight": 2,
+   "weight": 0.8,
    "role": "ped",
    "wage": "wage.landlord",
    "sites": [
@@ -2318,7 +2318,7 @@
    "id": "evt.fuel_queue",
    "kind": "cityEvent",
    "label": "Fuel queue",
-   "rate": 0.0,
+   "rate": 0.06,
    "days": [
     2,
     5
@@ -2335,7 +2335,7 @@
    "id": "evt.okada_ban",
    "kind": "cityEvent",
    "label": "Okada ban",
-   "rate": 0.0,
+   "rate": 0.025,
    "days": [
     4,
     9
@@ -2370,7 +2370,7 @@
    "id": "evt.strike",
    "kind": "cityEvent",
    "label": "Transport strike",
-   "rate": 0.0,
+   "rate": 0.03,
    "days": [
     1,
     2
@@ -2386,7 +2386,7 @@
    "id": "evt.blackout",
    "kind": "cityEvent",
    "label": "Blackout",
-   "rate": 0.0,
+   "rate": 0.05,
    "days": [
     1,
     2

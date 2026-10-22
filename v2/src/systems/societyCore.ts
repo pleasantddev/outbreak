@@ -21,6 +21,8 @@ export class Society {
   onNews?: (text: string, kind: string, x?: number, z?: number, hot?: boolean) => void;
   /** nemesis hooks: a citizen was generated, was promoted, died */
   onCitizen?: (c: Citizen) => void; onPromote?: (c: Citizen, from: number) => void; onDeath?: (c: Citizen, by: string) => void;
+  /** standing bans (okada ban, strike, market fire): who may not work until when */
+  bans: { until: number; test: (c: Citizen) => boolean }[] = [];
   landlords = new Map<number, number>(); rentInbox = new Map<number, number>();
   /** hourly accumulators for the economy */
   working!: Float64Array; expected!: Float64Array; agg = { n: 0, poor: 0, employed: 0, money: 0, crime: 0 }; hourVisits = 0;
@@ -137,7 +139,9 @@ export class Society {
   private genEnv() { return { content: this.C, world: this.W, seed: this.seed, factionFor: this.factionFor, wealth: (cx: number, cz: number) => 0.5 + (this.E.macro.wealth - 1) * 0.3 + (this.E.rentMult((cx + 0.5) * CELL, (cz + 0.5) * CELL) - 1) * 0.2 }; }
   private finishCell(c: CellRec, list: Citizen[]) {
     c.gen = null; c.list = list.filter((z) => !this.deaths.has(z.id));
+    this.bans = this.bans.filter((b) => b.until > this.minute);
     for (const z of c.list) {
+      for (const b of this.bans) if (z.st === ST.OK && b.test(z)) { z.st = ST.BANNED; z.until = b.until; }
       const keep = this.keepers.get(z.id);
       if (keep) { // a notable person came home: use the live record
         const i = c.list.indexOf(z); c.list[i] = keep; this.keepers.delete(z.id); this.byId.set(keep.id, keep); continue;
@@ -282,6 +286,8 @@ export class Society {
     // the poor are hungrier and angrier: desperation feeds the crime index
     c.soc = Math.max(0, c.soc - 0.2);
   }
+  ban(until: number, test: (c: Citizen) => boolean) { this.bans.push({ until, test }); for (const c of this.byId.values()) if (c.st === ST.OK && test(c)) { c.st = ST.BANNED; c.until = until; } }
+  ringDirtyNow() { this.ringDirty = true; this.rebuildRings(); }
   cellRec(k: number) { return this.cells.get(k); }
   near(c: Citizen, r: number) { return Math.hypot(c.hx - this.px, c.hz - this.pz) < r; }
   private moveHouse(c: Citizen, down: boolean) {
@@ -291,6 +297,14 @@ export class Society {
     if (Math.abs(best.rich - c.hrich) < 0.03) return;
     c.hx = best.x; c.hz = best.z; c.hrich = best.rich; c.rent = Math.round((this.C.rent.poor + (this.C.rent.rich - this.C.rent.poor) * best.rich * best.rich) / 5000) * 5000;
     if (c.rank >= 2 || this.near(c, 700)) this.news(`${nameOf(c)} has moved ${down ? 'to a cheaper room' : 'to a better house'} at ${c.area}.`, 'life', c.hx, c.hz);
+  }
+  /** a win over somebody who matters: one step up the ladder, right now */
+  forcePromote(c: Citizen) {
+    const f = this.factions.get(c.fac); const def = f ? this.C.factions.get(f.type) : undefined; if (!f || !def) { c.rep += 10; return false; }
+    const top = def.ranks.length - 1; if (c.rank >= top) return false;
+    const from = c.rank; c.rank++; c.rep = Math.max(c.rep, c.rank * 25 + 20);
+    if (c.rank === top) { const boss = f.boss >= 0 ? this.get(f.boss) : undefined; if (boss && boss.id !== c.id) boss.rank = Math.max(0, top - 1); f.boss = c.id; }
+    this.onPromote?.(c, from); return true;
   }
   private maybePromote(c: Citizen) {
     const f = this.factions.get(c.fac); if (!f) return; const def = this.C.factions.get(f.type); if (!def) return;

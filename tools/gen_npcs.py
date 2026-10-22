@@ -62,21 +62,21 @@ occ("police", "Police officer", 4, "wage.police", ["police", "street"], 6.0, 7.0
 occ("area_boy", "Area boy", 7, "wage.area_boy", ["street"], 11.0, 16.0, 29.0, 0.95, [17, 40], 0.02, [0.0, 0.25], role="area", faction="areaboys", lunch=False, night=True, jitter=1.5,
     tales=["{He} runs the corner and collects what {he} calls security fees from anybody who needs to park.", "{He} was somebody's apprentice once, and hands tell the story of how that ended.", "{He} does not start trouble, {he} says, {he} only finishes it."],
     barks=["Oga, na your own to settle us.", "Bring something for the boys.", "You dey lost?"])
-occ("student", "Student", 9, "wage.student", ["school"], 6.0, 8.0, 15.0, 0.55, [12, 24], 0.5, [0.1, 0.8], lunch=True, jitter=0.6,
+occ("student", "Student", 5, "wage.student", ["school"], 6.0, 8.0, 15.0, 0.55, [12, 24], 0.5, [0.1, 0.8], lunch=True, jitter=0.6,
     tales=["{He} sits for WAEC soon and has learnt to study by phone torch when NEPA takes light.", "{He} dreams of a scholarship abroad and spends weekends on hustle to afford data."],
     barks=["Good morning sir!", "Oga, na exam time."], look=dict(top="tee", colors=["#c9c1b2", "#355070", "#e8e0d0"]))
 occ("teacher", "Teacher", 3, "wage.teacher", ["school"], 5.5, 7.0, 15.5, 0.4, [24, 58], 0.62, [0.2, 0.65], jitter=0.5,
     tales=["{He} teaches {his} third set of final year students and has not been paid the allowance since last term.", "{He} runs lesson on weekends to survive the month."], look=dict(top="jacket", colors=["#5a3d2b", "#355070"]))
 occ("civil_servant", "Civil servant", 4, "wage.civil", ["institution", "bank"], 6.0, 8.0, 16.0, 0.25, [26, 58], 0.5, [0.25, 0.75], jitter=0.6,
     tales=["{He} has been on grade level 8 for {yrs} years and knows which file will not move without a handshake.", "{He} works at the local government secretariat and keeps a side shop for the real money."], look=dict(top="jacket", colors=["#1e2b3a", "#6b6b6b"]))
-occ("pastor", "Pastor", 1, "wage.pastor", ["church"], 5.0, 9.0, 20.0, 0.5, [30, 65], 0.2, [0.3, 0.85], faction="church", jitter=0.5, lunch=False,
+occ("pastor", "Pastor", 0.5, "wage.pastor", ["church"], 5.0, 9.0, 20.0, 0.5, [30, 65], 0.2, [0.3, 0.85], faction="church", jitter=0.5, lunch=False,
     tales=["{He} started the church in a one room hall and now runs three services on Sunday.", "{He} prays for the sick, counsels the broke, and counts the offering with two deacons watching."], look=dict(top="jacket", colors=["#141414", "#355070"]))
-occ("imam", "Imam", 1, "wage.imam", ["mosque"], 4.5, 9.0, 21.0, 0.5, [32, 70], 0.0, [0.2, 0.7], faction="mosque", jitter=0.5, lunch=False,
+occ("imam", "Imam", 0.4, "wage.imam", ["mosque"], 4.5, 9.0, 21.0, 0.5, [32, 70], 0.0, [0.2, 0.7], faction="mosque", jitter=0.5, lunch=False,
     tales=["{He} leads the five daily prayers and settles quarrels in the neighbourhood before they reach the police.", "{He} teaches Quran to the children after Asr and refuses payment."], look=dict(top="agbada", head="fila", colors=["#e8e0d0", "#c9c1b2"]))
 occ("shop_owner", "Shop owner", 6, "wage.shop", ["shops", "stand"], 6.0, 8.0, 20.0, 0.9, [26, 60], 0.45, [0.3, 0.8], lunch=True,
     tales=["{He} opened the shop with a loan from the cooperative and pays it back one carton at a time.", "{He} stocks everything from recharge cards to cement and knows who is owing whom.", "{He} wants a second shop before the landlord raises the rent again."],
     barks=["Welcome, what you dey find?", "We get am o!"], look=dict(top="tee", colors=["#355070", "#2f4a2c"]))
-occ("landlord", "Landlord", 2, "wage.landlord", ["street"], 6.0, 10.0, 17.0, 0.35, [38, 75], 0.3, [0.5, 1.0], lunch=True, jitter=1.0,
+occ("landlord", "Landlord", 0.8, "wage.landlord", ["street"], 6.0, 10.0, 17.0, 0.35, [38, 75], 0.3, [0.5, 1.0], lunch=True, jitter=1.0,
     tales=["{He} owns the compound and three others on the next street, and collects rent personally to avoid excuses.", "{He} inherited the land, built the flats on credit, and never forgave a late payment."], look=dict(top="agbada", colors=["#2f4a2c", "#5a3d2b", "#355070"]))
 occ("hustler", "Hustler", 7, "wage.hustler", ["street"], 7.0, 9.0, 20.0, 1.0, [18, 45], 0.3, [0.0, 0.35], lunch=False, jitter=2.0,
     tales=["{He} does a bit of everything: recharge cards, phones, errands, small small business.", "{He} has three side hustles and a plan for a fourth.", "{He} knows somebody who knows somebody, and that is a fully working business model."],
@@ -202,11 +202,11 @@ items += [
  dict(id="evt.raid", kind="cityEvent", label="Police raid", rate=0.35, days=[0, 0], shock=None, news=["Police raid at {area}, {n} suspects picked up.", "Officers swept the {site} at {area} overnight. {n} arrests.", "{area} Division parades {n} suspected area boys."], site="bar", toast="Police raid close by"),
  dict(id="evt.union_fight", kind="cityEvent", label="Union clash", rate=0.25, days=[0, 0], news=["Two factions clashed at {area}. Traffic was stuck for hours.", "NURTW-style tussle at {area} park: {n} hurt, bus fares up.", "Park chairmen disagree at {area}, passengers stranded."], site="busStop", toast="Fight at the park"),
  dict(id="evt.market_fire", kind="cityEvent", label="Market fire", rate=0.06, days=[1, 3], shock="shock.market_fire", news=["Fire razes stalls at {area} market. Traders count their losses.", "Market fire at {area}: food prices jump as traders lose stock."], site="market", toast="Market on fire"),
- dict(id="evt.fuel_queue", kind="cityEvent", label="Fuel queue", rate=0.0, days=[2, 5], shock="shock.fuel_queue", news=["Long queues at filling stations as fuel scarcity bites.", "Petrol now sells for {price} per litre as supply tightens."], site="fuel", toast="Fuel scarcity"),
- dict(id="evt.okada_ban", kind="cityEvent", label="Okada ban", rate=0.0, days=[4, 9], shock="shock.okada_ban", news=["State government bans okada on major roads. Riders are lost.", "Okada ban begins. Keke and danfo fares go up.", "Riders protest the okada restriction at {area}."], toast="Okada ban"),
+ dict(id="evt.fuel_queue", kind="cityEvent", label="Fuel queue", rate=0.06, days=[2, 5], shock="shock.fuel_queue", news=["Long queues at filling stations as fuel scarcity bites.", "Petrol now sells for {price} per litre as supply tightens."], site="fuel", toast="Fuel scarcity"),
+ dict(id="evt.okada_ban", kind="cityEvent", label="Okada ban", rate=0.025, days=[4, 9], shock="shock.okada_ban", news=["State government bans okada on major roads. Riders are lost.", "Okada ban begins. Keke and danfo fares go up.", "Riders protest the okada restriction at {area}."], toast="Okada ban"),
  dict(id="evt.rush", kind="cityEvent", label="Rush hour jam", rate=0.0, days=[0, 0], hours=[7, 9.5], news=["Heavy traffic on every major road. Leave home early or do not leave."], toast="Go slow"),
- dict(id="evt.strike", kind="cityEvent", label="Transport strike", rate=0.0, days=[1, 2], shock="shock.strike", news=["Transport workers down tools. Commuters walk to work.", "Strike at the parks: fares triple for those who find a bus."], toast="Transport strike"),
- dict(id="evt.blackout", kind="cityEvent", label="Blackout", rate=0.0, days=[1, 2], shock="shock.blackout", news=["Grid collapse. Generator sales rise, fuel too.", "Power cut across the corridor, fridge-sellers worried."], toast="Power cut"),
+ dict(id="evt.strike", kind="cityEvent", label="Transport strike", rate=0.03, days=[1, 2], shock="shock.strike", news=["Transport workers down tools. Commuters walk to work.", "Strike at the parks: fares triple for those who find a bus."], toast="Transport strike"),
+ dict(id="evt.blackout", kind="cityEvent", label="Blackout", rate=0.05, days=[1, 2], shock="shock.blackout", news=["Grid collapse. Generator sales rise, fuel too.", "Power cut across the corridor, fridge-sellers worried."], toast="Power cut"),
 ]
 
 json.dump(dict(version=1, items=items), open(sys.argv[1] if len(sys.argv) > 1 else "/home/claude/wt/society/v2/public/content/npcs.json", "w"), indent=1, ensure_ascii=False)
