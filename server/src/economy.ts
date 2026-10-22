@@ -81,7 +81,7 @@ export class Economy extends EventEmitter {
   }
   history(accountId: string, limit = 100, before?: number) {
     return all<{ id: number; at: number; kind: string; cash_delta: number; bank_delta: number; cash_after: number; bank_after: number; ref: string | null; note: string | null }>(this.db,
-      'SELECT id,at,kind,cash_delta,bank_delta,cash_after,bank_after,ref,note FROM tx_log WHERE account_id=?1 AND (?2 IS NULL OR id<?2) ORDER BY id DESC LIMIT ?3', accountId, before ?? null, Math.min(500, limit));
+      'SELECT id,at,kind,cash_delta,bank_delta,cash_after,bank_after,ref,note FROM tx_log WHERE account_id=@a AND (@b IS NULL OR id<@b) ORDER BY id DESC LIMIT @l', { a: accountId, b: before ?? null, l: Math.min(500, limit) });
   }
 
   /**
@@ -250,7 +250,7 @@ export class Economy extends EventEmitter {
     this.emit('flag', { accountId, kind, detail });
   }
   flags(accountId?: string, limit = 100) {
-    return all<{ id: number; at: number; account_id: string; kind: string; detail: string }>(this.db, 'SELECT * FROM cheat_flags WHERE (?1 IS NULL OR account_id=?1) ORDER BY id DESC LIMIT ?2', accountId ?? null, Math.min(500, limit));
+    return all<{ id: number; at: number; account_id: string; kind: string; detail: string }>(this.db, 'SELECT * FROM cheat_flags WHERE (@a IS NULL OR account_id=@a) ORDER BY id DESC LIMIT @l', { a: accountId ?? null, l: Math.min(500, limit) });
   }
 
   // -------------------------------------------------------------------------------- player blobs

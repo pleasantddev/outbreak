@@ -28,7 +28,7 @@ export async function startServer(over: Partial<Config> = {}): Promise<Running> 
   const add = (m: string) => (path: string, h: Parameters<Router['add']>[2], o?: Parameters<Router['add']>[3]) => router.add(m, path, h, o);
   const api: Api = {
     cfg, db, log, accounts, economy, content, online: hub, events,
-    limiters: { loginById: new RateLimiter(8, 10 * 60_000), guestCreate: new RateLimiter(8, 60 * 60_000) },
+    limiters: { loginById: new RateLimiter(8 * cfg.rateScale, 10 * 60_000), guestCreate: new RateLimiter(8 * cfg.rateScale, 60 * 60_000) },
     route: (m, p, h, o) => router.add(m, p, h, o), get: add('GET'), post: add('POST'), put: add('PUT'), patch: add('PATCH'), del: add('DELETE'),
   };
   if (cfg.adminEmail && cfg.adminPassword) { await accounts.ensureAdmin(cfg.adminEmail, cfg.adminPassword); log.info(`admin account ready: ${cfg.adminEmail}`); }

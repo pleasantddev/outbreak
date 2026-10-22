@@ -13,7 +13,7 @@ export interface MoveState {
   x: number; y: number; z: number; at: number; // last accepted position and server time (ms)
   credit: number; strikes: number; strikeAt: number; tpUntil: number; fixUntil: number; lastTp: number;
 }
-export const newMoveState = (x: number, y: number, z: number, now: number): MoveState => ({ x, y, z, at: now, credit: FOOT_MAX * CREDIT_SECONDS, strikes: 0, strikeAt: now, tpUntil: 0, fixUntil: 0, lastTp: 0 });
+export const newMoveState = (x: number, y: number, z: number, now: number): MoveState => ({ x, y, z, at: now, credit: FOOT_MAX * CREDIT_SECONDS, strikes: 0, strikeAt: now, tpUntil: 0, fixUntil: 0, lastTp: -1e9 });
 
 export type Verdict = { ok: true } | { ok: false; reason: string; hard: boolean };
 

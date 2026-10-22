@@ -45,8 +45,8 @@ export class Accounts extends EventEmitter {
     const q = opts.q ? `%${opts.q.toLowerCase()}%` : null;
     const rows = all<AccountRow & { name: string | null }>(this.db,
       `SELECT a.*, p.name AS name FROM accounts a LEFT JOIN profiles p ON p.account_id=a.id
-       WHERE (?1 IS NULL OR lower(a.email) LIKE ?1 OR a.phone LIKE ?1 OR lower(p.name) LIKE ?1 OR a.id LIKE ?1) AND (?2 IS NULL OR a.role=?2)
-       ORDER BY a.created_at DESC LIMIT ?3 OFFSET ?4`, q, opts.role ?? null, Math.min(500, opts.limit ?? 50), opts.offset ?? 0);
+       WHERE (@q IS NULL OR lower(a.email) LIKE @q OR a.phone LIKE @q OR lower(p.name) LIKE @q OR a.id LIKE @q) AND (@role IS NULL OR a.role=@role)
+       ORDER BY a.created_at DESC LIMIT @limit OFFSET @offset`, { q, role: opts.role ?? null, limit: Math.min(500, opts.limit ?? 50), offset: opts.offset ?? 0 });
     return rows.map((r) => ({ ...publicAccount(r), name: r.name, banReason: r.ban_reason, banUntil: r.ban_until }));
   }
 

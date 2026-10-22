@@ -370,7 +370,7 @@ export class Hub implements OnlineApi {
       for (const o of newcomers) if (!c.knownWho.has(o.id)) { c.knownWho.add(o.id); who.push(whoOf(o)); }
       if (who.length) this.send(c, { t: 'who', list: who });
       const buf = endSnapshot(w, countAt, count, removed);
-      c.ws.send(buf, { binary: true }); c.bytesOut += buf.length; this.stats0.bytesOut += buf.length; this.stats0.snapshots++; c.lastSnapAt = now;
+      c.ws.send(Buffer.from(buf), { binary: true }); /* copy: the writer is shared and ws may queue the frame */ c.bytesOut += buf.length; this.stats0.bytesOut += buf.length; this.stats0.snapshots++; c.lastSnapAt = now;
     }
   }
 

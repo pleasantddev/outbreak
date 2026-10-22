@@ -25,6 +25,8 @@ export interface Config {
   motd: string; trustProxy: boolean;
   /** enforce: correct and kick; log: only record; off: no checks (load tests) */
   antiCheat: 'enforce' | 'log' | 'off';
+  /** multiplies every rate limit (tests and load tests raise it; leave at 1 in production) */
+  rateScale: number;
 }
 
 function secret(dataDir: string): string {
@@ -51,7 +53,7 @@ export function loadConfig(over: Partial<Config> = {}): Config {
     allowOrigins: env.ALLOW_ORIGINS ?? '*', staticDir: env.STATIC_DIR ?? '', adminDir: env.ADMIN_DIR ?? '',
     guestAccounts: bool('GUEST_ACCOUNTS', true), trustClientPlotPrice: bool('TRUST_CLIENT_PLOT_PRICE', true),
     mapBounds: [-22000, -20500, 12000, 12500], motd: env.MOTD ?? 'Welcome to Lagos. Shine your eye.', trustProxy: bool('TRUST_PROXY', false),
-    antiCheat: (env.ANTI_CHEAT as Config['antiCheat']) ?? 'enforce',
+    antiCheat: (env.ANTI_CHEAT as Config['antiCheat']) ?? 'enforce', rateScale: num('RATE_SCALE', 1),
     ...over,
   };
   c.jwtSecret = over.jwtSecret ?? secret(dataDir);

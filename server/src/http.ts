@@ -65,7 +65,7 @@ export function createHttp(api: Api, router: Router): Server {
       if (m && 'route' in m) {
         const { route, params } = m;
         const lim = route.opts.rate ?? { limit: 240, windowMs: 60_000 };
-        if (!limiterFor(api, `${route.method} ${route.path}`, lim.limit, lim.windowMs).take(ip)) throw new HttpError(429, 'Too many requests. Slow down.');
+        if (!limiterFor(api, `${route.method} ${route.path}`, lim.limit * api.cfg.rateScale, lim.windowMs).take(ip)) throw new HttpError(429, 'Too many requests. Slow down.');
         const query: Record<string, string> = {}; for (const [k, v] of url.searchParams) query[k] = v;
         const r: ApiRequest = { method: req.method!, path: pathname, params, query, body: {}, headers: req.headers, ip, account: null, sid: null, raw: req, res };
         const bearer = /^Bearer (.+)$/i.exec(req.headers.authorization ?? '')?.[1] ?? query.token;

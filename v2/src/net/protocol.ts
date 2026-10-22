@@ -116,7 +116,7 @@ export function encodeState(m: StateMsg, w = new Writer(80)): Uint8Array {
 /** Returns null for anything malformed. Never throws on hostile input. */
 export function decodeState(buf: Uint8Array): StateMsg | null {
   try {
-    if (buf.length < 25 || buf[0] !== MSG_STATE) return null;
+    if (buf.length < 23 || buf[0] !== MSG_STATE) return null;
     const r = new Reader(buf); r.u8();
     const seq = r.u16(), flags = r.u16();
     const x = r.f32(), y = r.f32(), z = r.f32();
@@ -124,7 +124,7 @@ export function decodeState(buf: Uint8Array): StateMsg | null {
     if (!Number.isFinite(x + y + z)) return null;
     let veh: VehState | null = null;
     if (flags & F.VEH) {
-      if (r.left < 36) return null;
+      if (r.left < 33) return null;
       const kind = r.u8(), seat = r.u8(), seed = r.u32();
       const vx = r.f32(), vy = r.f32(), vz = r.f32();
       const qx = unpackQ(r.i16()), qy = unpackQ(r.i16()), qz = unpackQ(r.i16()), qw = unpackQ(r.i16());
