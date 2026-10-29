@@ -1,0 +1,479 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "m.cappa.first-job",
+      "title": "First Job at Cappa",
+      "summary": "Baba Tunde needs a hand at the mechanic village. Prove you can follow instructions and not scratch a customer's car.",
+      "giver": {
+        "npc": "npc.mechanic.tunde",
+        "name": "Baba Tunde",
+        "x": 223,
+        "z": 96
+      },
+      "level": 1,
+      "requires": [],
+      "repeatable": false,
+      "tags": [
+        "tutorial",
+        "mechanic"
+      ],
+      "reward": {
+        "cash": 15000,
+        "xp": 120,
+        "rep": {
+          "mechanics": 5
+        }
+      },
+      "entry": "s1",
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "text": "Meet Baba Tunde at the Cappa gate.",
+          "at": {
+            "x": 223,
+            "z": 96,
+            "r": 14
+          },
+          "next": "s2"
+        },
+        {
+          "id": "s2",
+          "type": "collect",
+          "text": "Collect 3 spanners from the stalls.",
+          "item": "tool.spanner",
+          "count": 3,
+          "next": "s3"
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "text": "The customer says the quote is too high. What do you tell him?",
+          "choices": [
+            {
+              "label": "Haggle and cut the price",
+              "next": "s4a"
+            },
+            {
+              "label": "Stand your ground",
+              "next": "s4b"
+            }
+          ]
+        },
+        {
+          "id": "s4a",
+          "type": "skillcheck",
+          "text": "Haggle with the customer.",
+          "skill": "skill.hustle.haggle",
+          "dc": 2,
+          "onSuccess": "s5",
+          "onFail": "s4b"
+        },
+        {
+          "id": "s4b",
+          "type": "wait",
+          "text": "Wait while the customer calls his brother.",
+          "seconds": 40,
+          "next": "s5"
+        },
+        {
+          "id": "s5",
+          "type": "deliver",
+          "text": "Drive the repaired Corolla to Maryland.",
+          "at": {
+            "x": 2565,
+            "z": -2670,
+            "r": 25
+          },
+          "vehicle": "car.corolla",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "complete",
+          "text": "Baba Tunde pays you and says come back tomorrow."
+        }
+      ]
+    },
+    {
+      "id": "m.danfo.shift",
+      "title": "Danfo Shift: Oshodi Line",
+      "summary": "Run the Oshodi to Ojuelegba line for one shift without losing the bus or your conductor.",
+      "giver": {
+        "npc": "npc.danfo.chairman",
+        "name": "Chairman Ola",
+        "x": 890,
+        "z": -206
+      },
+      "level": 2,
+      "requires": [
+        "m.cappa.first-job"
+      ],
+      "repeatable": true,
+      "tags": [
+        "transport"
+      ],
+      "reward": {
+        "cash": 42000,
+        "xp": 260,
+        "rep": {
+          "transport": 8
+        }
+      },
+      "entry": "s1",
+      "routeId": "route.danfo.oshodi-ojuelegba",
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "text": "Pay Chairman Ola the daily owo mota.",
+          "at": {
+            "x": 890,
+            "z": -206,
+            "r": 12
+          },
+          "next": "s2"
+        },
+        {
+          "id": "s2",
+          "type": "drive",
+          "text": "Pick up passengers along the route.",
+          "route": "route.danfo.oshodi-ojuelegba",
+          "passengers": 10,
+          "next": "s3"
+        },
+        {
+          "id": "s3",
+          "type": "event",
+          "text": "A police checkpoint is ahead.",
+          "event": "ev.police.checkpoint",
+          "onSuccess": "s4",
+          "onFail": "s5"
+        },
+        {
+          "id": "s4",
+          "type": "drive",
+          "text": "Finish the route and drop everybody.",
+          "route": "route.danfo.oshodi-ojuelegba",
+          "next": "end"
+        },
+        {
+          "id": "s5",
+          "type": "choice",
+          "text": "The officer wants something small.",
+          "choices": [
+            {
+              "label": "Pay him 2,000",
+              "next": "s4"
+            },
+            {
+              "label": "Refuse and argue",
+              "next": "s6"
+            }
+          ]
+        },
+        {
+          "id": "s6",
+          "type": "fight",
+          "text": "Area boys join the argument.",
+          "enemy": "npc.areaboy",
+          "count": 3,
+          "onSuccess": "s4",
+          "onFail": "fail"
+        },
+        {
+          "id": "fail",
+          "type": "fail",
+          "text": "Bus impounded. Shift over."
+        },
+        {
+          "id": "end",
+          "type": "complete",
+          "text": "Chairman Ola counts the money twice and nods."
+        }
+      ]
+    },
+    {
+      "id": "m.computer-village.parts",
+      "title": "Parts for Computer Village",
+      "summary": "Move a box of phone parts from Cappa to Computer Village before the market closes.",
+      "giver": {
+        "npc": "npc.trader.ngozi",
+        "name": "Madam Ngozi",
+        "x": -346,
+        "z": -4500
+      },
+      "level": 3,
+      "requires": [
+        "m.cappa.first-job"
+      ],
+      "repeatable": true,
+      "tags": [
+        "delivery"
+      ],
+      "reward": {
+        "cash": 58000,
+        "xp": 300
+      },
+      "entry": "s1",
+      "routeId": "route.delivery.cappa-computer-village",
+      "steps": [
+        {
+          "id": "s1",
+          "type": "collect",
+          "text": "Pick up the sealed box at Cappa.",
+          "item": "box.parts",
+          "count": 1,
+          "at": {
+            "x": 223,
+            "z": 96,
+            "r": 12
+          },
+          "next": "s2"
+        },
+        {
+          "id": "s2",
+          "type": "drive",
+          "text": "Deliver along the route without hard braking.",
+          "route": "route.delivery.cappa-computer-village",
+          "maxDamage": 20,
+          "next": "s3"
+        },
+        {
+          "id": "s3",
+          "type": "talk",
+          "text": "Hand the box to Madam Ngozi.",
+          "at": {
+            "x": -346,
+            "z": -4500,
+            "r": 15
+          },
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "complete",
+          "text": "Box intact. Madam Ngozi adds a bonus."
+        }
+      ]
+    },
+    {
+      "id": "m.plot.first-land",
+      "title": "Own a Piece of Lagos",
+      "summary": "Buy your first plot. Any plot. Even the one behind the gutter.",
+      "giver": {
+        "npc": "npc.agent.kunle",
+        "name": "Estate Agent Kunle",
+        "x": -30,
+        "z": -4463
+      },
+      "level": 5,
+      "requires": [
+        "m.danfo.shift"
+      ],
+      "repeatable": false,
+      "tags": [
+        "property"
+      ],
+      "reward": {
+        "cash": 0,
+        "xp": 500,
+        "items": [
+          {
+            "id": "deed.frame",
+            "qty": 1
+          }
+        ]
+      },
+      "entry": "s1",
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "text": "Meet Kunle at Ikeja Plaza.",
+          "at": {
+            "x": -30,
+            "z": -4463,
+            "r": 14
+          },
+          "next": "s2"
+        },
+        {
+          "id": "s2",
+          "type": "goto",
+          "text": "Visit a plot you like.",
+          "at": {
+            "x": -30,
+            "z": -4463,
+            "r": 400
+          },
+          "next": "s3"
+        },
+        {
+          "id": "s3",
+          "type": "buy",
+          "text": "Buy a parcel.",
+          "what": "parcel",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "complete",
+          "text": "Land is gold in Lagos."
+        }
+      ]
+    },
+    {
+      "id": "m.area-boys.toll",
+      "title": "The Toll at Oshodi",
+      "summary": "Area boys have started charging a toll on the bridge. Sort it out, one way or another.",
+      "giver": {
+        "npc": "npc.police.insp",
+        "name": "Inspector Bello",
+        "x": 860,
+        "z": -304
+      },
+      "level": 6,
+      "requires": [
+        "m.danfo.shift"
+      ],
+      "repeatable": false,
+      "tags": [
+        "street",
+        "crime"
+      ],
+      "reward": {
+        "cash": 90000,
+        "xp": 700,
+        "rep": {
+          "street": -10,
+          "law": 15
+        }
+      },
+      "entry": "s1",
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "text": "Hear Inspector Bello out.",
+          "at": {
+            "x": 860,
+            "z": -304,
+            "r": 12
+          },
+          "next": "s2"
+        },
+        {
+          "id": "s2",
+          "type": "goto",
+          "text": "Go to the bridge toll point.",
+          "at": {
+            "x": 1085,
+            "z": -406,
+            "r": 20
+          },
+          "next": "s3"
+        },
+        {
+          "id": "s3",
+          "type": "choice",
+          "text": "Their leader offers you a cut.",
+          "choices": [
+            {
+              "label": "Take the cut",
+              "next": "s4a"
+            },
+            {
+              "label": "Fight",
+              "next": "s4b"
+            },
+            {
+              "label": "Walk away",
+              "next": "fail"
+            }
+          ]
+        },
+        {
+          "id": "s4a",
+          "type": "talk",
+          "text": "Agree on the cut. Inspector will hear about it.",
+          "next": "end2"
+        },
+        {
+          "id": "s4b",
+          "type": "fight",
+          "text": "Clear the toll gang.",
+          "enemy": "npc.areaboy",
+          "count": 5,
+          "onSuccess": "end",
+          "onFail": "fail"
+        },
+        {
+          "id": "fail",
+          "type": "fail",
+          "text": "You walked away. The toll stays."
+        },
+        {
+          "id": "end",
+          "type": "complete",
+          "text": "Toll cleared. Inspector Bello owes you."
+        },
+        {
+          "id": "end2",
+          "type": "complete",
+          "text": "You are richer and Bello is watching."
+        }
+      ]
+    },
+    {
+      "id": "m.okada.night-run",
+      "title": "Night Run to Ikeja",
+      "summary": "A customer needs to reach Ikeja before the last flight. Okada is the only thing that moves.",
+      "giver": {
+        "npc": "npc.okada.sule",
+        "name": "Sule",
+        "x": -139,
+        "z": -8791
+      },
+      "level": 4,
+      "requires": [],
+      "repeatable": true,
+      "tags": [
+        "transport",
+        "night"
+      ],
+      "reward": {
+        "cash": 18000,
+        "xp": 160
+      },
+      "entry": "s1",
+      "routeId": "route.okada.ogba-ikeja",
+      "steps": [
+        {
+          "id": "s1",
+          "type": "talk",
+          "text": "Take the passenger at Ogba Bus Park.",
+          "at": {
+            "x": -139,
+            "z": -8791,
+            "r": 12
+          },
+          "next": "s2"
+        },
+        {
+          "id": "s2",
+          "type": "drive",
+          "text": "Ride the route. Pass no checkpoint at speed.",
+          "route": "route.okada.ogba-ikeja",
+          "next": "end"
+        },
+        {
+          "id": "end",
+          "type": "complete",
+          "text": "Passenger tips you well."
+        }
+      ]
+    }
+  ]
+}

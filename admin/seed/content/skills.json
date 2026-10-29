@@ -1,0 +1,271 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "skill.drive.basics",
+      "tree": "driving",
+      "name": "Road Sense",
+      "desc": "Smoother steering and better lane reading.",
+      "tier": 1,
+      "requires": [],
+      "cost": 1,
+      "maxRank": 3,
+      "effects": [
+        {
+          "stat": "steerAssist",
+          "mod": 0.1
+        }
+      ]
+    },
+    {
+      "id": "skill.drive.shortcut",
+      "tree": "driving",
+      "name": "Shortcut Knowledge",
+      "desc": "Learn the back roads. Minimap shows alleys.",
+      "tier": 2,
+      "requires": [
+        "skill.drive.basics"
+      ],
+      "cost": 2,
+      "maxRank": 2,
+      "effects": [
+        {
+          "stat": "alleyMarks",
+          "mod": 1
+        }
+      ]
+    },
+    {
+      "id": "skill.drive.manual",
+      "tree": "driving",
+      "name": "Manual Master",
+      "desc": "Gear changes are cleaner. Unlocks clutch kicks.",
+      "tier": 2,
+      "requires": [
+        "skill.drive.basics"
+      ],
+      "cost": 2,
+      "maxRank": 3,
+      "modes": [
+        {
+          "id": "sport",
+          "name": "Sport shifts",
+          "desc": "Higher revs, more grip loss."
+        },
+        {
+          "id": "eco",
+          "name": "Eco shifts",
+          "desc": "Less fuel used, slower pickup."
+        }
+      ]
+    },
+    {
+      "id": "skill.drive.danfo",
+      "tree": "driving",
+      "name": "Danfo Handling",
+      "desc": "Big vehicles stop sulking. Passengers tip more.",
+      "tier": 3,
+      "requires": [
+        "skill.drive.manual"
+      ],
+      "cost": 3,
+      "maxRank": 3,
+      "effects": [
+        {
+          "stat": "busHandling",
+          "mod": 0.2
+        }
+      ]
+    },
+    {
+      "id": "skill.drive.okada",
+      "tree": "driving",
+      "name": "Okada Weave",
+      "desc": "Squeeze between traffic with less crash risk.",
+      "tier": 3,
+      "requires": [
+        "skill.drive.shortcut"
+      ],
+      "cost": 3,
+      "maxRank": 3,
+      "modes": [
+        {
+          "id": "rush",
+          "name": "Rush hour",
+          "desc": "Faster, fewer mirrors."
+        },
+        {
+          "id": "careful",
+          "name": "Careful rider",
+          "desc": "Passengers pay more."
+        }
+      ]
+    },
+    {
+      "id": "skill.drive.chase",
+      "tree": "driving",
+      "name": "Pursuit Drift",
+      "desc": "Escape police faster. Handbrake turns.",
+      "tier": 4,
+      "requires": [
+        "skill.drive.danfo",
+        "skill.drive.okada"
+      ],
+      "cost": 5,
+      "maxRank": 2,
+      "level": 8
+    },
+    {
+      "id": "skill.hustle.haggle",
+      "tree": "hustle",
+      "name": "Haggling",
+      "desc": "Better buy and sell prices.",
+      "tier": 1,
+      "requires": [],
+      "cost": 1,
+      "maxRank": 5,
+      "effects": [
+        {
+          "stat": "priceHaggle",
+          "mod": 0.03
+        }
+      ]
+    },
+    {
+      "id": "skill.hustle.network",
+      "tree": "hustle",
+      "name": "Network",
+      "desc": "More missions from the same giver.",
+      "tier": 2,
+      "requires": [
+        "skill.hustle.haggle"
+      ],
+      "cost": 2,
+      "maxRank": 3
+    },
+    {
+      "id": "skill.hustle.credit",
+      "tree": "hustle",
+      "name": "Credit Line",
+      "desc": "Borrow from banks at lower rates.",
+      "tier": 2,
+      "requires": [
+        "skill.hustle.haggle"
+      ],
+      "cost": 2,
+      "maxRank": 3,
+      "effects": [
+        {
+          "stat": "loanRate",
+          "mod": -0.02
+        }
+      ]
+    },
+    {
+      "id": "skill.hustle.landlord",
+      "tree": "hustle",
+      "name": "Landlord",
+      "desc": "Collect rent faster. Unlocks plot leasing.",
+      "tier": 3,
+      "requires": [
+        "skill.hustle.network",
+        "skill.hustle.credit"
+      ],
+      "cost": 4,
+      "maxRank": 3,
+      "level": 6
+    },
+    {
+      "id": "skill.hustle.contractor",
+      "tree": "hustle",
+      "name": "Contractor",
+      "desc": "Build houses cheaper.",
+      "tier": 4,
+      "requires": [
+        "skill.hustle.landlord"
+      ],
+      "cost": 5,
+      "maxRank": 2,
+      "level": 10
+    },
+    {
+      "id": "skill.street.run",
+      "tree": "street",
+      "name": "Fast Feet",
+      "desc": "Sprint stamina lasts longer.",
+      "tier": 1,
+      "requires": [],
+      "cost": 1,
+      "maxRank": 3,
+      "effects": [
+        {
+          "stat": "stamina",
+          "mod": 0.15
+        }
+      ]
+    },
+    {
+      "id": "skill.street.scrap",
+      "tree": "street",
+      "name": "Scrap",
+      "desc": "Better in a fight. Unlocks the combo.",
+      "tier": 2,
+      "requires": [
+        "skill.street.run"
+      ],
+      "cost": 2,
+      "maxRank": 3,
+      "modes": [
+        {
+          "id": "brawler",
+          "name": "Brawler",
+          "desc": "Heavy hits, slow."
+        },
+        {
+          "id": "slick",
+          "name": "Slick",
+          "desc": "Quick hits, dodge bonus."
+        }
+      ]
+    },
+    {
+      "id": "skill.street.sense",
+      "tree": "street",
+      "name": "Street Sense",
+      "desc": "Notice pickpockets and ambushes.",
+      "tier": 2,
+      "requires": [
+        "skill.street.run"
+      ],
+      "cost": 2,
+      "maxRank": 3
+    },
+    {
+      "id": "skill.street.respect",
+      "tree": "street",
+      "name": "Respect",
+      "desc": "Area boys charge you less. NPCs greet you.",
+      "tier": 3,
+      "requires": [
+        "skill.street.scrap",
+        "skill.street.sense"
+      ],
+      "cost": 3,
+      "maxRank": 3,
+      "level": 5
+    },
+    {
+      "id": "skill.street.king",
+      "tree": "street",
+      "name": "Area King",
+      "desc": "Lead a crew. Unlocks territory claims.",
+      "tier": 4,
+      "requires": [
+        "skill.street.respect"
+      ],
+      "cost": 6,
+      "maxRank": 1,
+      "level": 12
+    }
+  ]
+}

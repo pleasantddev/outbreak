@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "npc.areaboy",
+      "type": "archetype",
+      "name": "Area boy",
+      "faction": "f.oshodi-boys",
+      "weight": 6,
+      "hp": 90,
+      "wage": 0,
+      "dialog": [
+        "Oga, na your own be that?",
+        "Settle us small."
+      ],
+      "schedule": "night-heavy"
+    },
+    {
+      "id": "npc.mechanic.tunde",
+      "type": "archetype",
+      "name": "Baba Tunde",
+      "faction": "f.cappa-guild",
+      "weight": 1,
+      "hp": 70,
+      "wage": 9000,
+      "dialog": [
+        "Bring the spanner, not stories."
+      ],
+      "unique": true,
+      "home": {
+        "x": 223,
+        "z": 96
+      }
+    },
+    {
+      "id": "npc.danfo.chairman",
+      "type": "archetype",
+      "name": "Chairman Ola",
+      "faction": "f.nurtw",
+      "weight": 1,
+      "hp": 80,
+      "wage": 0,
+      "dialog": [
+        "Owo mota first."
+      ],
+      "unique": true,
+      "home": {
+        "x": 890,
+        "z": -206
+      }
+    },
+    {
+      "id": "npc.trader.ngozi",
+      "type": "archetype",
+      "name": "Madam Ngozi",
+      "faction": "f.traders",
+      "weight": 1,
+      "hp": 60,
+      "wage": 0,
+      "dialog": [
+        "Original. Not tokunbo."
+      ],
+      "unique": true,
+      "home": {
+        "x": -346,
+        "z": -4500
+      }
+    },
+    {
+      "id": "npc.police.insp",
+      "type": "archetype",
+      "name": "Inspector Bello",
+      "faction": "f.police",
+      "weight": 1,
+      "hp": 120,
+      "wage": 45000,
+      "dialog": [
+        "Wetin you carry?"
+      ],
+      "unique": true,
+      "home": {
+        "x": 860,
+        "z": -304
+      }
+    },
+    {
+      "id": "npc.okada.sule",
+      "type": "archetype",
+      "name": "Sule",
+      "faction": "f.okada-union",
+      "weight": 1,
+      "hp": 75,
+      "wage": 6000,
+      "dialog": [
+        "Where we dey go?"
+      ],
+      "unique": true,
+      "home": {
+        "x": -139,
+        "z": -8791
+      }
+    },
+    {
+      "id": "npc.agent.kunle",
+      "type": "archetype",
+      "name": "Estate Agent Kunle",
+      "faction": "f.traders",
+      "weight": 1,
+      "hp": 55,
+      "wage": 0,
+      "dialog": [
+        "This one na prime land."
+      ],
+      "unique": true,
+      "home": {
+        "x": -30,
+        "z": -4463
+      }
+    },
+    {
+      "id": "npc.pedestrian",
+      "type": "archetype",
+      "name": "Pedestrian",
+      "faction": null,
+      "weight": 40,
+      "hp": 60,
+      "wage": 0,
+      "dialog": [
+        "Excuse me.",
+        "Abeg, wetin be the time?"
+      ]
+    },
+    {
+      "id": "f.oshodi-boys",
+      "type": "faction",
+      "name": "Oshodi Boys",
+      "color": "#ef4444",
+      "hostile": true,
+      "territory": {
+        "center": {
+          "x": 950,
+          "z": -300
+        },
+        "radius": 650
+      },
+      "strength": 6,
+      "desc": "Control tolls and parks around the interchange."
+    },
+    {
+      "id": "f.cappa-guild",
+      "type": "faction",
+      "name": "Cappa Mechanics Guild",
+      "color": "#f59e0b",
+      "hostile": false,
+      "territory": {
+        "center": {
+          "x": 223,
+          "z": 96
+        },
+        "radius": 420
+      },
+      "strength": 4,
+      "desc": "Mechanic village artisans. Fair prices, loyal friends."
+    },
+    {
+      "id": "f.nurtw",
+      "type": "faction",
+      "name": "Park Management",
+      "color": "#8b5cf6",
+      "hostile": false,
+      "territory": {
+        "center": {
+          "x": -139,
+          "z": -8791
+        },
+        "radius": 520
+      },
+      "strength": 5,
+      "desc": "Bus park boys, drivers' union."
+    },
+    {
+      "id": "f.traders",
+      "type": "faction",
+      "name": "Computer Village Traders",
+      "color": "#2de0c8",
+      "hostile": false,
+      "territory": {
+        "center": {
+          "x": -346,
+          "z": -4500
+        },
+        "radius": 380
+      },
+      "strength": 5,
+      "desc": "Phones, parts, and noise."
+    },
+    {
+      "id": "f.police",
+      "type": "faction",
+      "name": "Police",
+      "color": "#3b82f6",
+      "hostile": false,
+      "territory": {
+        "center": {
+          "x": -684,
+          "z": -4750
+        },
+        "radius": 800
+      },
+      "strength": 8,
+      "desc": "Checkpoints and patrols around Ikeja."
+    },
+    {
+      "id": "f.okada-union",
+      "type": "faction",
+      "name": "Okada Union",
+      "color": "#22c55e",
+      "hostile": false,
+      "territory": {
+        "center": {
+          "x": 2821,
+          "z": -9793
+        },
+        "radius": 700
+      },
+      "strength": 4,
+      "desc": "Riders from Berger to Ogba."
+    }
+  ]
+}

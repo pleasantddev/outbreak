@@ -1,0 +1,30 @@
+{
+  "name": "hl-admin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "preact": "^10.24.3",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/rajdhani": "^5.3.0",
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^26.6.5",
+    "@types/three": "^0.180.0",
+    "tsx": "^4.23.15",
+    "typescript": "5.9",
+    "vite": "^6.4.4"
+  },
+  "scripts": {
+    "dev": "vite --port 5225 --host",
+    "dev:server": "tsx dev-server.ts",
+    "gen-schema": "tsx tools/gen-schema.ts",
+    "bake": "tsx tools/bake-map.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "build": "npm run gen-schema && tsc --noEmit -p . && vite build",
+    "preview": "vite preview --port 5225 --host"
+  }
+}

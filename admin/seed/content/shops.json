@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "shop.cappa.paint",
+      "name": "Cappa Paint House",
+      "kind": "paint",
+      "x": 230,
+      "z": 110,
+      "stock": [
+        {
+          "item": "paint.matte-black",
+          "price": 45000
+        },
+        {
+          "item": "paint.lagos-yellow",
+          "price": 38000
+        },
+        {
+          "item": "paint.neon-teal",
+          "price": 120000
+        },
+        {
+          "item": "paint.royal-purple",
+          "price": 95000
+        }
+      ]
+    },
+    {
+      "id": "shop.cappa.plates",
+      "name": "Cappa Plate Office",
+      "kind": "plates",
+      "x": 214,
+      "z": 88,
+      "stock": [
+        {
+          "item": "plate.custom",
+          "price": 250000
+        },
+        {
+          "item": "plate.random",
+          "price": 25000
+        }
+      ]
+    },
+    {
+      "id": "shop.cappa.trackers",
+      "name": "TrackIt Lagos",
+      "kind": "trackers",
+      "x": 238,
+      "z": 80,
+      "stock": [
+        {
+          "item": "tracker.basic",
+          "price": 30000
+        },
+        {
+          "item": "tracker.pro",
+          "price": 85000
+        }
+      ]
+    },
+    {
+      "id": "shop.computer-village.phones",
+      "name": "Computer Village Phones",
+      "kind": "electronics",
+      "x": -346,
+      "z": -4500,
+      "stock": [
+        {
+          "item": "phone.tecno",
+          "price": 65000
+        },
+        {
+          "item": "phone.itel",
+          "price": 32000
+        },
+        {
+          "item": "phone.gloss",
+          "price": 420000
+        }
+      ]
+    },
+    {
+      "id": "shop.ikeja.decor",
+      "name": "Ikeja Furnishings",
+      "kind": "decor",
+      "x": -30,
+      "z": -4463,
+      "stock": [
+        {
+          "item": "decor.sofa",
+          "price": 150000
+        },
+        {
+          "item": "decor.generator",
+          "price": 380000
+        },
+        {
+          "item": "decor.solar-kit",
+          "price": 900000
+        },
+        {
+          "item": "decor.rug",
+          "price": 28000
+        }
+      ]
+    },
+    {
+      "id": "shop.oshodi.food",
+      "name": "Mama Put Oshodi",
+      "kind": "food",
+      "x": 870,
+      "z": -230,
+      "stock": [
+        {
+          "item": "food.jollof",
+          "price": 1500
+        },
+        {
+          "item": "food.amala",
+          "price": 1200
+        },
+        {
+          "item": "food.water",
+          "price": 200
+        }
+      ]
+    },
+    {
+      "id": "shop.maryland.mall",
+      "name": "Maryland Mall Fashion",
+      "kind": "clothes",
+      "x": 2690,
+      "z": -1577,
+      "stock": [
+        {
+          "item": "cloth.agbada",
+          "price": 60000
+        },
+        {
+          "item": "cloth.sneakers",
+          "price": 35000
+        },
+        {
+          "item": "cloth.cap",
+          "price": 6000
+        }
+      ]
+    }
+  ]
+}
