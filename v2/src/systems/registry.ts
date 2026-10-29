@@ -26,7 +26,13 @@ export interface GameCtx {
   land: { owned(): string[]; plot(id: string): Plot | null };
   /** extra minimap blips (tracked cars, sites...), asked every frame */
   blips: (() => { x: number; z: number; c: string; r?: number }[])[];
+  /** ask the streamer for the regions between two points so the GPS can route across the city */
+  loadRoute?: (x0: number, z0: number, x1: number, z1: number) => void;
+  /** profile XP and level */
+  grantXp?: (n: number) => void; playerLevel?: () => number;
 }
+export interface Blip { x: number; z: number; c: string; r?: number }
+export interface GoalPoint { x: number; z: number; label?: string }
 
 export interface GameSystem {
   id: string;
@@ -42,4 +48,8 @@ export interface GameSystem {
   onEvent?(ctx: GameCtx, e: SimEvent): void;
   /** phone app actions routed by app name */
   onAction?(ctx: GameCtx, app: string, id: string): boolean;
+  /** the current GPS destination, if this system has one (first system that returns a point wins) */
+  goal?(ctx: GameCtx): GoalPoint | null;
+  /** extra blips on the minimap */
+  blips?(ctx: GameCtx, out: Blip[]): void;
 }

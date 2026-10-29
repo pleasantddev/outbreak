@@ -63,8 +63,7 @@ function setModal(on: boolean, full = false) {
   modalDepth = Math.max(0, modalDepth + (on ? 1 : -1)); if (full) modalFull = Math.max(0, modalFull + (on ? 1 : -1));
   if (input) { input.enabled = modalDepth === 0 && !hud.landmapOn; if (modalDepth > 0) input.releasePointer(); }
 }
-const jobs: PhoneCtx['jobs'] = [];
-let activeJob: { id: string; title: string; pay: number; stage: 0 | 1; a: { x: number; z: number }; b: { x: number; z: number }; t: number; needCar: boolean } | null = null;
+const jobs: PhoneCtx['jobs'] = []; // the Hustles app is drawn by systems/missions.ts now
 const texts: [string, string][] = [['Unknown', 'Welcome to Lagos. Shine your eye.'], ['Mama Put', 'You still owe me ₦500 for the rice. I dey wait.'], ['Conductor Sule', 'If you wan work, come Oshodi park. Shout the route, collect the money, no steal.']];
 let potholeReports: any = null;
 let tileDue = 0;
@@ -115,10 +114,9 @@ async function boot() {
   hud.setLoad(0.97, 'Compiling shaders');
   { const t0 = performance.now(); await view.precompile(); console.info(`[hl] precompile ${Math.round(performance.now() - t0)} ms, ${view.renderer.info.programs?.length ?? 0} programs`); }
   hud.setLoad(1);
-  makeJobs();
   hud.onAction = (app, id) => { for (const s of SYSTEMS) if (s.onAction?.(ctx!, app, id)) return; onPhoneAction(app, id); };
-  ctx = { sim, view, hud, THREE, save, persist: () => persist({ ...state, cash: sim.cash }), get profile() { return profile ? { name: profile.name, accountId: (profile as any).accountId ?? (profile as any).id ?? '' } : null; }, startJob, systems: new Map(SYSTEMS.map((s) => [s.id, s] as [string, GameSystem])),
-    store, input, setModal, land: { owned: () => state.owned, plot: plotById }, blips: [] } as GameCtx;
+  ctx = { sim, view, hud, THREE, save, persist: () => persist({ ...state, cash: sim.cash }), get profile() { return profile ? { name: profile.name, accountId: (profile as any).accountId ?? (profile as any).id ?? '' } : null; }, startJob, systems: new Map(SYSTEMS.map((s) => [s.id, s] as [string, GameSystem])), store, loadRoute: loadRouteRegions, grantXp, playerLevel: () => (profile ? levelOf(profile.xp) : 1),
+    input, setModal, land: { owned: () => state.owned, plot: plotById }, blips: [] } as GameCtx;
   if (net.serverMode) net.attachState(state);
   for (const s of SYSTEMS) await s.init?.(ctx);
   hud.onBuy = (id) => { buyPlot(id); };
@@ -190,7 +188,7 @@ function introLines() {
   hud.say('Conductor', 'Oshodi! Oshodi! Last stop, everybody come down!');
   hud.say('You', 'Na here? Ehen. Lagos, I don land.');
   setTimeout(() => hud.toast('Unknown', 'Open your phone with T. Hustles pay. Land is the real money. Press M for the land map.', 'linear-gradient(160deg,#59a8ff,#1f62d6)', 'msg', 7), 6500);
-  setTimeout(() => offerCall('Conductor Sule', 'delivery', 'Guy, buka near the park get food wey must reach customer sharp sharp. You fit run am?'), 15000);
+  setTimeout(() => (ctx?.systems.get('missions') as any)?.introCall?.(), 15000);
   hud.help(touchDev ? '<b>Lagos.</b> Left thumb walks, drag right side to look. <kbd>CAR</kbd> gets in or jacks any car near you. <kbd>☎</kbd> is your phone.' : '<b>Lagos.</b> <kbd>T</kbd> phone · <kbd>E</kbd> car (walk up to any car, even one with a driver) · <kbd>LMB</kbd> punch · <kbd>RMB</kbd> aim · <kbd>M</kbd> land map · <kbd>V</kbd> cockpit.');
   setTimeout(() => hud.help(null), 12000);
 }
@@ -205,43 +203,9 @@ function syncColliders(force = false) {
 }
 
 // ---------------------------------------------------------------- hustles
-function makeJobs() {
-  jobs.length = 0;
-  jobs.push({ id: 'delivery', title: 'Food delivery', pay: 3500, desc: 'Pick up jollof from a buka and drop it off before it gets cold. Any car or okada.', active: false });
-  jobs.push({ id: 'danfo', title: 'Danfo run', pay: 6000, desc: 'Drive a danfo to the next park. Find one, jack it if you must.', active: false });
-  jobs.push({ id: 'parcel', title: 'Parcel, no questions', pay: 30000, desc: 'Pick up a parcel and get it across town. Police will be interested. Raises wahala.', active: false });
-}
-function walkPointAround(x: number, z: number, r0: number, r1: number) {
-  for (let i = 0; i < 40; i++) {
-    const ws = sim.net.nearWalks(x, z, r1); if (!ws.length) break;
-    const w = sim.net.walks[ws[(Math.random() * ws.length) | 0]]; const p = RoadNet.at(w.pts, Math.random() * w.len);
-    const d = Math.hypot(p.x - x, p.z - z); if (d > r0 && d < r1) return { x: p.x, z: p.z };
-  }
-  return { x: x + r0, z };
-}
-function startJob(id: string) {
-  const j = jobs.find((x) => x.id === id); if (!j) return;
-  const me = sim.local; const a = walkPointAround(me.pos.x, me.pos.z, 60, 220); const b = walkPointAround(a.x, a.z, 350, 700);
-  activeJob = { id, title: j.title, pay: j.pay, stage: 0, a, b, t: id === 'delivery' ? 240 : id === 'danfo' ? 300 : 360, needCar: id === 'danfo' };
-  jobs.forEach((x) => (x.active = x.id === id));
-  loadRouteRegions(me.pos.x, me.pos.z, b.x, b.z); guide.clear();
-  hud.title(j.title.toUpperCase(), 'Go to the green marker on the radar.', 4);
-  if (id === 'parcel') { sim.wanted = Math.max(sim.wanted, 1); sim.lastSeen = sim.time; }
-  net.jobStart(id);
-}
-function tickJob(dt: number) {
-  if (!activeJob) return;
-  const me = sim.local; const P = me.vehicle !== null ? sim.vehicles[me.vehicle].body.translation() : me.pos;
-  activeJob.t -= dt;
-  if (activeJob.t <= 0) { hud.title('HUSTLE FAILED', 'Too slow. Lagos waits for nobody.', 4, true); activeJob = null; jobs.forEach((x) => (x.active = false)); return; }
-  const tgt = activeJob.stage === 0 ? activeJob.a : activeJob.b;
-  const d = Math.hypot(tgt.x - P.x, tgt.z - P.z);
-  if (activeJob.needCar && activeJob.stage === 1 && !(me.vehicle !== null && sim.vehicles[me.vehicle].kind === 'danfo')) return;
-  if (d < 6) {
-    if (activeJob.stage === 0) { activeJob.stage = 1; hud.title('PICKED UP', `Now deliver it. ${Math.round(activeJob.t)}s left.`, 3); audio.ui('click'); }
-    else { payJob(activeJob.id, activeJob.pay); hud.money(activeJob.pay); hud.title('HUSTLE DONE', `+₦${activeJob.pay.toLocaleString()}`, 3); grantXp(Math.max(10, Math.round(activeJob.pay / 100))); activeJob = null; jobs.forEach((x) => (x.active = false)); persist({ ...state, cash: sim.cash }); }
-  }
-}
+// Jobs are content now (public/content/missions.json) and run by systems/missions.ts. startJob keeps the old ids working.
+function startJob(id: string) { (ctx?.systems.get('missions') as any)?.startMission(id); }
+function goalOf() { if (!ctx) return null; for (const s of SYSTEMS) { const g = s.goal?.(ctx); if (g) return g; } return null; }
 
 /** Offline the wage is added here; online the server pays (and its wallet push moves sim.cash). */
 function payJob(id: string, pay: number) {
@@ -259,7 +223,6 @@ function nearbyPlots(): PhoneCtx['plots'] {
   return out.sort((a, b) => a.dist - b.dist);
 }
 function onPhoneAction(app: string, id: string) {
-  if (app === 'Hustles') { if (id.startsWith('cancel:')) { activeJob = null; jobs.forEach((x) => (x.active = false)); } else startJob(id); }
   if (app === 'Landmap') { if (!hud.landmapOn) toggleLandmap(); if (id) selectPlot(id); return; }
   if (app === 'Land') {
     const p = nearbyPlots().find((x) => x.plot.id === id); if (!p) return;
@@ -387,13 +350,8 @@ function landmapInput(dt: number, k: Set<string>, pad: ReturnType<typeof gamepad
   if (pad) { L.x += pad.lx * sp; L.z += pad.ly * sp; L.h = Math.max(110, Math.min(900, L.h * (1 + (pad.lt - pad.rt) * dt))); if (pad.a && !prevPad?.a) { const p = view.landmapPick(0, 0); if (p) selectPlot(p.id); } if (pad.b && !prevPad?.b) toggleLandmap(); }
 }
 
-// ---------------------------------------------------------------- calls: work rings your phone
-function offerCall(who: string, job: string, line: string) {
-  if (activeJob) return;
-  hud.call(who, 'Incoming call · Y answer · N decline', () => { hud.say(who, line, 5); const j = jobs.find((x) => x.id === job); setTimeout(() => { startJob(job); if (j) hud.toast('Hustle accepted', `${j.title} · ₦${j.pay.toLocaleString()}. Follow the teal route.`, 'linear-gradient(160deg,#f6c453,#d98a12)', 'pin', 5); }, 1200); },
-    () => hud.toast('Missed call', `${who}. Check Hustles on your phone when you are ready.`, 'linear-gradient(160deg,#3a3f52,#151824)', 'phone'));
-}
-setInterval(() => { if (!started || activeJob || hud.ringing || hud.landmapOn) return; if (Math.random() < 0.5) { const j = [['Mama Put', 'delivery', 'My pikin, take this food go customer for me. I go pay you well.'], ['Conductor Sule', 'danfo', 'My driver no show. Carry the bus go the next park, you go collect your share.'], ['Unknown number', 'parcel', 'I get small package. No ask question. Police dey around so shine your eye.']][Math.floor(Math.random() * 3)]; offerCall(j[0], j[1], j[2]); } }, 150000);
+// ---------------------------------------------------------------- calls: work rings your phone (systems/missions.ts schedules them)
+function offerCall(_who: string, job: string, _line: string) { (ctx?.systems.get('missions') as any)?.offer(job); }
 
 // ---------------------------------------------------------------- hustler choice lives in the profile now (ui/lobby.ts)
 function setPlayerModel(id: string) {
@@ -467,7 +425,6 @@ function loop(t: number) {
     }
     if (ctx) for (const e of sim.events) for (const s of SYSTEMS) s.onEvent?.(ctx, e);
     view.handleEvents(sim.events, hud); sim.events.length = 0;
-    tickJob(dt);
   }
   syncColliders();
   view.phoneUp = hud.phoneUp;
@@ -486,7 +443,7 @@ function loop(t: number) {
     if (Math.random() < dt * 3) street = streetName(P.x, P.z);
     hud.update(dt, sim, { time: view.atmo.timeString(), real: view.atmo.realString(), weather: view.atmo.weatherLabel, temp: temperature(), area: areaName(P.x, P.z), street, weapon: w && w.id !== 'fists' ? WEAPONS[w.id].name : '', weaponKind: wk, mag: st ? String(w!.mag) : '', ammo: st ? String(me.inv.count(AMMO_STACK[st.ammo]!)) : '', aiming, inCar: me.vehicle !== null, bank: state.bank, kmh, gear: ms < -0.6 ? 'R' : kmh < 1 ? 'N' : String(gearN), rpm });
     void ammo;
-    let note: string | null = null; const jobTg = activeJob ? (activeJob.stage === 0 ? activeJob.a : activeJob.b) : null;
+    let note: string | null = null; const jobTg = goalOf();
     if (jobTg) {
       graphT -= dt; if (graphT <= 0) graphT = graph.sync(store.regions.values()) ? 0.15 : 0.6;
       guide.update(dt, P.x, P.z, me.vehicle !== null ? 'drive' : 'walk', jobTg);
@@ -496,7 +453,7 @@ function loop(t: number) {
     routeLine?.update(view.time, jobTg ? guide.remaining : null, jobTg, 0.07, me.vehicle === null);
     parcelT -= dt; if (parcelT <= 0 && me.vehicle === null) { parcelT = 0.4; hud.parcel(parcelAt(me.pos.x, me.pos.z)); } else if (me.vehicle !== null) hud.parcel(null);
     const blips: { x: number; z: number; c: string; r?: number }[] = [];
-    if (activeJob) { const tg = activeJob.stage === 0 ? activeJob.a : activeJob.b; blips.push({ x: tg.x, z: tg.z, c: '#3ddc84', r: 11 }); }
+    if (ctx) for (const sy of SYSTEMS) sy.blips?.(ctx, blips);
     for (const a of sim.actors) if (a.alive && a.role === 'police' && !(a as any)._gone) blips.push({ x: a.pos.x, z: a.pos.z, c: '#3b6cff', r: 6 });
     if (ctx) for (const f of ctx.blips) blips.push(...f());
     plateUpdate();
@@ -553,7 +510,7 @@ function drawPhoneMap() {
   for (const reg of store.regions.values()) for (const r of reg.roads) { if (r.cls > 8) continue; g.strokeStyle = r.cls <= 4 ? '#e0a92a' : '#fff'; g.lineWidth = r.cls <= 4 ? 3 : 1.4; g.beginPath(); for (let k = 0; k < r.pts.length; k += 2) (k ? g.lineTo : g.moveTo).call(g, r.pts[k] * S, r.pts[k + 1] * S); g.stroke(); }
   g.fillStyle = '#c0392b'; for (const reg of store.regions.values()) for (const p of reg.potholes) if (p.report !== 255) g.fillRect(p.x * S - 1, p.z * S - 1, 2.5, 2.5);
   for (const id of state.owned) { const pts = state.ownedPts[id]; if (!pts) continue; g.fillStyle = '#9b4dff'; g.beginPath(); for (let k = 0; k < pts.length; k += 2) (k ? g.lineTo : g.moveTo).call(g, pts[k] * S, pts[k + 1] * S); g.fill(); }
-  if (activeJob) { const tg = activeJob.stage === 0 ? activeJob.a : activeJob.b; g.fillStyle = '#1fbf5f'; g.beginPath(); g.arc(tg.x * S, tg.z * S, 6, 0, 6.28); g.fill(); }
+  { const tg = goalOf(); if (tg) { g.fillStyle = '#1fbf5f'; g.beginPath(); g.arc(tg.x * S, tg.z * S, 6, 0, 6.28); g.fill(); } }
   g.fillStyle = '#111'; g.beginPath(); g.arc(me.pos.x * S, me.pos.z * S, 5, 0, 6.28); g.fill(); g.restore();
 }
 void WEATHER_ORDER;
