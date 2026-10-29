@@ -77,7 +77,7 @@ export class LifeView {
     this.camera = new THREE.PerspectiveCamera(65, 1, 0.1, 2600);
     this.composer = new EffectComposer(this.renderer, { frameBufferType: THREE.HalfFloatType });
     this.renderPass = new RenderPass(this.scene, this.camera); this.composer.addPass(this.renderPass);
-    this.composer.autoRenderToScreen = false;
+    this.composer.autoRenderToScreen = false; this.renderPass.renderToScreen = false; // addPass flagged the first pass as the one that draws to the canvas; only the final effect pass may
     this.atmo = new Atmosphere(this.scene, this.renderer, this.level, opts);
     this.world = new WorldStreamer(this.renderer, store, tg, tw, quality);
     this.world.radius = L.radius;
