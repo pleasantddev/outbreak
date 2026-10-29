@@ -225,7 +225,7 @@ export class LifeHud {
   radarCv: HTMLCanvasElement; radarG: CanvasRenderingContext2D;
   me = { name: 'You', level: 1, id: '' };
   private npShown = false;
-  private callCb: { yes: () => void; no?: () => void } | null = null; private callT = 0;
+  private callCb: { yes: () => void; no?: () => void } | null = null; private callT = 0; private callUntil = 0;
   private parcelId = ''; private lastFrame: HudFrame | null = null;
   private speedArc: SVGPathElement; private rpmArc: SVGPathElement;
   constructor(touch: boolean) {
@@ -321,7 +321,8 @@ ${touch ? `<div id="tc">
     setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 450); }, secs * 1000);
   }
   /** Incoming call card. Answer with the button, Y / Enter, or gamepad A; decline with N or B. */
-  call(name: string, line: string, yes: () => void, no?: () => void, ringSecs = 14) {
+  call(name: string, line: string, yes: () => void, no?: () => void, ringSecs = 12) {
+    ringSecs = Math.min(ringSecs, 12); this.callUntil = performance.now() + ringSecs * 1000;
     this.el('call-av').textContent = initials(name); this.el('call-n').textContent = name; this.el('call-l').textContent = line;
     this.el('call').classList.add('on'); this.callCb = { yes, no }; this.callT = ringSecs;
   }
@@ -434,7 +435,7 @@ ${touch ? `<div id="tc">
     if (this.subT <= 0 && this.subQueue.length) { const n = this.subQueue.shift()!; this.el('subs').innerHTML = `<span class="who">${n.who}</span> ${n.text}`; this.subT = n.secs; }
     if (this.titleT > 0) { this.titleT -= dt; if (this.titleT <= 0) this.el('title').classList.remove('on'); }
     if (this.flashT > 0) { this.flashT -= dt; if (this.flashT <= 0) this.el('flash').style.opacity = '0'; }
-    if (this.callCb) { this.callT -= dt; if (this.callT <= 0) this.answer(false); }
+    if (this.callCb) { this.callT -= dt; if (this.callT <= 0 || performance.now() > this.callUntil) this.answer(false); }
   }
 
   /** Dark GPS minimap: rotates with the camera, roads by class, a teal route, blips, potholes, your land. */
