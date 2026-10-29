@@ -17,7 +17,22 @@ const NAMES = ['Kunle', 'Ngozi', 'Emeka', 'Bisi', 'Segun', 'Halima', 'Dayo', 'Ch
 export interface TileCol { hulls: { pts: number[]; h: number; convex: boolean }[]; walls: { ax: number; az: number; bx: number; bz: number; h: number }[]; poles: number[]; decks: { pos: number[]; idx: number[] }[] }
 export interface LifeOptions { seed: number; name: string; look: CharacterLook; spawn: { x: number; z: number }; quality: 'low' | 'medium' | 'high'; potholes: (x: number, z: number, r: number) => Pothole[] }
 
-interface PedBrain { kind: 'walk' | 'flee' | 'fight' | 'idle' | 'police' | 'ko'; walk: number; s: number; dir: number; t: number; target: number | null; from: Vec3 | null }
+export interface PedBrain { kind: 'walk' | 'flee' | 'fight' | 'idle' | 'police' | 'ko' | 'citizen'; walk: number; s: number; dir: number; t: number; target: number | null; from: Vec3 | null }
+/** Plug points for the society system (named citizens that live off-screen and appear here when near). */
+export interface LifeHooks {
+  /** replaces the random pedestrian spawn when it returns true */
+  populate?(P: Vec3, dt: number): boolean;
+  /** drives a citizen-bound actor whose brain kind is 'citizen' (fill in c) */
+  citizenThink?(a: Actor, b: PedBrain, c: Command, dt: number): void;
+  /** called when a citizen-bound actor is hurt; return true if it handled the reaction itself */
+  onHurt?(t: Actor, by: Actor, dmg: number, b: PedBrain): boolean;
+  /** an actor is being removed (walked far away, dead for a while, car removed) */
+  onDespawn?(a: Actor): void;
+  /** a traffic car is about to spawn: return a citizen id to put behind the wheel */
+  trafficDriver?(kind: VehicleKind, x: number, z: number): number | null;
+  /** the driver body for that citizen now exists */
+  bound?(a: Actor): void;
+}
 interface Driver { lane: number; s: number; speed: number; lateral: number; stuck: number; honk: number; wait: number }
 
 export class LifeSim {
@@ -34,6 +49,9 @@ export class LifeSim {
   wanted = 0; wantedCool = 0; lastSeen = 0; busted = 0;
   cash = 1850;
   private brains = new Map<number, PedBrain>();
+  hooks: LifeHooks = {};
+  /** society levers: 1 = normal. Rush hour raises traffic, an okada ban removes bikes. */
+  trafficScale = 1; trafficSlow = 1; banned = new Set<VehicleKind>();
   private drivers = new Map<number, Driver>();
   private tileBodies = new Map<string, RBody>();
   private colliderOwner = new Map<number, { kind: 'actor' | 'vehicle'; id: number }>();
@@ -62,6 +80,16 @@ export class LifeSim {
     this.spawnActor('player', { x: opts.spawn.x, y: 0.05, z: opts.spawn.z }, opts.look, opts.name);
   }
   get local() { return this.actors[0]; }
+  brainOf(id: number) { return this.brains.get(id); }
+  /** Spawns an actor bound to a citizen record: brain kind 'citizen', the society hook steers it. */
+  spawnBound(role: NonNullable<Actor['role']>, pos: Vec3, look: CharacterLook, name: string, cid: number): Actor {
+    const a = this.spawnActor(role, pos, look, name); a.cid = cid;
+    this.brains.set(a.id, { kind: 'citizen', walk: 0, s: 0, dir: 1, t: 0, target: null, from: null });
+    return a;
+  }
+  removeActor(a: Actor) { this.despawnActor(a); }
+  /** back to the default behaviour after a flight or a fight */
+  private calm(a: Actor, b: PedBrain) { b.kind = a.cid !== undefined ? 'citizen' : 'walk'; b.target = null; }
   ownerOf(c: RCollider | null | undefined) { return c ? this.colliderOwner.get(c.handle) : undefined; }
 
   // ---------------------------------------------------------------- world collision streaming
@@ -152,6 +180,7 @@ export class LifeSim {
     return a;
   }
   private despawnActor(a: Actor) {
+    this.hooks.onDespawn?.(a);
     if (a.vehicle !== null) this.exitVehicle(a, true);
     a.alive = false; (a as any)._gone = true;
     this.colliderOwner.delete(a.collider.handle);
@@ -204,7 +233,7 @@ export class LifeSim {
 
   enterVehicle(a: Actor, v: Vehicle, preferDriver = true) {
     let seat = preferDriver && v.seats[0] === null ? 0 : v.seats.indexOf(null);
-    let jack = false;
+    let jack = false, victim: number | undefined;
     if (preferDriver && v.seats[0] !== null && a.role === 'player') {
       const sp = Math.abs(v.ctrl.currentVehicleSpeed());
       if (sp > 4.5) return false;
@@ -212,7 +241,7 @@ export class LifeSim {
       this.exitVehicle(d);
       d.ext.x += Math.sin(a.yaw) * 3; d.ext.z += Math.cos(a.yaw) * 3; d.ko = 1.4; d.fear = 1;
       const b = this.brains.get(d.id); if (b) { b.kind = this.rng.chance(d.role === 'area' ? 0.7 : 0.25) ? 'fight' : 'flee'; b.target = a.id; b.from = { ...a.pos }; }
-      seat = 0; jack = true;
+      seat = 0; jack = true; victim = d.id;
       this.crime('carjack', 1, a.pos);
     }
     if (seat < 0) return false;
@@ -224,7 +253,7 @@ export class LifeSim {
     (v as any).parked = false;
     (v as any).doors[Math.min(3, seat)] = 1;
     if (a.role === 'player') this.drivers.delete(v.id);
-    this.events.push({ t: 'enterVehicle', actor: a.id, vehicle: v.id, seat, jack });
+    this.events.push({ t: 'enterVehicle', actor: a.id, vehicle: v.id, seat, jack, victim });
     return true;
   }
   exitVehicle(a: Actor, silent = false) {
@@ -284,7 +313,8 @@ export class LifeSim {
     for (const a of this.actors) if (!a.alive && !(a as any)._gone && this.time - (a as any)._diedAt > 40) this.despawnActor(a);
     for (const v of this.liveVehicles()) { const t = v.body.translation(); const d = Math.hypot(t.x - P.x, t.z - P.z); if (d > 280 && !v.seats.some((s) => s !== null && this.actors[s].role === 'player') && v.id !== (this as any).playerCar) this.removeVehicle(v); }
     const peds = this.actors.filter((a) => a.alive && !(a as any)._gone && a.role !== 'player' && a.vehicle === null).length;
-    if (peds < this.maxPeds) {
+    if (this.hooks.populate?.(P, dt)) { /* named citizens fill the pavements */ }
+    else if (peds < this.maxPeds) {
       const walks = this.net.nearWalks(P.x, P.z, 130);
       if (walks.length) {
         const wi = this.rng.pick(walks); const w = this.net.walks[wi]; const s = this.rng.next() * w.len; const at = RoadNet.at(w.pts, s);
@@ -309,7 +339,7 @@ export class LifeSim {
     // traffic
     const live = this.liveVehicles();
     const moving = live.filter((v) => this.drivers.has(v.id)).length;
-    if (moving < this.maxTraffic) {
+    if (moving < Math.round(this.maxTraffic * this.trafficScale)) {
       const lanes = this.net.near(P.x, P.z, 220);
       if (lanes.length) {
         const ln = this.net.lanes[this.rng.pick(lanes)];
@@ -317,12 +347,15 @@ export class LifeSim {
         const d = Math.hypot(at.x - P.x, at.z - P.z);
         const clear = live.every((v) => { const t = v.body.translation(); return Math.hypot(t.x - at.x, t.z - at.z) > 14; });
         if (d > 70 && d < 220 && clear) {
-          const kind: VehicleKind = this.rng.pick(['danfo', 'danfo', 'sedan', 'sedan', 'sedan', 'hatch', 'jeep', 'keke', 'keke', 'okada', 'okada'] as VehicleKind[]);
+          const kinds = (['danfo', 'danfo', 'sedan', 'sedan', 'sedan', 'hatch', 'jeep', 'keke', 'keke', 'okada', 'okada'] as VehicleKind[]).filter((k) => !this.banned.has(k));
+          const kind: VehicleKind = this.rng.pick(kinds);
           const v = this.addVehicle(kind, { x: at.x, y: 0.1, z: at.z }, at.yaw);
+          const cid = this.hooks.trafficDriver?.(kind, at.x, at.z) ?? null;
           const drv = this.spawnActor('driver', { x: at.x, y: 0.1, z: at.z });
+          if (cid !== null) { drv.cid = cid; this.hooks.bound?.(drv); }
           this.enterVehicle(drv, v);
           if (kind === 'danfo') for (let k = 1; k < 4; k++) if (this.rng.chance(0.6)) { const p = this.spawnActor('ped', { x: at.x, y: 0.1, z: at.z }); this.enterVehicle(p, v, false); }
-          this.drivers.set(v.id, { lane: ln.id, s, speed: ln.speed * this.rng.range(0.75, 1.05), lateral: 0, stuck: 0, honk: 0, wait: 0 });
+          this.drivers.set(v.id, { lane: ln.id, s, speed: ln.speed * this.rng.range(0.75, 1.05) * this.trafficSlow, lateral: 0, stuck: 0, honk: 0, wait: 0 });
         }
       }
     }
@@ -355,6 +388,7 @@ export class LifeSim {
     }
     const goTo = (x: number, z: number, run: boolean) => { const dx = x - a.pos.x, dz = z - a.pos.z, l = Math.hypot(dx, dz) || 1; c.mx = dx / l; c.mz = dz / l; c.sprint = run; c.yaw = Math.atan2(dx, dz); };
     switch (b.kind) {
+      case 'citizen': this.hooks.citizenThink?.(a, b, c, dt); break;
       case 'idle': b.t -= dt; if (b.t <= 0) { b.kind = 'walk'; b.t = this.rng.range(8, 30); } break;
       case 'walk': {
         const w = this.net.walks[b.walk]; if (!w) { b.kind = 'idle'; break; }
@@ -374,13 +408,13 @@ export class LifeSim {
       case 'flee': {
         const f = b.from ?? me.pos; const dx = a.pos.x - f.x, dz = a.pos.z - f.z, l = Math.hypot(dx, dz) || 1;
         c.mx = dx / l; c.mz = dz / l; c.sprint = true; c.yaw = Math.atan2(c.mx, c.mz);
-        b.t -= dt; if (b.t <= 0 || l > 60) { b.kind = 'walk'; const ws = this.net.nearWalks(a.pos.x, a.pos.z, 20); if (ws.length) { b.walk = ws[0]; b.s = RoadNet.project(this.net.walks[b.walk].pts, a.pos.x, a.pos.z).s; } a.fear = 0; }
+        b.t -= dt; if (b.t <= 0 || l > 60) { this.calm(a, b); const ws = this.net.nearWalks(a.pos.x, a.pos.z, 20); if (ws.length) { b.walk = ws[0]; b.s = RoadNet.project(this.net.walks[b.walk].pts, a.pos.x, a.pos.z).s; } a.fear = 0; }
         break;
       }
       case 'fight': case 'police': {
         const tgt = this.actors[b.target ?? 0];
-        if (!tgt || !tgt.alive) { b.kind = 'walk'; break; }
-        if (b.kind === 'police' && this.wanted <= 0) { b.kind = 'walk'; const ws = this.net.nearWalks(a.pos.x, a.pos.z, 30); if (ws.length) { b.walk = ws[0]; b.s = 0; } break; }
+        if (!tgt || !tgt.alive) { this.calm(a, b); break; }
+        if (b.kind === 'police' && this.wanted <= 0) { this.calm(a, b); const ws = this.net.nearWalks(a.pos.x, a.pos.z, 30); if (ws.length) { b.walk = ws[0]; b.s = 0; } break; }
         const tp = tgt.vehicle !== null ? (() => { const t = this.vehicles[tgt.vehicle!].body.translation(); return { x: t.x, y: t.y, z: t.z }; })() : tgt.pos;
         const d = Math.hypot(tp.x - a.pos.x, tp.z - a.pos.z);
         const w = this.currentWeapon(a);
@@ -407,7 +441,7 @@ export class LifeSim {
     const fine = Math.min(this.cash, 5000 + this.wanted * 5000);
     this.cash -= fine; this.wanted = 0;
     this.events.push({ t: 'announce', title: 'BUSTED', sub: `Settlement at the station: ₦${fine.toLocaleString()}. Abeg, go home.`, tone: 'danger' });
-    for (const a of this.actors) if (a.role === 'police' && a.alive) { const b = this.brains.get(a.id); if (b) b.kind = 'walk'; }
+    for (const a of this.actors) if (a.role === 'police' && a.alive) { const b = this.brains.get(a.id); if (b) this.calm(a, b); }
   }
 
   // ---------------------------------------------------------------- traffic driving
@@ -418,7 +452,7 @@ export class LifeSim {
     const p = v.body.translation(); const r = v.body.rotation();
     const pr = RoadNet.project(ln.pts, p.x, p.z); d.s = pr.s;
     if (d.s > ln.len - 6) {
-      if (ln.next.length) { const nx = this.rng.pick(ln.next); d.lane = nx; ln = this.net.lanes[nx]; d.s = RoadNet.project(ln.pts, p.x, p.z).s; d.speed = ln.speed * this.rng.range(0.75, 1.05); }
+      if (ln.next.length) { const nx = this.rng.pick(ln.next); d.lane = nx; ln = this.net.lanes[nx]; d.s = RoadNet.project(ln.pts, p.x, p.z).s; d.speed = ln.speed * this.rng.range(0.75, 1.05) * this.trafficSlow; }
       else { this.removeLater(v); drv.cmd = emptyCommand(); return; }
     }
     const speed = v.ctrl.currentVehicleSpeed();
@@ -609,7 +643,8 @@ export class LifeSim {
     // reactions
     if (by && t.role !== 'player') {
       const b = this.brains.get(t.id);
-      if (b) { const brave = t.role === 'police' || t.role === 'area' || (t.role === 'ped' && this.rng.chance(0.3)); if (brave) { b.kind = t.role === 'police' ? 'police' : 'fight'; b.target = by.id; } else { b.kind = 'flee'; b.from = { ...by.pos }; b.t = 10; } }
+      if (b && this.hooks.onHurt?.(t, by, dmg, b)) { /* the society system decided how this citizen reacts */ }
+      else if (b) { const brave = t.role === 'police' || t.role === 'area' || (t.role === 'ped' && this.rng.chance(0.3)); if (brave) { b.kind = t.role === 'police' ? 'police' : 'fight'; b.target = by.id; } else { b.kind = 'flee'; b.from = { ...by.pos }; b.t = 10; } }
       if (by.role === 'player') this.crime(t.role === 'police' ? 'police' : 'assault', t.role === 'police' ? 2 : this.wanted === 0 ? 1 : 0, by.pos);
     }
     if (t.hp <= 0) this.kill(t, by, label, head);

@@ -38,6 +38,8 @@ export interface Actor {
   killedBy: string | null; won: 'heart' | 'survivor' | 'contract' | null; extracting: number; usedAwakening: boolean;
   cmd: Command; prevCmd: Command;
   role?: 'player' | 'ped' | 'police' | 'driver' | 'area' | 'vendor'; cash?: number; hostile?: number; fear?: number; ko?: number;
+  /** society citizen record this body belongs to (see systems/society.ts) */
+  cid?: number;
 }
 
 export interface Creature {
@@ -84,7 +86,7 @@ export type SimEvent =
   | { t: 'blackout'; region: string }
   | { t: 'hurt'; actor: number; dmg: number; from: Vec3 | null }
   | { t: 'melee'; actor: number }
-  | { t: 'enterVehicle'; actor: number; vehicle: number; seat?: number; jack?: boolean }
+  | { t: 'enterVehicle'; actor: number; vehicle: number; seat?: number; jack?: boolean; victim?: number }
   | { t: 'exitVehicle'; actor: number; vehicle: number; seat: number }
   | { t: 'pothole'; vehicle: number; at: Vec3; strength: number; wet: number }
   | { t: 'crime'; kind: string; wanted: number }

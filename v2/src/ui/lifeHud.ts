@@ -192,6 +192,13 @@ export const APPS: [string, string, string][] = [
   ['Settings', svg('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-1-3-2 .2-1.3-1.3.2-2-3-1-1 2h-1.8l-1-2-3 1 .2 2L6 7.2 4 7l-1 3 2 1v1.8l-2 1 1 3 2-.2 1.3 1.3-.2 2 3 1 1-2h1.8l1 2 3-1-.2-2 1.3-1.3 2 .2 1-3-2-1z'), 'linear-gradient(160deg,#70757c,#3a3d42)'],
 ];
 
+/** Phone apps that systems add (society: Market, Street). They render rows into the app view; actions go to GameSystem.onAction. */
+const EXT_APPS = new Map<string, { render: (c: PhoneCtx) => string; mode: 'replace' | 'append' }>();
+export function registerPhoneApp(name: string, icon: string, color: string, render: (c: PhoneCtx) => string, mode: 'replace' | 'append' = 'replace') {
+  if (mode === 'replace' && !APPS.some((a) => a[0] === name)) APPS.splice(Math.max(0, APPS.length - 1), 0, [name, svg(icon), color]);
+  EXT_APPS.set(name, { render, mode });
+}
+
 export interface PhoneCtx { time: string; real: string; weather: string; season: string; day: number; cash: number; bank: number; plots: { plot: Plot; price: number; owned: boolean; dist: number }[]; jobs: { id: string; title: string; pay: number; desc: string; active: boolean }[]; texts: [string, string][]; potholes: { name: string; road: string; area: string; reported: string; placed: number; source: string }[]; quality: string }
 export interface ParcelInfo { id: string; title: string; area: string; owner: string; size: number; zone: string; price: number; owned: boolean; /** sold to another player (multiplayer) */ taken?: boolean; traits: [string, 'g' | 'r' | 'p' | ''][]; stats: [string, string][] }
 export interface HudFrame { time: string; real: string; weather: string; temp: number; area: string; street: string; weapon: string; weaponKind: 'none' | 'melee' | 'gun'; ammo: string; mag: string; aiming: boolean; inCar: boolean; bank: number; kmh: number; gear: string; rpm: number }
@@ -375,7 +382,9 @@ ${touch ? `<div id="tc">
     else if (name === 'Roads') html = row('Pothole reports', 'From news reports and residents, 2023 to October 2026. Each report is snapped to the named road.') + c.potholes.map((p) => row(`${p.name}`, `${p.road} · ${p.area}<br>Reported ${p.reported} · ${p.placed} potholes placed`)).join('');
     else if (name === 'Contacts') html = row(`${this.me.name} (you)`, this.me.id ? `Account ${this.me.id}` : 'Your number') + row('Mama Put', 'Under the bridge, Oshodi') + row('Conductor Sule', 'Oshodi park') + row('Baba Landlord', 'Sells land. Asks no questions. Charges for C of O.');
     else if (name === 'Settings') html = row('Graphics', `Quality: ${c.quality}<br>Auto adapts to your device while you play. Tap to cycle Auto, High, Medium, Low. F3 shows frame stats.`, ['Settings', 'quality', 'Change']) + row('Weather', 'Cycle the weather (testing)', ['Settings', 'weather', 'Next']) + row('Time', 'Jump one hour', ['Settings', 'hour', '+1 hour']) + row('Lobby', 'Save and go back to the lobby. Change your look or your name there.', ['Settings', 'lobby', 'Back to lobby']);
+    else if (EXT_APPS.get(name)?.mode === 'replace') html = EXT_APPS.get(name)!.render(c);
     else html = `<canvas id="pmap" width="400" height="400"></canvas>` + row('Legend', 'Teal: your route · Red dots: reported potholes · Purple: your land');
+    const extra = EXT_APPS.get(name); if (extra?.mode === 'append') html += extra.render(c);
     L.innerHTML = html;
     L.querySelectorAll('button[data-app]').forEach((b) => ((b as HTMLElement).onclick = () => this.onAction?.((b as HTMLElement).dataset.app!, (b as HTMLElement).dataset.id!)));
     L.querySelectorAll('.row').forEach((r, i) => r.classList.toggle('sel', i === this.rowSel));

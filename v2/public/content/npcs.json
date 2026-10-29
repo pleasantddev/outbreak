@@ -1,0 +1,2402 @@
+{
+ "version": 1,
+ "items": [
+  {
+   "id": "names.yoruba",
+   "kind": "names",
+   "eth": "yoruba",
+   "weight": 55,
+   "faith": {
+    "christian": 0.55,
+    "muslim": 0.45
+   },
+   "male": [
+    "Adebayo",
+    "Adewale",
+    "Ayodele",
+    "Babatunde",
+    "Bamidele",
+    "Bolaji",
+    "Damilola",
+    "Dayo",
+    "Femi",
+    "Gbenga",
+    "Idowu",
+    "Ife",
+    "Kayode",
+    "Kehinde",
+    "Kolawole",
+    "Kunle",
+    "Lanre",
+    "Niyi",
+    "Olamide",
+    "Olumide",
+    "Olusegun",
+    "Opeyemi",
+    "Rotimi",
+    "Sanmi",
+    "Segun",
+    "Seyi",
+    "Sola",
+    "Taiwo",
+    "Tobi",
+    "Tunde",
+    "Wale",
+    "Yemi",
+    "Folarin",
+    "Akin",
+    "Dele",
+    "Jide",
+    "Tayo",
+    "Toyin",
+    "Bisi",
+    "Sunday"
+   ],
+   "female": [
+    "Abike",
+    "Adeola",
+    "Adunni",
+    "Bimpe",
+    "Bisola",
+    "Bukola",
+    "Damilola",
+    "Folake",
+    "Funke",
+    "Funmilayo",
+    "Kemi",
+    "Lola",
+    "Modupe",
+    "Morenike",
+    "Omolara",
+    "Omotola",
+    "Seun",
+    "Shade",
+    "Sade",
+    "Titilayo",
+    "Tolu",
+    "Yetunde",
+    "Yewande",
+    "Ronke",
+    "Toyin",
+    "Wunmi",
+    "Folasade",
+    "Temitope",
+    "Iyabo",
+    "Ayo",
+    "Bola",
+    "Abosede",
+    "Kudirat",
+    "Risikat",
+    "Sidikat",
+    "Rukayat"
+   ],
+   "surnames": [
+    "Adeyemi",
+    "Adebisi",
+    "Adeleke",
+    "Ajayi",
+    "Akinola",
+    "Alabi",
+    "Aluko",
+    "Balogun",
+    "Bankole",
+    "Fashola",
+    "Fasanya",
+    "Ogunbanjo",
+    "Ogunleye",
+    "Ogundele",
+    "Ogunsola",
+    "Olaniyan",
+    "Olatunji",
+    "Oladipo",
+    "Oladele",
+    "Olawale",
+    "Oyelaran",
+    "Oyewole",
+    "Salami",
+    "Lawal",
+    "Ojo",
+    "Ola",
+    "Taiwo",
+    "Afolabi",
+    "Adesina",
+    "Adewumi",
+    "Famuyiwa",
+    "Onasanya",
+    "Shonubi",
+    "Sanusi",
+    "Bello",
+    "Raji",
+    "Animashaun",
+    "Oguntoye"
+   ]
+  },
+  {
+   "id": "names.igbo",
+   "kind": "names",
+   "eth": "igbo",
+   "weight": 20,
+   "faith": {
+    "christian": 0.96,
+    "muslim": 0.01
+   },
+   "male": [
+    "Chidi",
+    "Chika",
+    "Chinedu",
+    "Chukwuemeka",
+    "Emeka",
+    "Ifeanyi",
+    "Ikenna",
+    "Kelechi",
+    "Kenechukwu",
+    "Nnamdi",
+    "Obinna",
+    "Obi",
+    "Okechukwu",
+    "Onyeka",
+    "Uche",
+    "Uchenna",
+    "Somto",
+    "Tochukwu",
+    "Nonso",
+    "Arinze",
+    "Ugochukwu",
+    "Chibuike",
+    "Ebuka",
+    "Ikechukwu",
+    "Izuchukwu",
+    "Munachi"
+   ],
+   "female": [
+    "Adaeze",
+    "Amaka",
+    "Chioma",
+    "Chinwe",
+    "Ifeoma",
+    "Ngozi",
+    "Nneka",
+    "Nkechi",
+    "Obiageli",
+    "Onyinye",
+    "Uchechi",
+    "Ugochi",
+    "Uzoamaka",
+    "Adanna",
+    "Ebere",
+    "Ijeoma",
+    "Nkiru",
+    "Oluchi",
+    "Somkene",
+    "Zuzu",
+    "Chidinma",
+    "Ogechi"
+   ],
+   "surnames": [
+    "Okafor",
+    "Okonkwo",
+    "Nwosu",
+    "Nwankwo",
+    "Eze",
+    "Obi",
+    "Onwuka",
+    "Umeh",
+    "Anyanwu",
+    "Ezeh",
+    "Iwu",
+    "Nnadi",
+    "Ugwu",
+    "Chukwu",
+    "Okoye",
+    "Okeke",
+    "Madu",
+    "Agu",
+    "Ibe",
+    "Ndukwe",
+    "Ekwueme",
+    "Nwachukwu",
+    "Obiora",
+    "Ogbonna",
+    "Uzor"
+   ]
+  },
+  {
+   "id": "names.hausa",
+   "kind": "names",
+   "eth": "hausa",
+   "weight": 11,
+   "faith": {
+    "christian": 0.04,
+    "muslim": 0.94
+   },
+   "male": [
+    "Abdullahi",
+    "Aminu",
+    "Bashir",
+    "Garba",
+    "Hamza",
+    "Ibrahim",
+    "Idris",
+    "Ismail",
+    "Isa",
+    "Jibril",
+    "Kabiru",
+    "Lawan",
+    "Mansur",
+    "Musa",
+    "Mustapha",
+    "Nasir",
+    "Sani",
+    "Shehu",
+    "Suleiman",
+    "Umar",
+    "Usman",
+    "Yakubu",
+    "Yusuf",
+    "Zubairu",
+    "Auwal",
+    "Danjuma"
+   ],
+   "female": [
+    "Aisha",
+    "Amina",
+    "Fatima",
+    "Halima",
+    "Hauwa",
+    "Hadiza",
+    "Maryam",
+    "Rabi",
+    "Rakiya",
+    "Safiya",
+    "Salamatu",
+    "Zainab",
+    "Zulai",
+    "Asma'u",
+    "Binta",
+    "Habiba",
+    "Jamila",
+    "Khadija",
+    "Larai",
+    "Sadiya"
+   ],
+   "surnames": [
+    "Abubakar",
+    "Adamu",
+    "Bello",
+    "Dantata",
+    "Danladi",
+    "Garba",
+    "Gwarzo",
+    "Haruna",
+    "Ibrahim",
+    "Kano",
+    "Lawal",
+    "Mohammed",
+    "Muhammad",
+    "Sambo",
+    "Shuaibu",
+    "Tijani",
+    "Umar",
+    "Yahaya",
+    "Yusuf",
+    "Zakari",
+    "Dambazau"
+   ]
+  },
+  {
+   "id": "names.other",
+   "kind": "names",
+   "eth": "other",
+   "weight": 14,
+   "faith": {
+    "christian": 0.82,
+    "muslim": 0.1
+   },
+   "male": [
+    "Efe",
+    "Osaze",
+    "Etim",
+    "Ime",
+    "Tonye",
+    "Ebi",
+    "Ogheneovo",
+    "Eyo",
+    "Bassey",
+    "Asuquo",
+    "Edet",
+    "Ovie",
+    "Tamuno",
+    "Ekene",
+    "Ibiene",
+    "Okon",
+    "Idara",
+    "Otobong",
+    "Akpan",
+    "Oghenekaro",
+    "Ejiro"
+   ],
+   "female": [
+    "Ese",
+    "Osasu",
+    "Mfon",
+    "Nse",
+    "Ibiere",
+    "Ebiere",
+    "Eno",
+    "Idara",
+    "Iyanu",
+    "Ufuoma",
+    "Ejiro",
+    "Oghenetega",
+    "Aniekan",
+    "Itohan",
+    "Imaobong",
+    "Edirin",
+    "Eseosa",
+    "Utibe"
+   ],
+   "surnames": [
+    "Okoro",
+    "Ekpo",
+    "Etim",
+    "Bassey",
+    "Edet",
+    "Okon",
+    "Akpan",
+    "Asuquo",
+    "Uduak",
+    "Idemudia",
+    "Ogbemudia",
+    "Ighodaro",
+    "Osagie",
+    "Omoruyi",
+    "Ikhide",
+    "Ibeh",
+    "Amadi",
+    "Briggs",
+    "Dickson",
+    "Tamuno"
+   ]
+  },
+  {
+   "id": "occ.trader",
+   "kind": "occupation",
+   "label": "Market trader",
+   "weight": 12,
+   "role": "ped",
+   "wage": "wage.trader",
+   "sites": [
+    "market",
+    "shops",
+    "stand"
+   ],
+   "sched": {
+    "wake": 5.5,
+    "start": 7.5,
+    "end": 18.5,
+    "jitter": 1.0,
+    "lunch": true,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 0.95,
+   "age": [
+    24,
+    58
+   ],
+   "female": 0.35,
+   "rich": [
+    0.1,
+    0.55
+   ],
+   "tales": [
+    "{He} has had the same stall for {yrs} years and knows every customer by their face and their debt.",
+    "{He} buys goods at Mile 12 before dawn and sells by afternoon, small margin, big hustle.",
+    "{He} sells provisions and treats the neighbourhood like extended family, until you ask for credit."
+   ],
+   "faction": "traders",
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#8a0b0b",
+     "#d9a441",
+     "#355070"
+    ]
+   },
+   "barks": [
+    "Oga, come buy! Correct price!",
+    "Fresh fresh! Today only!",
+    "Customer, wetin you dey find?"
+   ]
+  },
+  {
+   "id": "occ.market_woman",
+   "kind": "occupation",
+   "label": "Market woman",
+   "weight": 10,
+   "role": "ped",
+   "wage": "wage.market_woman",
+   "sites": [
+    "market",
+    "stand"
+   ],
+   "sched": {
+    "wake": 5.0,
+    "start": 7.0,
+    "end": 17.5,
+    "jitter": 1.0,
+    "lunch": true,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 0.97,
+   "age": [
+    28,
+    64
+   ],
+   "female": 1.0,
+   "rich": [
+    0.05,
+    0.5
+   ],
+   "tales": [
+    "{He} has sold tomatoes and pepper at the same spot since before the road was tarred.",
+    "{He} pays association dues faithfully and will tell you the exact day the price of rice jumped.",
+    "{He} raised {his} children from this table and wants one of them to study law."
+   ],
+   "faction": "traders",
+   "look": {
+    "top": "tee",
+    "pattern": "ankara_wave",
+    "colors": [
+     "#d9a441",
+     "#b0332a",
+     "#355070"
+    ]
+   },
+   "barks": [
+    "Mummy mi, come buy tomato!",
+    "Pepper dey cheap today!",
+    "Make you no let anybody cheat you o."
+   ]
+  },
+  {
+   "id": "occ.okada",
+   "kind": "occupation",
+   "label": "Okada rider",
+   "weight": 8,
+   "role": "ped",
+   "wage": "wage.okada",
+   "sites": [
+    "busStop",
+    "street"
+   ],
+   "sched": {
+    "wake": 5.5,
+    "start": 6.0,
+    "end": 21.0,
+    "jitter": 1.5,
+    "lunch": false,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 1.0,
+   "age": [
+    19,
+    42
+   ],
+   "female": 0.02,
+   "rich": [
+    0.0,
+    0.3
+   ],
+   "tales": [
+    "{He} bought the bike on weekly instalments and still owes the financier more than {he} admits.",
+    "{He} knows every shortcut from here to the expressway and every officer who collects at each one.",
+    "{He} came to Lagos with nothing and the bike is the only thing {he} owns that works."
+   ],
+   "faction": "okada",
+   "vehicle": "okada",
+   "look": {
+    "top": "tee",
+    "head": "cap",
+    "colors": [
+     "#1e2b3a",
+     "#5b1a16",
+     "#2f4a2c"
+    ]
+   },
+   "barks": [
+    "Oga, where you dey go? I carry you!",
+    "Bike! Bike! Short trip!"
+   ]
+  },
+  {
+   "id": "occ.danfo_driver",
+   "kind": "occupation",
+   "label": "Danfo driver",
+   "weight": 6,
+   "role": "ped",
+   "wage": "wage.danfo_driver",
+   "sites": [
+    "busStop"
+   ],
+   "sched": {
+    "wake": 5.0,
+    "start": 5.5,
+    "end": 20.5,
+    "jitter": 1.0,
+    "lunch": false,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 1.0,
+   "age": [
+    28,
+    60
+   ],
+   "female": 0.03,
+   "rich": [
+    0.0,
+    0.4
+   ],
+   "tales": [
+    "{He} has driven this route for {yrs} years, long enough to know which potholes are new.",
+    "{He} pays the park chairman every morning before the first passenger boards.",
+    "{He} owns the bus with a partner and they have not agreed on the maintenance bill since March."
+   ],
+   "faction": "union",
+   "vehicle": "danfo",
+   "look": {
+    "top": "tee",
+    "pattern": "stripe_danfo",
+    "colors": [
+     "#e8c34a"
+    ]
+   }
+  },
+  {
+   "id": "occ.conductor",
+   "kind": "occupation",
+   "label": "Danfo conductor",
+   "weight": 8,
+   "role": "ped",
+   "wage": "wage.conductor",
+   "sites": [
+    "busStop"
+   ],
+   "sched": {
+    "wake": 5.0,
+    "start": 5.5,
+    "end": 20.5,
+    "jitter": 1.0,
+    "lunch": false,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 1.0,
+   "age": [
+    17,
+    38
+   ],
+   "female": 0.02,
+   "rich": [
+    0.0,
+    0.3
+   ],
+   "tales": [
+    "{He} shouts the route from dawn and has lost {his} voice twice this year.",
+    "{He} wants to drive one day, and is saving what the chairman does not collect.",
+    "{He} fights for passengers at the park like it is a contact sport, because it is."
+   ],
+   "faction": "union",
+   "look": {
+    "top": "tee",
+    "pattern": "stripe_danfo",
+    "colors": [
+     "#e8c34a",
+     "#141414"
+    ]
+   },
+   "barks": [
+    "Oshodi Oshodi! Enter enter!",
+    "Ojuelegba, Yaba, Obalende! Move!",
+    "Chop change, no wahala! Enter!",
+    "Last seat! Last seat!"
+   ]
+  },
+  {
+   "id": "occ.keke",
+   "kind": "occupation",
+   "label": "Keke rider",
+   "weight": 5,
+   "role": "ped",
+   "wage": "wage.keke",
+   "sites": [
+    "busStop",
+    "street"
+   ],
+   "sched": {
+    "wake": 5.5,
+    "start": 6.5,
+    "end": 20.5,
+    "jitter": 1.0,
+    "lunch": false,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 1.0,
+   "age": [
+    22,
+    50
+   ],
+   "female": 0.02,
+   "rich": [
+    0.05,
+    0.35
+   ],
+   "tales": [
+    "{He} drives a rented keke and pays the owner before {he} pays {his} own landlord.",
+    "{He} swears keke is safer than okada and quicker than danfo, depending on who is listening."
+   ],
+   "faction": "okada",
+   "vehicle": "keke",
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#e8c34a",
+     "#355070"
+    ]
+   }
+  },
+  {
+   "id": "occ.mechanic",
+   "kind": "occupation",
+   "label": "Mechanic",
+   "weight": 5,
+   "role": "ped",
+   "wage": "wage.mechanic",
+   "sites": [
+    "mechanic"
+   ],
+   "sched": {
+    "wake": 6.0,
+    "start": 8.0,
+    "end": 18.5,
+    "jitter": 1.0,
+    "lunch": true,
+    "night": false,
+    "weekend": "off"
+   },
+   "outdoor": 0.9,
+   "age": [
+    22,
+    60
+   ],
+   "female": 0.03,
+   "rich": [
+    0.1,
+    0.5
+   ],
+   "tales": [
+    "{He} learned under an oga for six years before opening {his} own bay.",
+    "{He} can tell what is wrong with an engine by sound, and charges for the listening.",
+    "{He} sells tokunbo parts and swears every one came off a clean car."
+   ],
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#3e3a33",
+     "#355070",
+     "#5b1a16"
+    ]
+   },
+   "barks": [
+    "Oga, your car dey show me sign.",
+    "Original part, no fake!",
+    "Come, I go check am for you."
+   ]
+  },
+  {
+   "id": "occ.bank_staff",
+   "kind": "occupation",
+   "label": "Bank staff",
+   "weight": 3,
+   "role": "ped",
+   "wage": "wage.bank_staff",
+   "sites": [
+    "bank"
+   ],
+   "sched": {
+    "wake": 6.0,
+    "start": 8.0,
+    "end": 17.0,
+    "jitter": 0.5,
+    "lunch": true,
+    "night": false,
+    "weekend": "off"
+   },
+   "outdoor": 0.12,
+   "age": [
+    24,
+    52
+   ],
+   "female": 0.55,
+   "rich": [
+    0.45,
+    0.9
+   ],
+   "tales": [
+    "{He} counts other people's money all day and runs a salary advance by the 20th of every month.",
+    "{He} took the job after a hundred rejections and now dreams of a transfer to Lekki branch."
+   ],
+   "look": {
+    "top": "jacket",
+    "colors": [
+     "#1e2b3a",
+     "#355070"
+    ]
+   }
+  },
+  {
+   "id": "occ.police",
+   "kind": "occupation",
+   "label": "Police officer",
+   "weight": 4,
+   "role": "police",
+   "wage": "wage.police",
+   "sites": [
+    "police",
+    "street"
+   ],
+   "sched": {
+    "wake": 6.0,
+    "start": 7.0,
+    "end": 19.0,
+    "jitter": 1.0,
+    "lunch": true,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 0.9,
+   "age": [
+    22,
+    55
+   ],
+   "female": 0.12,
+   "rich": [
+    0.15,
+    0.6
+   ],
+   "tales": [
+    "{He} joined for the stability and stays for the allowances that were never on the payslip.",
+    "{He} has been posted to this division for {yrs} years and has not seen the promotion list.",
+    "{He} wants to be a good officer and has been told this is not always compatible with being a paid one."
+   ],
+   "faction": "police",
+   "barks": [
+    "Oga, your particulars?",
+    "Park well o.",
+    "Wetin dey here?"
+   ]
+  },
+  {
+   "id": "occ.area_boy",
+   "kind": "occupation",
+   "label": "Area boy",
+   "weight": 7,
+   "role": "area",
+   "wage": "wage.area_boy",
+   "sites": [
+    "street"
+   ],
+   "sched": {
+    "wake": 11.0,
+    "start": 16.0,
+    "end": 29.0,
+    "jitter": 1.5,
+    "lunch": false,
+    "night": true,
+    "weekend": "work"
+   },
+   "outdoor": 0.95,
+   "age": [
+    17,
+    40
+   ],
+   "female": 0.02,
+   "rich": [
+    0.0,
+    0.25
+   ],
+   "tales": [
+    "{He} runs the corner and collects what {he} calls security fees from anybody who needs to park.",
+    "{He} was somebody's apprentice once, and hands tell the story of how that ended.",
+    "{He} does not start trouble, {he} says, {he} only finishes it."
+   ],
+   "faction": "areaboys",
+   "barks": [
+    "Oga, na your own to settle us.",
+    "Bring something for the boys.",
+    "You dey lost?"
+   ]
+  },
+  {
+   "id": "occ.student",
+   "kind": "occupation",
+   "label": "Student",
+   "weight": 5,
+   "role": "ped",
+   "wage": "wage.student",
+   "sites": [
+    "school"
+   ],
+   "sched": {
+    "wake": 6.0,
+    "start": 8.0,
+    "end": 15.0,
+    "jitter": 0.6,
+    "lunch": true,
+    "night": false,
+    "weekend": "off"
+   },
+   "outdoor": 0.55,
+   "age": [
+    12,
+    24
+   ],
+   "female": 0.5,
+   "rich": [
+    0.1,
+    0.8
+   ],
+   "tales": [
+    "{He} sits for WAEC soon and has learnt to study by phone torch when NEPA takes light.",
+    "{He} dreams of a scholarship abroad and spends weekends on hustle to afford data."
+   ],
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#c9c1b2",
+     "#355070",
+     "#e8e0d0"
+    ]
+   },
+   "barks": [
+    "Good morning sir!",
+    "Oga, na exam time."
+   ]
+  },
+  {
+   "id": "occ.teacher",
+   "kind": "occupation",
+   "label": "Teacher",
+   "weight": 3,
+   "role": "ped",
+   "wage": "wage.teacher",
+   "sites": [
+    "school"
+   ],
+   "sched": {
+    "wake": 5.5,
+    "start": 7.0,
+    "end": 15.5,
+    "jitter": 0.5,
+    "lunch": true,
+    "night": false,
+    "weekend": "off"
+   },
+   "outdoor": 0.4,
+   "age": [
+    24,
+    58
+   ],
+   "female": 0.62,
+   "rich": [
+    0.2,
+    0.65
+   ],
+   "tales": [
+    "{He} teaches {his} third set of final year students and has not been paid the allowance since last term.",
+    "{He} runs lesson on weekends to survive the month."
+   ],
+   "look": {
+    "top": "jacket",
+    "colors": [
+     "#5a3d2b",
+     "#355070"
+    ]
+   }
+  },
+  {
+   "id": "occ.civil_servant",
+   "kind": "occupation",
+   "label": "Civil servant",
+   "weight": 4,
+   "role": "ped",
+   "wage": "wage.civil_servant",
+   "sites": [
+    "institution",
+    "bank"
+   ],
+   "sched": {
+    "wake": 6.0,
+    "start": 8.0,
+    "end": 16.0,
+    "jitter": 0.6,
+    "lunch": true,
+    "night": false,
+    "weekend": "off"
+   },
+   "outdoor": 0.25,
+   "age": [
+    26,
+    58
+   ],
+   "female": 0.5,
+   "rich": [
+    0.25,
+    0.75
+   ],
+   "tales": [
+    "{He} has been on grade level 8 for {yrs} years and knows which file will not move without a handshake.",
+    "{He} works at the local government secretariat and keeps a side shop for the real money."
+   ],
+   "look": {
+    "top": "jacket",
+    "colors": [
+     "#1e2b3a",
+     "#6b6b6b"
+    ]
+   }
+  },
+  {
+   "id": "occ.pastor",
+   "kind": "occupation",
+   "label": "Pastor",
+   "weight": 0.5,
+   "role": "ped",
+   "wage": "wage.pastor",
+   "sites": [
+    "church"
+   ],
+   "sched": {
+    "wake": 5.0,
+    "start": 9.0,
+    "end": 20.0,
+    "jitter": 0.5,
+    "lunch": false,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 0.5,
+   "age": [
+    30,
+    65
+   ],
+   "female": 0.2,
+   "rich": [
+    0.3,
+    0.85
+   ],
+   "tales": [
+    "{He} started the church in a one room hall and now runs three services on Sunday.",
+    "{He} prays for the sick, counsels the broke, and counts the offering with two deacons watching."
+   ],
+   "faction": "church",
+   "look": {
+    "top": "jacket",
+    "colors": [
+     "#141414",
+     "#355070"
+    ]
+   }
+  },
+  {
+   "id": "occ.imam",
+   "kind": "occupation",
+   "label": "Imam",
+   "weight": 0.4,
+   "role": "ped",
+   "wage": "wage.imam",
+   "sites": [
+    "mosque"
+   ],
+   "sched": {
+    "wake": 4.5,
+    "start": 9.0,
+    "end": 21.0,
+    "jitter": 0.5,
+    "lunch": false,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 0.5,
+   "age": [
+    32,
+    70
+   ],
+   "female": 0.0,
+   "rich": [
+    0.2,
+    0.7
+   ],
+   "tales": [
+    "{He} leads the five daily prayers and settles quarrels in the neighbourhood before they reach the police.",
+    "{He} teaches Quran to the children after Asr and refuses payment."
+   ],
+   "faction": "mosque",
+   "look": {
+    "top": "agbada",
+    "head": "fila",
+    "colors": [
+     "#e8e0d0",
+     "#c9c1b2"
+    ]
+   }
+  },
+  {
+   "id": "occ.shop_owner",
+   "kind": "occupation",
+   "label": "Shop owner",
+   "weight": 6,
+   "role": "ped",
+   "wage": "wage.shop_owner",
+   "sites": [
+    "shops",
+    "stand"
+   ],
+   "sched": {
+    "wake": 6.0,
+    "start": 8.0,
+    "end": 20.0,
+    "jitter": 1.0,
+    "lunch": true,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 0.9,
+   "age": [
+    26,
+    60
+   ],
+   "female": 0.45,
+   "rich": [
+    0.3,
+    0.8
+   ],
+   "tales": [
+    "{He} opened the shop with a loan from the cooperative and pays it back one carton at a time.",
+    "{He} stocks everything from recharge cards to cement and knows who is owing whom.",
+    "{He} wants a second shop before the landlord raises the rent again."
+   ],
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#355070",
+     "#2f4a2c"
+    ]
+   },
+   "barks": [
+    "Welcome, what you dey find?",
+    "We get am o!"
+   ]
+  },
+  {
+   "id": "occ.landlord",
+   "kind": "occupation",
+   "label": "Landlord",
+   "weight": 0.8,
+   "role": "ped",
+   "wage": "wage.landlord",
+   "sites": [
+    "street"
+   ],
+   "sched": {
+    "wake": 6.0,
+    "start": 10.0,
+    "end": 17.0,
+    "jitter": 1.0,
+    "lunch": true,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 0.35,
+   "age": [
+    38,
+    75
+   ],
+   "female": 0.3,
+   "rich": [
+    0.5,
+    1.0
+   ],
+   "tales": [
+    "{He} owns the compound and three others on the next street, and collects rent personally to avoid excuses.",
+    "{He} inherited the land, built the flats on credit, and never forgave a late payment."
+   ],
+   "look": {
+    "top": "agbada",
+    "colors": [
+     "#2f4a2c",
+     "#5a3d2b",
+     "#355070"
+    ]
+   }
+  },
+  {
+   "id": "occ.hustler",
+   "kind": "occupation",
+   "label": "Hustler",
+   "weight": 7,
+   "role": "ped",
+   "wage": "wage.hustler",
+   "sites": [
+    "street"
+   ],
+   "sched": {
+    "wake": 7.0,
+    "start": 9.0,
+    "end": 20.0,
+    "jitter": 2.0,
+    "lunch": false,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 1.0,
+   "age": [
+    18,
+    45
+   ],
+   "female": 0.3,
+   "rich": [
+    0.0,
+    0.35
+   ],
+   "tales": [
+    "{He} does a bit of everything: recharge cards, phones, errands, small small business.",
+    "{He} has three side hustles and a plan for a fourth.",
+    "{He} knows somebody who knows somebody, and that is a fully working business model."
+   ],
+   "barks": [
+    "Oga, I fit get am for you.",
+    "Wetin you need? I sabi person."
+   ]
+  },
+  {
+   "id": "occ.food_vendor",
+   "kind": "occupation",
+   "label": "Food vendor",
+   "weight": 7,
+   "role": "ped",
+   "wage": "wage.food_vendor",
+   "sites": [
+    "food",
+    "street",
+    "market"
+   ],
+   "sched": {
+    "wake": 4.5,
+    "start": 6.5,
+    "end": 21.0,
+    "jitter": 1.0,
+    "lunch": false,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 1.0,
+   "age": [
+    24,
+    62
+   ],
+   "female": 0.85,
+   "rich": [
+    0.05,
+    0.4
+   ],
+   "tales": [
+    "{He} runs a buka that is famous for beans and plantain, and infamous for slow service.",
+    "{He} starts the pot at five and has sold out before three most days."
+   ],
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#b0332a",
+     "#e8e0d0",
+     "#d9a441"
+    ]
+   },
+   "barks": [
+    "Rice and stew! Hot hot!",
+    "Amala is ready!",
+    "Buka open o!"
+   ]
+  },
+  {
+   "id": "occ.hawker",
+   "kind": "occupation",
+   "label": "Hawker",
+   "weight": 6,
+   "role": "ped",
+   "wage": "wage.hawker",
+   "sites": [
+    "busStop",
+    "street"
+   ],
+   "sched": {
+    "wake": 5.5,
+    "start": 6.5,
+    "end": 20.0,
+    "jitter": 1.5,
+    "lunch": false,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 1.0,
+   "age": [
+    14,
+    40
+   ],
+   "female": 0.4,
+   "rich": [
+    0.0,
+    0.25
+   ],
+   "tales": [
+    "{He} sells sachet water, gala, and phone chargers to anybody stuck in traffic.",
+    "{He} runs between cars with a tray on {his} head and has never been hit, so far."
+   ],
+   "barks": [
+    "Pure water! Cold cold!",
+    "Gala! Gala! Gala!",
+    "Charger! Original!"
+   ]
+  },
+  {
+   "id": "occ.guard",
+   "kind": "occupation",
+   "label": "Security guard",
+   "weight": 5,
+   "role": "ped",
+   "wage": "wage.guard",
+   "sites": [
+    "bank",
+    "shops",
+    "institution",
+    "street"
+   ],
+   "sched": {
+    "wake": 17.0,
+    "start": 18.0,
+    "end": 30.0,
+    "jitter": 1.0,
+    "lunch": false,
+    "night": true,
+    "weekend": "work"
+   },
+   "outdoor": 0.9,
+   "age": [
+    24,
+    58
+   ],
+   "female": 0.03,
+   "rich": [
+    0.0,
+    0.4
+   ],
+   "tales": [
+    "{He} works the night shift and sleeps through the afternoon, if the generator allows.",
+    "{He} guards a gate for a salary smaller than what the gate is worth."
+   ],
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#141414",
+     "#3e3a33"
+    ],
+    "head": "cap"
+   }
+  },
+  {
+   "id": "occ.nurse",
+   "kind": "occupation",
+   "label": "Nurse",
+   "weight": 3,
+   "role": "ped",
+   "wage": "wage.nurse",
+   "sites": [
+    "hospital"
+   ],
+   "sched": {
+    "wake": 5.5,
+    "start": 7.0,
+    "end": 19.0,
+    "jitter": 1.0,
+    "lunch": true,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 0.2,
+   "age": [
+    23,
+    55
+   ],
+   "female": 0.82,
+   "rich": [
+    0.2,
+    0.7
+   ],
+   "tales": [
+    "{He} works double shifts and has a plan to go abroad that {his} mother refuses to hear about.",
+    "{He} patches up everybody who comes through the door and does not judge the stories."
+   ],
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#e8e0d0",
+     "#c9c1b2"
+    ]
+   }
+  },
+  {
+   "id": "occ.fuel_attendant",
+   "kind": "occupation",
+   "label": "Fuel attendant",
+   "weight": 3,
+   "role": "ped",
+   "wage": "wage.fuel_attendant",
+   "sites": [
+    "fuel"
+   ],
+   "sched": {
+    "wake": 5.5,
+    "start": 6.5,
+    "end": 20.0,
+    "jitter": 1.0,
+    "lunch": true,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 1.0,
+   "age": [
+    20,
+    45
+   ],
+   "female": 0.35,
+   "rich": [
+    0.0,
+    0.3
+   ],
+   "tales": [
+    "{He} knows the pump price before the board does, because customers complain first.",
+    "{He} stands in the sun all day and makes peace between drivers in the queue."
+   ],
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#b0332a",
+     "#e8e0d0"
+    ]
+   }
+  },
+  {
+   "id": "occ.artisan",
+   "kind": "occupation",
+   "label": "Tailor or barber",
+   "weight": 5,
+   "role": "ped",
+   "wage": "wage.artisan",
+   "sites": [
+    "shops",
+    "stand",
+    "street"
+   ],
+   "sched": {
+    "wake": 6.0,
+    "start": 8.5,
+    "end": 20.0,
+    "jitter": 1.0,
+    "lunch": true,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 0.9,
+   "age": [
+    20,
+    55
+   ],
+   "female": 0.4,
+   "rich": [
+    0.1,
+    0.5
+   ],
+   "tales": [
+    "{He} cuts hair and stitches clothes in the same shop and does both better than the competition.",
+    "{He} has two apprentices and no patience for either of them."
+   ],
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#8a0b0b",
+     "#355070",
+     "#e8e0d0"
+    ]
+   }
+  },
+  {
+   "id": "occ.pos_agent",
+   "kind": "occupation",
+   "label": "POS agent",
+   "weight": 4,
+   "role": "ped",
+   "wage": "wage.pos_agent",
+   "sites": [
+    "stand",
+    "shops",
+    "street"
+   ],
+   "sched": {
+    "wake": 6.0,
+    "start": 7.5,
+    "end": 20.5,
+    "jitter": 1.0,
+    "lunch": true,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 1.0,
+   "age": [
+    20,
+    40
+   ],
+   "female": 0.5,
+   "rich": [
+    0.1,
+    0.45
+   ],
+   "tales": [
+    "{He} runs a POS stand and knows exactly when the network will fail and charges extra anyway.",
+    "{He} sits under an umbrella with a machine and a faithful queue."
+   ],
+   "look": {
+    "top": "tee",
+    "colors": [
+     "#355070",
+     "#d9a441"
+    ]
+   },
+   "barks": [
+    "Withdraw! Transfer! Quick!",
+    "Network dey today o."
+   ]
+  },
+  {
+   "id": "occ.unemployed",
+   "kind": "occupation",
+   "label": "Jobless",
+   "weight": 5,
+   "role": "ped",
+   "wage": "wage.unemployed",
+   "sites": [
+    "street"
+   ],
+   "sched": {
+    "wake": 8.0,
+    "start": 12.0,
+    "end": 18.0,
+    "jitter": 2.0,
+    "lunch": false,
+    "night": false,
+    "weekend": "work"
+   },
+   "outdoor": 1.0,
+   "age": [
+    18,
+    45
+   ],
+   "female": 0.35,
+   "rich": [
+    0.0,
+    0.3
+   ],
+   "tales": [
+    "{He} has been between jobs for a while and has stopped calling it a break.",
+    "{He} sends CVs on Monday and stands at the junction by Wednesday."
+   ]
+  },
+  {
+   "id": "fac.areaboys",
+   "kind": "faction",
+   "label": "Area boys",
+   "ranks": [
+    "Omo ita",
+    "Soldier",
+    "Lieutenant",
+    "Street boss",
+    "Area chairman"
+   ],
+   "names": [
+    "{area} Boys",
+    "{area} Elements",
+    "Gbenga's Street, {area}"
+   ],
+   "cell": "cell",
+   "levy": 0.04
+  },
+  {
+   "id": "fac.union",
+   "kind": "faction",
+   "label": "Transport union",
+   "ranks": [
+    "Member",
+    "Conductor chief",
+    "Park chairman",
+    "Zone chairman",
+    "Branch chairman"
+   ],
+   "names": [
+    "{area} Park Union",
+    "{area} Transport Workers"
+   ],
+   "cell": "site",
+   "siteKind": "busStop",
+   "levy": 0.05
+  },
+  {
+   "id": "fac.okada",
+   "kind": "faction",
+   "label": "Okada association",
+   "ranks": [
+    "Rider",
+    "Stand captain",
+    "Stand chairman",
+    "Zone coordinator"
+   ],
+   "names": [
+    "{area} Okada Riders",
+    "{area} Keke Association"
+   ],
+   "cell": "cell",
+   "levy": 0.03
+  },
+  {
+   "id": "fac.traders",
+   "kind": "faction",
+   "label": "Traders association",
+   "ranks": [
+    "Member",
+    "Row leader",
+    "Deputy Iyaloja",
+    "Iyaloja or Babaloja"
+   ],
+   "names": [
+    "{area} Market Association",
+    "{area} Traders Union"
+   ],
+   "cell": "site",
+   "siteKind": "market",
+   "levy": 0.02
+  },
+  {
+   "id": "fac.police",
+   "kind": "faction",
+   "label": "Police division",
+   "ranks": [
+    "Constable",
+    "Corporal",
+    "Sergeant",
+    "Inspector",
+    "Divisional officer"
+   ],
+   "names": [
+    "{area} Division",
+    "{area} Police Station"
+   ],
+   "cell": "site",
+   "siteKind": "police",
+   "levy": 0.0
+  },
+  {
+   "id": "fac.church",
+   "kind": "faction",
+   "label": "Congregation",
+   "ranks": [
+    "Member",
+    "Usher",
+    "Elder",
+    "Pastor"
+   ],
+   "names": [
+    "{area} Gospel Assembly",
+    "{area} Faith Centre"
+   ],
+   "cell": "site",
+   "siteKind": "church",
+   "levy": 0.1
+  },
+  {
+   "id": "fac.mosque",
+   "kind": "faction",
+   "label": "Jamaa",
+   "ranks": [
+    "Member",
+    "Muezzin",
+    "Alfa",
+    "Imam"
+   ],
+   "names": [
+    "{area} Central Mosque",
+    "{area} Jamaa"
+   ],
+   "cell": "site",
+   "siteKind": "mosque",
+   "levy": 0.025
+  },
+  {
+   "id": "trait.hothead",
+   "kind": "trait",
+   "label": "Hot tempered",
+   "aggression": 0.35,
+   "courage": 0.1,
+   "greed": 0.0,
+   "loyalty": -0.05,
+   "faith": 0.0,
+   "vengeful": false,
+   "weight": 8
+  },
+  {
+   "id": "trait.calm",
+   "kind": "trait",
+   "label": "Calm",
+   "aggression": -0.25,
+   "courage": 0.05,
+   "greed": -0.05,
+   "loyalty": 0.1,
+   "faith": 0.0,
+   "vengeful": false,
+   "weight": 10
+  },
+  {
+   "id": "trait.coward",
+   "kind": "trait",
+   "label": "Cowardly",
+   "aggression": -0.2,
+   "courage": -0.4,
+   "greed": 0.05,
+   "loyalty": -0.1,
+   "faith": 0.0,
+   "vengeful": false,
+   "weight": 6
+  },
+  {
+   "id": "trait.brave",
+   "kind": "trait",
+   "label": "Brave",
+   "aggression": 0.1,
+   "courage": 0.4,
+   "greed": -0.05,
+   "loyalty": 0.1,
+   "faith": 0.0,
+   "vengeful": false,
+   "weight": 6
+  },
+  {
+   "id": "trait.greedy",
+   "kind": "trait",
+   "label": "Greedy",
+   "aggression": 0.05,
+   "courage": 0.0,
+   "greed": 0.4,
+   "loyalty": -0.2,
+   "faith": 0.0,
+   "vengeful": false,
+   "weight": 9
+  },
+  {
+   "id": "trait.generous",
+   "kind": "trait",
+   "label": "Generous",
+   "aggression": -0.1,
+   "courage": 0.05,
+   "greed": -0.35,
+   "loyalty": 0.2,
+   "faith": 0.0,
+   "vengeful": false,
+   "weight": 7
+  },
+  {
+   "id": "trait.loyal",
+   "kind": "trait",
+   "label": "Loyal",
+   "aggression": 0.0,
+   "courage": 0.1,
+   "greed": -0.1,
+   "loyalty": 0.4,
+   "faith": 0.0,
+   "vengeful": false,
+   "weight": 8
+  },
+  {
+   "id": "trait.slippery",
+   "kind": "trait",
+   "label": "Slippery",
+   "aggression": 0.0,
+   "courage": -0.05,
+   "greed": 0.2,
+   "loyalty": -0.4,
+   "faith": 0.0,
+   "vengeful": false,
+   "weight": 6
+  },
+  {
+   "id": "trait.vengeful",
+   "kind": "trait",
+   "label": "Never forgets",
+   "aggression": 0.1,
+   "courage": 0.1,
+   "greed": 0.0,
+   "loyalty": 0.0,
+   "faith": 0.0,
+   "vengeful": true,
+   "weight": 6
+  },
+  {
+   "id": "trait.forgiving",
+   "kind": "trait",
+   "label": "Forgives easily",
+   "aggression": -0.15,
+   "courage": 0.0,
+   "greed": -0.1,
+   "loyalty": 0.1,
+   "faith": 0.0,
+   "vengeful": false,
+   "weight": 7
+  },
+  {
+   "id": "trait.pious",
+   "kind": "trait",
+   "label": "Devout",
+   "aggression": -0.1,
+   "courage": 0.05,
+   "greed": -0.15,
+   "loyalty": 0.15,
+   "faith": 0.5,
+   "vengeful": false,
+   "weight": 8
+  },
+  {
+   "id": "trait.proud",
+   "kind": "trait",
+   "label": "Proud",
+   "aggression": 0.2,
+   "courage": 0.15,
+   "greed": 0.05,
+   "loyalty": 0.0,
+   "faith": 0.0,
+   "vengeful": true,
+   "weight": 7
+  },
+  {
+   "id": "trait.charming",
+   "kind": "trait",
+   "label": "Charming",
+   "aggression": -0.05,
+   "courage": 0.05,
+   "greed": 0.05,
+   "loyalty": 0.0,
+   "faith": 0.0,
+   "vengeful": false,
+   "weight": 6
+  },
+  {
+   "id": "trait.stubborn",
+   "kind": "trait",
+   "label": "Stubborn",
+   "aggression": 0.1,
+   "courage": 0.2,
+   "greed": 0.0,
+   "loyalty": 0.1,
+   "faith": 0.0,
+   "vengeful": true,
+   "weight": 6
+  },
+  {
+   "id": "bs.origin.1",
+   "kind": "backstory",
+   "slot": "origin",
+   "text": "{Name} grew up in {area} and has never really left."
+  },
+  {
+   "id": "bs.origin.2",
+   "kind": "backstory",
+   "slot": "origin",
+   "text": "{Name} was born in {area}, the third of five children."
+  },
+  {
+   "id": "bs.origin.3",
+   "kind": "backstory",
+   "slot": "origin",
+   "text": "{Name} came to Lagos from {state} at nineteen with one bag and an uncle's phone number."
+  },
+  {
+   "id": "bs.origin.4",
+   "kind": "backstory",
+   "slot": "origin",
+   "text": "{Name} moved to {area} after the family land in {state} was sold under {his} father."
+  },
+  {
+   "id": "bs.origin.5",
+   "kind": "backstory",
+   "slot": "origin",
+   "text": "{Name} was raised by {his} grandmother in {area} while {his} parents worked abroad."
+  },
+  {
+   "id": "bs.origin.6",
+   "kind": "backstory",
+   "slot": "origin",
+   "text": "{Name} arrived from {state} during the rains and slept in a mechanic's workshop for the first month.",
+   "minAge": 22
+  },
+  {
+   "id": "bs.origin.7",
+   "kind": "backstory",
+   "slot": "origin",
+   "text": "{Name} has lived on the same street in {area} since primary school.",
+   "minAge": 18
+  },
+  {
+   "id": "bs.origin.8",
+   "kind": "backstory",
+   "slot": "origin",
+   "text": "{Name} is the first in {his} family to finish secondary school.",
+   "maxAge": 32
+  },
+  {
+   "id": "bs.origin.9",
+   "kind": "backstory",
+   "slot": "origin",
+   "text": "{Name} is from {state} and speaks of home with equal parts longing and relief.",
+   "eth": [
+    "igbo",
+    "hausa",
+    "other"
+   ]
+  },
+  {
+   "id": "bs.origin.10",
+   "kind": "backstory",
+   "slot": "origin",
+   "text": "{Name} was a child when {area} still had open drains and one working street light.",
+   "minAge": 40
+  },
+  {
+   "id": "bs.turn.1",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "A fire took the family shop in 2019 and nobody was ever blamed."
+  },
+  {
+   "id": "bs.turn.2",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "{He} lost a brother to a police bullet at a checkpoint and does not talk about it.",
+   "minAge": 20
+  },
+  {
+   "id": "bs.turn.3",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "{He} was scammed out of the school fees savings by a man who called himself a pastor."
+  },
+  {
+   "id": "bs.turn.4",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "{He} once went to jail for a weekend over a misunderstanding with an officer and has remembered every face since.",
+   "minAge": 20
+  },
+  {
+   "id": "bs.turn.5",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "{He} got into a fight at fifteen that left {him} with a scar and a reputation.",
+   "maxAge": 45
+  },
+  {
+   "id": "bs.turn.6",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "A flood took the room and everything in it, and {he} has kept receipts for everything since."
+  },
+  {
+   "id": "bs.turn.7",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "{He} was robbed at gunpoint on the way home and moved house within the month.",
+   "minAge": 18
+  },
+  {
+   "id": "bs.turn.8",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "{He} lost a business partner who vanished with the money and the van.",
+   "minAge": 25
+  },
+  {
+   "id": "bs.turn.9",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "{He} was beaten by a mob once for something {he} did not do, and has been wary of crowds since."
+  },
+  {
+   "id": "bs.turn.10",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "{He} won a small contract once, and the memory of what it paid keeps {him} chasing the next one.",
+   "minAge": 24
+  },
+  {
+   "id": "bs.turn.11",
+   "kind": "backstory",
+   "slot": "turn",
+   "text": "{He} buried a parent last year and is still paying for the funeral.",
+   "minAge": 22
+  },
+  {
+   "id": "bs.ambition.1",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} wants to open a bigger place before the next Christmas."
+  },
+  {
+   "id": "bs.ambition.2",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} is saving to leave Lagos and start again somewhere quiet.",
+   "minAge": 25
+  },
+  {
+   "id": "bs.ambition.3",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} wants to be respected on this street and has a plan for how.",
+   "occ": [
+    "occ.area_boy",
+    "occ.hustler",
+    "occ.unemployed",
+    "occ.okada",
+    "occ.conductor"
+   ]
+  },
+  {
+   "id": "bs.ambition.4",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} wants {his} children to never do this kind of work.",
+   "minAge": 28
+  },
+  {
+   "id": "bs.ambition.5",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} is waiting for one good contract to change everything."
+  },
+  {
+   "id": "bs.ambition.6",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} dreams of a visa and a flight, in that order.",
+   "maxAge": 38
+  },
+  {
+   "id": "bs.ambition.7",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} wants to own the land under {his} feet and trusts nobody with the papers.",
+   "minAge": 30
+  },
+  {
+   "id": "bs.ambition.8",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} is climbing and does not mind who is standing on the step above.",
+   "occ": [
+    "occ.police",
+    "occ.civil_servant",
+    "occ.bank_staff",
+    "occ.area_boy",
+    "occ.conductor"
+   ]
+  },
+  {
+   "id": "bs.ambition.9",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} prays for peace and keeps a cutlass under the bed anyway.",
+   "minAge": 30
+  },
+  {
+   "id": "bs.ambition.10",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} wants to finish school, whatever it takes.",
+   "occ": [
+    "occ.student",
+    "occ.hustler",
+    "occ.unemployed"
+   ]
+  },
+  {
+   "id": "bs.ambition.11",
+   "kind": "backstory",
+   "slot": "ambition",
+   "text": "{He} is tired and just wants the month to end with a little left over.",
+   "minAge": 30
+  },
+  {
+   "id": "taunt.hurt.1",
+   "kind": "taunt",
+   "when": "hurt",
+   "lines": [
+    "You remember me? {place}. You touched me there and thought it was finished.",
+    "Ah ah! Na you. {place}, you carry hand for me. I no forget.",
+    "I dey wait for you since {place}. Today na today."
+   ]
+  },
+  {
+   "id": "taunt.hurt.areaboys.1",
+   "kind": "taunt",
+   "when": "hurt",
+   "lines": [
+    "{Name} still dey here. You thought I go forget {place}?",
+    "You wan run again? Like {place}?"
+   ],
+   "faction": "areaboys"
+  },
+  {
+   "id": "taunt.robbed.1",
+   "kind": "taunt",
+   "when": "robbed",
+   "lines": [
+    "You collect my money for {place}. Bring am back, or bring your head.",
+    "Na you rob me! {place}! I get your face for my mind.",
+    "My money wey you take for {place}? I never finish counting am."
+   ]
+  },
+  {
+   "id": "taunt.carjacked.1",
+   "kind": "taunt",
+   "when": "carjacked",
+   "lines": [
+    "You carry my {item} for {place}! Where e dey?",
+    "Oga, my {item}. {place}. You think say Lagos wide pass my memory?",
+    "Na you steal my {item}! I never recover from that wahala."
+   ]
+  },
+  {
+   "id": "taunt.carjacked.okada.1",
+   "kind": "taunt",
+   "when": "carjacked",
+   "lines": [
+    "Thief! Thief! Na my {item} you take for {place}!",
+    "Hold am! This one carry my {item} for {place}!"
+   ],
+   "faction": "okada"
+  },
+  {
+   "id": "taunt.beat_you.1",
+   "kind": "taunt",
+   "when": "beat_you",
+   "lines": [
+    "I put you down for {place} and now you dey walk for my street?",
+    "Remember {place}? You were on the ground and I was standing. Make you no forget.",
+    "They call me {rank} now. Na you help me reach there, after {place}."
+   ]
+  },
+  {
+   "id": "taunt.survived.1",
+   "kind": "taunt",
+   "when": "survived",
+   "lines": [
+    "You thought you finish me for {place}. I still dey stand.",
+    "I survive {place}. Look my face. Look am well.",
+    "Na God save me for {place}. Now na your turn."
+   ]
+  },
+  {
+   "id": "taunt.killed_kin.1",
+   "kind": "taunt",
+   "when": "killed_kin",
+   "lines": [
+    "You kill my {rel} for {place}. I swear, one of us no go leave here.",
+    "My {rel} dey for ground because of you, {place}. This one na family matter."
+   ]
+  },
+  {
+   "id": "taunt.returned.1",
+   "kind": "taunt",
+   "when": "returned",
+   "lines": [
+    "You thought I die? {place} no fit finish me. I come back stronger.",
+    "Dead man dey talk to you. {place}. Say your prayer.",
+    "Look at me. You do this, {place}. I come back with friends."
+   ]
+  },
+  {
+   "id": "taunt.betrayed.1",
+   "kind": "taunt",
+   "when": "betrayed",
+   "lines": [
+    "I trusted you and you sold me for small money. Never again.",
+    "Na you spoil my name. I go spoil yours."
+   ]
+  },
+  {
+   "id": "taunt.witnessed.1",
+   "kind": "taunt",
+   "when": "witnessed",
+   "lines": [
+    "I see wetin you do for {place}. I no go talk, but I no go forget.",
+    "Please, abeg, no do me anything. I no tell anybody about {place}."
+   ]
+  },
+  {
+   "id": "taunt.helped.1",
+   "kind": "taunt",
+   "when": "helped",
+   "lines": [
+    "Ah, my person! You remember me? {place}. I never forget your help.",
+    "Na you help me for {place}. Anything you need, just call me.",
+    "God go bless you for {place}. You get one person for this street."
+   ]
+  },
+  {
+   "id": "taunt.tipped.1",
+   "kind": "taunt",
+   "when": "tipped",
+   "lines": [
+    "Oga, the small money wey you drop for me for {place}, e save my week. Thank you.",
+    "You be good person. I go carry your name for prayers."
+   ]
+  },
+  {
+   "id": "taunt.met.1",
+   "kind": "taunt",
+   "when": "met",
+   "lines": [
+    "Oga, I know you. Everybody for {area} don hear.",
+    "You be the one from {place}? Na you.",
+    "Hmm. See who come {area} today."
+   ]
+  },
+  {
+   "id": "taunt.promoted.1",
+   "kind": "taunt",
+   "when": "promoted",
+   "lines": [
+    "Na you make me {rank}. Remember dat.",
+    "E no be small thing. {rank} {Name}, that is me now."
+   ]
+  },
+  {
+   "id": "taunt.ambush.1",
+   "kind": "taunt",
+   "when": "ambush",
+   "lines": [
+    "Una hold am! Na this one!",
+    "We don find you. {place} no go save you.",
+    "Today you go pay for {place}."
+   ]
+  },
+  {
+   "id": "taunt.fear.1",
+   "kind": "taunt",
+   "when": "fear",
+   "lines": [
+    "Abeg, abeg, I no get anything.",
+    "Oga please, I no do anything.",
+    "Ah! Na you again! Please, I get family!"
+   ]
+  },
+  {
+   "id": "taunt.ally_join.1",
+   "kind": "taunt",
+   "when": "ally_join",
+   "lines": [
+    "Oga, I dey with you! Make we handle these guys!",
+    "Na my person dey inside wahala. Move!",
+    "You no go fight alone! I reach!"
+   ]
+  },
+  {
+   "id": "taunt.ally_greet.1",
+   "kind": "taunt",
+   "when": "ally_greet",
+   "lines": [
+    "My guy! You dey alright?",
+    "Na you be dat! Lagos small o.",
+    "Oga, anything you need, I dey around."
+   ]
+  },
+  {
+   "id": "taunt.ally_betray.1",
+   "kind": "taunt",
+   "when": "ally_betray",
+   "lines": [
+    "I no wan do this, but I get my own matter. Sorry, my guy."
+   ]
+  },
+  {
+   "id": "evt.robbery",
+   "kind": "cityEvent",
+   "label": "Street robbery",
+   "rate": 0.9,
+   "days": [
+    0,
+    0
+   ],
+   "news": [
+    "Robbery at {area}: {victim} lost {amount} to two men on a bike.",
+    "Phone snatching spree around {area}, residents say it is getting worse.",
+    "{area} traders lament after robbers took the day's takings."
+   ],
+   "toast": "Robbery near you"
+  },
+  {
+   "id": "evt.raid",
+   "kind": "cityEvent",
+   "label": "Police raid",
+   "rate": 0.35,
+   "days": [
+    0,
+    0
+   ],
+   "shock": null,
+   "news": [
+    "Police raid at {area}, {n} suspects picked up.",
+    "Officers swept the {site} at {area} overnight. {n} arrests.",
+    "{area} Division parades {n} suspected area boys."
+   ],
+   "site": "bar",
+   "toast": "Police raid close by"
+  },
+  {
+   "id": "evt.union_fight",
+   "kind": "cityEvent",
+   "label": "Union clash",
+   "rate": 0.25,
+   "days": [
+    0,
+    0
+   ],
+   "news": [
+    "Two factions clashed at {area}. Traffic was stuck for hours.",
+    "NURTW-style tussle at {area} park: {n} hurt, bus fares up.",
+    "Park chairmen disagree at {area}, passengers stranded."
+   ],
+   "site": "busStop",
+   "toast": "Fight at the park"
+  },
+  {
+   "id": "evt.market_fire",
+   "kind": "cityEvent",
+   "label": "Market fire",
+   "rate": 0.06,
+   "days": [
+    1,
+    3
+   ],
+   "shock": "shock.market_fire",
+   "news": [
+    "Fire razes stalls at {area} market. Traders count their losses.",
+    "Market fire at {area}: food prices jump as traders lose stock."
+   ],
+   "site": "market",
+   "toast": "Market on fire"
+  },
+  {
+   "id": "evt.fuel_queue",
+   "kind": "cityEvent",
+   "label": "Fuel queue",
+   "rate": 0.06,
+   "days": [
+    2,
+    5
+   ],
+   "shock": "shock.fuel_queue",
+   "news": [
+    "Long queues at filling stations as fuel scarcity bites.",
+    "Petrol now sells for {price} per litre as supply tightens."
+   ],
+   "site": "fuel",
+   "toast": "Fuel scarcity"
+  },
+  {
+   "id": "evt.okada_ban",
+   "kind": "cityEvent",
+   "label": "Okada ban",
+   "rate": 0.025,
+   "days": [
+    4,
+    9
+   ],
+   "shock": "shock.okada_ban",
+   "news": [
+    "State government bans okada on major roads. Riders are lost.",
+    "Okada ban begins. Keke and danfo fares go up.",
+    "Riders protest the okada restriction at {area}."
+   ],
+   "toast": "Okada ban"
+  },
+  {
+   "id": "evt.rush",
+   "kind": "cityEvent",
+   "label": "Rush hour jam",
+   "rate": 0.0,
+   "days": [
+    0,
+    0
+   ],
+   "hours": [
+    7,
+    9.5
+   ],
+   "news": [
+    "Heavy traffic on every major road. Leave home early or do not leave."
+   ],
+   "toast": "Go slow"
+  },
+  {
+   "id": "evt.strike",
+   "kind": "cityEvent",
+   "label": "Transport strike",
+   "rate": 0.03,
+   "days": [
+    1,
+    2
+   ],
+   "shock": "shock.strike",
+   "news": [
+    "Transport workers down tools. Commuters walk to work.",
+    "Strike at the parks: fares triple for those who find a bus."
+   ],
+   "toast": "Transport strike"
+  },
+  {
+   "id": "evt.blackout",
+   "kind": "cityEvent",
+   "label": "Blackout",
+   "rate": 0.05,
+   "days": [
+    1,
+    2
+   ],
+   "shock": "shock.blackout",
+   "news": [
+    "Grid collapse. Generator sales rise, fuel too.",
+    "Power cut across the corridor, fridge-sellers worried."
+   ],
+   "toast": "Power cut"
+  }
+ ]
+}
