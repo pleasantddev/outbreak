@@ -416,6 +416,7 @@ function loop(t: number) {
   if (view.firstPerson && sim.local.vehicle !== null) cockpit();
   if (started && !hud.landmapOn && modalDepth === 0) {
     const cmd = command(f, camInfo.aimDir, pad);
+    if (ctx) for (const s of SYSTEMS) s.filterCommand?.(ctx, cmd);
     acc += Math.min(dt, 0.1); let steps = 0;
     while (acc >= 1 / 60 && steps < 4) {
       sim.setCommand(0, cmd); sim.step(1 / 60);
@@ -429,6 +430,7 @@ function loop(t: number) {
   syncColliders();
   view.phoneUp = hud.phoneUp;
   if (stageOn) { stage!.update(dt); front?.update(dt); }
+  if (ctx && started) for (const s of SYSTEMS) s.preRender?.(ctx, dt);
   if (!modalFull) view.frame(dt);
   if (ctx && started) for (const s of SYSTEMS) s.frame?.(ctx, dt);
   if (stageOn) stage!.showPlayer(false);
@@ -462,6 +464,7 @@ function loop(t: number) {
     let pr: string | null = null;
     if (me.vehicle === null) for (const v of sim.liveVehicles()) { const p = v.body.translation(); if (Math.hypot(p.x - me.pos.x, p.z - me.pos.z) < 4) { pr = v.seats[0] !== null ? '<kbd>E</kbd>Jack this car' : (v as any).locked ? '<kbd>E</kbd>Break in' : '<kbd>E</kbd>Get in'; break; } }
     else pr = null;
+    if (ctx) for (const s of SYSTEMS) { const sp = s.prompt?.(ctx); if (sp) { pr = sp; break; } }
     hud.prompt(pr);
     if (Math.random() < dt * 0.2) persist({ ...state, cash: sim.cash });
   }

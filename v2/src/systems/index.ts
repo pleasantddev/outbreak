@@ -6,7 +6,7 @@ import { nemesisSystem } from './nemesis';
 import { garage } from './garage';
 import { identity } from './identity';
 import { skills } from './skills';
-import { missions } from './missions';
+import { missions } from './missions'; import { lifeSystem } from './life'; import { vendorSystem } from './life/vendors';
 // net goes first: it signs the player in during init, before the lobby and before other systems read their saved state
 export const SYSTEMS: GameSystem[] = [
   netSystem,
@@ -14,4 +14,6 @@ export const SYSTEMS: GameSystem[] = [
   societySystem, nemesisSystem,
   garage, identity,
   missions, // missions, events, routes: content/missions.json etc.
+  lifeSystem, // needs, smart objects, the pie, your room
+  vendorSystem, // market women, mama put, suya, pay toilets: haggle for everything
 ];

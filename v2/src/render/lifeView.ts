@@ -58,6 +58,8 @@ export class LifeView {
   /** a system can keep the world streaming around a place other than the player (for example while inside a house interior) */
   focusOverride: THREE.Vector3 | null = null;
   time = 0; hurt = 0; phoneBlend = 0; phoneUp = false; firstPerson = false;
+  /** game clock multiplier (sleep fast-forwards time) */
+  timeScale = 1;
   crowd: { g: THREE.Object3D; x: number; z: number }[] = []; private crowdT = 0;
   /** LANDMAP: an aerial camera over the city with every plot outlined by status */
   landmap = { on: false, x: 0, z: 0, h: 320, sel: '', builtAt: { x: 1e9, z: 1e9 }, owned: [] as string[], lines: null as THREE.LineSegments | null, fill: null as THREE.Mesh | null };
@@ -77,7 +79,7 @@ export class LifeView {
     this.camera = new THREE.PerspectiveCamera(65, 1, 0.1, 2600);
     this.composer = new EffectComposer(this.renderer, { frameBufferType: THREE.HalfFloatType });
     this.renderPass = new RenderPass(this.scene, this.camera); this.composer.addPass(this.renderPass);
-    this.composer.autoRenderToScreen = false;
+    this.composer.autoRenderToScreen = false; this.renderPass.renderToScreen = false;
     this.atmo = new Atmosphere(this.scene, this.renderer, this.level, opts);
     this.world = new WorldStreamer(this.renderer, store, tg, tw, quality);
     this.world.radius = L.radius;
@@ -195,7 +197,7 @@ export class LifeView {
     const focus = L.on ? new THREE.Vector3(L.x, 0, L.z) : this.focusOverride ?? focus0;
     this.world.update(focus.x, focus.z);
     if (L.on) this.landmapFrame();
-    const env = this.atmo.update(dt, focus, cam);
+    const env = this.atmo.update(dt, focus, cam, 30 * this.timeScale);
     if (L.on) { const fg = this.scene.fog as THREE.FogExp2 | null; if (fg && 'density' in fg) fg.density = Math.min(fg.density, 0.00035); this.atmo.rain.visible = false; }
     (sim as any).wet = this.atmo.wet; (sim as any).water = this.atmo.water;
     this.fx.update(dt, cam.position, { active: false, pos: { x: 0, y: -999, z: 0 }, carried: false } as any, { cx: 0, cz: 0, r: 99999, active: false } as any, [], this.time);
@@ -233,7 +235,9 @@ export class LifeView {
       };
       v.fireEdge = v.reloadEdge = v.meleeEdge = false; v.hit = Math.max(0, v.hit - dt);
       const em = (a as any).emote as { clip: string; until: number } | undefined; // multiplayer emotes (systems/net.ts)
-      if (em) { if (performance.now() < em.until && sp < 0.3 && a.vehicle === null && a.alive) { st.anim = 'emote'; st.clip = em.clip; st.armed = false; } else (a as any).emote = undefined; }
+      const act = (a as any).act as { clip: string; hold?: number; speed?: number; yaw?: number } | undefined; // life-sim actions (systems/life)
+      if (act && a.vehicle === null && a.alive) { st.anim = 'emote'; st.clip = act.clip; st.clipHold = act.hold; st.clipSpeed = act.speed; st.faceYaw = act.yaw; st.armed = false; }
+      else if (em) { if (performance.now() < em.until && sp < 0.3 && a.vehicle === null && a.alive) { st.anim = 'emote'; st.clip = em.clip; st.armed = false; } else (a as any).emote = undefined; }
       if (a.vehicle !== null) {
         const veh = sim.vehicles[a.vehicle]; const r = veh.body.rotation(); const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w)); st.aimYaw = Math.atan2(fw.x, fw.z);
         const cm = this.cars.get(veh.id)?.m; if (cm) { const t = seatTarget(cm, a.seat, veh.body.translation(), r, v.seat); if (t) { v.seat = t; st.seat = t; } }
@@ -242,6 +246,7 @@ export class LifeView {
       v.acc += dt; const every = self || a.vehicle !== null ? 1 : d < 28 ? 1 : d < 55 ? 2 : d < 95 ? 4 : 8;
       if (++v.skip >= every || st.firing || st.reloading || v.acc > 0.25) { v.view.update(v.acc, st, this.time); v.acc = 0; v.skip = 0; }
       if (a.id === me.id) this.posePhone(v, dt);
+      const pose = (a as any).actPose as ((view: HumanView, dt: number) => void) | undefined; if (pose && act) pose(v.view, dt);
     }
     for (const [id, v] of this.actors) if (!seen.has(id) || (sim.actors[id] as any)?._gone) { v.view.dispose(); this.actors.delete(id); }
 

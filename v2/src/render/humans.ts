@@ -125,6 +125,12 @@ export interface CharState {
   firing: boolean; reloading: boolean; melee: boolean; dead: boolean; driving: boolean; shadow: number; awaken: number; hit: number; cast: boolean; healing: boolean;
   /** with anim 'emote': the animation library clip to loop (multiplayer emotes) */
   clip?: string;
+  /** with anim 'emote': hold the clip still at this normalised time (0..1), e.g. lying on a bed */
+  clipHold?: number;
+  /** with anim 'emote': playback speed of the clip */
+  clipSpeed?: number;
+  /** force the body facing (life-sim actions: sit facing the TV, lie along the bed) */
+  faceYaw?: number;
   /** set while seated in a vehicle: world space anchor and limb targets */
   seat?: SeatTarget | null;
 }
@@ -303,6 +309,7 @@ export class HumanView {
     const targetYaw = s.aiming || s.firing || s.driving ? s.aimYaw : s.speed > 0.4 ? s.moveYaw : this.yaw;
     let dy = targetYaw - this.yaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
     this.yaw += dy * Math.min(1, dt * (s.aiming ? 18 : 10));
+    if (s.faceYaw !== undefined) this.yaw = s.faceYaw;
     if (s.seat) this.yaw = s.seat.yaw; else if (this.root.scale.x !== 1) this.root.scale.setScalar(1);
     this.root.rotation.y = this.yaw;
 
@@ -328,7 +335,11 @@ export class HumanView {
       case 'mantle': case 'climb': this.play('ClimbUp_1m', 0.1, 'full', 1.6); break;
       case 'heal': this.play('Consume', 0.2, 'full'); break;
       case 'talk': this.play('Idle_TalkingPhone_Loop', 0.3, 'full'); break;
-      case 'emote': this.play(s.clip ?? 'Idle_Loop', 0.25, 'full'); break;
+      case 'emote': {
+        this.play(s.clip ?? 'Idle_Loop', 0.25, 'full', s.clipHold !== undefined ? 0 : s.clipSpeed ?? 1);
+        if (s.clipHold !== undefined && this.base) { const a = this.base.action; a.time = a.getClip().duration * Math.min(0.999, Math.max(0, s.clipHold)); }
+        break;
+      }
       default: this.play('Idle_Loop', 0.25, layer);
     }
     if (armedUpper) this.playUpper(s.aiming || s.firing ? 'Pistol_Aim_Neutral' : 'Pistol_Idle_Loop');

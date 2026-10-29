@@ -50,6 +50,12 @@ export interface GameSystem {
   onAction?(ctx: GameCtx, app: string, id: string): boolean;
   /** the current GPS destination, if this system has one (first system that returns a point wins) */
   goal?(ctx: GameCtx): GoalPoint | null;
+  /** adjust the local player's command before the sim step (life-sim actions hold the player still) */
+  filterCommand?(ctx: GameCtx, c: import('../sim/types').Command): void;
+  /** every frame right before the world renders (camera overrides for interiors, cutaway walls) */
+  preRender?(ctx: GameCtx, dt: number): void;
+  /** an interaction prompt for the HUD (first system that returns one wins over the car prompt) */
+  prompt?(ctx: GameCtx): string | null;
   /** extra blips on the minimap */
   blips?(ctx: GameCtx, out: Blip[]): void;
 }
