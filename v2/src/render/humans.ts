@@ -123,6 +123,8 @@ function clothMaterial(base: THREE.MeshStandardMaterial, u: Record<string, THREE
 export interface CharState {
   anim: string; speed: number; moveYaw: number; aimYaw: number; pitch: number; aiming: boolean; armed: boolean; weapon: WeaponId | null;
   firing: boolean; reloading: boolean; melee: boolean; dead: boolean; driving: boolean; shadow: number; awaken: number; hit: number; cast: boolean; healing: boolean;
+  /** with anim 'emote': the animation library clip to loop (multiplayer emotes) */
+  clip?: string;
   /** set while seated in a vehicle: world space anchor and limb targets */
   seat?: SeatTarget | null;
 }
@@ -300,7 +302,7 @@ export class HumanView {
     // undo last frame's procedural pose; the mixer skips writing bones whose value did not change
     for (const x of this.snap) x.b.quaternion.copy(x.q);
 
-    const armedUpper = s.armed && !s.dead && !s.driving && !['sprint', 'swim', 'swimIdle', 'mantle', 'climb', 'heal'].includes(s.anim);
+    const armedUpper = s.armed && !s.dead && !s.driving && !['sprint', 'swim', 'swimIdle', 'mantle', 'climb', 'heal', 'emote'].includes(s.anim);
     const layer = armedUpper ? 'lower' : 'full';
     let back = 1;
     if ((s.aiming || s.firing) && s.speed > 0.4) { let rel = s.moveYaw - s.aimYaw; while (rel > Math.PI) rel -= Math.PI * 2; while (rel < -Math.PI) rel += Math.PI * 2; if (Math.abs(rel) > Math.PI * 0.6) back = -1; }
@@ -319,6 +321,7 @@ export class HumanView {
       case 'mantle': case 'climb': this.play('ClimbUp_1m', 0.1, 'full', 1.6); break;
       case 'heal': this.play('Consume', 0.2, 'full'); break;
       case 'talk': this.play('Idle_TalkingPhone_Loop', 0.3, 'full'); break;
+      case 'emote': this.play(s.clip ?? 'Idle_Loop', 0.25, 'full'); break;
       default: this.play('Idle_Loop', 0.25, layer);
     }
     if (armedUpper) this.playUpper(s.aiming || s.firing ? 'Pistol_Aim_Neutral' : 'Pistol_Idle_Loop');

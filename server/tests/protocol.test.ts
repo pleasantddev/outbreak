@@ -19,11 +19,11 @@ describe('client state message', () => {
     const out = decodeState(encodeState(m))!;
     expect(out.flags & F.VEH).toBeTruthy();
     const v = out.veh!; expect(v.kind).toBe(3); expect(v.seed).toBe(123456); expect(v.qy).toBeCloseTo(0.7071, 3);
-    expect(v.steer).toBeCloseTo(-0.3, 1); expect(v.spin).toBeCloseTo(4.2, 2); expect(v.doors[0]).toBe(1); expect(v.doors[1]).toBe(0); expect(v.vspeed).toBeCloseTo(12.34, 2); expect(v.vflags).toBe(5);
+    expect(v.steer).toBeCloseTo(-0.3, 1); expect(v.spin).toBeCloseTo(4.2, 2); expect(v.doors[0]).toBe(1); expect(v.doors[1]).toBe(0); expect(v.doors[2]).toBeCloseTo(0.33, 1); expect(v.vspeed).toBeCloseTo(12.34, 2); expect(v.vflags).toBe(5);
   });
   it('is small', () => {
     expect(encodeState(foot()).length).toBeLessThanOrEqual(23);
-    expect(encodeState(foot({ veh: { kind: 0, seat: 0, seed: 1, x: 0, y: 0, z: 0, qx: 0, qy: 0, qz: 0, qw: 1, steer: 0, spin: 0, doors: [0, 0, 0, 0], vflags: 0, vspeed: 0 } })).length).toBeLessThanOrEqual(56);
+    expect(encodeState(foot({ veh: { kind: 0, seat: 0, seed: 1, x: 0, y: 0, z: 0, qx: 0, qy: 0, qz: 0, qw: 1, steer: 0, spin: 0, doors: [0, 0, 0, 0], vflags: 0, vspeed: 0 } })).length).toBeLessThanOrEqual(57);
   });
   it('rejects garbage without throwing', () => {
     expect(decodeState(new Uint8Array([]))).toBeNull();
@@ -38,7 +38,7 @@ describe('client state message', () => {
   });
   it('angle and door packing', () => {
     expect(unpackYaw(packYaw(-0.5))).toBeCloseTo(2 * Math.PI - 0.5, 3);
-    expect(unpackDoors(packDoors([1, 0.5, 0, 1]))).toEqual([1, 2 / 3, 0, 1]);
+    expect(unpackDoors(packDoors([1, 0.5, 0, 1]))).toEqual([1, 8 / 15, 0, 1]);
   });
 });
 

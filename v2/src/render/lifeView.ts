@@ -217,6 +217,8 @@ export class LifeView {
         melee: !wid || wid === 'machete', dead: !a.alive || a.ko! > 0, driving: a.vehicle !== null, shadow: 0, awaken: 0, hit: v.hit, cast: false, healing: a.healT > 0,
       };
       v.fireEdge = v.reloadEdge = v.meleeEdge = false; v.hit = Math.max(0, v.hit - dt);
+      const em = (a as any).emote as { clip: string; until: number } | undefined; // multiplayer emotes (systems/net.ts)
+      if (em) { if (performance.now() < em.until && sp < 0.3 && a.vehicle === null && a.alive) { st.anim = 'emote'; st.clip = em.clip; st.armed = false; } else (a as any).emote = undefined; }
       if (a.vehicle !== null) {
         const veh = sim.vehicles[a.vehicle]; const r = veh.body.rotation(); const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w)); st.aimYaw = Math.atan2(fw.x, fw.z);
         const cm = this.cars.get(veh.id)?.m; if (cm) { const t = seatTarget(cm, a.seat, veh.body.translation(), r, v.seat); if (t) { v.seat = t; st.seat = t; } }
@@ -293,10 +295,11 @@ export class LifeView {
     if (Math.hypot(L.x - L.builtAt.x, L.z - L.builtAt.z) < 120 && L.lines) return;
     L.builtAt = { x: L.x, z: L.z }; L.lines?.removeFromParent();
     const pos: number[] = [], col: number[] = []; const owned = new Set(L.owned);
-    const C = { own: new THREE.Color('#8b5cf6'), vac: new THREE.Color('#49e08a'), unf: new THREE.Color('#f59e0b'), built: new THREE.Color('#9ba3b4') };
+    const C = { own: new THREE.Color('#8b5cf6'), vac: new THREE.Color('#49e08a'), unf: new THREE.Color('#f59e0b'), built: new THREE.Color('#9ba3b4'), sold: new THREE.Color('#ef4444') };
+    const taken = (L as any).taken as ((id: string) => boolean) | undefined; // plots other players bought (multiplayer)
     for (const list of this.world.plots.values()) for (const p of list) {
       if (Math.hypot(p.cx - L.x, p.cz - L.z) > 900) continue;
-      const c = owned.has(p.id) ? C.own : p.zone === 'vacant' ? C.vac : p.zone === 'unfinished' ? C.unf : C.built;
+      const c = owned.has(p.id) ? C.own : taken?.(p.id) ? C.sold : p.zone === 'vacant' ? C.vac : p.zone === 'unfinished' ? C.unf : C.built;
       const n = p.pts.length / 2;
       for (let i = 0; i < n; i++) { const j = (i + 1) % n; pos.push(p.pts[i * 2], 1.2, p.pts[i * 2 + 1], p.pts[j * 2], 1.2, p.pts[j * 2 + 1]); col.push(c.r, c.g, c.b, c.r, c.g, c.b); }
     }

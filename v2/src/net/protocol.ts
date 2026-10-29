@@ -24,6 +24,9 @@ export const VKINDS = ['okada', 'danfo', 'suv', 'sedan', 'hatch', 'jeep', 'polic
 /** Top speed in m/s per VKINDS entry (mirrors VEHICLES.topSpeed in data/balance.ts, checked by a client test). */
 export const VKIND_TOP: Record<(typeof VKINDS)[number], number> = { okada: 30, danfo: 22, suv: 28, sedan: 33, hatch: 30, jeep: 36, police: 34, keke: 15 };
 
+/** Weapon byte on the wire, index into this list (mirrors WeaponId in data/balance.ts, checked by a client test). */
+export const WEAPON_WIRE = ['fists', 'pistol', 'smg', 'ar', 'shotgun', 'sniper', 'machete'] as const;
+
 export const EMOTES = ['wave', 'dance', 'phone', 'no', 'talk', 'arms'] as const;
 
 // player flag bits (u16)
@@ -93,9 +96,9 @@ export const packSteer = (r: number) => Math.max(-127, Math.min(127, Math.round(
 export const unpackSteer = (i: number) => (i / 127) * 0.8;
 export const packSpin = (r: number) => packYaw(r);
 export const unpackSpin = (u: number) => unpackYaw(u);
-/** four door openings 0..1 into one byte, 2 bits each */
-export function packDoors(d: ArrayLike<number>) { let b = 0; for (let i = 0; i < 4; i++) b |= Math.max(0, Math.min(3, Math.round((d[i] ?? 0) * 3))) << (i * 2); return b; }
-export function unpackDoors(b: number): [number, number, number, number] { return [(b & 3) / 3, ((b >> 2) & 3) / 3, ((b >> 4) & 3) / 3, ((b >> 6) & 3) / 3]; }
+/** four door openings 0..1 into one u16, 4 bits each */
+export function packDoors(d: ArrayLike<number>) { let b = 0; for (let i = 0; i < 4; i++) b |= Math.max(0, Math.min(15, Math.round((d[i] ?? 0) * 15))) << (i * 4); return b; }
+export function unpackDoors(b: number): [number, number, number, number] { return [(b & 15) / 15, ((b >> 4) & 15) / 15, ((b >> 8) & 15) / 15, ((b >> 12) & 15) / 15]; }
 
 // ----------------------------------------------------------------------------------------------- client -> server
 export function encodeState(m: StateMsg, w = new Writer(80)): Uint8Array {
@@ -108,7 +111,7 @@ export function encodeState(m: StateMsg, w = new Writer(80)): Uint8Array {
     w.u8(v.kind); w.u8(v.seat); w.u32(v.seed);
     w.f32(v.x); w.f32(v.y); w.f32(v.z);
     w.i16(packQ(v.qx)); w.i16(packQ(v.qy)); w.i16(packQ(v.qz)); w.i16(packQ(v.qw));
-    w.i8(packSteer(v.steer)); w.u16(packSpin(v.spin)); w.u8(packDoors(v.doors)); w.u8(v.vflags);
+    w.i8(packSteer(v.steer)); w.u16(packSpin(v.spin)); w.u16(packDoors(v.doors)); w.u8(v.vflags);
     w.i16(Math.max(-32767, Math.min(32767, Math.round(v.vspeed * 100))));
   }
   return w.bytes();
@@ -124,11 +127,11 @@ export function decodeState(buf: Uint8Array): StateMsg | null {
     if (!Number.isFinite(x + y + z)) return null;
     let veh: VehState | null = null;
     if (flags & F.VEH) {
-      if (r.left < 33) return null;
+      if (r.left < 34) return null;
       const kind = r.u8(), seat = r.u8(), seed = r.u32();
       const vx = r.f32(), vy = r.f32(), vz = r.f32();
       const qx = unpackQ(r.i16()), qy = unpackQ(r.i16()), qz = unpackQ(r.i16()), qw = unpackQ(r.i16());
-      const steer = unpackSteer(r.i8()), spin = unpackSpin(r.u16()), doors = unpackDoors(r.u8()), vflags = r.u8(), vspeed = r.i16() / 100;
+      const steer = unpackSteer(r.i8()), spin = unpackSpin(r.u16()), doors = unpackDoors(r.u16()), vflags = r.u8(), vspeed = r.i16() / 100;
       if (!Number.isFinite(vx + vy + vz) || kind >= VKINDS.length) return null;
       veh = { kind, seat, seed, x: vx, y: vy, z: vz, qx, qy, qz, qw, steer, spin, doors, vflags, vspeed };
     }
@@ -144,7 +147,7 @@ export interface PlayerEnt {
 }
 export interface VehEnt {
   id: number; kind: number; seed: number; driver: number; X: number; Y: number; Z: number;
-  qx: number; qy: number; qz: number; qw: number /* int16 */; steer: number /* i8 */; spin: number /* u16 */; doors: number /* packed */; vflags: number; vspeed: number /* i16, cm/s */;
+  qx: number; qy: number; qz: number; qw: number /* int16 */; steer: number /* i8 */; spin: number /* u16 */; doors: number /* packed u16 */; vflags: number; vspeed: number /* i16, cm/s */;
 }
 export type Ent = (PlayerEnt & { k: 0 }) | (VehEnt & { k: 1 });
 
@@ -194,7 +197,7 @@ export function writeEntity(w: Writer, e: Ent, base: Ent | null): boolean {
   if (!b) { w.u8(e.kind); w.u32(e.seed); }
   if (mask & V_FULL) { if (full) { w.i32(e.X); w.i32(e.Y); w.i32(e.Z); } else { w.i16(dx); w.i16(dy); w.i16(dz); } }
   if (mask & V_QUAT) { w.i16(e.qx); w.i16(e.qy); w.i16(e.qz); w.i16(e.qw); }
-  if (mask & V_WHEEL) { w.i8(e.steer); w.u16(e.spin); w.u8(e.doors); w.u8(e.vflags); }
+  if (mask & V_WHEEL) { w.i8(e.steer); w.u16(e.spin); w.u16(e.doors); w.u8(e.vflags); }
   if (mask & V_SPEED) { w.i16(e.vspeed); w.u16(e.driver); }
   if (b) Object.assign(b, e); return true;
 }
@@ -225,7 +228,7 @@ export function decodeSnapshot(buf: Uint8Array, known: Map<number, Ent>): SnapRe
         if (!e) { e = newVehEnt(id); known.set(id, e); e.kind = r.u8(); e.seed = r.u32(); }
         if (mask & V_FULL) { if (full) { e.X = r.i32(); e.Y = r.i32(); e.Z = r.i32(); } else { e.X += r.i16(); e.Y += r.i16(); e.Z += r.i16(); } }
         if (mask & V_QUAT) { e.qx = r.i16(); e.qy = r.i16(); e.qz = r.i16(); e.qw = r.i16(); }
-        if (mask & V_WHEEL) { e.steer = r.i8(); e.spin = r.u16(); e.doors = r.u8(); e.vflags = r.u8(); }
+        if (mask & V_WHEEL) { e.steer = r.i8(); e.spin = r.u16(); e.doors = r.u16(); e.vflags = r.u8(); }
         if (mask & V_SPEED) { e.vspeed = r.i16(); e.driver = r.u16(); }
         changed.push(e);
       } else {
@@ -256,7 +259,7 @@ export type ClientMsg =
 export interface WhoInfo { id: number; name: string; model: string; skin: number; outfit: string; level: number; role?: string }
 
 export type ServerMsg =
-  | { t: 'welcome'; id: number; v: number; tickHz: number; serverTime: number; cell: number; wallet: { cash: number; bank: number }; plots: string[]; online: number; profile: unknown; role: string; state: Record<string, unknown>; motd?: string }
+  | { t: 'welcome'; id: number; v: number; tickHz: number; serverTime: number; epoch: number; cell: number; wallet: { cash: number; bank: number }; plots: string[]; online: number; profile: unknown; role: string; state: Record<string, unknown>; motd?: string }
   | { t: 'pong'; c: number; s: number }
   | { t: 'who'; list: WhoInfo[] }
   | { t: 'chat'; ch: 'near' | 'global' | 'whisper' | 'system'; from: string; fromId: number; text: string; ts: number }

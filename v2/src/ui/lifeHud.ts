@@ -193,7 +193,7 @@ export const APPS: [string, string, string][] = [
 ];
 
 export interface PhoneCtx { time: string; real: string; weather: string; season: string; day: number; cash: number; bank: number; plots: { plot: Plot; price: number; owned: boolean; dist: number }[]; jobs: { id: string; title: string; pay: number; desc: string; active: boolean }[]; texts: [string, string][]; potholes: { name: string; road: string; area: string; reported: string; placed: number; source: string }[]; quality: string }
-export interface ParcelInfo { id: string; title: string; area: string; owner: string; size: number; zone: string; price: number; owned: boolean; traits: [string, 'g' | 'r' | 'p' | ''][]; stats: [string, string][] }
+export interface ParcelInfo { id: string; title: string; area: string; owner: string; size: number; zone: string; price: number; owned: boolean; /** sold to another player (multiplayer) */ taken?: boolean; traits: [string, 'g' | 'r' | 'p' | ''][]; stats: [string, string][] }
 export interface HudFrame { time: string; real: string; weather: string; temp: number; area: string; street: string; weapon: string; weaponKind: 'none' | 'melee' | 'gun'; ammo: string; mag: string; aiming: boolean; inCar: boolean; bank: number; kmh: number; gear: string; rpm: number }
 
 const fmt = (n: number) => '₦' + Math.round(n).toLocaleString();
@@ -340,7 +340,7 @@ ${touch ? `<div id="tc">
       <div class="own"><i>${initials(p.owner)}</i><div><b>${p.owned ? 'You' : p.owner}</b><br><span style="color:var(--mut);font-size:12px">${p.owned ? 'Your name is on the papers' : 'Current owner'}</span></div></div>
       <div class="chips">${p.traits.map(([t, c]) => `<span class="chip ${c}">${t}</span>`).join('')}</div>
       <div class="stats">${p.stats.map(([k, v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('')}</div>
-      ${p.owned ? '<div class="empty" style="margin:8px 0">This one is yours. Building comes next.</div>' : `<div class="price num">${fmt(p.price)} <small>+ C of O</small></div>
+      ${p.owned ? '<div class="empty" style="margin:8px 0">This one is yours. Building comes next.</div>' : p.taken ? '<div class="empty" style="margin:8px 0">Sold. Somebody got here first.</div>' : `<div class="price num">${fmt(p.price)} <small>+ C of O</small></div>
       <button class="btn" id="lm-buy">${canAfford ? 'BUY PLOT' : 'NOT ENOUGH MONEY'}</button>`}`;
     const b = P.querySelector('#lm-buy') as HTMLElement | null; if (b) b.onclick = () => this.onBuy?.(p.id);
   }

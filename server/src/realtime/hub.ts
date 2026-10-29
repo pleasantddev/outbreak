@@ -145,7 +145,7 @@ export class Hub implements OnlineApi {
     const w = this.econ.wallet(auth.account.id);
     const st = this.econ.state(auth.account.id);
     this.send(c, {
-      t: 'welcome', id, v: PROTOCOL_VERSION, tickHz: this.cfg.tickHz, serverTime: this.now(), cell: CELL, wallet: w, plots: this.econ.plotsOf(auth.account.id).map((p) => p.id),
+      t: 'welcome', id, v: PROTOCOL_VERSION, tickHz: this.cfg.tickHz, serverTime: this.now(), epoch: Date.now(), cell: CELL, wallet: w, plots: this.econ.plotsOf(auth.account.id).map((p) => p.id),
       online: this.conns.size, profile: publicProfile(profile), role: auth.account.role, motd: this.cfg.motd,
       state: { ...st.blobs, vehicles: st.vehicles, skills: st.skills, missions: st.missions, pos: last },
     });
