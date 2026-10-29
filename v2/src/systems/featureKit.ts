@@ -207,3 +207,7 @@ export function range(label: string, min: number, max: number, step: number, val
   const inp = h('input', { type: 'range', min, max, step, value }); inp.addEventListener('input', () => { const v = +inp.value; out.textContent = fmtv(v); on(v); });
   return Object.assign(h('label', { class: 'fk-range' }, h('span', { text: label, style: 'min-width:64px' }), inp, out), { set(v: number) { inp.value = String(v); out.textContent = fmtv(v); } });
 }
+
+/** extra stylesheet for one system, added once */
+const cssAdded = new Set<string>();
+export function addCss(id: string, css: string) { if (cssAdded.has(id)) return; cssAdded.add(id); injectCss(); const s = document.createElement('style'); s.dataset.fk = id; s.textContent = css; document.head.appendChild(s); }

@@ -176,7 +176,7 @@ export function tickSites(ctx: GameCtx, dt: number) {
     // people at the site
     if (d < 120) {
       const alive = s.npcs.filter((id) => { const a = sim.actors[id]; return a && a.alive && !(a as any)._gone; });
-      if (alive.length < (s.def.site === 'paint' ? 3 : 4) && now - (s as any)._npcT > 2) {
+      if (alive.length < (s.def.site === 'paint' ? 3 : 4) && now - ((s as any)._npcT ?? -99) > 2) {
         (s as any)._npcT = now; const seed = hash32(s.def.id);
         const slots: { x: number; z: number; face: number; name: string; mech: boolean }[] = [];
         const c = Math.cos(s.group!.rotation.y), sn = Math.sin(s.group!.rotation.y); const L = (lx: number, lz: number) => ({ x: s.x + lx * c + lz * sn, z: s.z - lx * sn + lz * c });
