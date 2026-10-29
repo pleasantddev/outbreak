@@ -26,6 +26,8 @@ class Life {
   run: Running | null = null; lastHour = -1; started = false; doorObj: THREE.Group | null = null; fanBlades: THREE.Object3D | null = null;
   near: Thing | null = null; private saveT = 0; private warnT: Record<string, number> = {}; private bodies: any[] = [];
   private talkWith: Actor | null = null;
+  /** Sims-style clock speed chosen by the player (1, 3, 8); actions like sleep multiply on top */
+  speed = 1;
   venues = new Map<string, Venue>(); private vdoorT = 3; private vdoorObj = new Map<string, THREE.Group>();
   /** other systems add interactables in the street (vendors, pay toilets, clubs) */
   providers: (() => Thing[])[] = [];
@@ -45,6 +47,7 @@ class Life {
     }
     this.bodies.push(body);
     this.ui.onCancel = () => this.stop(true);
+    this.ui.onSpeed = (v) => { this.speed = v; this.ui.setSpeed(v); };
     addEventListener('keydown', (e) => this.key(e));
     (window as any).__life = this;
   }
@@ -283,13 +286,12 @@ class Life {
     this.teleport(r.spot.x, r.spot.y, r.spot.z, r.spot.yaw);
     (me as any).act = { clip: r.a.clip, hold: r.a.hold, speed: r.a.speed, yaw: r.spot.yaw };
     if (r.a.prop || r.a.pose) (me as any).actPose = (v: HumanView, dt: number) => this.pose(v, dt);
-    if (r.a.ff) this.ctx.view.timeScale = r.a.ff;
     if (r.a.sleeping) this.ui.sleeping(true);
     if (r.a.effect === 'fan') { this.S.fan = !this.S.fan; this.ctx.hud.toast('Fan', this.S.fan ? 'Breeze dey blow now.' : 'Fan off.', 'linear-gradient(160deg,#42a5f5,#1565c0)', 'msg', 2.5); }
   }
   stop(cancelled: boolean) {
     const r = this.run; if (!r) return; const c = this.ctx; const me = c.sim.local;
-    this.run = null; (me as any).act = undefined; (me as any).actPose = undefined; c.view.timeScale = 1; this.ui.sleeping(false); this.ui.action(null);
+    this.run = null; (me as any).act = undefined; (me as any).actPose = undefined; this.ui.sleeping(false); this.ui.action(null);
     r.prop?.removeFromParent();
     if (r.phase === 'do' && (r.a.y ?? 0) > 0.2) { const t = r.thing; const back = 1.0; this.teleport(t.x + Math.sin(t.yaw) * back, 0.02, t.z + Math.cos(t.yaw) * back, t.yaw); }
     if (this.talkWith) { (this.talkWith as any)._script = false; (this.talkWith as any).act = undefined; this.talkWith = null; }
@@ -364,6 +366,7 @@ class Life {
   }
   frame(dt: number) {
     const c = this.ctx; if (!this.started) return; const me = c.sim.local;
+    { const r0 = this.run; const danger = c.sim.wanted > 0 || me.vehicle !== null || !me.alive; if (danger && this.speed !== 1) { this.speed = 1; this.ui.setSpeed(1); } c.view.timeScale = (r0 && r0.phase === 'do' && r0.a.ff ? r0.a.ff : 1) * this.speed; }
     const h = c.view.atmo.hour + c.view.atmo.day * 24; if (this.lastHour < 0) this.lastHour = h;
     let dh = h - this.lastHour; this.lastHour = h; if (dh < 0 || dh > 2) dh = 0;
     const r = this.run;
@@ -424,6 +427,7 @@ class Life {
 
   // ---------------------------------------------------------------- input, prompt, misc
   private key(e: KeyboardEvent) {
+    if (e.code === 'BracketRight' || e.code === 'BracketLeft') { const L = [1, 3, 8]; const i = Math.max(0, Math.min(2, L.indexOf(this.speed) + (e.code === 'BracketRight' ? 1 : -1))); this.speed = L[i]; this.ui.setSpeed(this.speed); return; }
     if (!this.pie.open) return;
     if (e.code === 'Escape' || e.code === 'Backspace') { this.pie.close(); e.preventDefault(); }
     const n = +e.key; if (n >= 1 && n <= 9) { this.pie.pick(n - 1); e.preventDefault(); }

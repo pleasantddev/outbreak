@@ -35,3 +35,12 @@ D. Careers batch 2 (mechanic, okada/danfo fares, tech bro, yahoo, thief).
 E. Leisure: casino, nightclub, beer parlour; racing modes.
 F. Integrate society/missions/features deeper; sound pass; perf check; publish; push.
 Each milestone: tsc, regress.py, screenshots reviewed, publish to the artifact, push to GitHub, update docs/STATE.md.
+
+## Status (30 Oct)
+- A done: systems/life (needs, moodlets, smart objects, pie, home lot with Sims cutaway, door on the street, social pie).
+- B done: systems/life/vendors.ts + haggle.ts (market women, mama put, suya, corn, pure water, recharge, okrika, pay toilet).
+- D mostly done: careers/transport (J on duty, fare haggling, agberos), mechanic, tech (Hub 32 gigs), thief (pickpocket),
+  yahoo (satire arc, EFCC raid). Still to do: bank clerk / office 9-5, buka owner, autonomy when idle.
+- E mostly done: leisure/casino (blackjack, roulette, slots), leisure/club (rhythm dance-off, VIP, DJ), careers/racing
+  (sprint, circuit, drag with launch boost, AI rivals on the road graph). Still to do: beer parlour, viewing centre, gym.
+- Venues API: systems/life/venue.ts; life.addVenue(v) builds colliders, places a street door on a commercial plot.

@@ -26,6 +26,7 @@ const css = `
 #nsheet .r .b{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden} #nsheet .r .b i{display:block;height:100%;border-radius:3px}
 #nsheet .ml{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px} #nsheet .ml span{font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.07)}
 #nsheet .ml span.p{color:#9ff0c2} #nsheet .ml span.n{color:#ffb0b8}
+#ndock .spd{display:flex;gap:2px;margin-left:4px;padding-left:8px;border-left:1px solid rgba(255,255,255,.12)} #ndock .spd b{min-width:24px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font:700 10.5px Rajdhani,Inter;color:#9ba3b4;cursor:pointer} #ndock .spd b.on{background:rgba(139,92,246,.85);color:#fff}
 #nfade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:8;transition:opacity .28s}
 #nsleep{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .8s;background:radial-gradient(ellipse at center,rgba(10,12,30,.0) 30%,rgba(6,8,22,.75) 100%);display:flex;align-items:flex-start;justify-content:center}
 #nsleep.on{opacity:1} #nsleep b{margin-top:16vh;font:600 15px Inter;letter-spacing:3px;color:#cfd8ff;opacity:.85}
@@ -38,7 +39,8 @@ const col = (v: number) => (v > 60 ? '#49e08a' : v > 35 ? '#facc15' : v > 18 ? '
 
 export class LifeUi {
   dock: HTMLElement; chip: HTMLElement; sheet: HTMLElement; fade: HTMLElement; sleep: HTMLElement;
-  onCancel?: () => void;
+  onCancel?: () => void; onSpeed?: (s: number) => void;
+  setSpeed(s: number) { this.dock.querySelectorAll('[data-s]').forEach((b) => b.classList.toggle('on', +(b as HTMLElement).dataset.s! === s)); }
   constructor() {
     const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
     const mk = (id: string, html = '') => { const d = document.createElement('div'); d.id = id; d.innerHTML = html; document.body.appendChild(d); return d; };
@@ -47,7 +49,7 @@ export class LifeUi {
     this.sheet = mk('nsheet');
     this.fade = mk('nfade'); this.sleep = mk('nsleep', '<b>SLEEPING</b>');
     this.dock.style.display = 'none';
-    this.dock.addEventListener('pointerup', (e) => { e.stopPropagation(); this.sheet.classList.toggle('on'); });
+    this.dock.addEventListener('pointerup', (e) => { e.stopPropagation(); const sp = (e.target as HTMLElement).closest('[data-s]') as HTMLElement | null; if (sp) { this.onSpeed?.(+sp.dataset.s!); return; } this.sheet.classList.toggle('on'); });
     (this.chip.querySelector('#nchip-x') as HTMLElement).addEventListener('pointerup', (e) => { e.stopPropagation(); this.onCancel?.(); });
   }
   show(on: boolean) { this.dock.style.display = on ? 'flex' : 'none'; if (!on) { this.sheet.classList.remove('on'); this.chip.classList.remove('on'); } }
