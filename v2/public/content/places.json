@@ -1,0 +1,1613 @@
+{
+ "version": 1,
+ "items": [
+  {
+   "id": "oshodi_interchange",
+   "name": "Oshodi Interchange",
+   "lat": 6.55554,
+   "lon": 3.35112,
+   "kind": "park",
+   "area": "Oshodi"
+  },
+  {
+   "id": "oshodi_park",
+   "name": "Oshodi Park, Terminal 2",
+   "lat": 6.55575,
+   "lon": 3.35077,
+   "kind": "park",
+   "area": "Oshodi"
+  },
+  {
+   "id": "oshodi_terminal1",
+   "name": "Oshodi Terminal 1",
+   "lat": 6.55486,
+   "lon": 3.35105,
+   "kind": "park",
+   "area": "Oshodi"
+  },
+  {
+   "id": "oshodi_terminal3",
+   "name": "Oshodi Terminal 3",
+   "lat": 6.55668,
+   "lon": 3.35281,
+   "kind": "park",
+   "area": "Oshodi"
+  },
+  {
+   "id": "oshodi_station",
+   "name": "Oshodi Rail Station",
+   "lat": 6.55725,
+   "lon": 3.35141,
+   "kind": "station",
+   "area": "Oshodi"
+  },
+  {
+   "id": "oshodi_underbridge",
+   "name": "Under the Oshodi bridge",
+   "lat": 6.5562,
+   "lon": 3.3498,
+   "kind": "junction",
+   "area": "Oshodi"
+  },
+  {
+   "id": "mama_put_oshodi",
+   "name": "Mama Put, under the bridge",
+   "lat": 6.5558,
+   "lon": 3.3503,
+   "kind": "food",
+   "area": "Oshodi"
+  },
+  {
+   "id": "buka_oshodi",
+   "name": "Mama Nkechi Buka, Oshodi",
+   "lat": 6.5546,
+   "lon": 3.3478,
+   "kind": "food",
+   "area": "Oshodi"
+  },
+  {
+   "id": "oshodi_mosque",
+   "name": "Oshodi Central Mosque",
+   "lat": 6.5556,
+   "lon": 3.34731,
+   "kind": "mosque",
+   "area": "Oshodi"
+  },
+  {
+   "id": "oshodi_primary",
+   "name": "Oshodi Primary School",
+   "lat": 6.55974,
+   "lon": 3.34636,
+   "kind": "school",
+   "area": "Oshodi"
+  },
+  {
+   "id": "oshodi_banks",
+   "name": "Oshodi bank row",
+   "lat": 6.55385,
+   "lon": 3.34615,
+   "kind": "bank",
+   "area": "Oshodi"
+  },
+  {
+   "id": "access_oshodi",
+   "name": "Access Bank, Oshodi",
+   "lat": 6.55278,
+   "lon": 3.34354,
+   "kind": "bank",
+   "area": "Oshodi"
+  },
+  {
+   "id": "oshodi_pos_stand",
+   "name": "POS stand, Oshodi Road",
+   "lat": 6.5562,
+   "lon": 3.3441,
+   "kind": "shop",
+   "area": "Oshodi"
+  },
+  {
+   "id": "cappa_village",
+   "name": "Cappa Mechanic Village",
+   "lat": 6.55213,
+   "lon": 3.34502,
+   "kind": "mechanic",
+   "area": "Ilupeju"
+  },
+  {
+   "id": "cappa_gate",
+   "name": "Cappa Village gate",
+   "lat": 6.5526,
+   "lon": 3.3436,
+   "kind": "mechanic",
+   "area": "Ilupeju"
+  },
+  {
+   "id": "adonai_fuel",
+   "name": "Adonai Filling Station, Oshodi Road",
+   "lat": 6.55195,
+   "lon": 3.34148,
+   "kind": "fuel",
+   "area": "Oshodi"
+  },
+  {
+   "id": "popoola_battery",
+   "name": "Popoola Battery Clinic",
+   "lat": 6.56827,
+   "lon": 3.33428,
+   "kind": "mechanic",
+   "area": "Ikeja"
+  },
+  {
+   "id": "ladipo_market",
+   "name": "Ladipo Auto Spare Parts Market",
+   "lat": 6.54462,
+   "lon": 3.34064,
+   "kind": "market",
+   "area": "Mushin"
+  },
+  {
+   "id": "ladipo_gate",
+   "name": "Ladipo Market gate",
+   "lat": 6.54493,
+   "lon": 3.34421,
+   "kind": "market",
+   "area": "Mushin"
+  },
+  {
+   "id": "ladipo_stall_row",
+   "name": "Ladipo brake pad row",
+   "lat": 6.5441,
+   "lon": 3.3392,
+   "kind": "market",
+   "area": "Mushin"
+  },
+  {
+   "id": "papa_ajao",
+   "name": "Papa Ajao",
+   "lat": 6.54059,
+   "lon": 3.3473,
+   "kind": "junction",
+   "area": "Mushin"
+  },
+  {
+   "id": "mafoluku",
+   "name": "Mafoluku",
+   "lat": 6.5596,
+   "lon": 3.33199,
+   "kind": "junction",
+   "area": "Oshodi"
+  },
+  {
+   "id": "mafoluku_terminal",
+   "name": "Mafoluku Bus Terminal",
+   "lat": 6.55576,
+   "lon": 3.32424,
+   "kind": "park",
+   "area": "Oshodi"
+  },
+  {
+   "id": "conoil_airport_road",
+   "name": "Conoil, Airport Road",
+   "lat": 6.55435,
+   "lon": 3.32424,
+   "kind": "fuel",
+   "area": "Oshodi"
+  },
+  {
+   "id": "airport_road_junction",
+   "name": "Airport Road junction",
+   "lat": 6.55707,
+   "lon": 3.32249,
+   "kind": "junction",
+   "area": "Oshodi"
+  },
+  {
+   "id": "ibis_airport",
+   "name": "Ibis Hotel, Airport Road",
+   "lat": 6.55116,
+   "lon": 3.32962,
+   "kind": "office",
+   "area": "Oshodi"
+  },
+  {
+   "id": "mmia_t1",
+   "name": "MMIA International Terminal 1",
+   "lat": 6.57907,
+   "lon": 3.32114,
+   "kind": "landmark",
+   "area": "Ikeja"
+  },
+  {
+   "id": "mmia_t2",
+   "name": "MMIA International Terminal 2",
+   "lat": 6.57724,
+   "lon": 3.32343,
+   "kind": "landmark",
+   "area": "Ikeja"
+  },
+  {
+   "id": "mmia_domestic",
+   "name": "MMA Domestic Terminal",
+   "lat": 6.59003,
+   "lon": 3.332,
+   "kind": "landmark",
+   "area": "Ikeja"
+  },
+  {
+   "id": "computer_village",
+   "name": "Computer Village",
+   "lat": 6.5937,
+   "lon": 3.33988,
+   "kind": "market",
+   "area": "Ikeja"
+  },
+  {
+   "id": "computer_village_alley",
+   "name": "Computer Village, Otigba Street",
+   "lat": 6.5931,
+   "lon": 3.3412,
+   "kind": "market",
+   "area": "Ikeja"
+  },
+  {
+   "id": "ikeja_along",
+   "name": "Ikeja Along",
+   "lat": 6.59868,
+   "lon": 3.33454,
+   "kind": "stop",
+   "area": "Ikeja"
+  },
+  {
+   "id": "ikeja_bus_terminal",
+   "name": "Ikeja Bus Terminal",
+   "lat": 6.5915,
+   "lon": 3.33885,
+   "kind": "park",
+   "area": "Ikeja"
+  },
+  {
+   "id": "ikeja_station",
+   "name": "Ikeja Rail Station",
+   "lat": 6.59207,
+   "lon": 3.33778,
+   "kind": "station",
+   "area": "Ikeja"
+  },
+  {
+   "id": "ikeja_plaza_bank",
+   "name": "Ikeja Plaza bank",
+   "lat": 6.59336,
+   "lon": 3.34273,
+   "kind": "bank",
+   "area": "Ikeja"
+  },
+  {
+   "id": "lasuth",
+   "name": "LASUTH, Ikeja",
+   "lat": 6.59074,
+   "lon": 3.34166,
+   "kind": "hospital",
+   "area": "Ikeja"
+  },
+  {
+   "id": "ikeja_city_mall",
+   "name": "Ikeja City Mall",
+   "lat": 6.6145,
+   "lon": 3.35785,
+   "kind": "shop",
+   "area": "Alausa"
+  },
+  {
+   "id": "alausa_secretariat",
+   "name": "Lagos State Secretariat, Alausa",
+   "lat": 6.61504,
+   "lon": 3.36134,
+   "kind": "office",
+   "area": "Alausa"
+  },
+  {
+   "id": "alausa_surveyor",
+   "name": "Office of the State Surveyor General",
+   "lat": 6.61203,
+   "lon": 3.35348,
+   "kind": "office",
+   "area": "Alausa"
+  },
+  {
+   "id": "ikeja_passport",
+   "name": "Passport Office, Ikeja",
+   "lat": 6.61938,
+   "lon": 3.35608,
+   "kind": "office",
+   "area": "Ikeja"
+  },
+  {
+   "id": "ikeja_police_hq",
+   "name": "Police Divisional HQ, Ikeja",
+   "lat": 6.61954,
+   "lon": 3.36063,
+   "kind": "police",
+   "area": "Ikeja"
+  },
+  {
+   "id": "ikeja_gra",
+   "name": "Ikeja GRA",
+   "lat": 6.57762,
+   "lon": 3.35163,
+   "kind": "estate",
+   "area": "Ikeja"
+  },
+  {
+   "id": "radisson_ikeja",
+   "name": "Radisson Hotel, Ikeja",
+   "lat": 6.58347,
+   "lon": 3.35768,
+   "kind": "office",
+   "area": "Ikeja"
+  },
+  {
+   "id": "sheraton_ikeja",
+   "name": "Sheraton Hotel, Ikeja",
+   "lat": 6.58376,
+   "lon": 3.35984,
+   "kind": "office",
+   "area": "Ikeja"
+  },
+  {
+   "id": "opebi_chicken",
+   "name": "Chicken Republic, Opebi",
+   "lat": 6.59167,
+   "lon": 3.35976,
+   "kind": "food",
+   "area": "Ikeja"
+  },
+  {
+   "id": "allen_junction",
+   "name": "Allen Avenue junction",
+   "lat": 6.60735,
+   "lon": 3.34931,
+   "kind": "junction",
+   "area": "Ikeja"
+  },
+  {
+   "id": "ikeja_golf",
+   "name": "Ikeja Golf Club",
+   "lat": 6.58245,
+   "lon": 3.34217,
+   "kind": "landmark",
+   "area": "Ikeja"
+  },
+  {
+   "id": "ikeja_cantonment",
+   "name": "Ikeja Cantonment gate",
+   "lat": 6.56601,
+   "lon": 3.3539,
+   "kind": "landmark",
+   "area": "Ikeja"
+  },
+  {
+   "id": "foursquare_ikeja",
+   "name": "Foursquare Gospel Church, Ikeja",
+   "lat": 6.56856,
+   "lon": 3.33944,
+   "kind": "church",
+   "area": "Ikeja"
+  },
+  {
+   "id": "catholic_ikeja",
+   "name": "Catholic Church, Ikeja",
+   "lat": 6.59667,
+   "lon": 3.35068,
+   "kind": "church",
+   "area": "Ikeja"
+  },
+  {
+   "id": "rccg_alausa",
+   "name": "Redeemed Christian Church, Alausa",
+   "lat": 6.62499,
+   "lon": 3.36047,
+   "kind": "church",
+   "area": "Alausa"
+  },
+  {
+   "id": "mosque_kareem",
+   "name": "Abdul-Kareem Sodunke Memorial Mosque",
+   "lat": 6.55755,
+   "lon": 3.34146,
+   "kind": "mosque",
+   "area": "Oshodi"
+  },
+  {
+   "id": "mosque_airport",
+   "name": "Lagos Airport Central Mosque",
+   "lat": 6.57309,
+   "lon": 3.32281,
+   "kind": "mosque",
+   "area": "Ikeja"
+  },
+  {
+   "id": "pharmacy_ikeja",
+   "name": "HealthPlus Pharmacy, Ikeja",
+   "lat": 6.59694,
+   "lon": 3.35427,
+   "kind": "shop",
+   "area": "Ikeja"
+  },
+  {
+   "id": "pharmacy_icm",
+   "name": "HealthPlus, Ikeja City Mall",
+   "lat": 6.61386,
+   "lon": 3.35814,
+   "kind": "shop",
+   "area": "Alausa"
+  },
+  {
+   "id": "agege_station",
+   "name": "Agege Rail Station",
+   "lat": 6.61946,
+   "lon": 3.32617,
+   "kind": "station",
+   "area": "Agege"
+  },
+  {
+   "id": "agege_stadium",
+   "name": "Agege Stadium",
+   "lat": 6.62368,
+   "lon": 3.32993,
+   "kind": "landmark",
+   "area": "Agege"
+  },
+  {
+   "id": "agege_pen_cinema",
+   "name": "Agege Motor Road, Pen Cinema",
+   "lat": 6.6239,
+   "lon": 3.3239,
+   "kind": "junction",
+   "area": "Agege"
+  },
+  {
+   "id": "ogba_park",
+   "name": "Ogba Bus Park",
+   "lat": 6.6325,
+   "lon": 3.34174,
+   "kind": "park",
+   "area": "Ogba"
+  },
+  {
+   "id": "oando_ogba",
+   "name": "Oando Filling Station, Ogba",
+   "lat": 6.62553,
+   "lon": 3.34416,
+   "kind": "fuel",
+   "area": "Ogba"
+  },
+  {
+   "id": "ashade_market",
+   "name": "Ashade Market",
+   "lat": 6.61359,
+   "lon": 3.32939,
+   "kind": "market",
+   "area": "Agege"
+  },
+  {
+   "id": "dopemu_market",
+   "name": "Dopemu Market",
+   "lat": 6.61261,
+   "lon": 3.3111,
+   "kind": "market",
+   "area": "Dopemu"
+  },
+  {
+   "id": "iyana_ipaja",
+   "name": "Iyana Ipaja",
+   "lat": 6.61731,
+   "lon": 3.29734,
+   "kind": "junction",
+   "area": "Iyana Ipaja"
+  },
+  {
+   "id": "ile_epo_market",
+   "name": "Ile-Epo Market",
+   "lat": 6.63691,
+   "lon": 3.30109,
+   "kind": "market",
+   "area": "Abule Egba"
+  },
+  {
+   "id": "abule_egba_landfill",
+   "name": "Abule Egba Landfill",
+   "lat": 6.63975,
+   "lon": 3.30169,
+   "kind": "landmark",
+   "area": "Abule Egba"
+  },
+  {
+   "id": "oko_oba_cattle",
+   "name": "Oko-Oba Cattle Market",
+   "lat": 6.64888,
+   "lon": 3.31888,
+   "kind": "market",
+   "area": "Agege"
+  },
+  {
+   "id": "egbeda",
+   "name": "Egbeda",
+   "lat": 6.59121,
+   "lon": 3.28896,
+   "kind": "junction",
+   "area": "Egbeda"
+  },
+  {
+   "id": "idimu",
+   "name": "Idimu",
+   "lat": 6.57526,
+   "lon": 3.2839,
+   "kind": "junction",
+   "area": "Idimu"
+  },
+  {
+   "id": "ikotun_terminal",
+   "name": "Ikotun Terminal",
+   "lat": 6.54801,
+   "lon": 3.26779,
+   "kind": "park",
+   "area": "Ikotun"
+  },
+  {
+   "id": "igando_market",
+   "name": "Igando Market",
+   "lat": 6.55107,
+   "lon": 3.241,
+   "kind": "market",
+   "area": "Igando"
+  },
+  {
+   "id": "alimosho_gh",
+   "name": "Alimosho General Hospital",
+   "lat": 6.56135,
+   "lon": 3.25116,
+   "kind": "hospital",
+   "area": "Igando"
+  },
+  {
+   "id": "ejigbo",
+   "name": "Ejigbo",
+   "lat": 6.54945,
+   "lon": 3.29344,
+   "kind": "junction",
+   "area": "Ejigbo"
+  },
+  {
+   "id": "ajao_estate",
+   "name": "Ajao Estate",
+   "lat": 6.54577,
+   "lon": 3.32348,
+   "kind": "estate",
+   "area": "Ajao Estate"
+  },
+  {
+   "id": "isolo_junction",
+   "name": "Isolo",
+   "lat": 6.52851,
+   "lon": 3.31878,
+   "kind": "junction",
+   "area": "Isolo"
+  },
+  {
+   "id": "isolo_gh",
+   "name": "Isolo General Hospital",
+   "lat": 6.52787,
+   "lon": 3.31948,
+   "kind": "hospital",
+   "area": "Isolo"
+  },
+  {
+   "id": "oja_ota",
+   "name": "Oja Ota Bus Stop",
+   "lat": 6.68443,
+   "lon": 3.21541,
+   "kind": "stop",
+   "area": "Ota"
+  },
+  {
+   "id": "sango_ota",
+   "name": "Sango Ota",
+   "lat": 6.70717,
+   "lon": 3.24286,
+   "kind": "stop",
+   "area": "Sango"
+  },
+  {
+   "id": "toll_gate_ota",
+   "name": "Ota Toll Gate",
+   "lat": 6.6925,
+   "lon": 3.25741,
+   "kind": "junction",
+   "area": "Ota"
+  },
+  {
+   "id": "palms_ota",
+   "name": "The Palms, Ota",
+   "lat": 6.69663,
+   "lon": 3.25607,
+   "kind": "shop",
+   "area": "Ota"
+  },
+  {
+   "id": "canaanland",
+   "name": "Canaanland, Ota",
+   "lat": 6.68052,
+   "lon": 3.16144,
+   "kind": "church",
+   "area": "Ota"
+  },
+  {
+   "id": "mushin_center",
+   "name": "Mushin",
+   "lat": 6.52758,
+   "lon": 3.35087,
+   "kind": "junction",
+   "area": "Mushin"
+  },
+  {
+   "id": "mushin_market",
+   "name": "Mushin Market",
+   "lat": 6.52744,
+   "lon": 3.35836,
+   "kind": "market",
+   "area": "Mushin"
+  },
+  {
+   "id": "mushin_terminal",
+   "name": "Mushin Bus Terminal",
+   "lat": 6.53248,
+   "lon": 3.36143,
+   "kind": "park",
+   "area": "Mushin"
+  },
+  {
+   "id": "mushin_gh",
+   "name": "Mushin General Hospital",
+   "lat": 6.53153,
+   "lon": 3.34625,
+   "kind": "hospital",
+   "area": "Mushin"
+  },
+  {
+   "id": "idi_oro",
+   "name": "Idi-Oro",
+   "lat": 6.52186,
+   "lon": 3.35641,
+   "kind": "junction",
+   "area": "Mushin"
+  },
+  {
+   "id": "onipanu",
+   "name": "Onipanu",
+   "lat": 6.53719,
+   "lon": 3.36033,
+   "kind": "junction",
+   "area": "Onipanu"
+  },
+  {
+   "id": "palmgrove",
+   "name": "Palmgrove",
+   "lat": 6.54178,
+   "lon": 3.36741,
+   "kind": "stop",
+   "area": "Palmgrove"
+  },
+  {
+   "id": "obanikoro",
+   "name": "Obanikoro",
+   "lat": 6.54655,
+   "lon": 3.36758,
+   "kind": "stop",
+   "area": "Obanikoro"
+  },
+  {
+   "id": "anthony_stop",
+   "name": "Anthony Bus Stop",
+   "lat": 6.55897,
+   "lon": 3.36696,
+   "kind": "stop",
+   "area": "Anthony"
+  },
+  {
+   "id": "fadeyi",
+   "name": "Fadeyi",
+   "lat": 6.52492,
+   "lon": 3.36769,
+   "kind": "stop",
+   "area": "Fadeyi"
+  },
+  {
+   "id": "ojuelegba",
+   "name": "Ojuelegba",
+   "lat": 6.51077,
+   "lon": 3.3623,
+   "kind": "junction",
+   "area": "Ojuelegba"
+  },
+  {
+   "id": "surulere",
+   "name": "Surulere",
+   "lat": 6.5008,
+   "lon": 3.35712,
+   "kind": "junction",
+   "area": "Surulere"
+  },
+  {
+   "id": "randle_gh",
+   "name": "Randle General Hospital",
+   "lat": 6.50821,
+   "lon": 3.3575,
+   "kind": "hospital",
+   "area": "Surulere"
+  },
+  {
+   "id": "teslim_balogun",
+   "name": "Teslim Balogun Stadium",
+   "lat": 6.49986,
+   "lon": 3.36065,
+   "kind": "landmark",
+   "area": "Surulere"
+  },
+  {
+   "id": "national_stadium",
+   "name": "Lagos National Stadium",
+   "lat": 6.49709,
+   "lon": 3.365,
+   "kind": "landmark",
+   "area": "Surulere"
+  },
+  {
+   "id": "bode_thomas_police",
+   "name": "Bode Thomas Police Station",
+   "lat": 6.48942,
+   "lon": 3.3572,
+   "kind": "police",
+   "area": "Surulere"
+  },
+  {
+   "id": "bode_thomas_bank",
+   "name": "GTBank, Bode Thomas",
+   "lat": 6.48956,
+   "lon": 3.35668,
+   "kind": "bank",
+   "area": "Surulere"
+  },
+  {
+   "id": "luth",
+   "name": "Lagos University Teaching Hospital, Idi-Araba",
+   "lat": 6.51826,
+   "lon": 3.35537,
+   "kind": "hospital",
+   "area": "Idi-Araba"
+  },
+  {
+   "id": "yaba_station",
+   "name": "Yaba Rail Station",
+   "lat": 6.51147,
+   "lon": 3.37,
+   "kind": "station",
+   "area": "Yaba"
+  },
+  {
+   "id": "yaba_terminal",
+   "name": "Yaba Bus Terminal",
+   "lat": 6.51087,
+   "lon": 3.37065,
+   "kind": "park",
+   "area": "Yaba"
+  },
+  {
+   "id": "yabatech",
+   "name": "Yaba College of Technology",
+   "lat": 6.51888,
+   "lon": 3.37403,
+   "kind": "school",
+   "area": "Yaba"
+  },
+  {
+   "id": "tejuosho",
+   "name": "Tejuosho Market",
+   "lat": 6.50819,
+   "lon": 3.37016,
+   "kind": "market",
+   "area": "Yaba"
+  },
+  {
+   "id": "iponri_market",
+   "name": "Iponri Market",
+   "lat": 6.48474,
+   "lon": 3.36439,
+   "kind": "market",
+   "area": "Iponri"
+  },
+  {
+   "id": "aswani_market",
+   "name": "Aswani Market",
+   "lat": 6.53959,
+   "lon": 3.33103,
+   "kind": "market",
+   "area": "Isolo"
+  },
+  {
+   "id": "unilag_library",
+   "name": "UNILAG Main Library",
+   "lat": 6.52011,
+   "lon": 3.39981,
+   "kind": "school",
+   "area": "Akoka"
+  },
+  {
+   "id": "unilag_shuttle",
+   "name": "UNILAG Shuttle Station",
+   "lat": 6.51841,
+   "lon": 3.39484,
+   "kind": "stop",
+   "area": "Akoka"
+  },
+  {
+   "id": "unilag_medical",
+   "name": "UNILAG Medical Centre",
+   "lat": 6.51468,
+   "lon": 3.39629,
+   "kind": "hospital",
+   "area": "Akoka"
+  },
+  {
+   "id": "unilag_new_hall",
+   "name": "UNILAG New Hall",
+   "lat": 6.5199,
+   "lon": 3.39192,
+   "kind": "school",
+   "area": "Akoka"
+  },
+  {
+   "id": "jaja_complex",
+   "name": "Jaja Shopping Complex",
+   "lat": 6.51622,
+   "lon": 3.39709,
+   "kind": "shop",
+   "area": "Akoka"
+  },
+  {
+   "id": "bariga_jetty",
+   "name": "Bariga Waterfront Jetty",
+   "lat": 6.52831,
+   "lon": 3.40004,
+   "kind": "jetty",
+   "area": "Bariga"
+  },
+  {
+   "id": "bariga",
+   "name": "Bariga",
+   "lat": 6.54073,
+   "lon": 3.38804,
+   "kind": "junction",
+   "area": "Bariga"
+  },
+  {
+   "id": "gbagada_gh",
+   "name": "Gbagada General Hospital",
+   "lat": 6.55371,
+   "lon": 3.38732,
+   "kind": "hospital",
+   "area": "Gbagada"
+  },
+  {
+   "id": "gbagada_interchange",
+   "name": "Gbagada Interchange",
+   "lat": 6.55023,
+   "lon": 3.39221,
+   "kind": "junction",
+   "area": "Gbagada"
+  },
+  {
+   "id": "gbagada_landfill",
+   "name": "Gbagada Landfill",
+   "lat": 6.54927,
+   "lon": 3.38618,
+   "kind": "landmark",
+   "area": "Gbagada"
+  },
+  {
+   "id": "somolu",
+   "name": "Somolu",
+   "lat": 6.53836,
+   "lon": 3.37193,
+   "kind": "junction",
+   "area": "Somolu"
+  },
+  {
+   "id": "oworonsoki_jetty",
+   "name": "Oworonshoki Jetty",
+   "lat": 6.54793,
+   "lon": 3.4072,
+   "kind": "jetty",
+   "area": "Oworonshoki"
+  },
+  {
+   "id": "area_g_police",
+   "name": "Police Area G Command",
+   "lat": 6.56028,
+   "lon": 3.37155,
+   "kind": "police",
+   "area": "Anthony"
+  },
+  {
+   "id": "bajulaye_police",
+   "name": "Bajulaye Police Post",
+   "lat": 6.52703,
+   "lon": 3.37633,
+   "kind": "police",
+   "area": "Somolu"
+  },
+  {
+   "id": "ilupeju",
+   "name": "Ilupeju",
+   "lat": 6.55505,
+   "lon": 3.35928,
+   "kind": "junction",
+   "area": "Ilupeju"
+  },
+  {
+   "id": "total_ilupeju",
+   "name": "Total, Ilupeju Bypass",
+   "lat": 6.55885,
+   "lon": 3.3641,
+   "kind": "fuel",
+   "area": "Ilupeju"
+  },
+  {
+   "id": "maryland_stop",
+   "name": "Maryland Bus Stop",
+   "lat": 6.57501,
+   "lon": 3.36981,
+   "kind": "stop",
+   "area": "Maryland"
+  },
+  {
+   "id": "maryland_mall",
+   "name": "Maryland Mall",
+   "lat": 6.56727,
+   "lon": 3.36732,
+   "kind": "shop",
+   "area": "Maryland"
+  },
+  {
+   "id": "mende_market",
+   "name": "Mende Market",
+   "lat": 6.57262,
+   "lon": 3.36943,
+   "kind": "market",
+   "area": "Mende"
+  },
+  {
+   "id": "onigbongbo_market",
+   "name": "Onigbongbo Market",
+   "lat": 6.5712,
+   "lon": 3.36602,
+   "kind": "market",
+   "area": "Onigbongbo"
+  },
+  {
+   "id": "ojota",
+   "name": "Ojota",
+   "lat": 6.58707,
+   "lon": 3.37915,
+   "kind": "junction",
+   "area": "Ojota"
+  },
+  {
+   "id": "ojota_interchange",
+   "name": "Ojota Interchange",
+   "lat": 6.59671,
+   "lon": 3.3803,
+   "kind": "junction",
+   "area": "Ojota"
+  },
+  {
+   "id": "olushosun_landfill",
+   "name": "Olusosun Landfill",
+   "lat": 6.5949,
+   "lon": 3.37606,
+   "kind": "landmark",
+   "area": "Ojota"
+  },
+  {
+   "id": "ketu_market",
+   "name": "Ketu Market",
+   "lat": 6.59679,
+   "lon": 3.38384,
+   "kind": "market",
+   "area": "Ketu"
+  },
+  {
+   "id": "brt_ketu",
+   "name": "Ketu BRT Stop",
+   "lat": 6.59838,
+   "lon": 3.38643,
+   "kind": "stop",
+   "area": "Ketu"
+  },
+  {
+   "id": "ketu_church",
+   "name": "Upper Room Baptist Church, Ketu",
+   "lat": 6.59843,
+   "lon": 3.397,
+   "kind": "church",
+   "area": "Ketu"
+  },
+  {
+   "id": "ketu_gtbank",
+   "name": "GTBank, Ketu",
+   "lat": 6.60491,
+   "lon": 3.39208,
+   "kind": "bank",
+   "area": "Ketu"
+  },
+  {
+   "id": "mile12_market",
+   "name": "Mile 12 Market",
+   "lat": 6.60719,
+   "lon": 3.39281,
+   "kind": "market",
+   "area": "Mile 12"
+  },
+  {
+   "id": "mile12_terminal",
+   "name": "Mile 12 Bus Terminal",
+   "lat": 6.60564,
+   "lon": 3.39936,
+   "kind": "park",
+   "area": "Mile 12"
+  },
+  {
+   "id": "owode_onirin",
+   "name": "Owode Onirin Market",
+   "lat": 6.60951,
+   "lon": 3.41207,
+   "kind": "market",
+   "area": "Owode Onirin"
+  },
+  {
+   "id": "ogudu_gra",
+   "name": "Ogudu GRA",
+   "lat": 6.575,
+   "lon": 3.39053,
+   "kind": "estate",
+   "area": "Ogudu"
+  },
+  {
+   "id": "ogudu_police",
+   "name": "Ogudu Police Station",
+   "lat": 6.58252,
+   "lon": 3.38437,
+   "kind": "police",
+   "area": "Ogudu"
+  },
+  {
+   "id": "magodo_plot",
+   "name": "Magodo, vacant plot",
+   "lat": 6.61808,
+   "lon": 3.37778,
+   "kind": "estate",
+   "area": "Magodo"
+  },
+  {
+   "id": "ojodu_plot",
+   "name": "Ojodu Berger, vacant plot",
+   "lat": 6.64156,
+   "lon": 3.36851,
+   "kind": "estate",
+   "area": "Ojodu"
+  },
+  {
+   "id": "ayobo_plot",
+   "name": "Ayobo, vacant plot",
+   "lat": 6.60203,
+   "lon": 3.24379,
+   "kind": "estate",
+   "area": "Ayobo"
+  },
+  {
+   "id": "agboyi_plot",
+   "name": "Agboyi, swamp plot",
+   "lat": 6.5775,
+   "lon": 3.4058,
+   "kind": "estate",
+   "area": "Agboyi"
+  },
+  {
+   "id": "agboyi_jetty",
+   "name": "Agboyi Jetty",
+   "lat": 6.57956,
+   "lon": 3.40975,
+   "kind": "jetty",
+   "area": "Agboyi"
+  },
+  {
+   "id": "oworo_road",
+   "name": "Oworo Road",
+   "lat": 6.55149,
+   "lon": 3.39739,
+   "kind": "street",
+   "area": "Oworonshoki"
+  },
+  {
+   "id": "festac",
+   "name": "Festac Town",
+   "lat": 6.46827,
+   "lon": 3.28394,
+   "kind": "junction",
+   "area": "Festac"
+  },
+  {
+   "id": "trade_fair",
+   "name": "Trade Fair Complex",
+   "lat": 6.4679,
+   "lon": 3.24322,
+   "kind": "market",
+   "area": "Ojo"
+  },
+  {
+   "id": "alaba_intl",
+   "name": "Alaba International Market",
+   "lat": 6.46255,
+   "lon": 3.19096,
+   "kind": "market",
+   "area": "Ojo"
+  },
+  {
+   "id": "alaba_rago",
+   "name": "Alaba Rago",
+   "lat": 6.46439,
+   "lon": 3.32448,
+   "kind": "station",
+   "area": "Amuwo Odofin"
+  },
+  {
+   "id": "mile2",
+   "name": "Mile 2",
+   "lat": 6.45988,
+   "lon": 3.3117,
+   "kind": "junction",
+   "area": "Mile 2"
+  },
+  {
+   "id": "mile2_niwa",
+   "name": "Mile 2 NIWA Jetty",
+   "lat": 6.45907,
+   "lon": 3.30774,
+   "kind": "jetty",
+   "area": "Mile 2"
+  },
+  {
+   "id": "amuwo_odofin",
+   "name": "Amuwo Odofin",
+   "lat": 6.47815,
+   "lon": 3.31155,
+   "kind": "junction",
+   "area": "Amuwo Odofin"
+  },
+  {
+   "id": "ajegunle",
+   "name": "Ajegunle",
+   "lat": 6.44816,
+   "lon": 3.33351,
+   "kind": "junction",
+   "area": "Ajegunle"
+  },
+  {
+   "id": "ajegunle_jetty",
+   "name": "Ajegunle Waterside",
+   "lat": 6.44606,
+   "lon": 3.34985,
+   "kind": "jetty",
+   "area": "Ajegunle"
+  },
+  {
+   "id": "apapa",
+   "name": "Apapa",
+   "lat": 6.4469,
+   "lon": 3.36224,
+   "kind": "junction",
+   "area": "Apapa"
+  },
+  {
+   "id": "apapa_port",
+   "name": "Apapa Port",
+   "lat": 6.46375,
+   "lon": 3.37029,
+   "kind": "landmark",
+   "area": "Apapa"
+  },
+  {
+   "id": "apapa_port_gate",
+   "name": "Apapa Port Gate",
+   "lat": 6.45353,
+   "lon": 3.37086,
+   "kind": "landmark",
+   "area": "Apapa"
+  },
+  {
+   "id": "apapa_wharf",
+   "name": "Flour Mills Wharf, Apapa",
+   "lat": 6.4477,
+   "lon": 3.37492,
+   "kind": "jetty",
+   "area": "Apapa"
+  },
+  {
+   "id": "orile_iganmu",
+   "name": "Orile Iganmu",
+   "lat": 6.47733,
+   "lon": 3.34577,
+   "kind": "junction",
+   "area": "Orile"
+  },
+  {
+   "id": "iganmu",
+   "name": "Iganmu",
+   "lat": 6.48242,
+   "lon": 3.36416,
+   "kind": "junction",
+   "area": "Iganmu"
+  },
+  {
+   "id": "costain",
+   "name": "Costain",
+   "lat": 6.48182,
+   "lon": 3.36929,
+   "kind": "stop",
+   "area": "Costain"
+  },
+  {
+   "id": "national_theatre",
+   "name": "National Theatre",
+   "lat": 6.47478,
+   "lon": 3.36885,
+   "kind": "landmark",
+   "area": "Iganmu"
+  },
+  {
+   "id": "eko_bridge_foot",
+   "name": "Eko Bridge, Iddo end",
+   "lat": 6.4757,
+   "lon": 3.37518,
+   "kind": "bridge",
+   "area": "Iddo"
+  },
+  {
+   "id": "ijora_causeway",
+   "name": "Ijora Causeway",
+   "lat": 6.46973,
+   "lon": 3.3778,
+   "kind": "bridge",
+   "area": "Ijora"
+  },
+  {
+   "id": "oyingbo_terminal",
+   "name": "Oyingbo Bus Terminal",
+   "lat": 6.48127,
+   "lon": 3.38307,
+   "kind": "park",
+   "area": "Oyingbo"
+  },
+  {
+   "id": "oyingbo_station",
+   "name": "Oyingbo Rail Station",
+   "lat": 6.48328,
+   "lon": 3.38119,
+   "kind": "station",
+   "area": "Oyingbo"
+  },
+  {
+   "id": "iddo_market",
+   "name": "Iddo Market",
+   "lat": 6.47097,
+   "lon": 3.38322,
+   "kind": "market",
+   "area": "Iddo"
+  },
+  {
+   "id": "ebute_metta_station",
+   "name": "Mobolaji Johnson Station, Ebute Metta",
+   "lat": 6.50177,
+   "lon": 3.37371,
+   "kind": "station",
+   "area": "Ebute Metta"
+  },
+  {
+   "id": "ebute_metta_church",
+   "name": "Christ Anglican Church, Ebute Metta",
+   "lat": 6.48968,
+   "lon": 3.38561,
+   "kind": "church",
+   "area": "Ebute Metta"
+  },
+  {
+   "id": "makoko",
+   "name": "Makoko",
+   "lat": 6.49585,
+   "lon": 3.39234,
+   "kind": "compound",
+   "area": "Makoko"
+  },
+  {
+   "id": "makoko_police",
+   "name": "Makoko Police Post",
+   "lat": 6.49541,
+   "lon": 3.38575,
+   "kind": "police",
+   "area": "Makoko"
+  },
+  {
+   "id": "makoko_taxi_park",
+   "name": "Makoko Taxi Park",
+   "lat": 6.49965,
+   "lon": 3.38688,
+   "kind": "park",
+   "area": "Makoko"
+  },
+  {
+   "id": "ebute_ero",
+   "name": "Ebute Ero Market",
+   "lat": 6.46305,
+   "lon": 3.38486,
+   "kind": "market",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "idumota",
+   "name": "Idumota",
+   "lat": 6.46294,
+   "lon": 3.38669,
+   "kind": "market",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "jankara",
+   "name": "Jankara Market",
+   "lat": 6.46287,
+   "lon": 3.39342,
+   "kind": "market",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "marina_cms",
+   "name": "Marina CMS Jetty",
+   "lat": 6.4495,
+   "lon": 3.38978,
+   "kind": "jetty",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "marina",
+   "name": "Marina",
+   "lat": 6.44616,
+   "lon": 3.39503,
+   "kind": "station",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "tbs_terminal",
+   "name": "Tafawa Balewa Square Bus Terminal",
+   "lat": 6.44574,
+   "lon": 3.40095,
+   "kind": "park",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "obalende_park",
+   "name": "Obalende Motor Park",
+   "lat": 6.44955,
+   "lon": 3.40869,
+   "kind": "park",
+   "area": "Obalende"
+  },
+  {
+   "id": "freedom_park",
+   "name": "Freedom Park",
+   "lat": 6.44873,
+   "lon": 3.39668,
+   "kind": "landmark",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "cathedral_church",
+   "name": "Cathedral Church of Christ",
+   "lat": 6.45085,
+   "lon": 3.39016,
+   "kind": "church",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "holy_cross",
+   "name": "Holy Cross Cathedral",
+   "lat": 6.44996,
+   "lon": 3.39649,
+   "kind": "church",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "lagos_gh",
+   "name": "General Hospital Lagos",
+   "lat": 6.4476,
+   "lon": 3.39635,
+   "kind": "hospital",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "uba_house",
+   "name": "UBA House, Marina",
+   "lat": 6.45557,
+   "lon": 3.38313,
+   "kind": "bank",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "tinubu_square",
+   "name": "Tinubu Square",
+   "lat": 6.45383,
+   "lon": 3.38942,
+   "kind": "landmark",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "tbm_island_end",
+   "name": "Third Mainland Bridge, Island end",
+   "lat": 6.46324,
+   "lon": 3.39418,
+   "kind": "bridge",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "tbm_mid",
+   "name": "Third Mainland Bridge, midspan",
+   "lat": 6.4863,
+   "lon": 3.39515,
+   "kind": "bridge",
+   "area": "Third Mainland"
+  },
+  {
+   "id": "tbm_mainland_end",
+   "name": "Third Mainland Bridge, Oworonshoki end",
+   "lat": 6.5441,
+   "lon": 3.39886,
+   "kind": "bridge",
+   "area": "Third Mainland"
+  },
+  {
+   "id": "tbm_south_quarter",
+   "name": "Third Mainland Bridge, quarter span",
+   "lat": 6.4748,
+   "lon": 3.3946,
+   "kind": "bridge",
+   "area": "Third Mainland"
+  },
+  {
+   "id": "tbm_north_quarter",
+   "name": "Third Mainland Bridge, north quarter",
+   "lat": 6.5165,
+   "lon": 3.3972,
+   "kind": "bridge",
+   "area": "Third Mainland"
+  },
+  {
+   "id": "carter_bridge",
+   "name": "Carter Bridge",
+   "lat": 6.46927,
+   "lon": 3.38273,
+   "kind": "bridge",
+   "area": "Iddo"
+  },
+  {
+   "id": "ikoyi",
+   "name": "Ikoyi",
+   "lat": 6.45234,
+   "lon": 3.42805,
+   "kind": "estate",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "ikoyi_club",
+   "name": "Ikoyi Club 1938",
+   "lat": 6.45044,
+   "lon": 3.42405,
+   "kind": "landmark",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "falomo_bridge",
+   "name": "Falomo Bridge",
+   "lat": 6.4492,
+   "lon": 3.4262,
+   "kind": "bridge",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "osborne_terminal",
+   "name": "Osborne Ferry Terminal",
+   "lat": 6.46417,
+   "lon": 3.41746,
+   "kind": "jetty",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "dolphin_estate",
+   "name": "Dolphin Estate",
+   "lat": 6.45871,
+   "lon": 3.41674,
+   "kind": "estate",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "ikoyi_cemetery",
+   "name": "Ikoyi Cemetery",
+   "lat": 6.45186,
+   "lon": 3.41199,
+   "kind": "landmark",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "dodan_barracks",
+   "name": "Dodan Barracks",
+   "lat": 6.44976,
+   "lon": 3.41795,
+   "kind": "landmark",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "kingstower_ikoyi",
+   "name": "Kings Tower, Ikoyi",
+   "lat": 6.45475,
+   "lon": 3.4317,
+   "kind": "office",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "golden_gate",
+   "name": "Golden Gate",
+   "lat": 6.45447,
+   "lon": 3.43089,
+   "kind": "stop",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "glover_court_suya",
+   "name": "Glover Court Suya",
+   "lat": 6.45212,
+   "lon": 3.43549,
+   "kind": "food",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "mobil_alausa",
+   "name": "Mobil, Alausa",
+   "lat": 6.62086,
+   "lon": 3.35308,
+   "kind": "fuel",
+   "area": "Alausa"
+  },
+  {
+   "id": "nnpc_isolo",
+   "name": "NNPC Filling Station, Isolo",
+   "lat": 6.53936,
+   "lon": 3.31147,
+   "kind": "fuel",
+   "area": "Isolo"
+  },
+  {
+   "id": "shoprite_icm",
+   "name": "Shoprite, Ikeja City Mall",
+   "lat": 6.6138,
+   "lon": 3.35827,
+   "kind": "shop",
+   "area": "Alausa"
+  }
+ ]
+}

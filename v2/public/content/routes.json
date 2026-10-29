@@ -1,0 +1,824 @@
+{
+ "version": 1,
+ "items": [
+  {
+   "id": "danfo_oshodi_ikeja",
+   "name": "Oshodi to Ikeja",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Up Agege Motor Road side, past Mafoluku, down to Ikeja Along. The busiest line in the morning.",
+   "fare": 150,
+   "stops": [
+    {
+     "place": "oshodi_park",
+     "dwell": 5,
+     "label": "Oshodi Park"
+    },
+    {
+     "place": "mafoluku"
+    },
+    {
+     "place": "ikeja_bus_terminal",
+     "dwell": 4
+    },
+    {
+     "place": "ikeja_along",
+     "dwell": 4
+    }
+   ],
+   "rush": [
+    6,
+    10
+   ],
+   "via": [
+    "Mafoluku",
+    "Ikeja"
+   ],
+   "tags": [
+    "danfo",
+    "mainland"
+   ]
+  },
+  {
+   "id": "danfo_oshodi_mushin",
+   "name": "Oshodi to Mushin",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Short, fast, full of people with sacks. Ladipo is on the way.",
+   "fare": 120,
+   "stops": [
+    {
+     "place": "oshodi_park",
+     "dwell": 5
+    },
+    {
+     "place": "ladipo_gate"
+    },
+    {
+     "place": "papa_ajao"
+    },
+    {
+     "place": "mushin_center",
+     "dwell": 4
+    },
+    {
+     "place": "mushin_terminal"
+    }
+   ],
+   "rush": [
+    7,
+    10
+   ],
+   "tags": [
+    "danfo"
+   ]
+  },
+  {
+   "id": "danfo_ikeja_ojota",
+   "name": "Ikeja to Ojota",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Across the top of Lagos, past Maryland and Mende, ending at Ojota interchange.",
+   "fare": 180,
+   "stops": [
+    {
+     "place": "ikeja_along",
+     "dwell": 4
+    },
+    {
+     "place": "allen_junction"
+    },
+    {
+     "place": "maryland_stop"
+    },
+    {
+     "place": "mende_market"
+    },
+    {
+     "place": "ojota",
+     "dwell": 4
+    }
+   ],
+   "rush": [
+    16,
+    20
+   ],
+   "tags": [
+    "danfo"
+   ]
+  },
+  {
+   "id": "danfo_oshodi_ikotun",
+   "name": "Oshodi to Ikotun",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Out west through Isolo and Ejigbo. Long road, tight corners.",
+   "fare": 200,
+   "stops": [
+    {
+     "place": "oshodi_park",
+     "dwell": 5
+    },
+    {
+     "place": "isolo_junction"
+    },
+    {
+     "place": "ejigbo"
+    },
+    {
+     "place": "egbeda"
+    },
+    {
+     "place": "ikotun_terminal",
+     "dwell": 4
+    }
+   ],
+   "rush": [
+    16,
+    20
+   ],
+   "tags": [
+    "danfo",
+    "long"
+   ]
+  },
+  {
+   "id": "danfo_oshodi_yaba",
+   "name": "Oshodi to Yaba",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Anthony, Obanikoro, Onipanu, Yaba. Students and tailors.",
+   "fare": 150,
+   "stops": [
+    {
+     "place": "oshodi_park",
+     "dwell": 5
+    },
+    {
+     "place": "anthony_stop"
+    },
+    {
+     "place": "obanikoro"
+    },
+    {
+     "place": "onipanu"
+    },
+    {
+     "place": "yaba_terminal",
+     "dwell": 5
+    }
+   ],
+   "rush": [
+    7,
+    10
+   ],
+   "tags": [
+    "danfo"
+   ]
+  },
+  {
+   "id": "danfo_oshodi_apapa",
+   "name": "Oshodi to Apapa",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "The long one: Isolo, Mile 2, then the port trucks. Take patience.",
+   "fare": 250,
+   "stops": [
+    {
+     "place": "oshodi_park",
+     "dwell": 5
+    },
+    {
+     "place": "isolo_junction"
+    },
+    {
+     "place": "mile2"
+    },
+    {
+     "place": "ajegunle"
+    },
+    {
+     "place": "apapa",
+     "dwell": 5
+    }
+   ],
+   "rush": [
+    6,
+    9
+   ],
+   "tags": [
+    "danfo",
+    "long",
+    "port"
+   ]
+  },
+  {
+   "id": "danfo_ikeja_agege",
+   "name": "Ikeja to Agege",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Rail line on your side. Watch for the level crossing.",
+   "fare": 130,
+   "stops": [
+    {
+     "place": "ikeja_bus_terminal",
+     "dwell": 4
+    },
+    {
+     "place": "ashade_market"
+    },
+    {
+     "place": "agege_station"
+    },
+    {
+     "place": "agege_stadium",
+     "dwell": 4
+    },
+    {
+     "place": "agege_pen_cinema"
+    }
+   ],
+   "tags": [
+    "danfo"
+   ]
+  },
+  {
+   "id": "danfo_ketu_ojota",
+   "name": "Ketu to Ojota",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Short hop along the expressway side. Mile 12 smell on the way.",
+   "fare": 120,
+   "stops": [
+    {
+     "place": "mile12_terminal",
+     "dwell": 4
+    },
+    {
+     "place": "ketu_market"
+    },
+    {
+     "place": "brt_ketu"
+    },
+    {
+     "place": "ojota",
+     "dwell": 4
+    }
+   ],
+   "rush": [
+    6,
+    9
+   ],
+   "tags": [
+    "danfo"
+   ]
+  },
+  {
+   "id": "danfo_yaba_oyingbo",
+   "name": "Yaba to Oyingbo",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Down Herbert Macaulay Way to the old rail market.",
+   "fare": 130,
+   "stops": [
+    {
+     "place": "yaba_terminal",
+     "dwell": 4
+    },
+    {
+     "place": "ebute_metta_station"
+    },
+    {
+     "place": "makoko_taxi_park"
+    },
+    {
+     "place": "oyingbo_terminal",
+     "dwell": 5
+    }
+   ],
+   "tags": [
+    "danfo"
+   ]
+  },
+  {
+   "id": "danfo_tbs_obalende",
+   "name": "TBS to Obalende",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Island hop. Short fare, a lot of shouting.",
+   "fare": 100,
+   "stops": [
+    {
+     "place": "tbs_terminal",
+     "dwell": 4
+    },
+    {
+     "place": "freedom_park"
+    },
+    {
+     "place": "obalende_park",
+     "dwell": 4
+    }
+   ],
+   "tags": [
+    "danfo",
+    "island"
+   ]
+  },
+  {
+   "id": "danfo_mainland_island",
+   "name": "Gbagada to Obalende (Third Mainland)",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Across the lagoon on Third Mainland. Fast if it is not jammed.",
+   "fare": 300,
+   "stops": [
+    {
+     "place": "gbagada_interchange",
+     "dwell": 5
+    },
+    {
+     "place": "tbm_north_quarter"
+    },
+    {
+     "place": "tbm_mid"
+    },
+    {
+     "place": "tbm_island_end",
+     "dwell": 4
+    },
+    {
+     "place": "obalende_park",
+     "dwell": 5
+    }
+   ],
+   "rush": [
+    6,
+    9
+   ],
+   "via": [
+    "Third Mainland Bridge"
+   ],
+   "tags": [
+    "danfo",
+    "bridge",
+    "long"
+   ]
+  },
+  {
+   "id": "danfo_ikotun_igando",
+   "name": "Ikotun to Igando",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "The western end. Rough roads, patient passengers.",
+   "fare": 100,
+   "stops": [
+    {
+     "place": "ikotun_terminal",
+     "dwell": 4
+    },
+    {
+     "place": "idimu"
+    },
+    {
+     "place": "igando_market",
+     "dwell": 4
+    },
+    {
+     "place": "alimosho_gh"
+    }
+   ],
+   "tags": [
+    "danfo"
+   ]
+  },
+  {
+   "id": "danfo_mile2_festac",
+   "name": "Mile 2 to Festac",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Along the Badagry axis. Shared with trailers.",
+   "fare": 160,
+   "stops": [
+    {
+     "place": "mile2",
+     "dwell": 4
+    },
+    {
+     "place": "alaba_rago"
+    },
+    {
+     "place": "amuwo_odofin"
+    },
+    {
+     "place": "festac",
+     "dwell": 4
+    },
+    {
+     "place": "trade_fair"
+    }
+   ],
+   "tags": [
+    "danfo",
+    "west"
+   ]
+  },
+  {
+   "id": "danfo_surulere_ojuelegba",
+   "name": "Surulere to Ojuelegba",
+   "mode": "danfo",
+   "vehicle": "danfo",
+   "blurb": "Fela shrine side. Tight junction, loud music.",
+   "fare": 90,
+   "stops": [
+    {
+     "place": "surulere",
+     "dwell": 4
+    },
+    {
+     "place": "teslim_balogun"
+    },
+    {
+     "place": "ojuelegba",
+     "dwell": 4
+    },
+    {
+     "place": "fadeyi"
+    }
+   ],
+   "tags": [
+    "danfo"
+   ]
+  },
+  {
+   "id": "bus_ketu_tbs",
+   "name": "BRT Ketu to TBS",
+   "mode": "bus",
+   "vehicle": "danfo",
+   "blurb": "The lane with the barrier. Fares are fixed, nobody argues.",
+   "fare": 220,
+   "stops": [
+    {
+     "place": "brt_ketu",
+     "dwell": 4
+    },
+    {
+     "place": "ojota_interchange"
+    },
+    {
+     "place": "gbagada_interchange"
+    },
+    {
+     "place": "tbs_terminal",
+     "dwell": 5
+    }
+   ],
+   "rush": [
+    6,
+    9
+   ],
+   "tags": [
+    "bus",
+    "brt"
+   ]
+  },
+  {
+   "id": "okada_computer_village",
+   "name": "Computer Village shuttle",
+   "mode": "okada",
+   "vehicle": "okada",
+   "blurb": "Short hops between the terminal, the Otigba alley and the bank.",
+   "fare": 400,
+   "stops": [
+    {
+     "place": "ikeja_bus_terminal"
+    },
+    {
+     "place": "computer_village"
+    },
+    {
+     "place": "computer_village_alley"
+    },
+    {
+     "place": "ikeja_plaza_bank"
+    }
+   ],
+   "tags": [
+    "okada"
+   ]
+  },
+  {
+   "id": "okada_oshodi_cappa",
+   "name": "Oshodi to Cappa",
+   "mode": "okada",
+   "vehicle": "okada",
+   "blurb": "Mechanics to the park and back. Quick money.",
+   "fare": 350,
+   "stops": [
+    {
+     "place": "oshodi_terminal1"
+    },
+    {
+     "place": "cappa_gate"
+    },
+    {
+     "place": "adonai_fuel"
+    },
+    {
+     "place": "oshodi_banks"
+    }
+   ],
+   "loop": true,
+   "tags": [
+    "okada"
+   ]
+  },
+  {
+   "id": "okada_papa_ajao",
+   "name": "Papa Ajao run",
+   "mode": "okada",
+   "vehicle": "okada",
+   "blurb": "Narrow lanes, plenty of passengers with onions.",
+   "fare": 350,
+   "stops": [
+    {
+     "place": "papa_ajao"
+    },
+    {
+     "place": "ladipo_gate"
+    },
+    {
+     "place": "mushin_market"
+    },
+    {
+     "place": "idi_oro"
+    }
+   ],
+   "tags": [
+    "okada"
+   ]
+  },
+  {
+   "id": "okada_yaba_unilag",
+   "name": "Yaba to UNILAG",
+   "mode": "okada",
+   "vehicle": "okada",
+   "blurb": "Students who are late for class and have no change.",
+   "fare": 450,
+   "stops": [
+    {
+     "place": "yaba_terminal"
+    },
+    {
+     "place": "yabatech"
+    },
+    {
+     "place": "unilag_shuttle"
+    },
+    {
+     "place": "jaja_complex"
+    }
+   ],
+   "rush": [
+    7,
+    10
+   ],
+   "tags": [
+    "okada",
+    "students"
+   ]
+  },
+  {
+   "id": "okada_gbagada_bariga",
+   "name": "Gbagada to Bariga",
+   "mode": "okada",
+   "vehicle": "okada",
+   "blurb": "Down to the waterfront. Last bike after dark is trouble.",
+   "fare": 350,
+   "stops": [
+    {
+     "place": "gbagada_interchange"
+    },
+    {
+     "place": "gbagada_gh"
+    },
+    {
+     "place": "bariga"
+    },
+    {
+     "place": "bariga_jetty"
+    }
+   ],
+   "tags": [
+    "okada"
+   ]
+  },
+  {
+   "id": "keke_ikeja_gra",
+   "name": "Ikeja GRA loop",
+   "mode": "keke",
+   "vehicle": "keke",
+   "blurb": "Calm streets, nice houses, madams going to church or hair appointment.",
+   "fare": 250,
+   "stops": [
+    {
+     "place": "ikeja_gra"
+    },
+    {
+     "place": "ikeja_golf"
+    },
+    {
+     "place": "radisson_ikeja"
+    },
+    {
+     "place": "opebi_chicken"
+    }
+   ],
+   "loop": true,
+   "tags": [
+    "keke"
+   ]
+  },
+  {
+   "id": "keke_surulere",
+   "name": "Surulere loop",
+   "mode": "keke",
+   "vehicle": "keke",
+   "blurb": "Stadium, hospital, market and back again.",
+   "fare": 200,
+   "stops": [
+    {
+     "place": "surulere"
+    },
+    {
+     "place": "randle_gh"
+    },
+    {
+     "place": "bode_thomas_bank"
+    },
+    {
+     "place": "teslim_balogun"
+    }
+   ],
+   "loop": true,
+   "tags": [
+    "keke"
+   ]
+  },
+  {
+   "id": "keke_festac",
+   "name": "Festac loop",
+   "mode": "keke",
+   "vehicle": "keke",
+   "blurb": "Wide roads, numbered avenues, patient riders.",
+   "fare": 200,
+   "stops": [
+    {
+     "place": "festac"
+    },
+    {
+     "place": "amuwo_odofin"
+    },
+    {
+     "place": "trade_fair"
+    },
+    {
+     "place": "alaba_rago"
+    }
+   ],
+   "loop": true,
+   "tags": [
+    "keke"
+   ]
+  },
+  {
+   "id": "keke_agege",
+   "name": "Agege market loop",
+   "mode": "keke",
+   "vehicle": "keke",
+   "blurb": "Short streets, bread smell, market women with large baskets.",
+   "fare": 180,
+   "stops": [
+    {
+     "place": "agege_station"
+    },
+    {
+     "place": "ashade_market"
+    },
+    {
+     "place": "agege_stadium"
+    },
+    {
+     "place": "agege_pen_cinema"
+    }
+   ],
+   "loop": true,
+   "tags": [
+    "keke"
+   ]
+  },
+  {
+   "id": "delivery_oshodi_ikeja",
+   "name": "Oshodi to Ikeja freight",
+   "mode": "delivery",
+   "vehicle": "hatch",
+   "blurb": "Boxes between the two big hubs. Customers hate waiting.",
+   "fare": 5000,
+   "stops": [
+    {
+     "place": "oshodi_park"
+    },
+    {
+     "place": "mafoluku"
+    },
+    {
+     "place": "ikeja_bus_terminal"
+    }
+   ],
+   "tags": [
+    "delivery"
+   ]
+  },
+  {
+   "id": "delivery_ladipo_mushin",
+   "name": "Ladipo parts delivery",
+   "mode": "delivery",
+   "vehicle": "hatch",
+   "blurb": "Brake pads and shock absorbers to garages in Mushin and Isolo.",
+   "fare": 4000,
+   "stops": [
+    {
+     "place": "ladipo_gate"
+    },
+    {
+     "place": "papa_ajao"
+    },
+    {
+     "place": "mushin_center"
+    },
+    {
+     "place": "aswani_market"
+    }
+   ],
+   "tags": [
+    "delivery",
+    "parts"
+   ]
+  },
+  {
+   "id": "delivery_cv_ikeja",
+   "name": "Computer Village dispatch",
+   "mode": "delivery",
+   "vehicle": "okada",
+   "blurb": "Phones and chargers out of the alley to waiting shops.",
+   "fare": 3500,
+   "stops": [
+    {
+     "place": "computer_village_alley"
+    },
+    {
+     "place": "ikeja_plaza_bank"
+    },
+    {
+     "place": "ikeja_bus_terminal"
+    },
+    {
+     "place": "ikeja_station"
+    }
+   ],
+   "tags": [
+    "delivery",
+    "phones"
+   ]
+  },
+  {
+   "id": "delivery_island_run",
+   "name": "Mainland to Island",
+   "mode": "delivery",
+   "vehicle": "sedan",
+   "blurb": "Across Third Mainland with something that cannot be late.",
+   "fare": 9000,
+   "stops": [
+    {
+     "place": "ikeja_along"
+    },
+    {
+     "place": "ojota"
+    },
+    {
+     "place": "tbm_mainland_end"
+    },
+    {
+     "place": "tbm_island_end"
+    },
+    {
+     "place": "marina"
+    }
+   ],
+   "tags": [
+    "delivery",
+    "bridge"
+   ]
+  }
+ ]
+}

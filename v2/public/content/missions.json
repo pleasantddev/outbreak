@@ -1,0 +1,5375 @@
+{
+ "version": 1,
+ "items": [
+  {
+   "id": "danfo_first_run",
+   "title": "First Run, Oshodi to Ikeja",
+   "arc": "Conductor Sule",
+   "category": "transport",
+   "area": "Oshodi",
+   "giver": "Conductor Sule",
+   "blurb": "Sule's driver no show. Carry the yellow bus to Ikeja, call the stops, collect the fares.",
+   "minutes": 8,
+   "difficulty": 1,
+   "offer": {
+    "call": {
+     "who": "Conductor Sule",
+     "line": "My driver no show and the bus dey park. Come Oshodi, carry am go Ikeja. You go collect your share.",
+     "weight": 3
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Conductor Sule",
+     "to": "oshodi_park",
+     "lines": [
+      [
+       "Conductor Sule",
+       "Ah, you reach. See the bus, the one with the cracked mirror. She get temper but she dey go."
+      ],
+      [
+       "Conductor Sule",
+       "Shout the route, no overload, no fight. Park Ikeja side, I go collect my own."
+      ]
+     ],
+     "text": "Meet Conductor Sule at Oshodi Park",
+     "type": "talk"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "danfo"
+     ],
+     "provide": "oshodi_park",
+     "text": "Get into the danfo",
+     "type": "vehicle"
+    },
+    {
+     "id": "rival",
+     "who": "Rival conductor",
+     "prompt": "A rival conductor blocks the bus door. \"This bus na for my line! Pay park fee or find another road.\"",
+     "options": [
+      {
+       "text": "Pay the park fee (₦500)",
+       "next": "paid",
+       "fx": {
+        "cash": -500,
+        "rep": {
+         "union": 2
+        }
+       }
+      },
+      {
+       "text": "Talk him down",
+       "next": "talked",
+       "roll": {
+        "skill": "charm",
+        "dc": 1,
+        "ok": "talked",
+        "bad": "shoved",
+        "okFx": {
+         "rep": {
+          "union": 3
+         }
+        }
+       }
+      },
+      {
+       "text": "Drive through the gap",
+       "next": "pushed",
+       "fx": {
+        "rep": {
+         "union": -3
+        }
+       }
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "paid",
+     "route": "danfo_oshodi_ikeja",
+     "text": "Run the Oshodi to Ikeja line",
+     "type": "route"
+    },
+    {
+     "id": "end5",
+     "outcome": "win",
+     "title": "RUN DONE",
+     "rewards": {
+      "cash": 6000,
+      "xp": 80,
+      "skillXp": {
+       "drive": 30,
+       "charm": 8
+      },
+      "rep": {
+       "union": 6
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "talked",
+     "route": "danfo_oshodi_ikeja",
+     "text": "Run the line. Talking worked.",
+     "type": "route"
+    },
+    {
+     "id": "end7",
+     "outcome": "win",
+     "title": "SMOOTH RUN",
+     "rewards": {
+      "cash": 6500,
+      "xp": 90,
+      "skillXp": {
+       "drive": 30,
+       "charm": 14
+      },
+      "rep": {
+       "union": 8
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "shoved",
+     "to": "oshodi_terminal1",
+     "text": "He shoved you off the door. Get out of the park.",
+     "on": "any",
+     "type": "goto"
+    },
+    {
+     "id": "end9",
+     "outcome": "fail",
+     "title": "THROWN OUT",
+     "text": "The rival conductors ran you off the line.",
+     "type": "end"
+    },
+    {
+     "id": "pushed",
+     "route": "danfo_oshodi_ikeja",
+     "text": "Run the line, no stopping for them",
+     "fareMult": 1,
+     "type": "route"
+    },
+    {
+     "id": "end11",
+     "outcome": "win",
+     "title": "RUN DONE",
+     "rewards": {
+      "cash": 5500,
+      "xp": 70,
+      "skillXp": {
+       "drive": 34
+      },
+      "rep": {
+       "union": 2
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 6000,
+    "xp": 80,
+    "skillXp": {
+     "drive": 30,
+     "charm": 8
+    },
+    "rep": {
+     "union": 6
+    }
+   },
+   "penalty": {
+    "rep": {
+     "union": -2
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "legacy": "danfo",
+   "tags": [
+    "intro",
+    "danfo"
+   ]
+  },
+  {
+   "id": "sule_rush_hour",
+   "title": "Rush Hour at Oshodi",
+   "arc": "Conductor Sule",
+   "category": "transport",
+   "area": "Oshodi",
+   "giver": "Conductor Sule",
+   "blurb": "Morning rush. Two runs to Mushin and back before the park fills up.",
+   "minutes": 10,
+   "difficulty": 2,
+   "req": {
+    "after": [
+     "danfo_first_run"
+    ]
+   },
+   "offer": {
+    "call": {
+     "who": "Conductor Sule",
+     "line": "Rush hour don start. Fares go double, the bus dey wait. Make you come now now.",
+     "hours": [
+      5,
+      10
+     ],
+     "weight": 2
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Conductor Sule",
+     "to": "oshodi_park",
+     "lines": [
+      [
+       "Conductor Sule",
+       "Everybody dey rush. If you carry full bus the first run, I go give you extra."
+      ]
+     ],
+     "text": "Find Sule at the park",
+     "type": "talk"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "danfo"
+     ],
+     "provide": "oshodi_park",
+     "text": "Take the bus",
+     "type": "vehicle"
+    },
+    {
+     "id": "route3",
+     "route": "danfo_oshodi_mushin",
+     "text": "First run: Oshodi to Mushin",
+     "fareMult": 1.2,
+     "type": "route"
+    },
+    {
+     "id": "choice4",
+     "who": "Passenger",
+     "prompt": "\"Driver! My stop is back there. Abeg turn around, I go pay double.\"",
+     "options": [
+      {
+       "text": "Turn around, take the double fare",
+       "next": "turn",
+       "fx": {
+        "cash": 800
+       }
+      },
+      {
+       "text": "Ignore him. The line is the line.",
+       "next": "back",
+       "fx": {
+        "rep": {
+         "union": 2
+        }
+       }
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "turn",
+     "route": "danfo_oshodi_mushin",
+     "text": "Second run, back to Oshodi",
+     "reverse": true,
+     "fareMult": 1.2,
+     "type": "route"
+    },
+    {
+     "id": "end6",
+     "outcome": "win",
+     "title": "DOUBLE RUN",
+     "rewards": {
+      "cash": 11800,
+      "xp": 135,
+      "skillXp": {
+       "drive": 45,
+       "charm": 10
+      },
+      "rep": {
+       "union": 6
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "back",
+     "route": "danfo_oshodi_mushin",
+     "text": "Second run, back to Oshodi",
+     "reverse": true,
+     "fareMult": 1.2,
+     "type": "route"
+    },
+    {
+     "id": "end8",
+     "outcome": "win",
+     "title": "DOUBLE RUN",
+     "rewards": {
+      "cash": 11000,
+      "xp": 130,
+      "skillXp": {
+       "drive": 45
+      },
+      "rep": {
+       "union": 10
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 11000,
+    "xp": 130,
+    "skillXp": {
+     "drive": 45,
+     "charm": 10
+    },
+    "rep": {
+     "union": 8
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 10
+   },
+   "tags": [
+    "danfo"
+   ]
+  },
+  {
+   "id": "sule_area_boys_toll",
+   "title": "Toll at Mafoluku",
+   "arc": "Conductor Sule",
+   "category": "transport",
+   "area": "Mafoluku",
+   "giver": "Conductor Sule",
+   "blurb": "Area boys have started a toll at Mafoluku. Pay, charm them or break it up.",
+   "minutes": 8,
+   "difficulty": 2,
+   "req": {
+    "after": [
+     "danfo_first_run"
+    ],
+    "level": 2
+   },
+   "offer": {
+    "giver": {
+     "name": "Conductor Sule",
+     "at": "mafoluku_terminal",
+     "line": "Those boys for Mafoluku don start collect toll. Settle am for me, I no care how.",
+     "look": "ped"
+    }
+   },
+   "start": "goto1",
+   "steps": [
+    {
+     "id": "goto1",
+     "to": "mafoluku_terminal",
+     "text": "Go to Mafoluku terminal and see what they want",
+     "type": "goto"
+    },
+    {
+     "id": "talk2",
+     "npc": "Lekan (area boy)",
+     "to": "mafoluku_terminal",
+     "lines": [
+      [
+       "Lekan",
+       "This place get owner. Every bus wey pass, ₦2,000. No be me talk am, na the chairman."
+      ],
+      [
+       "You",
+       "Which chairman?"
+      ],
+      [
+       "Lekan",
+       "You go see am. After you pay."
+      ]
+     ],
+     "text": "Talk to the boys",
+     "look": "area",
+     "type": "talk"
+    },
+    {
+     "id": "choice3",
+     "who": "Lekan",
+     "prompt": "He folds his arms. Three of his friends step closer.",
+     "options": [
+      {
+       "text": "Pay ₦2,000 and leave",
+       "next": "pay",
+       "fx": {
+        "cash": -2000
+       }
+      },
+      {
+       "text": "Talk about the union chairman",
+       "next": "sweet",
+       "roll": {
+        "skill": "charm",
+        "dc": 3,
+        "ok": "sweet",
+        "bad": "fightit",
+        "okFx": {
+         "rep": {
+          "streets": 3
+         }
+        }
+       }
+      },
+      {
+       "text": "Fight",
+       "next": "fightit",
+       "if": {
+        "skill": {
+         "fight": 2
+        }
+       },
+       "lockedHint": "Fighting 2 to try this"
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "pay",
+     "outcome": "win",
+     "title": "TOLL SETTLED",
+     "rewards": {
+      "cash": 7000,
+      "xp": 90,
+      "skillXp": {
+       "charm": 10
+      },
+      "rep": {
+       "union": 4
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "sweet",
+     "outcome": "win",
+     "title": "NO MORE TOLL",
+     "rewards": {
+      "cash": 10000,
+      "xp": 125,
+      "skillXp": {
+       "charm": 22,
+       "street": 8
+      },
+      "rep": {
+       "union": 10,
+       "streets": 3
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "fightit",
+     "at": "mafoluku_terminal",
+     "foes": [
+      {
+       "n": 3,
+       "role": "area",
+       "weapon": "machete"
+      }
+     ],
+     "text": "Beat the toll boys",
+     "type": "fight"
+    },
+    {
+     "id": "end7",
+     "outcome": "win",
+     "title": "TOLL BROKEN",
+     "rewards": {
+      "cash": 9500,
+      "xp": 120,
+      "skillXp": {
+       "fight": 24,
+       "street": 10
+      },
+      "rep": {
+       "union": 12,
+       "streets": -2
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 9000,
+    "xp": 110,
+    "skillXp": {
+     "charm": 18,
+     "fight": 10,
+     "street": 12
+    },
+    "rep": {
+     "union": 10
+    }
+   },
+   "penalty": {
+    "rep": {
+     "union": -4
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "tags": [
+    "area boys",
+    "danfo"
+   ]
+  },
+  {
+   "id": "night_shift_ikotun",
+   "title": "Night Shift to Ikotun",
+   "arc": "Conductor Sule",
+   "category": "transport",
+   "area": "Oshodi",
+   "giver": "Conductor Sule",
+   "blurb": "The last bus to Ikotun pays well, and so does trouble. Watch who enters after ten.",
+   "minutes": 12,
+   "difficulty": 3,
+   "req": {
+    "level": 3,
+    "after": [
+     "sule_rush_hour"
+    ]
+   },
+   "offer": {
+    "call": {
+     "who": "Conductor Sule",
+     "line": "Last bus for Ikotun side, nobody wan carry am. Fares dey sweet but shine your eye.",
+     "hours": [
+      20,
+      23
+     ],
+     "weight": 2
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Conductor Sule",
+     "to": "oshodi_park",
+     "lines": [
+      [
+       "Conductor Sule",
+       "Night run. People dey enter that bus for one chance reason. If dem look wrong, stop and shout."
+      ]
+     ],
+     "text": "Meet Sule",
+     "type": "talk"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "danfo"
+     ],
+     "provide": "oshodi_park",
+     "text": "Take the night bus",
+     "type": "vehicle"
+    },
+    {
+     "id": "route3",
+     "route": "danfo_oshodi_ikotun",
+     "text": "Run Oshodi to Ikotun",
+     "stops": 3,
+     "fareMult": 1.4,
+     "type": "route"
+    },
+    {
+     "id": "choice4",
+     "who": "Man in a black cap",
+     "prompt": "A man in a black cap leans to the window at Ejigbo. \"Oga, small detour. I pay five thousand for the trouble.\"",
+     "options": [
+      {
+       "text": "Take the detour",
+       "next": "detour",
+       "fx": {
+        "cash": 5000
+       }
+      },
+      {
+       "text": "Read him: does he look right?",
+       "next": "safe",
+       "roll": {
+        "skill": "street",
+        "dc": 2,
+        "ok": "safe",
+        "bad": "trap"
+       }
+      },
+      {
+       "text": "Refuse and drive on",
+       "next": "safe"
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "safe",
+     "route": "danfo_oshodi_ikotun",
+     "text": "Finish the line",
+     "skip": 3,
+     "fareMult": 1.4,
+     "type": "route"
+    },
+    {
+     "id": "end6",
+     "outcome": "win",
+     "title": "NIGHT RUN DONE",
+     "rewards": {
+      "cash": 17000,
+      "xp": 190,
+      "skillXp": {
+       "drive": 50,
+       "street": 18
+      },
+      "rep": {
+       "union": 12
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "detour",
+     "to": "idimu",
+     "text": "Take the man where he wants. Keep your eyes open.",
+     "on": "vehicle",
+     "type": "goto"
+    },
+    {
+     "id": "fight8",
+     "at": "idimu",
+     "foes": [
+      {
+       "n": 2,
+       "role": "area",
+       "weapon": "machete"
+      }
+     ],
+     "text": "Wahala. Hold them off",
+     "type": "fight"
+    },
+    {
+     "id": "end9",
+     "outcome": "win",
+     "title": "SURVIVED",
+     "rewards": {
+      "cash": 15000,
+      "xp": 200,
+      "skillXp": {
+       "drive": 40,
+       "fight": 20,
+       "street": 20
+      },
+      "rep": {
+       "streets": 3
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "trap",
+     "at": "ejigbo",
+     "foes": [
+      {
+       "n": 2,
+       "role": "area",
+       "weapon": "machete"
+      }
+     ],
+     "text": "He had friends. Fight them off",
+     "type": "fight"
+    },
+    {
+     "id": "end11",
+     "outcome": "win",
+     "title": "ONE CHANCE, NO CHANCE",
+     "rewards": {
+      "cash": 14000,
+      "xp": 180,
+      "skillXp": {
+       "fight": 22,
+       "street": 14
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 17000,
+    "xp": 190,
+    "skillXp": {
+     "drive": 50,
+     "street": 16
+    },
+    "rep": {
+     "union": 10
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 15
+   },
+   "tags": [
+    "danfo",
+    "night"
+   ]
+  },
+  {
+   "id": "okada_cv_first_day",
+   "title": "Okada: First Day at Computer Village",
+   "arc": "Okada Life",
+   "category": "transport",
+   "area": "Ikeja",
+   "giver": "Baba Rider",
+   "blurb": "Borrow an okada and ferry phone buyers around the Computer Village alleys.",
+   "minutes": 7,
+   "difficulty": 1,
+   "offer": {
+    "giver": {
+     "name": "Baba Rider",
+     "at": "ikeja_bus_terminal",
+     "line": "You fit ride? Take this bike, bring ₦1,500 for me daily. Whatever else you collect na yours."
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Baba Rider",
+     "to": "ikeja_bus_terminal",
+     "lines": [
+      [
+       "Baba Rider",
+       "The bike get small problem with the brake. Press hard. Passengers no go know."
+      ]
+     ],
+     "text": "Meet Baba Rider",
+     "type": "talk"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "okada"
+     ],
+     "provide": "ikeja_bus_terminal",
+     "text": "Take the okada",
+     "type": "vehicle"
+    },
+    {
+     "id": "route3",
+     "route": "okada_computer_village",
+     "text": "Shuttle passengers around Computer Village",
+     "type": "route"
+    },
+    {
+     "id": "end4",
+     "outcome": "win",
+     "title": "FIRST DAY DONE",
+     "rewards": {
+      "cash": 5500,
+      "xp": 70,
+      "skillXp": {
+       "ride": 30
+      },
+      "rep": {
+       "riders": 6
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 5500,
+    "xp": 70,
+    "skillXp": {
+     "ride": 30
+    },
+    "rep": {
+     "riders": 6
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 8
+   },
+   "tags": [
+    "okada"
+   ]
+  },
+  {
+   "id": "okada_union_dues",
+   "title": "Rider Union Dues",
+   "arc": "Okada Life",
+   "category": "transport",
+   "area": "Oshodi",
+   "giver": "Chairman Alade",
+   "blurb": "The riders union wants its dues, today. Collect from four riders, or pay yourself.",
+   "minutes": 9,
+   "difficulty": 2,
+   "req": {
+    "after": [
+     "okada_cv_first_day"
+    ]
+   },
+   "offer": {
+    "giver": {
+     "name": "Chairman Alade",
+     "at": "oshodi_terminal3",
+     "line": "Dues na dues. You go round collect from four boys, or you go pay for them. Your choice.",
+     "look": "area"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Chairman Alade",
+     "to": "oshodi_terminal3",
+     "lines": [
+      [
+       "Chairman Alade",
+       "Four spots: Ikeja Along, Mafoluku, Mushin and Ojota. Some of them go fight you. Eh. Na work."
+      ]
+     ],
+     "text": "See the chairman",
+     "look": "area",
+     "type": "talk"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "okada"
+     ],
+     "provide": "oshodi_terminal3",
+     "text": "Take a bike",
+     "type": "vehicle"
+    },
+    {
+     "id": "visit3",
+     "places": [
+      "ikeja_along",
+      "mafoluku",
+      "mushin_center",
+      "ojota"
+     ],
+     "text": "Collect dues from the riders",
+     "each": {
+      "cash": 600,
+      "rep": {
+       "riders": 1
+      }
+     },
+     "type": "visit"
+    },
+    {
+     "id": "choice4",
+     "who": "Rider (Ojota)",
+     "prompt": "The last rider says his bike is down and he has no money. His eyes say he is lying.",
+     "options": [
+      {
+       "text": "Let him off",
+       "next": "soft",
+       "fx": {
+        "rep": {
+         "riders": 3
+        }
+       }
+      },
+      {
+       "text": "Push him for it",
+       "next": "hard",
+       "roll": {
+        "skill": "street",
+        "dc": 2,
+        "ok": "hard",
+        "bad": "soft"
+       }
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "hard",
+     "outcome": "win",
+     "title": "DUES COLLECTED",
+     "rewards": {
+      "cash": 8500,
+      "xp": 100,
+      "skillXp": {
+       "street": 20
+      },
+      "rep": {
+       "riders": 8,
+       "union": 5
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "soft",
+     "outcome": "win",
+     "title": "SOFT HEART",
+     "rewards": {
+      "cash": 6500,
+      "xp": 90,
+      "skillXp": {
+       "street": 12,
+       "charm": 12
+      },
+      "rep": {
+       "riders": 12
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 8500,
+    "xp": 100,
+    "skillXp": {
+     "street": 20,
+     "charm": 12
+    },
+    "rep": {
+     "riders": 10,
+     "union": 5
+    }
+   },
+   "penalty": {
+    "rep": {
+     "riders": -4
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "tags": [
+    "okada",
+    "union"
+   ]
+  },
+  {
+   "id": "okada_ban_run",
+   "title": "Okada Ban Zone",
+   "arc": "Okada Life",
+   "category": "transport",
+   "area": "Ikeja",
+   "giver": "Segun (rider)",
+   "blurb": "An okada ban covers Ikeja this week. Deliver a passenger through it without getting caught.",
+   "minutes": 9,
+   "difficulty": 3,
+   "req": {
+    "level": 3,
+    "after": [
+     "okada_cv_first_day"
+    ]
+   },
+   "offer": {
+    "call": {
+     "who": "Segun (rider)",
+     "line": "LASTMA don block everywhere. I get passenger for Ikeja side, he pay ₦12,000. You fit pass?",
+     "weight": 1
+    }
+   },
+   "start": "vehicle1",
+   "steps": [
+    {
+     "id": "vehicle1",
+     "kind": [
+      "okada"
+     ],
+     "provide": "oshodi_terminal1",
+     "text": "Get an okada at Oshodi",
+     "type": "vehicle"
+    },
+    {
+     "id": "talk2",
+     "npc": "Passenger (Mr. Femi)",
+     "to": "oshodi_terminal1",
+     "lines": [
+      [
+       "Mr. Femi",
+       "I get meeting at Alausa. No time for traffic."
+      ],
+      [
+       "Mr. Femi",
+       "They say bikes dey banned, but I no get choice. Go through the back streets."
+      ]
+     ],
+     "text": "Pick up the passenger",
+     "type": "talk"
+    },
+    {
+     "id": "goto3",
+     "to": "allen_junction",
+     "text": "Go through Allen with the passenger",
+     "on": "vehicle",
+     "vehicle": [
+      "okada"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "evade4",
+     "level": 1,
+     "text": "LASTMA spotted the bike. Lose them",
+     "type": "evade"
+    },
+    {
+     "id": "goto5",
+     "to": "alausa_secretariat",
+     "text": "Drop him at Alausa Secretariat",
+     "on": "vehicle",
+     "vehicle": [
+      "okada"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "end6",
+     "outcome": "win",
+     "title": "PASSENGER DELIVERED",
+     "rewards": {
+      "cash": 12000,
+      "xp": 170,
+      "skillXp": {
+       "ride": 40,
+       "stealth": 12
+      },
+      "rep": {
+       "riders": 10
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 12000,
+    "xp": 170,
+    "skillXp": {
+     "ride": 40,
+     "stealth": 12,
+     "street": 14
+    },
+    "rep": {
+     "riders": 10,
+     "police": -3
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "tags": [
+    "okada",
+    "police"
+   ]
+  },
+  {
+   "id": "keke_gra_madam",
+   "title": "Madam in the Keke",
+   "arc": "Keke Business",
+   "category": "transport",
+   "area": "Ikeja GRA",
+   "giver": "Mama Gbemi",
+   "blurb": "A GRA madam wants a keke for the morning: hair salon, church, market. Complaints included.",
+   "minutes": 10,
+   "difficulty": 2,
+   "offer": {
+    "giver": {
+     "name": "Mama Gbemi",
+     "at": "ikeja_gra",
+     "line": "Young man, you drive this keke gently, abi? My wig is not free."
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Mama Gbemi",
+     "to": "ikeja_gra",
+     "lines": [
+      [
+       "Mama Gbemi",
+       "First the salon at Opebi, then church, then you wait while I buy fish."
+      ],
+      [
+       "Mama Gbemi",
+       "Do not honk. I am not a goat."
+      ]
+     ],
+     "text": "Meet Mama Gbemi",
+     "type": "talk"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "keke"
+     ],
+     "provide": "ikeja_gra",
+     "text": "Take the keke",
+     "type": "vehicle"
+    },
+    {
+     "id": "route3",
+     "route": "keke_ikeja_gra",
+     "text": "Drive Mama Gbemi around",
+     "fareMult": 1.1,
+     "type": "route"
+    },
+    {
+     "id": "choice4",
+     "who": "Mama Gbemi",
+     "prompt": "She sniffs at the keke. \"Thank you. Now tell me honestly. Did you enjoy the job?\"",
+     "options": [
+      {
+       "text": "\"Yes ma, God bless you.\"",
+       "next": "tip",
+       "fx": {
+        "cash": 500,
+        "rep": {
+         "church": 2
+        }
+       }
+      },
+      {
+       "text": "Ask for a tip, politely",
+       "next": "bigtip",
+       "roll": {
+        "skill": "charm",
+        "dc": 2,
+        "ok": "bigtip",
+        "bad": "tip"
+       }
+      },
+      {
+       "text": "Say nothing",
+       "next": "plain"
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "tip",
+     "outcome": "win",
+     "title": "MADAM SATISFIED",
+     "rewards": {
+      "cash": 8500,
+      "xp": 105,
+      "skillXp": {
+       "ride": 32,
+       "charm": 18
+      },
+      "rep": {
+       "church": 4
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "bigtip",
+     "outcome": "win",
+     "title": "BIG TIP",
+     "rewards": {
+      "cash": 11000,
+      "xp": 120,
+      "skillXp": {
+       "ride": 32,
+       "charm": 24
+      },
+      "rep": {
+       "church": 4
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "plain",
+     "outcome": "win",
+     "title": "JOB DONE",
+     "rewards": {
+      "cash": 8000,
+      "xp": 100,
+      "skillXp": {
+       "ride": 32
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 8000,
+    "xp": 100,
+    "skillXp": {
+     "ride": 32,
+     "charm": 15
+    },
+    "rep": {
+     "church": 4
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 10
+   },
+   "tags": [
+    "keke",
+    "madam"
+   ]
+  },
+  {
+   "id": "keke_festac_wedding",
+   "title": "Wedding Party to Festac",
+   "arc": "Keke Business",
+   "category": "transport",
+   "area": "Festac",
+   "giver": "Aunty Ngozi",
+   "blurb": "Six aso-ebi aunties, three kekes needed, one nervous bride. You are the only keke available.",
+   "minutes": 9,
+   "difficulty": 2,
+   "req": {
+    "level": 2
+   },
+   "offer": {
+    "giver": {
+     "name": "Aunty Ngozi",
+     "at": "festac",
+     "line": "The wedding starts in forty minutes and the bride dey cry. Abeg, carry us!"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Aunty Ngozi",
+     "to": "festac",
+     "lines": [
+      [
+       "Aunty Ngozi",
+       "We go Trade Fair side. The hall is there. Move move move!"
+      ]
+     ],
+     "text": "Meet Aunty Ngozi",
+     "type": "talk"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "keke"
+     ],
+     "provide": "festac",
+     "text": "Take the keke",
+     "type": "vehicle"
+    },
+    {
+     "id": "goto3",
+     "to": "trade_fair",
+     "text": "Take the wedding party to Trade Fair",
+     "on": "vehicle",
+     "vehicle": [
+      "keke"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "choice4",
+     "who": "Aunty Ngozi",
+     "prompt": "The bride says she forgot the cake at home. Everyone looks at you.",
+     "options": [
+      {
+       "text": "Make a quick run back to Festac",
+       "next": "back",
+       "fx": {
+        "cash": -300
+       }
+      },
+      {
+       "text": "\"I know a baker nearby.\"",
+       "next": "baker"
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "back",
+     "to": "festac",
+     "text": "Rush back for the cake",
+     "on": "vehicle",
+     "vehicle": [
+      "keke"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "goto6",
+     "to": "trade_fair",
+     "text": "Back to Trade Fair, quick",
+     "on": "vehicle",
+     "vehicle": [
+      "keke"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "end7",
+     "outcome": "win",
+     "title": "WEDDING SAVED",
+     "rewards": {
+      "cash": 10500,
+      "xp": 125,
+      "skillXp": {
+       "ride": 38
+      },
+      "rep": {
+       "church": 8
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "baker",
+     "to": "alaba_rago",
+     "text": "Stop at the baker near Alaba Rago",
+     "on": "vehicle",
+     "vehicle": [
+      "keke"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "goto9",
+     "to": "trade_fair",
+     "text": "Deliver the party and the cake",
+     "on": "vehicle",
+     "vehicle": [
+      "keke"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "end10",
+     "outcome": "win",
+     "title": "WEDDING SAVED",
+     "rewards": {
+      "cash": 10000,
+      "xp": 120,
+      "skillXp": {
+       "ride": 36,
+       "charm": 6
+      },
+      "rep": {
+       "church": 6
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 10000,
+    "xp": 120,
+    "skillXp": {
+     "ride": 36,
+     "charm": 12
+    },
+    "rep": {
+     "church": 6
+    }
+   },
+   "fail": {
+    "onDeath": true,
+    "timer": 720
+   },
+   "tags": [
+    "keke",
+    "wedding"
+   ]
+  },
+  {
+   "id": "brt_lane_hero",
+   "title": "BRT Lane, Full Bus",
+   "arc": "Mainland Lines",
+   "category": "transport",
+   "area": "Ketu",
+   "giver": "Mr. Ola (supervisor)",
+   "blurb": "The BRT lane is empty only when you do not need it. Drive the express from Ketu to TBS.",
+   "minutes": 12,
+   "difficulty": 3,
+   "req": {
+    "level": 4,
+    "skill": {
+     "drive": 3
+    }
+   },
+   "offer": {
+    "giver": {
+     "name": "Mr. Ola",
+     "at": "brt_ketu",
+     "line": "The express bus has no driver. Drive it clean, no scraping the barrier, no stopping for hawkers."
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Mr. Ola",
+     "to": "brt_ketu",
+     "lines": [
+      [
+       "Mr. Ola",
+       "Quick stops, quick loading. People are watching the clock."
+      ]
+     ],
+     "text": "Meet Mr. Ola",
+     "type": "talk"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "danfo"
+     ],
+     "provide": "brt_ketu",
+     "text": "Board the BRT bus",
+     "type": "vehicle"
+    },
+    {
+     "id": "route3",
+     "route": "bus_ketu_tbs",
+     "text": "Run the BRT line, Ketu to TBS",
+     "type": "route"
+    },
+    {
+     "id": "end4",
+     "outcome": "win",
+     "title": "EXPRESS DONE",
+     "rewards": {
+      "cash": 19000,
+      "xp": 220,
+      "skillXp": {
+       "drive": 60
+      },
+      "rep": {
+       "union": 8
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 19000,
+    "xp": 220,
+    "skillXp": {
+     "drive": 60
+    },
+    "rep": {
+     "union": 6
+    }
+   },
+   "fail": {
+    "onDeath": true,
+    "wantedAbove": 1
+   },
+   "repeat": {
+    "cooldownMin": 15
+   },
+   "tags": [
+    "bus",
+    "brt"
+   ]
+  },
+  {
+   "id": "third_mainland_commute",
+   "title": "Third Mainland Commute",
+   "arc": "Mainland Lines",
+   "category": "transport",
+   "area": "Gbagada",
+   "giver": "Sule",
+   "blurb": "A bus-load of office workers and a jam on the bridge. Get them to the Island.",
+   "minutes": 12,
+   "difficulty": 3,
+   "req": {
+    "level": 4,
+    "after": [
+     "sule_rush_hour"
+    ]
+   },
+   "offer": {
+    "call": {
+     "who": "Conductor Sule",
+     "line": "Third Mainland job. The jam dey there but fare dey high. Come Gbagada.",
+     "hours": [
+      5,
+      9
+     ],
+     "weight": 2
+    }
+   },
+   "start": "vehicle1",
+   "steps": [
+    {
+     "id": "vehicle1",
+     "kind": [
+      "danfo"
+     ],
+     "provide": "gbagada_interchange",
+     "text": "Get a danfo at Gbagada",
+     "type": "vehicle"
+    },
+    {
+     "id": "route2",
+     "route": "danfo_mainland_island",
+     "text": "Run Gbagada to Obalende across the bridge",
+     "type": "route"
+    },
+    {
+     "id": "choice3",
+     "who": "Passenger",
+     "prompt": "Midspan, traffic stops dead. A man in a suit leans in: \"I go be late. Park and let me jump out, I pay you triple.\"",
+     "options": [
+      {
+       "text": "Let him down on the bridge",
+       "next": "down",
+       "fx": {
+        "cash": 1500
+       }
+      },
+      {
+       "text": "\"We move together.\"",
+       "next": "together"
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "down",
+     "outcome": "win",
+     "title": "ISLAND REACHED",
+     "rewards": {
+      "cash": 22000,
+      "xp": 235,
+      "skillXp": {
+       "drive": 55
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "together",
+     "outcome": "win",
+     "title": "NO ONE LEFT BEHIND",
+     "rewards": {
+      "cash": 21000,
+      "xp": 230,
+      "skillXp": {
+       "drive": 55,
+       "charm": 14
+      },
+      "rep": {
+       "union": 10
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 21000,
+    "xp": 230,
+    "skillXp": {
+     "drive": 55,
+     "charm": 12
+    },
+    "rep": {
+     "union": 8
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 15
+   },
+   "tags": [
+    "danfo",
+    "bridge"
+   ]
+  },
+  {
+   "id": "airport_pickup",
+   "title": "Airport Pickup",
+   "arc": "Mainland Lines",
+   "category": "transport",
+   "area": "Ikeja",
+   "giver": "Mr. Chidi",
+   "blurb": "A returnee lands at MMIA. He wants a clean car, a driver who knows Ikoyi, and no talking.",
+   "minutes": 12,
+   "difficulty": 3,
+   "req": {
+    "level": 5
+   },
+   "offer": {
+    "call": {
+     "who": "Mr. Chidi",
+     "line": "My cousin land from London. Pick him at Terminal 1 and take him to Ikoyi. Sedan or SUV, nothing small.",
+     "hours": [
+      8,
+      20
+     ],
+     "weight": 1
+    }
+   },
+   "start": "vehicle1",
+   "steps": [
+    {
+     "id": "vehicle1",
+     "kind": [
+      "sedan",
+      "suv"
+     ],
+     "provide": "mmia_t1",
+     "text": "Find a sedan or SUV",
+     "type": "vehicle"
+    },
+    {
+     "id": "goto2",
+     "to": "mmia_t1",
+     "text": "Pick up the passenger at MMIA Terminal 1",
+     "type": "goto"
+    },
+    {
+     "id": "talk3",
+     "npc": "Returnee",
+     "to": "mmia_t1",
+     "lines": [
+      [
+       "Returnee",
+       "Eyah, the heat. Is the AC working? No? Of course not."
+      ],
+      [
+       "Returnee",
+       "Ikoyi, please. I will direct you when we reach Falomo."
+      ]
+     ],
+     "text": "Meet the passenger",
+     "type": "talk"
+    },
+    {
+     "id": "goto4",
+     "to": "falomo_bridge",
+     "text": "Drive to Falomo Bridge",
+     "on": "vehicle",
+     "vehicle": [
+      "sedan",
+      "suv"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "choice5",
+     "who": "Returnee",
+     "prompt": "\"The traffic is mad. Is there another way?\"",
+     "options": [
+      {
+       "text": "\"Trust me, we dey fine.\"",
+       "next": "trust"
+      },
+      {
+       "text": "Take the back road",
+       "next": "quick",
+       "roll": {
+        "skill": "drive",
+        "dc": 3,
+        "ok": "quick",
+        "bad": "trust"
+       }
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "trust",
+     "to": "ikoyi_club",
+     "text": "Deliver him to Ikoyi",
+     "on": "vehicle",
+     "vehicle": [
+      "sedan",
+      "suv"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "end7",
+     "outcome": "win",
+     "title": "AIRPORT RUN DONE",
+     "rewards": {
+      "cash": 28000,
+      "xp": 260,
+      "skillXp": {
+       "drive": 50,
+       "charm": 14
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "quick",
+     "to": "ikoyi_club",
+     "text": "You are early. Deliver him to Ikoyi",
+     "on": "vehicle",
+     "vehicle": [
+      "sedan",
+      "suv"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "end9",
+     "outcome": "win",
+     "title": "BIG TIP",
+     "rewards": {
+      "cash": 34000,
+      "xp": 280,
+      "skillXp": {
+       "drive": 58,
+       "charm": 22
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 28000,
+    "xp": 260,
+    "skillXp": {
+     "drive": 50,
+     "charm": 20
+    },
+    "rep": {
+     "market": 5
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 20
+   },
+   "tags": [
+    "airport",
+    "ikoyi"
+   ]
+  },
+  {
+   "id": "okada_hospital_dash",
+   "title": "Hospital Dash",
+   "arc": "Okada Life",
+   "category": "rescue",
+   "area": "Mushin",
+   "giver": "A frightened husband",
+   "blurb": "A woman is in labour at Mushin and the road is blocked. Get her to the hospital on the bike, now.",
+   "minutes": 5,
+   "difficulty": 2,
+   "offer": {
+    "giver": {
+     "name": "Frightened husband",
+     "at": "papa_ajao",
+     "line": "My wife dey labour! Okada, please, General Hospital!",
+     "look": "ped"
+    }
+   },
+   "start": "vehicle1",
+   "steps": [
+    {
+     "id": "vehicle1",
+     "kind": [
+      "okada"
+     ],
+     "provide": "papa_ajao",
+     "text": "Take the okada",
+     "type": "vehicle"
+    },
+    {
+     "id": "talk2",
+     "npc": "Frightened husband",
+     "to": "papa_ajao",
+     "lines": [
+      [
+       "Husband",
+       "She is here! Carry her, abeg abeg."
+      ]
+     ],
+     "text": "Pick up the couple",
+     "type": "talk"
+    },
+    {
+     "id": "goto3",
+     "to": "mushin_gh",
+     "text": "Ride to Mushin General Hospital, fast",
+     "on": "vehicle",
+     "vehicle": [
+      "okada"
+     ],
+     "timer": 220,
+     "onTimeout": "late",
+     "type": "goto"
+    },
+    {
+     "id": "end4",
+     "outcome": "win",
+     "title": "MOTHER AND BABY OK",
+     "rewards": {
+      "cash": 7000,
+      "xp": 140,
+      "skillXp": {
+       "ride": 36
+      },
+      "rep": {
+       "church": 10,
+       "riders": 5
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "late",
+     "outcome": "fail",
+     "title": "TOO LATE",
+     "text": "The baby came on the road. Mother and child are alright, but you were slow.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 7000,
+    "xp": 130,
+    "skillXp": {
+     "ride": 36
+    },
+    "rep": {
+     "church": 8,
+     "riders": 5
+    }
+   },
+   "penalty": {
+    "rep": {
+     "church": -3
+    }
+   },
+   "fail": {
+    "onDeath": true,
+    "timer": 260
+   },
+   "repeat": {
+    "cooldownMin": 12
+   },
+   "tags": [
+    "emergency"
+   ]
+  },
+  {
+   "id": "danfo_overload_wahala",
+   "title": "Overload",
+   "arc": "Mainland Lines",
+   "category": "transport",
+   "area": "Mushin",
+   "giver": "Sule",
+   "blurb": "The bus is overloaded and a checkpoint sits at Ladipo. Hide, bribe, or bluff.",
+   "minutes": 10,
+   "difficulty": 3,
+   "req": {
+    "level": 3,
+    "after": [
+     "danfo_first_run"
+    ]
+   },
+   "offer": {
+    "board": true
+   },
+   "start": "vehicle1",
+   "steps": [
+    {
+     "id": "vehicle1",
+     "kind": [
+      "danfo"
+     ],
+     "provide": "oshodi_park",
+     "text": "Get a danfo",
+     "type": "vehicle"
+    },
+    {
+     "id": "route2",
+     "route": "danfo_oshodi_mushin",
+     "text": "Load up. Fill it fully.",
+     "stops": 2,
+     "fareMult": 1.5,
+     "type": "route"
+    },
+    {
+     "id": "goto3",
+     "to": "ladipo_gate",
+     "text": "Approach Ladipo and see the checkpoint",
+     "on": "vehicle",
+     "type": "goto"
+    },
+    {
+     "id": "choice4",
+     "who": "Police officer",
+     "prompt": "\"Oga driver. I count twenty-two. Plate says eighteen. You know the law?\"",
+     "options": [
+      {
+       "text": "Give a dash (₦3,000)",
+       "next": "dash",
+       "fx": {
+        "cash": -3000,
+        "rep": {
+         "police": 1
+        }
+       }
+      },
+      {
+       "text": "Bluff: \"They are all family.\"",
+       "next": "bluff",
+       "roll": {
+        "skill": "charm",
+        "dc": 3,
+        "ok": "bluff",
+        "bad": "fine"
+       }
+      },
+      {
+       "text": "Floor it",
+       "next": "run",
+       "fx": {
+        "wanted": 2
+       }
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "dash",
+     "outcome": "win",
+     "title": "CHECKPOINT PASSED",
+     "rewards": {
+      "cash": 15000,
+      "xp": 160,
+      "skillXp": {
+       "street": 20
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "bluff",
+     "outcome": "win",
+     "title": "BLUFFED THROUGH",
+     "rewards": {
+      "cash": 18000,
+      "xp": 180,
+      "skillXp": {
+       "charm": 24,
+       "street": 16
+      },
+      "rep": {
+       "police": 1
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "fine",
+     "outcome": "win",
+     "title": "FINED",
+     "rewards": {
+      "cash": 8000,
+      "xp": 100,
+      "skillXp": {
+       "street": 8
+      }
+     },
+     "done": {
+      "cash": -2000
+     },
+     "type": "end"
+    },
+    {
+     "id": "run",
+     "level": 2,
+     "text": "The officers want you. Lose them",
+     "type": "evade"
+    },
+    {
+     "id": "end9",
+     "outcome": "win",
+     "title": "GOT AWAY",
+     "rewards": {
+      "cash": 15000,
+      "xp": 190,
+      "skillXp": {
+       "drive": 40,
+       "street": 24
+      },
+      "rep": {
+       "police": -6,
+       "streets": 4
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 15000,
+    "xp": 160,
+    "skillXp": {
+     "drive": 40,
+     "street": 20,
+     "charm": 12
+    },
+    "rep": {
+     "union": 7
+    }
+   },
+   "penalty": {
+    "rep": {
+     "police": -3
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "tags": [
+    "danfo",
+    "police"
+   ]
+  },
+  {
+   "id": "food_run_oshodi",
+   "title": "Jollof Run",
+   "arc": "Mama Put",
+   "category": "delivery",
+   "area": "Oshodi",
+   "giver": "Mama Put",
+   "blurb": "Mama Put has a hot pot of jollof for a customer across the road and nobody to carry it. Do not let it go cold.",
+   "minutes": 4,
+   "difficulty": 1,
+   "offer": {
+    "call": {
+     "who": "Mama Put",
+     "line": "My pikin, take this food go customer for me. I go pay you well. And you still owe me ₦500, I never forget.",
+     "weight": 3
+    },
+    "giver": {
+     "name": "Mama Put",
+     "at": "mama_put_oshodi",
+     "line": "You, come here! Carry this food for my customer. Hot hot, no waiting.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Mama Put",
+     "to": "mama_put_oshodi",
+     "lines": [
+      [
+       "Mama Put",
+       "Three packs of jollof and a chicken. Customer dey wait at Oshodi Terminal 3. Fast, before the oil settles."
+      ]
+     ],
+     "text": "Collect the food from Mama Put",
+     "look": "vendor",
+     "type": "talk"
+    },
+    {
+     "id": "pickup2",
+     "item": "jollof pack",
+     "to": "mama_put_oshodi",
+     "text": "Pick up the jollof",
+     "type": "pickup"
+    },
+    {
+     "id": "deliver3",
+     "item": "jollof pack",
+     "to": "oshodi_terminal3",
+     "text": "Take the food to the customer at Terminal 3",
+     "npc": "Hungry customer",
+     "type": "deliver"
+    },
+    {
+     "id": "end4",
+     "outcome": "win",
+     "title": "FOOD DELIVERED",
+     "rewards": {
+      "cash": 3500,
+      "xp": 40,
+      "skillXp": {
+       "stamina": 8,
+       "charm": 4
+      },
+      "rep": {
+       "market": 3
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 3500,
+    "xp": 40,
+    "skillXp": {
+     "stamina": 8,
+     "charm": 4
+    },
+    "rep": {
+     "market": 3
+    }
+   },
+   "fail": {
+    "timer": 320,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 5
+   },
+   "legacy": "delivery",
+   "tags": [
+    "intro",
+    "food"
+   ]
+  },
+  {
+   "id": "parcel_no_questions",
+   "title": "Parcel, No Questions",
+   "arc": "Unknown Number",
+   "category": "crime",
+   "area": "Oshodi",
+   "giver": "Unknown number",
+   "blurb": "A small package, a far address, and police who seem to know about it. Do not open it.",
+   "minutes": 9,
+   "difficulty": 3,
+   "req": {
+    "level": 2
+   },
+   "offer": {
+    "call": {
+     "who": "Unknown number",
+     "line": "I get small package. No ask question. Police dey around, so shine your eye.",
+     "weight": 2
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Contact in a grey cap",
+     "to": "oshodi_underbridge",
+     "lines": [
+      [
+       "Grey cap",
+       "Do not open it. Do not lose it. Do not talk to anybody in uniform."
+      ],
+      [
+       "Grey cap",
+       "The man at Ikeja Along go call you. Move."
+      ]
+     ],
+     "text": "Meet the contact under the bridge",
+     "look": "area",
+     "type": "talk"
+    },
+    {
+     "id": "pickup2",
+     "item": "sealed parcel",
+     "to": "oshodi_underbridge",
+     "text": "Take the parcel",
+     "type": "pickup"
+    },
+    {
+     "id": "goto3",
+     "to": "mafoluku",
+     "text": "Head for Mafoluku, stay calm",
+     "type": "goto"
+    },
+    {
+     "id": "branch4",
+     "cases": [
+      {
+       "if": {
+        "wantedMin": 1
+       },
+       "next": "hot"
+      }
+     ],
+     "else": "calm",
+     "type": "branch"
+    },
+    {
+     "id": "calm",
+     "who": "Parcel",
+     "prompt": "A police car slows beside you. The officer waves you over.",
+     "options": [
+      {
+       "text": "Pull over and play dumb",
+       "next": "dumb",
+       "fx": {
+        "rep": {
+         "police": 1
+        }
+       }
+      },
+      {
+       "text": "Keep walking, quicken your steps",
+       "next": "run",
+       "fx": {
+        "wanted": 1
+       }
+      },
+      {
+       "text": "Chat him up about football",
+       "next": "pass",
+       "roll": {
+        "skill": "charm",
+        "dc": 3,
+        "ok": "pass",
+        "bad": "dumb"
+       }
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "pass",
+     "to": "ikeja_along",
+     "text": "Take the parcel to Ikeja Along",
+     "type": "goto"
+    },
+    {
+     "id": "deliver7",
+     "item": "sealed parcel",
+     "to": "ikeja_along",
+     "text": "Hand it to the man at Ikeja Along",
+     "npc": "The receiver",
+     "type": "deliver"
+    },
+    {
+     "id": "end8",
+     "outcome": "win",
+     "title": "PARCEL GONE",
+     "rewards": {
+      "cash": 30000,
+      "xp": 260,
+      "skillXp": {
+       "street": 30,
+       "charm": 10
+      },
+      "rep": {
+       "streets": 8
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "dumb",
+     "who": "Police officer",
+     "prompt": "\"Open the bag.\"",
+     "options": [
+      {
+       "text": "Hand over ₦8,000",
+       "next": "pass",
+       "fx": {
+        "cash": -8000
+       }
+      },
+      {
+       "text": "Run for it",
+       "next": "run"
+      },
+      {
+       "text": "\"Oga, na my shoe-polish.\"",
+       "next": "pass",
+       "roll": {
+        "skill": "charm",
+        "dc": 4,
+        "ok": "pass",
+        "bad": "caught"
+       }
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "run",
+     "level": 2,
+     "text": "Lose the police with the parcel",
+     "type": "evade"
+    },
+    {
+     "id": "goto11",
+     "to": "ikeja_along",
+     "text": "You got away. Deliver the parcel to Ikeja Along",
+     "type": "goto"
+    },
+    {
+     "id": "deliver12",
+     "item": "sealed parcel",
+     "to": "ikeja_along",
+     "text": "Hand it to the man at Ikeja Along",
+     "npc": "The receiver",
+     "type": "deliver"
+    },
+    {
+     "id": "end13",
+     "outcome": "win",
+     "title": "PARCEL GONE, HEAT ON",
+     "rewards": {
+      "cash": 30000,
+      "xp": 280,
+      "skillXp": {
+       "street": 36,
+       "stealth": 14
+      },
+      "rep": {
+       "streets": 10,
+       "police": -5
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "caught",
+     "outcome": "fail",
+     "title": "ARRESTED",
+     "text": "The parcel was taken. Somebody will be asking about it.",
+     "fx": {
+      "wanted": 2
+     },
+     "type": "end"
+    },
+    {
+     "id": "hot",
+     "to": "oshodi_underbridge",
+     "text": "You are in trouble. Get away from here.",
+     "type": "goto"
+    },
+    {
+     "id": "evade16",
+     "level": 2,
+     "text": "Lose the heat before you continue",
+     "type": "evade"
+    },
+    {
+     "id": "goto17",
+     "to": "ikeja_along",
+     "text": "Now continue with the parcel",
+     "type": "goto"
+    },
+    {
+     "id": "deliver18",
+     "item": "sealed parcel",
+     "to": "ikeja_along",
+     "text": "Hand it to the man at Ikeja Along",
+     "npc": "The receiver",
+     "type": "deliver"
+    },
+    {
+     "id": "end19",
+     "outcome": "win",
+     "title": "PARCEL GONE, LATE",
+     "rewards": {
+      "cash": 24000,
+      "xp": 240,
+      "skillXp": {
+       "street": 28,
+       "stealth": 10
+      },
+      "rep": {
+       "streets": 6
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 30000,
+    "xp": 260,
+    "skillXp": {
+     "street": 30,
+     "drive": 15,
+     "stealth": 12
+    },
+    "rep": {
+     "streets": 8,
+     "police": -4
+    }
+   },
+   "penalty": {
+    "rep": {
+     "streets": -4
+    }
+   },
+   "fail": {
+    "timer": 480,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 20
+   },
+   "legacy": "parcel",
+   "tags": [
+    "intro",
+    "contraband"
+   ]
+  },
+  {
+   "id": "cv_phone_dispatch",
+   "title": "Phones for the Shops",
+   "arc": "Computer Village",
+   "category": "delivery",
+   "area": "Ikeja",
+   "giver": "Alhaji Musa",
+   "blurb": "Boxes of phones and chargers need to reach four shops before the Ikeja traders close.",
+   "minutes": 8,
+   "difficulty": 2,
+   "offer": {
+    "giver": {
+     "name": "Alhaji Musa",
+     "at": "computer_village",
+     "line": "Four boxes, four shops. If one phone goes missing, I know your face.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Alhaji Musa",
+     "to": "computer_village",
+     "lines": [
+      [
+       "Alhaji Musa",
+       "Plaza bank, bus terminal, the station and Otigba alley. In that order."
+      ]
+     ],
+     "text": "Meet Alhaji Musa",
+     "look": "vendor",
+     "type": "talk"
+    },
+    {
+     "id": "pickup2",
+     "item": "phone boxes",
+     "to": "computer_village",
+     "text": "Collect the boxes",
+     "type": "pickup"
+    },
+    {
+     "id": "route3",
+     "route": "delivery_cv_ikeja",
+     "text": "Deliver along the Computer Village dispatch route",
+     "type": "route"
+    },
+    {
+     "id": "deliver4",
+     "item": "phone boxes",
+     "to": "computer_village_alley",
+     "text": "Hand the last box to the shop",
+     "npc": "Shop owner",
+     "type": "deliver"
+    },
+    {
+     "id": "end5",
+     "outcome": "win",
+     "title": "BOXES DELIVERED",
+     "rewards": {
+      "cash": 9500,
+      "xp": 120,
+      "skillXp": {
+       "ride": 20,
+       "trade": 10
+      },
+      "rep": {
+       "market": 6
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 9500,
+    "xp": 120,
+    "skillXp": {
+     "ride": 20,
+     "street": 8,
+     "trade": 10
+    },
+    "rep": {
+     "market": 6
+    }
+   },
+   "fail": {
+    "timer": 600,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 8
+   },
+   "tags": [
+    "phones"
+   ]
+  },
+  {
+   "id": "ladipo_pads_run",
+   "title": "Brake Pads for Papa Ajao",
+   "arc": "Ladipo Parts",
+   "category": "delivery",
+   "area": "Mushin",
+   "giver": "Madam Bisi",
+   "blurb": "A mechanic at Papa Ajao has a taxi on the lift waiting for brake pads from Ladipo. Fifteen minutes or he loses the customer.",
+   "minutes": 7,
+   "difficulty": 2,
+   "offer": {
+    "giver": {
+     "name": "Madam Bisi",
+     "at": "ladipo_stall_row",
+     "line": "Pads for Pa Ajao, urgent. Ladipo no wait, you no wait, we all no wait.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Madam Bisi",
+     "to": "ladipo_stall_row",
+     "lines": [
+      [
+       "Madam Bisi",
+       "Genuine, not fake. Tell Pa Ajao the stamp is under the box."
+      ]
+     ],
+     "text": "Collect the pads from Madam Bisi",
+     "look": "vendor",
+     "type": "talk"
+    },
+    {
+     "id": "pickup2",
+     "item": "brake pads",
+     "to": "ladipo_stall_row",
+     "text": "Take the brake pads",
+     "type": "pickup"
+    },
+    {
+     "id": "vehicle3",
+     "kind": [
+      "hatch",
+      "sedan",
+      "okada"
+     ],
+     "provide": "ladipo_gate",
+     "text": "Get any car or okada",
+     "type": "vehicle"
+    },
+    {
+     "id": "goto4",
+     "to": "papa_ajao",
+     "text": "Get to Papa Ajao quickly",
+     "on": "vehicle",
+     "vehicle": [
+      "hatch",
+      "sedan",
+      "okada"
+     ],
+     "timer": 300,
+     "onTimeout": "late",
+     "type": "goto"
+    },
+    {
+     "id": "deliver5",
+     "item": "brake pads",
+     "to": "papa_ajao",
+     "text": "Hand over the pads",
+     "npc": "Pa Ajao",
+     "type": "deliver"
+    },
+    {
+     "id": "end6",
+     "outcome": "win",
+     "title": "PADS DELIVERED",
+     "rewards": {
+      "cash": 7500,
+      "xp": 90,
+      "skillXp": {
+       "drive": 18,
+       "mech": 8
+      },
+      "rep": {
+       "mechanics": 5
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "late",
+     "outcome": "fail",
+     "title": "TOO SLOW",
+     "text": "The customer drove off. Pa Ajao is not happy.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 7500,
+    "xp": 90,
+    "skillXp": {
+     "drive": 18,
+     "trade": 8,
+     "mech": 6
+    },
+    "rep": {
+     "mechanics": 5,
+     "market": 3
+    }
+   },
+   "fail": {
+    "timer": 540,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 8
+   },
+   "tags": [
+    "parts"
+   ]
+  },
+  {
+   "id": "fish_from_makoko",
+   "title": "Fish from Makoko",
+   "arc": "Water Side",
+   "category": "delivery",
+   "area": "Makoko",
+   "giver": "Mama Tolu",
+   "blurb": "Fresh fish from the Makoko canoes to Oyingbo market before the sun spoils it.",
+   "minutes": 10,
+   "difficulty": 2,
+   "req": {
+    "level": 2
+   },
+   "offer": {
+    "giver": {
+     "name": "Mama Tolu",
+     "at": "makoko",
+     "line": "The fish is still jumping. Take am go Oyingbo before it start to smell.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Mama Tolu",
+     "to": "makoko",
+     "lines": [
+      [
+       "Mama Tolu",
+       "Cool box, ice, and no stopping. The market women pay for fresh."
+      ]
+     ],
+     "text": "Meet Mama Tolu at Makoko",
+     "look": "vendor",
+     "type": "talk"
+    },
+    {
+     "id": "pickup2",
+     "item": "fish cooler",
+     "to": "makoko",
+     "text": "Load the cooler",
+     "type": "pickup"
+    },
+    {
+     "id": "vehicle3",
+     "kind": [
+      "hatch",
+      "sedan",
+      "suv",
+      "okada",
+      "keke"
+     ],
+     "provide": "makoko_taxi_park",
+     "text": "Find a ride",
+     "type": "vehicle"
+    },
+    {
+     "id": "choice4",
+     "who": "Mama Tolu",
+     "prompt": "The ice is melting fast. Heat today is wicked.",
+     "options": [
+      {
+       "text": "Drive straight, no stopping",
+       "next": "straight"
+      },
+      {
+       "text": "Stop by Ebute Metta for ice (₦1,500)",
+       "next": "ice",
+       "fx": {
+        "cash": -1500
+       }
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "straight",
+     "to": "oyingbo_terminal",
+     "text": "Rush to Oyingbo",
+     "on": "vehicle",
+     "vehicle": [
+      "hatch",
+      "sedan",
+      "suv",
+      "okada",
+      "keke"
+     ],
+     "timer": 280,
+     "onTimeout": "spoiled",
+     "type": "goto"
+    },
+    {
+     "id": "deliver6",
+     "item": "fish cooler",
+     "to": "oyingbo_terminal",
+     "text": "Hand the cooler to the buyer",
+     "npc": "Market woman",
+     "type": "deliver"
+    },
+    {
+     "id": "end7",
+     "outcome": "win",
+     "title": "FISH SOLD FRESH",
+     "rewards": {
+      "cash": 11000,
+      "xp": 130,
+      "skillXp": {
+       "drive": 20,
+       "trade": 10
+      },
+      "rep": {
+       "market": 6
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "ice",
+     "to": "ebute_metta_station",
+     "text": "Get ice at Ebute Metta",
+     "on": "vehicle",
+     "vehicle": [
+      "hatch",
+      "sedan",
+      "suv",
+      "okada",
+      "keke"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "goto9",
+     "to": "oyingbo_terminal",
+     "text": "Now rush to Oyingbo",
+     "on": "vehicle",
+     "vehicle": [
+      "hatch",
+      "sedan",
+      "suv",
+      "okada",
+      "keke"
+     ],
+     "timer": 360,
+     "onTimeout": "spoiled",
+     "type": "goto"
+    },
+    {
+     "id": "deliver10",
+     "item": "fish cooler",
+     "to": "oyingbo_terminal",
+     "text": "Hand the cooler to the buyer",
+     "npc": "Market woman",
+     "type": "deliver"
+    },
+    {
+     "id": "end11",
+     "outcome": "win",
+     "title": "FISH SOLD FRESH",
+     "rewards": {
+      "cash": 10000,
+      "xp": 125,
+      "skillXp": {
+       "drive": 20,
+       "trade": 10
+      },
+      "rep": {
+       "market": 6
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "spoiled",
+     "outcome": "fail",
+     "title": "FISH SPOILED",
+     "text": "The market woman held her nose and refused. Nobody likes this smell.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 11000,
+    "xp": 130,
+    "skillXp": {
+     "drive": 20,
+     "trade": 10
+    },
+    "rep": {
+     "market": 6
+    }
+   },
+   "fail": {
+    "timer": 420,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 10
+   },
+   "tags": [
+    "fish"
+   ]
+  },
+  {
+   "id": "wedding_cake_delivery",
+   "title": "Cake for the Reception",
+   "arc": "Owambe Season",
+   "category": "delivery",
+   "area": "Ikeja GRA",
+   "giver": "Chef Tola",
+   "blurb": "A three-tier cake and a hall in GRA. Take the corners gently. The bride has a temper.",
+   "minutes": 8,
+   "difficulty": 3,
+   "req": {
+    "level": 3
+   },
+   "offer": {
+    "giver": {
+     "name": "Chef Tola",
+     "at": "pharmacy_ikeja",
+     "line": "Three tiers, two hundred thousand naira, and no pothole is your friend. Drive like it is your own child.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Chef Tola",
+     "to": "pharmacy_ikeja",
+     "lines": [
+      [
+       "Chef Tola",
+       "Your max speed today is walking pace. Good luck."
+      ]
+     ],
+     "text": "Meet Chef Tola",
+     "look": "vendor",
+     "type": "talk"
+    },
+    {
+     "id": "pickup2",
+     "item": "wedding cake",
+     "to": "pharmacy_ikeja",
+     "text": "Load the cake",
+     "type": "pickup"
+    },
+    {
+     "id": "vehicle3",
+     "kind": [
+      "sedan",
+      "hatch",
+      "suv"
+     ],
+     "provide": "pharmacy_ikeja",
+     "text": "Take a car, not an okada",
+     "type": "vehicle"
+    },
+    {
+     "id": "goto4",
+     "to": "ikeja_gra",
+     "text": "Drive carefully to the GRA reception hall",
+     "on": "vehicle",
+     "vehicle": [
+      "sedan",
+      "hatch",
+      "suv"
+     ],
+     "timer": 360,
+     "onTimeout": "late",
+     "type": "goto"
+    },
+    {
+     "id": "deliver5",
+     "item": "wedding cake",
+     "to": "ikeja_gra",
+     "text": "Hand the cake to the bridesmaids",
+     "npc": "Bridesmaid",
+     "type": "deliver"
+    },
+    {
+     "id": "end6",
+     "outcome": "win",
+     "title": "CAKE ARRIVES",
+     "rewards": {
+      "cash": 14000,
+      "xp": 160,
+      "skillXp": {
+       "drive": 36
+      },
+      "rep": {
+       "church": 6
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "late",
+     "outcome": "fail",
+     "title": "LATE CAKE",
+     "text": "The reception started without cake. The aunties will remember.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 14000,
+    "xp": 160,
+    "skillXp": {
+     "drive": 36
+    },
+    "rep": {
+     "church": 4
+    }
+   },
+   "fail": {
+    "timer": 480,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 12
+   },
+   "tags": [
+    "cake"
+   ]
+  },
+  {
+   "id": "cement_for_ayobo",
+   "title": "Cement for Ayobo",
+   "arc": "Omo Onile",
+   "category": "delivery",
+   "area": "Ayobo",
+   "giver": "Engineer Dayo",
+   "blurb": "A site in Ayobo needs twenty bags of cement. The area boys at the site will ask for something.",
+   "minutes": 11,
+   "difficulty": 3,
+   "req": {
+    "level": 4
+   },
+   "offer": {
+    "giver": {
+     "name": "Engineer Dayo",
+     "at": "ayobo_plot",
+     "line": "The cement lorry is stuck at Egbeda. Collect and bring. The onile will want money, tell them it is paid.",
+     "look": "ped"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Engineer Dayo",
+     "to": "ayobo_plot",
+     "lines": [
+      [
+       "Engineer",
+       "Go to Egbeda, the yellow lorry. Bring it here by the main road."
+      ]
+     ],
+     "text": "Meet Engineer Dayo",
+     "look": "ped",
+     "type": "talk"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "suv",
+      "jeep",
+      "hatch"
+     ],
+     "provide": "ayobo_plot",
+     "text": "Find a car with space",
+     "type": "vehicle"
+    },
+    {
+     "id": "goto3",
+     "to": "egbeda",
+     "text": "Find the cement lorry at Egbeda",
+     "on": "vehicle",
+     "type": "goto"
+    },
+    {
+     "id": "pickup4",
+     "item": "cement bags",
+     "to": "egbeda",
+     "text": "Load the bags",
+     "type": "pickup"
+    },
+    {
+     "id": "goto5",
+     "to": "ayobo_plot",
+     "text": "Take the cement to Ayobo",
+     "on": "vehicle",
+     "vehicle": [
+      "suv",
+      "jeep",
+      "hatch"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "choice6",
+     "who": "Onile",
+     "prompt": "Three young men step out. \"Everything that goes into this land, we get a share. ₦15,000.\"",
+     "options": [
+      {
+       "text": "Pay ₦15,000",
+       "next": "pay",
+       "fx": {
+        "cash": -15000
+       }
+      },
+      {
+       "text": "Say the engineer already paid",
+       "next": "ok",
+       "roll": {
+        "skill": "charm",
+        "dc": 3,
+        "ok": "ok",
+        "bad": "fightit"
+       }
+      },
+      {
+       "text": "Fight",
+       "next": "fightit"
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "ok",
+     "item": "cement bags",
+     "to": "ayobo_plot",
+     "text": "Hand the cement to the foreman",
+     "npc": "Foreman",
+     "type": "deliver"
+    },
+    {
+     "id": "end8",
+     "outcome": "win",
+     "title": "CEMENT DELIVERED",
+     "rewards": {
+      "cash": 18000,
+      "xp": 190,
+      "skillXp": {
+       "drive": 30,
+       "charm": 18
+      },
+      "rep": {
+       "landlords": 6,
+       "streets": 2
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "pay",
+     "item": "cement bags",
+     "to": "ayobo_plot",
+     "text": "Hand the cement to the foreman",
+     "npc": "Foreman",
+     "type": "deliver"
+    },
+    {
+     "id": "end10",
+     "outcome": "win",
+     "title": "CEMENT DELIVERED, POCKET HURT",
+     "rewards": {
+      "cash": 18000,
+      "xp": 170,
+      "skillXp": {
+       "drive": 30
+      },
+      "rep": {
+       "landlords": 5
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "fightit",
+     "at": "ayobo_plot",
+     "foes": [
+      {
+       "n": 3,
+       "role": "area",
+       "weapon": "machete"
+      }
+     ],
+     "text": "Fight off the onile",
+     "type": "fight"
+    },
+    {
+     "id": "deliver12",
+     "item": "cement bags",
+     "to": "ayobo_plot",
+     "text": "Now hand the cement over",
+     "npc": "Foreman",
+     "type": "deliver"
+    },
+    {
+     "id": "end13",
+     "outcome": "win",
+     "title": "CEMENT DELIVERED THE HARD WAY",
+     "rewards": {
+      "cash": 18000,
+      "xp": 210,
+      "skillXp": {
+       "drive": 30,
+       "fight": 24
+      },
+      "rep": {
+       "landlords": 3,
+       "streets": -3
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 18000,
+    "xp": 190,
+    "skillXp": {
+     "drive": 30,
+     "charm": 14,
+     "street": 10
+    },
+    "rep": {
+     "landlords": 5
+    }
+   },
+   "fail": {
+    "timer": 780,
+    "onDeath": true
+   },
+   "tags": [
+    "land",
+    "construction"
+   ]
+  },
+  {
+   "id": "night_pharmacy_run",
+   "title": "Night Pharmacy",
+   "arc": "Mushin Nights",
+   "category": "delivery",
+   "area": "Ikeja",
+   "giver": "Nurse Joy",
+   "blurb": "A child has a fever and the only pharmacy with the right syrup is in Ikeja. The ward is in Mushin.",
+   "minutes": 9,
+   "difficulty": 2,
+   "offer": {
+    "call": {
+     "who": "Nurse Joy",
+     "line": "Please, the ward has run out of the syrup. HealthPlus at Ikeja has it. Anybody who can ride, come now.",
+     "hours": [
+      19,
+      5
+     ],
+     "weight": 2
+    }
+   },
+   "start": "vehicle1",
+   "steps": [
+    {
+     "id": "vehicle1",
+     "kind": [
+      "okada",
+      "hatch",
+      "sedan"
+     ],
+     "provide": "ikeja_station",
+     "text": "Get on a vehicle",
+     "type": "vehicle"
+    },
+    {
+     "id": "pickup2",
+     "item": "syrup",
+     "to": "pharmacy_ikeja",
+     "text": "Collect the syrup at HealthPlus Ikeja",
+     "type": "pickup"
+    },
+    {
+     "id": "choice3",
+     "who": "Pharmacist",
+     "prompt": "The pharmacist hesitates. \"I need to see a prescription.\"",
+     "options": [
+      {
+       "text": "Explain it is an emergency",
+       "next": "ok",
+       "roll": {
+        "skill": "charm",
+        "dc": 2,
+        "ok": "ok",
+        "bad": "pay"
+       }
+      },
+      {
+       "text": "Pay extra (₦2,000)",
+       "next": "pay",
+       "fx": {
+        "cash": -2000
+       }
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "ok",
+     "to": "mushin_gh",
+     "text": "Race to Mushin General Hospital",
+     "on": "vehicle",
+     "vehicle": [
+      "okada",
+      "hatch",
+      "sedan"
+     ],
+     "timer": 360,
+     "type": "goto"
+    },
+    {
+     "id": "deliver5",
+     "item": "syrup",
+     "to": "mushin_gh",
+     "text": "Hand the syrup to Nurse Joy",
+     "npc": "Nurse Joy",
+     "type": "deliver"
+    },
+    {
+     "id": "end6",
+     "outcome": "win",
+     "title": "CHILD SAVED",
+     "rewards": {
+      "cash": 8000,
+      "xp": 150,
+      "skillXp": {
+       "ride": 20,
+       "drive": 20,
+       "charm": 6
+      },
+      "rep": {
+       "church": 10
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "pay",
+     "to": "mushin_gh",
+     "text": "Race to Mushin General Hospital",
+     "on": "vehicle",
+     "vehicle": [
+      "okada",
+      "hatch",
+      "sedan"
+     ],
+     "timer": 360,
+     "type": "goto"
+    },
+    {
+     "id": "deliver8",
+     "item": "syrup",
+     "to": "mushin_gh",
+     "text": "Hand the syrup to Nurse Joy",
+     "npc": "Nurse Joy",
+     "type": "deliver"
+    },
+    {
+     "id": "end9",
+     "outcome": "win",
+     "title": "CHILD SAVED",
+     "rewards": {
+      "cash": 6000,
+      "xp": 140,
+      "skillXp": {
+       "ride": 20,
+       "drive": 20
+      },
+      "rep": {
+       "church": 8
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 8000,
+    "xp": 140,
+    "skillXp": {
+     "ride": 20,
+     "drive": 20
+    },
+    "rep": {
+     "church": 8
+    }
+   },
+   "fail": {
+    "timer": 600,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 15
+   },
+   "tags": [
+    "medical",
+    "night"
+   ]
+  },
+  {
+   "id": "gas_cylinder_estate",
+   "title": "Gas for the Estate",
+   "arc": "Dark Streets",
+   "category": "delivery",
+   "area": "Ajao Estate",
+   "giver": "Landlady Kemi",
+   "blurb": "Gas is scarce and the estate women want cylinders. Light is out too, so find the street in the dark.",
+   "minutes": 9,
+   "difficulty": 2,
+   "offer": {
+    "giver": {
+     "name": "Landlady Kemi",
+     "at": "ajao_estate",
+     "line": "No gas, no cooking, no peace. Bring us four cylinders. NEPA took light again so do not hit anybody.",
+     "look": "ped"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Landlady Kemi",
+     "to": "ajao_estate",
+     "lines": [
+      [
+       "Landlady Kemi",
+       "Isolo filling plant, the one by the NNPC. Return before the generators die."
+      ]
+     ],
+     "text": "Meet Landlady Kemi",
+     "look": "ped",
+     "type": "talk"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "hatch",
+      "sedan",
+      "suv",
+      "keke"
+     ],
+     "provide": "ajao_estate",
+     "text": "Find a ride with room",
+     "type": "vehicle"
+    },
+    {
+     "id": "goto3",
+     "to": "nnpc_isolo",
+     "text": "Go to the gas plant by the NNPC station, Isolo",
+     "on": "vehicle",
+     "type": "goto"
+    },
+    {
+     "id": "pickup4",
+     "item": "gas cylinders",
+     "to": "nnpc_isolo",
+     "text": "Load the cylinders",
+     "type": "pickup"
+    },
+    {
+     "id": "goto5",
+     "to": "ajao_estate",
+     "text": "Take them to the estate",
+     "on": "vehicle",
+     "vehicle": [
+      "hatch",
+      "sedan",
+      "suv",
+      "keke"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "deliver6",
+     "item": "gas cylinders",
+     "to": "ajao_estate",
+     "text": "Hand over the cylinders",
+     "npc": "Estate women",
+     "type": "deliver"
+    },
+    {
+     "id": "end7",
+     "outcome": "win",
+     "title": "GAS IN THE ESTATE",
+     "rewards": {
+      "cash": 9500,
+      "xp": 110,
+      "skillXp": {
+       "drive": 18
+      },
+      "rep": {
+       "landlords": 5,
+       "church": 2
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 9500,
+    "xp": 110,
+    "skillXp": {
+     "drive": 18,
+     "stamina": 10
+    },
+    "rep": {
+     "landlords": 4,
+     "church": 2
+    }
+   },
+   "fail": {
+    "timer": 700,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 10
+   },
+   "tags": [
+    "gas"
+   ]
+  },
+  {
+   "id": "alausa_docs_courier",
+   "title": "Papers for Alausa",
+   "arc": "Paperwork",
+   "category": "delivery",
+   "area": "Alausa",
+   "giver": "Barrister Femi",
+   "blurb": "Land documents that must be stamped before the secretariat closes. Traffic is not your excuse.",
+   "minutes": 10,
+   "difficulty": 3,
+   "req": {
+    "level": 3
+   },
+   "offer": {
+    "giver": {
+     "name": "Barrister Femi",
+     "at": "ikeja_plaza_bank",
+     "line": "Documents. Stamped today or my client loses his plot. Please move.",
+     "look": "ped"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Barrister Femi",
+     "to": "ikeja_plaza_bank",
+     "lines": [
+      [
+       "Barrister Femi",
+       "The Surveyor General office, not the secretariat. People always confuse them."
+      ]
+     ],
+     "text": "Meet Barrister Femi",
+     "look": "ped",
+     "type": "talk"
+    },
+    {
+     "id": "pickup2",
+     "item": "land documents",
+     "to": "ikeja_plaza_bank",
+     "text": "Take the folder",
+     "type": "pickup"
+    },
+    {
+     "id": "vehicle3",
+     "kind": [
+      "okada",
+      "hatch",
+      "sedan",
+      "keke"
+     ],
+     "provide": "ikeja_plaza_bank",
+     "text": "Get a vehicle",
+     "type": "vehicle"
+    },
+    {
+     "id": "goto4",
+     "to": "alausa_surveyor",
+     "text": "Go to the Surveyor General office, Alausa",
+     "on": "vehicle",
+     "vehicle": [
+      "okada",
+      "hatch",
+      "sedan",
+      "keke"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "choice5",
+     "who": "Clerk",
+     "prompt": "The clerk glances at the clock. \"It is 3:30. We close at 4. The queue is long.\"",
+     "options": [
+      {
+       "text": "Join the queue",
+       "next": "queue"
+      },
+      {
+       "text": "Slip him ₦2,000",
+       "next": "dash",
+       "fx": {
+        "cash": -2000
+       }
+      },
+      {
+       "text": "Say you are with the Barrister",
+       "next": "dash",
+       "roll": {
+        "skill": "charm",
+        "dc": 3,
+        "ok": "dash",
+        "bad": "queue"
+       }
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "queue",
+     "secs": 25,
+     "text": "Wait while the queue crawls",
+     "type": "wait"
+    },
+    {
+     "id": "stamp",
+     "item": "land documents",
+     "to": "alausa_surveyor",
+     "text": "Get the stamp",
+     "npc": "Clerk",
+     "type": "deliver"
+    },
+    {
+     "id": "end8",
+     "outcome": "win",
+     "title": "STAMPED",
+     "rewards": {
+      "cash": 15000,
+      "xp": 170,
+      "skillXp": {
+       "drive": 24,
+       "charm": 10
+      },
+      "rep": {
+       "landlords": 5
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "dash",
+     "item": "land documents",
+     "to": "alausa_surveyor",
+     "text": "Get the stamp",
+     "npc": "Clerk",
+     "type": "deliver"
+    },
+    {
+     "id": "end10",
+     "outcome": "win",
+     "title": "STAMPED FAST",
+     "rewards": {
+      "cash": 13500,
+      "xp": 160,
+      "skillXp": {
+       "drive": 24,
+       "street": 8
+      },
+      "rep": {
+       "landlords": 5,
+       "police": -1
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 15000,
+    "xp": 170,
+    "skillXp": {
+     "drive": 24,
+     "charm": 12
+    },
+    "rep": {
+     "landlords": 5
+    }
+   },
+   "fail": {
+    "timer": 540,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 12
+   },
+   "tags": [
+    "paperwork"
+   ]
+  },
+  {
+   "id": "oshodi_tomato_flip",
+   "title": "Tomato Flip",
+   "arc": "Market Days",
+   "category": "trade",
+   "area": "Mile 12",
+   "giver": "Mama Nkechi",
+   "blurb": "Tomatoes are cheap at Mile 12 and dear at Oshodi. Buy a basket, carry it, sell it before it goes soft.",
+   "minutes": 9,
+   "difficulty": 1,
+   "offer": {
+    "giver": {
+     "name": "Mama Nkechi",
+     "at": "buka_oshodi",
+     "line": "Tomatoes dey cost money in Oshodi. Go Mile 12, buy for me and sell for the park. Keep the difference.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Mama Nkechi",
+     "to": "buka_oshodi",
+     "lines": [
+      [
+       "Mama Nkechi",
+       "Take ₦4,000 from my own pocket. If you waste it, I know where you sleep."
+      ]
+     ],
+     "text": "Collect the capital from Mama Nkechi",
+     "look": "vendor",
+     "done": {
+      "cash": 4000
+     },
+     "type": "talk"
+    },
+    {
+     "id": "goto2",
+     "to": "mile12_market",
+     "text": "Go to Mile 12 market",
+     "type": "goto"
+    },
+    {
+     "id": "trade3",
+     "npc": "Tomato seller",
+     "at": "mile12_market",
+     "buy": {
+      "item": "tomato basket",
+      "price": 4000,
+      "label": "a basket of tomatoes"
+     },
+     "haggle": true,
+     "text": "Buy tomatoes",
+     "onWalk": "walk",
+     "onBroke": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "goto4",
+     "to": "oshodi_terminal1",
+     "text": "Carry them to Oshodi before they soften",
+     "type": "goto"
+    },
+    {
+     "id": "trade5",
+     "npc": "Pepper-soup lady",
+     "at": "oshodi_terminal1",
+     "sell": {
+      "item": "tomato basket",
+      "price": 7200,
+      "label": "a basket of tomatoes"
+     },
+     "haggle": true,
+     "text": "Sell the tomatoes at the park",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "end6",
+     "outcome": "win",
+     "title": "TOMATO PROFIT",
+     "rewards": {
+      "cash": 2500,
+      "xp": 70,
+      "skillXp": {
+       "trade": 30
+      },
+      "rep": {
+       "market": 5
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "walk",
+     "outcome": "fail",
+     "title": "NO DEAL",
+     "text": "You walked away. The money goes back to Mama Nkechi.",
+     "fx": {
+      "cash": -4000
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 2500,
+    "xp": 70,
+    "skillXp": {
+     "trade": 30
+    },
+    "rep": {
+     "market": 5
+    }
+   },
+   "fail": {
+    "timer": 780,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 8
+   },
+   "tags": [
+    "market"
+   ]
+  },
+  {
+   "id": "mile12_yam_wholesale",
+   "title": "Yam by the Truck",
+   "arc": "Market Days",
+   "category": "trade",
+   "area": "Mile 12",
+   "giver": "Alhaji Danjuma",
+   "blurb": "A trailer of yams arrives at Mile 12. Buy cheap, sell in lots at Mushin and Agege.",
+   "minutes": 12,
+   "difficulty": 2,
+   "req": {
+    "level": 2
+   },
+   "offer": {
+    "giver": {
+     "name": "Alhaji Danjuma",
+     "at": "mile12_terminal",
+     "line": "The trailer just reach. If you have eyes for numbers, you fit eat from this.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Alhaji Danjuma",
+     "to": "mile12_terminal",
+     "lines": [
+      [
+       "Alhaji Danjuma",
+       "I sell twenty tubers for ₦9,000 but you must carry yourself. Two markets: Mushin first, then Agege."
+      ]
+     ],
+     "text": "Meet Alhaji Danjuma",
+     "look": "vendor",
+     "done": {
+      "cash": 9000
+     },
+     "type": "talk"
+    },
+    {
+     "id": "trade2",
+     "npc": "Truck driver",
+     "at": "mile12_terminal",
+     "buy": {
+      "item": "yam tubers",
+      "price": 9000,
+      "label": "twenty tubers of yam"
+     },
+     "haggle": true,
+     "text": "Buy the yams",
+     "onBroke": "walk",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "vehicle3",
+     "kind": [
+      "hatch",
+      "suv",
+      "jeep",
+      "danfo"
+     ],
+     "provide": "mile12_terminal",
+     "text": "You need a vehicle to move the load",
+     "type": "vehicle"
+    },
+    {
+     "id": "trade4",
+     "npc": "Mushin wholesaler",
+     "at": "mushin_market",
+     "sell": {
+      "item": "yam tubers",
+      "price": 13500,
+      "label": "twenty tubers of yam"
+     },
+     "haggle": true,
+     "text": "Sell at Mushin market",
+     "onWalk": "agege",
+     "type": "trade"
+    },
+    {
+     "id": "end5",
+     "outcome": "win",
+     "title": "YAM SOLD",
+     "rewards": {
+      "cash": 3500,
+      "xp": 100,
+      "skillXp": {
+       "trade": 40,
+       "drive": 8
+      },
+      "rep": {
+       "market": 6
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "agege",
+     "npc": "Agege trader",
+     "at": "ashade_market",
+     "sell": {
+      "item": "yam tubers",
+      "price": 12500,
+      "label": "twenty tubers of yam"
+     },
+     "haggle": true,
+     "text": "Try Agege instead",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "end7",
+     "outcome": "win",
+     "title": "YAM SOLD",
+     "rewards": {
+      "cash": 3000,
+      "xp": 90,
+      "skillXp": {
+       "trade": 36
+      },
+      "rep": {
+       "market": 4
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "walk",
+     "outcome": "fail",
+     "title": "NO BUYER",
+     "text": "You carry the yams around Lagos and nobody wants them. Danjuma takes his loss.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 3500,
+    "xp": 100,
+    "skillXp": {
+     "trade": 40,
+     "drive": 8
+    },
+    "rep": {
+     "market": 6
+    }
+   },
+   "fail": {
+    "timer": 900,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 10
+   },
+   "tags": [
+    "market"
+   ]
+  },
+  {
+   "id": "ladipo_tokunbo_tyres",
+   "title": "Tokunbo Tyres",
+   "arc": "Ladipo Parts",
+   "category": "trade",
+   "area": "Mushin",
+   "giver": "Chief Ebuka",
+   "blurb": "Used tyres from Ladipo, sold to Cappa mechanics. Feel the tread before you pay.",
+   "minutes": 10,
+   "difficulty": 2,
+   "req": {
+    "level": 2
+   },
+   "offer": {
+    "giver": {
+     "name": "Chief Ebuka",
+     "at": "ladipo_market",
+     "line": "I get four tokunbo tyres that nobody has time to sell. Buy, flip, we share the smile.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Chief Ebuka",
+     "to": "ladipo_market",
+     "lines": [
+      [
+       "Chief Ebuka",
+       "Look at this one. Almost new. Tokunbo from Germany. Maybe Idumota, but the tread is real."
+      ]
+     ],
+     "text": "Meet Chief Ebuka",
+     "look": "vendor",
+     "type": "talk"
+    },
+    {
+     "id": "choice2",
+     "who": "Chief Ebuka",
+     "prompt": "Four tyres, ₦12,000. Inspect first, or trust me?",
+     "options": [
+      {
+       "text": "Inspect the tread",
+       "next": "good",
+       "roll": {
+        "skill": "mech",
+        "dc": 2,
+        "ok": "good",
+        "bad": "bad",
+        "okFx": {
+         "skillXp": {
+          "mech": 8
+         }
+        }
+       }
+      },
+      {
+       "text": "Trust him",
+       "next": "bad"
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "good",
+     "npc": "Chief Ebuka",
+     "at": "ladipo_market",
+     "buy": {
+      "item": "four tyres",
+      "price": 12000,
+      "label": "four used tyres"
+     },
+     "haggle": true,
+     "text": "Buy the good tyres",
+     "onWalk": "walk",
+     "onBroke": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "goto4",
+     "to": "cappa_village",
+     "text": "Take them to Cappa",
+     "type": "goto"
+    },
+    {
+     "id": "trade5",
+     "npc": "Cappa mechanic",
+     "at": "cappa_village",
+     "sell": {
+      "item": "four tyres",
+      "price": 18500,
+      "label": "four used tyres"
+     },
+     "haggle": true,
+     "text": "Sell to the mechanics",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "end6",
+     "outcome": "win",
+     "title": "GOOD TYRES, GOOD MONEY",
+     "rewards": {
+      "cash": 3500,
+      "xp": 100,
+      "skillXp": {
+       "trade": 32,
+       "mech": 18
+      },
+      "rep": {
+       "market": 5,
+       "mechanics": 6
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "bad",
+     "npc": "Chief Ebuka",
+     "at": "ladipo_market",
+     "buy": {
+      "item": "four tyres",
+      "price": 12000,
+      "label": "four used tyres"
+     },
+     "haggle": true,
+     "text": "Buy the tyres",
+     "onWalk": "walk",
+     "onBroke": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "goto8",
+     "to": "cappa_village",
+     "text": "Take them to Cappa",
+     "type": "goto"
+    },
+    {
+     "id": "trade9",
+     "npc": "Cappa mechanic",
+     "at": "cappa_village",
+     "sell": {
+      "item": "four tyres",
+      "price": 10500,
+      "label": "four used tyres"
+     },
+     "haggle": true,
+     "text": "Sell. They are not great",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "end10",
+     "outcome": "win",
+     "title": "BAD TREAD, BAD DEAL",
+     "rewards": {
+      "cash": 0,
+      "xp": 60,
+      "skillXp": {
+       "trade": 18,
+       "mech": 8
+      },
+      "rep": {
+       "market": 1
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "walk",
+     "outcome": "fail",
+     "title": "NO DEAL",
+     "text": "You walked away.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 3500,
+    "xp": 100,
+    "skillXp": {
+     "trade": 32,
+     "mech": 16
+    },
+    "rep": {
+     "market": 5,
+     "mechanics": 5
+    }
+   },
+   "fail": {
+    "timer": 780,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 10
+   },
+   "tags": [
+    "parts"
+   ]
+  },
+  {
+   "id": "cv_refurb_phones",
+   "title": "Refurb Phones",
+   "arc": "Computer Village",
+   "category": "trade",
+   "area": "Ikeja",
+   "giver": "Oga Tunde",
+   "blurb": "Buy dead phones, fix three of them in the alley, sell them as good second-hand.",
+   "minutes": 11,
+   "difficulty": 2,
+   "req": {
+    "level": 3
+   },
+   "offer": {
+    "giver": {
+     "name": "Oga Tunde",
+     "at": "computer_village_alley",
+     "line": "Dead phones, bag of ten. Fix three of them, sell to the guy by the bank. Very easy money.",
+     "look": "vendor"
+    }
+   },
+   "start": "trade1",
+   "steps": [
+    {
+     "id": "trade1",
+     "npc": "Oga Tunde",
+     "at": "computer_village_alley",
+     "buy": {
+      "item": "dead phones",
+      "price": 6000,
+      "label": "a bag of dead phones"
+     },
+     "haggle": true,
+     "text": "Buy the dead phones",
+     "onWalk": "walk",
+     "onBroke": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "goto2",
+     "to": "computer_village",
+     "text": "Find a table to work at",
+     "type": "goto"
+    },
+    {
+     "id": "tap3",
+     "label": "Repair the first phone",
+     "taps": 14,
+     "secs": 9,
+     "text": "Repair the first phone",
+     "skill": "mech",
+     "onFail": "walk",
+     "perTap": 50,
+     "type": "tap"
+    },
+    {
+     "id": "hack4",
+     "label": "Unlock a locked phone",
+     "len": 4,
+     "secs": 14,
+     "text": "Unlock the second one",
+     "onFail": "fail2",
+     "type": "hack"
+    },
+    {
+     "id": "tap5",
+     "label": "Repair the third phone",
+     "taps": 16,
+     "secs": 9,
+     "text": "Repair the third phone",
+     "skill": "mech",
+     "onFail": "fail2",
+     "type": "tap"
+    },
+    {
+     "id": "trade6",
+     "npc": "Phone buyer",
+     "at": "ikeja_plaza_bank",
+     "sell": {
+      "item": "dead phones",
+      "price": 11500,
+      "label": "three working phones"
+     },
+     "haggle": true,
+     "text": "Sell at the bank junction",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "end7",
+     "outcome": "win",
+     "title": "FLIPPED",
+     "rewards": {
+      "cash": 4000,
+      "xp": 120,
+      "skillXp": {
+       "trade": 22,
+       "hack": 18,
+       "mech": 10
+      },
+      "rep": {
+       "market": 5
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "fail2",
+     "outcome": "win",
+     "title": "ONLY HALF WORKED",
+     "rewards": {
+      "cash": 0,
+      "xp": 60,
+      "skillXp": {
+       "hack": 8
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "walk",
+     "outcome": "fail",
+     "title": "NO DEAL",
+     "text": "You walked away.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 4000,
+    "xp": 120,
+    "skillXp": {
+     "trade": 22,
+     "hack": 18,
+     "mech": 10
+    },
+    "rep": {
+     "market": 5
+    }
+   },
+   "fail": {
+    "timer": 720,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 10
+   },
+   "tags": [
+    "phones"
+   ]
+  },
+  {
+   "id": "ankara_from_idumota",
+   "title": "Ankara from Idumota",
+   "arc": "Market Days",
+   "category": "trade",
+   "area": "Lagos Island",
+   "giver": "Madam Funmi",
+   "blurb": "Bolts of Ankara from the Island market to a boutique in Ikeja. The tailors upstairs love the colour.",
+   "minutes": 14,
+   "difficulty": 3,
+   "req": {
+    "level": 4
+   },
+   "offer": {
+    "giver": {
+     "name": "Madam Funmi",
+     "at": "idumota",
+     "line": "Wax print for my boutique in Ikeja. Go to the wholesaler, bargain hard, and come back with fabric.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Madam Funmi",
+     "to": "idumota",
+     "lines": [
+      [
+       "Madam Funmi",
+       "Four bolts, ₦28,000 max. The wholesaler is in the third row. Do not buy faded ones."
+      ]
+     ],
+     "text": "Meet Madam Funmi",
+     "look": "vendor",
+     "done": {
+      "cash": 28000
+     },
+     "type": "talk"
+    },
+    {
+     "id": "trade2",
+     "npc": "Wholesaler",
+     "at": "jankara",
+     "buy": {
+      "item": "ankara bolts",
+      "price": 28000,
+      "label": "four bolts of Ankara"
+     },
+     "haggle": true,
+     "text": "Buy the Ankara bolts",
+     "onWalk": "walk",
+     "onBroke": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "vehicle3",
+     "kind": [
+      "sedan",
+      "hatch",
+      "suv",
+      "jeep"
+     ],
+     "provide": "jankara",
+     "text": "Get a car",
+     "type": "vehicle"
+    },
+    {
+     "id": "goto4",
+     "to": "ikeja_city_mall",
+     "text": "Drive to the boutique near Ikeja City Mall",
+     "on": "vehicle",
+     "vehicle": [
+      "sedan",
+      "hatch",
+      "suv",
+      "jeep"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "trade5",
+     "npc": "Boutique owner",
+     "at": "ikeja_city_mall",
+     "sell": {
+      "item": "ankara bolts",
+      "price": 41000,
+      "label": "four bolts of Ankara"
+     },
+     "haggle": true,
+     "text": "Sell to the boutique",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "end6",
+     "outcome": "win",
+     "title": "FABRIC FLIPPED",
+     "rewards": {
+      "cash": 6500,
+      "xp": 170,
+      "skillXp": {
+       "trade": 45,
+       "drive": 12
+      },
+      "rep": {
+       "market": 8
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "walk",
+     "outcome": "fail",
+     "title": "NO DEAL",
+     "text": "You walked away, and Funmi will never trust you with money again.",
+     "fx": {
+      "cash": -28000
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 6500,
+    "xp": 170,
+    "skillXp": {
+     "trade": 45,
+     "drive": 12
+    },
+    "rep": {
+     "market": 8
+    }
+   },
+   "fail": {
+    "timer": 1200,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 12
+   },
+   "tags": [
+    "fabric"
+   ]
+  },
+  {
+   "id": "pure_water_round",
+   "title": "Pure Water Round",
+   "arc": "Market Days",
+   "category": "trade",
+   "area": "Oshodi",
+   "giver": "Auntie Sade",
+   "blurb": "Sell sachet water at four busy stops. Hot day, thirsty crowd, small profit every time.",
+   "minutes": 8,
+   "difficulty": 1,
+   "offer": {
+    "giver": {
+     "name": "Auntie Sade",
+     "at": "oshodi_interchange",
+     "line": "Pure water, cold cold. Take the bag and walk the stops. I don dey tire.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Auntie Sade",
+     "to": "oshodi_interchange",
+     "lines": [
+      [
+       "Auntie Sade",
+       "Oshodi, Mafoluku, Ilupeju and Isolo. Say \"pure water, cold\" and smile."
+      ]
+     ],
+     "text": "Meet Auntie Sade",
+     "look": "vendor",
+     "type": "talk"
+    },
+    {
+     "id": "pickup2",
+     "item": "water bag",
+     "to": "oshodi_interchange",
+     "text": "Take the water bag",
+     "type": "pickup"
+    },
+    {
+     "id": "visit3",
+     "places": [
+      "oshodi_terminal3",
+      "mafoluku",
+      "ilupeju",
+      "isolo_junction"
+     ],
+     "text": "Sell water at four stops",
+     "each": {
+      "cash": 450,
+      "skillXp": {
+       "stamina": 4,
+       "trade": 2
+      }
+     },
+     "type": "visit"
+    },
+    {
+     "id": "end4",
+     "outcome": "win",
+     "title": "ALL SOLD",
+     "rewards": {
+      "cash": 1500,
+      "xp": 50,
+      "skillXp": {
+       "stamina": 24,
+       "trade": 14
+      },
+      "rep": {
+       "market": 3
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 1500,
+    "xp": 50,
+    "skillXp": {
+     "stamina": 24,
+     "trade": 14,
+     "charm": 6
+    },
+    "rep": {
+     "market": 3
+    }
+   },
+   "fail": {
+    "timer": 600,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 6
+   },
+   "tags": [
+    "water"
+   ]
+  },
+  {
+   "id": "market_price_war",
+   "title": "Price War",
+   "arc": "Market Days",
+   "category": "trade",
+   "area": "Mushin",
+   "giver": "Two sellers",
+   "blurb": "Two onion sellers have a price war at Mushin market. Both want you on their side.",
+   "minutes": 9,
+   "difficulty": 2,
+   "req": {
+    "level": 3
+   },
+   "offer": {
+    "giver": {
+     "name": "Mama Kudi",
+     "at": "mushin_market",
+     "line": "That woman across the road is selling below cost to kill me. Help me.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Mama Kudi",
+     "to": "mushin_market",
+     "lines": [
+      [
+       "Mama Kudi",
+       "She price at ₦700 a bag. Cost is ₦850. I am done if you do nothing."
+      ]
+     ],
+     "text": "Hear Mama Kudi",
+     "look": "vendor",
+     "type": "talk"
+    },
+    {
+     "id": "talk2",
+     "npc": "Mama Ife",
+     "to": "mushin_market",
+     "lines": [
+      [
+       "Mama Ife",
+       "Kudi is the one starting trouble. She has been robbing the market for years."
+      ]
+     ],
+     "text": "Hear the other side",
+     "look": "vendor",
+     "type": "talk"
+    },
+    {
+     "id": "choice3",
+     "who": "The market",
+     "prompt": "The whole row is watching you.",
+     "options": [
+      {
+       "text": "Persuade both to agree a fair price",
+       "next": "peace",
+       "roll": {
+        "skill": "charm",
+        "dc": 4,
+        "ok": "peace",
+        "bad": "sides"
+       }
+      },
+      {
+       "text": "Back Mama Kudi",
+       "next": "kudi",
+       "fx": {
+        "rep": {
+         "market": 2
+        }
+       }
+      },
+      {
+       "text": "Back Mama Ife",
+       "next": "ife"
+      },
+      {
+       "text": "Walk away from it",
+       "next": "away"
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "peace",
+     "outcome": "win",
+     "title": "PEACE IN THE ROW",
+     "rewards": {
+      "cash": 7500,
+      "xp": 140,
+      "skillXp": {
+       "charm": 32,
+       "trade": 10
+      },
+      "rep": {
+       "market": 14
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "sides",
+     "at": "mushin_market",
+     "foes": [
+      {
+       "n": 2,
+       "role": "ped"
+      }
+     ],
+     "text": "It turns into a scuffle. Separate them",
+     "type": "fight"
+    },
+    {
+     "id": "end6",
+     "outcome": "win",
+     "title": "PARTLY SETTLED",
+     "rewards": {
+      "cash": 3500,
+      "xp": 100,
+      "skillXp": {
+       "fight": 12,
+       "charm": 6
+      },
+      "rep": {
+       "market": 4
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "kudi",
+     "outcome": "win",
+     "title": "KUDI WINS",
+     "rewards": {
+      "cash": 6500,
+      "xp": 110,
+      "skillXp": {
+       "street": 8
+      },
+      "rep": {
+       "market": 6
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "ife",
+     "outcome": "win",
+     "title": "IFE WINS",
+     "rewards": {
+      "cash": 6500,
+      "xp": 110,
+      "skillXp": {
+       "street": 8
+      },
+      "rep": {
+       "market": 6
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "away",
+     "outcome": "fail",
+     "title": "YOU STAYED OUT",
+     "text": "No money for a man who does not pick sides in Lagos.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 6000,
+    "xp": 110,
+    "skillXp": {
+     "trade": 24,
+     "charm": 16
+    },
+    "rep": {
+     "market": 8
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "tags": [
+    "market"
+   ]
+  },
+  {
+   "id": "iddo_charcoal_haul",
+   "title": "Charcoal Haul",
+   "arc": "Water Side",
+   "category": "trade",
+   "area": "Iddo",
+   "giver": "Baba Charcoal",
+   "blurb": "Bags of charcoal from the Iddo wharf to restaurants on the mainland. The lorry broke down, so you drive.",
+   "minutes": 12,
+   "difficulty": 2,
+   "req": {
+    "level": 3
+   },
+   "offer": {
+    "giver": {
+     "name": "Baba Charcoal",
+     "at": "iddo_market",
+     "line": "The lorry don die. You get car? Carry thirty bags to the mainland and I pay you.",
+     "look": "vendor"
+    }
+   },
+   "start": "vehicle1",
+   "steps": [
+    {
+     "id": "vehicle1",
+     "kind": [
+      "suv",
+      "jeep",
+      "hatch",
+      "danfo"
+     ],
+     "provide": "iddo_market",
+     "text": "Get a vehicle with room",
+     "type": "vehicle"
+    },
+    {
+     "id": "pickup2",
+     "item": "charcoal bags",
+     "to": "iddo_market",
+     "text": "Load thirty bags",
+     "type": "pickup"
+    },
+    {
+     "id": "goto3",
+     "to": "yaba_terminal",
+     "text": "Drive to Yaba",
+     "on": "vehicle",
+     "vehicle": [
+      "suv",
+      "jeep",
+      "hatch",
+      "danfo"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "trade4",
+     "npc": "Restaurant owner",
+     "at": "yaba_terminal",
+     "sell": {
+      "item": "charcoal bags",
+      "price": 9000,
+      "label": "thirty bags of charcoal"
+     },
+     "haggle": true,
+     "text": "Sell to the restaurant owner",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "end5",
+     "outcome": "win",
+     "title": "CHARCOAL SOLD",
+     "rewards": {
+      "cash": 3500,
+      "xp": 130,
+      "skillXp": {
+       "drive": 28,
+       "trade": 12
+      },
+      "rep": {
+       "market": 5
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "walk",
+     "outcome": "fail",
+     "title": "NO DEAL",
+     "text": "You walked away.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 8500,
+    "xp": 130,
+    "skillXp": {
+     "drive": 28,
+     "trade": 12
+    },
+    "rep": {
+     "market": 5
+    }
+   },
+   "fail": {
+    "timer": 780,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 10
+   },
+   "tags": [
+    "charcoal"
+   ]
+  },
+  {
+   "id": "ketu_garri_run",
+   "title": "Garri for Ikotun",
+   "arc": "Market Days",
+   "category": "trade",
+   "area": "Ketu",
+   "giver": "Iya Garri",
+   "blurb": "Garri is expensive on the western side. Move three sacks from Ketu to Ikotun and keep the margin.",
+   "minutes": 13,
+   "difficulty": 2,
+   "offer": {
+    "giver": {
+     "name": "Iya Garri",
+     "at": "ketu_market",
+     "line": "Garri on this side is cheap, on the Ikotun side is gold. Go sell for me.",
+     "look": "vendor"
+    }
+   },
+   "start": "trade1",
+   "steps": [
+    {
+     "id": "trade1",
+     "npc": "Iya Garri",
+     "at": "ketu_market",
+     "buy": {
+      "item": "garri sacks",
+      "price": 7500,
+      "label": "three sacks of garri"
+     },
+     "haggle": true,
+     "text": "Buy the garri",
+     "onWalk": "walk",
+     "onBroke": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "danfo",
+      "hatch",
+      "suv",
+      "jeep",
+      "keke"
+     ],
+     "provide": "ketu_market",
+     "text": "Get a ride",
+     "type": "vehicle"
+    },
+    {
+     "id": "goto3",
+     "to": "ikotun_terminal",
+     "text": "Take the garri to Ikotun",
+     "on": "vehicle",
+     "vehicle": [
+      "danfo",
+      "hatch",
+      "suv",
+      "jeep",
+      "keke"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "trade4",
+     "npc": "Ikotun trader",
+     "at": "ikotun_terminal",
+     "sell": {
+      "item": "garri sacks",
+      "price": 12500,
+      "label": "three sacks of garri"
+     },
+     "haggle": true,
+     "text": "Sell at the terminal",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "end5",
+     "outcome": "win",
+     "title": "GARRI SOLD",
+     "rewards": {
+      "cash": 4500,
+      "xp": 100,
+      "skillXp": {
+       "trade": 32
+      },
+      "rep": {
+       "market": 5
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "walk",
+     "outcome": "fail",
+     "title": "NO DEAL",
+     "text": "You walked away.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 4500,
+    "xp": 100,
+    "skillXp": {
+     "trade": 32,
+     "drive": 12
+    },
+    "rep": {
+     "market": 5
+    }
+   },
+   "fail": {
+    "timer": 960,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 10
+   },
+   "tags": [
+    "food"
+   ]
+  },
+  {
+   "id": "okrika_tejuosho",
+   "title": "Okrika Bale",
+   "arc": "Market Days",
+   "category": "trade",
+   "area": "Yaba",
+   "giver": "Uncle Sam",
+   "blurb": "A bale of second-hand clothes opens at Tejuosho. Pick the good ones and flip them on campus.",
+   "minutes": 11,
+   "difficulty": 2,
+   "req": {
+    "level": 3
+   },
+   "offer": {
+    "giver": {
+     "name": "Uncle Sam",
+     "at": "tejuosho",
+     "line": "The bale just open. Quick quick, the best jeans go first.",
+     "look": "vendor"
+    }
+   },
+   "start": "trade1",
+   "steps": [
+    {
+     "id": "trade1",
+     "npc": "Uncle Sam",
+     "at": "tejuosho",
+     "buy": {
+      "item": "okrika bale",
+      "price": 8000,
+      "label": "a bale of second-hand clothes"
+     },
+     "haggle": true,
+     "text": "Buy the bale",
+     "onWalk": "walk",
+     "onBroke": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "goto2",
+     "to": "unilag_new_hall",
+     "text": "Walk the bale to UNILAG",
+     "type": "goto"
+    },
+    {
+     "id": "trade3",
+     "npc": "Student hawker",
+     "at": "unilag_new_hall",
+     "sell": {
+      "item": "okrika bale",
+      "price": 13000,
+      "label": "second-hand clothes"
+     },
+     "haggle": true,
+     "text": "Sell on campus",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "end4",
+     "outcome": "win",
+     "title": "FASHION FLIPPED",
+     "rewards": {
+      "cash": 3000,
+      "xp": 90,
+      "skillXp": {
+       "trade": 28
+      },
+      "rep": {
+       "market": 4,
+       "students": 4
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "walk",
+     "outcome": "fail",
+     "title": "NO DEAL",
+     "text": "You walked away.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 3000,
+    "xp": 90,
+    "skillXp": {
+     "trade": 28,
+     "charm": 12
+    },
+    "rep": {
+     "market": 4,
+     "students": 4
+    }
+   },
+   "fail": {
+    "timer": 780,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 10
+   },
+   "tags": [
+    "clothes"
+   ]
+  },
+  {
+   "id": "fake_parts_dilemma",
+   "title": "Genuine or Fake?",
+   "arc": "Ladipo Parts",
+   "category": "trade",
+   "area": "Mushin",
+   "giver": "Oga Kunle",
+   "blurb": "A stall owner offers you a load of fake brake pads. Selling them is easy money. Someone may get hurt.",
+   "minutes": 9,
+   "difficulty": 3,
+   "req": {
+    "level": 4,
+    "after": [
+     "ladipo_tokunbo_tyres"
+    ]
+   },
+   "offer": {
+    "giver": {
+     "name": "Oga Kunle",
+     "at": "ladipo_stall_row",
+     "line": "I get something for you. Genuine packaging, you know. No questions.",
+     "look": "vendor"
+    }
+   },
+   "start": "talk1",
+   "steps": [
+    {
+     "id": "talk1",
+     "npc": "Oga Kunle",
+     "to": "ladipo_stall_row",
+     "lines": [
+      [
+       "Oga Kunle",
+       "Fifty sets. Same box as the real thing. Cheap cheap, you can triple your money."
+      ],
+      [
+       "You",
+       "And if the brakes fail?"
+      ],
+      [
+       "Oga Kunle",
+       "Then it is God's will."
+      ]
+     ],
+     "text": "Talk to Oga Kunle",
+     "look": "vendor",
+     "type": "talk"
+    },
+    {
+     "id": "choice2",
+     "who": "Oga Kunle",
+     "prompt": "What do you do?",
+     "options": [
+      {
+       "text": "Buy and sell the fakes (₦6,000 cost)",
+       "next": "sell",
+       "fx": {
+        "cash": -6000,
+        "rep": {
+         "mechanics": -6,
+         "streets": 3
+        }
+       }
+      },
+      {
+       "text": "Report him to the mechanics union",
+       "next": "report",
+       "roll": {
+        "skill": "charm",
+        "dc": 3,
+        "ok": "report",
+        "bad": "away",
+        "okFx": {
+         "rep": {
+          "mechanics": 10,
+          "market": 4
+         }
+        }
+       }
+      },
+      {
+       "text": "Refuse and walk",
+       "next": "away"
+      }
+     ],
+     "type": "choice"
+    },
+    {
+     "id": "sell",
+     "npc": "Eager mechanic",
+     "at": "cappa_gate",
+     "sell": {
+      "item": "fake pads",
+      "price": 17000,
+      "label": "a set of fifty brake pads"
+     },
+     "haggle": true,
+     "text": "Sell at Cappa",
+     "onWalk": "away",
+     "type": "trade"
+    },
+    {
+     "id": "end4",
+     "outcome": "win",
+     "title": "MONEY MADE, SOMEBODY SUFFERS",
+     "rewards": {
+      "cash": 0,
+      "xp": 100,
+      "skillXp": {
+       "street": 14,
+       "trade": 12
+      },
+      "rep": {
+       "streets": 4
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "report",
+     "outcome": "win",
+     "title": "FAKE PARTS REPORTED",
+     "rewards": {
+      "cash": 5000,
+      "xp": 140,
+      "skillXp": {
+       "charm": 22,
+       "mech": 8
+      },
+      "rep": {
+       "mechanics": 12
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "away",
+     "outcome": "win",
+     "title": "CLEAN HANDS",
+     "rewards": {
+      "cash": 1000,
+      "xp": 80,
+      "skillXp": {
+       "street": 6
+      },
+      "rep": {
+       "mechanics": 4
+      }
+     },
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 5000,
+    "xp": 130,
+    "skillXp": {
+     "trade": 20,
+     "street": 14
+    },
+    "rep": {
+     "market": 3
+    }
+   },
+   "fail": {
+    "onDeath": true
+   },
+   "tags": [
+    "dilemma"
+   ]
+  },
+  {
+   "id": "alaba_electronics",
+   "title": "Alaba Electronics",
+   "arc": "Market Days",
+   "category": "trade",
+   "area": "Ojo",
+   "giver": "Chinedu",
+   "blurb": "Televisions, speakers and fans from Alaba to the Ikeja shops. Mind the bumps and the customs men.",
+   "minutes": 15,
+   "difficulty": 3,
+   "req": {
+    "level": 5
+   },
+   "offer": {
+    "giver": {
+     "name": "Chinedu",
+     "at": "alaba_intl",
+     "line": "The container just opened. Ten flat screens. Take them to Ikeja and I give you a cut.",
+     "look": "vendor"
+    }
+   },
+   "start": "trade1",
+   "steps": [
+    {
+     "id": "trade1",
+     "npc": "Chinedu",
+     "at": "alaba_intl",
+     "buy": {
+      "item": "flat screens",
+      "price": 60000,
+      "label": "ten flat screen TVs"
+     },
+     "haggle": true,
+     "text": "Buy the TVs",
+     "onWalk": "walk",
+     "onBroke": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "vehicle2",
+     "kind": [
+      "suv",
+      "jeep",
+      "danfo"
+     ],
+     "provide": "alaba_intl",
+     "text": "You need a vehicle with space",
+     "type": "vehicle"
+    },
+    {
+     "id": "goto3",
+     "to": "ikeja_city_mall",
+     "text": "Drive to Ikeja City Mall",
+     "on": "vehicle",
+     "vehicle": [
+      "suv",
+      "jeep",
+      "danfo"
+     ],
+     "type": "goto"
+    },
+    {
+     "id": "trade4",
+     "npc": "Shop owner",
+     "at": "ikeja_city_mall",
+     "sell": {
+      "item": "flat screens",
+      "price": 84000,
+      "label": "ten flat screen TVs"
+     },
+     "haggle": true,
+     "text": "Sell to the shop owner",
+     "onWalk": "walk",
+     "type": "trade"
+    },
+    {
+     "id": "end5",
+     "outcome": "win",
+     "title": "ELECTRONICS FLIPPED",
+     "rewards": {
+      "cash": 12000,
+      "xp": 230,
+      "skillXp": {
+       "trade": 40,
+       "drive": 24
+      },
+      "rep": {
+       "market": 10
+      }
+     },
+     "type": "end"
+    },
+    {
+     "id": "walk",
+     "outcome": "fail",
+     "title": "NO DEAL",
+     "text": "You walked away with nothing but sore feet.",
+     "type": "end"
+    }
+   ],
+   "rewards": {
+    "cash": 12000,
+    "xp": 230,
+    "skillXp": {
+     "trade": 40,
+     "drive": 24,
+     "street": 12
+    },
+    "rep": {
+     "market": 10
+    }
+   },
+   "fail": {
+    "timer": 1200,
+    "onDeath": true
+   },
+   "repeat": {
+    "cooldownMin": 15
+   },
+   "tags": [
+    "electronics"
+   ]
+  }
+ ]
+}

@@ -409,7 +409,7 @@ const end: Exec<EndStep> = {
 const route: Exec<RouteStep> = {
   enter(m, r, st) {
     const def = m.content.route.get(st.route); if (!def) { console.warn('[missions] unknown route', st.route); m.finish(r, 'fail', 'Unknown route'); return; }
-    let stops = [...def.stops]; if (st.reverse) stops.reverse(); if (st.stops) stops = stops.slice(0, st.stops);
+    let stops = [...def.stops]; if (st.reverse) stops.reverse(); const sk0 = st.skip ?? 0; stops = stops.slice(sk0, st.stops ? sk0 + st.stops : undefined); if (!stops.length) { m.finish(r, 'fail', 'Empty route'); return; }
     r.s.def = def; r.s.stops = stops; r.s.i = 0; r.s.phase = 'drive'; r.s.pax = [] as Actor[]; r.s.dwell = 0; r.s.total = 0; r.text = st.text ?? def.name;
     for (const sp of stops) if (!need(m, r, sp.place, 'road')) return;
   },

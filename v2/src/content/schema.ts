@@ -66,7 +66,7 @@ export interface TalkStep extends StepBase { type: 'talk'; npc: string; to?: Pla
 export interface PickupStep extends StepBase { type: 'pickup'; to: PlaceRef; item: string; r?: number; npc?: string }
 export interface DeliverStep extends StepBase { type: 'deliver'; to: PlaceRef; item: string; r?: number; npc?: string }
 export interface VehicleStep extends StepBase { type: 'vehicle'; kind: VehicleKind[]; /** spawn one here if none is near */ provide?: PlaceRef; /** let go of the old marker: you must stay in it */ }
-export interface RouteStep extends StepBase { type: 'route'; route: string; reverse?: boolean; /** how many stops to serve (default all) */ stops?: number; /** fare multiplier */ fareMult?: number }
+export interface RouteStep extends StepBase { type: 'route'; route: string; reverse?: boolean; /** how many stops to serve (default all) */ stops?: number; /** skip this many stops from the start first (to continue a line) */ skip?: number; /** fare multiplier */ fareMult?: number }
 export interface VisitStep extends StepBase { type: 'visit'; places: PlaceRef[]; r?: number; each?: Fx; npcs?: string[] }
 export interface ChoiceOption { text: string; next: string; fx?: Fx; if?: Cond; /** shown but locked when the Cond fails */ lockedHint?: string; /** skill gamble */ roll?: { skill: string; dc: number; ok: string; bad: string; okFx?: Fx; badFx?: Fx } }
 export interface ChoiceStep extends StepBase { type: 'choice'; prompt: string; who?: string; options: ChoiceOption[]; /** auto-pick this option index when time runs out */ secs?: number; fallback?: number }
