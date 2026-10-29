@@ -6,7 +6,7 @@ import { nemesisSystem } from './nemesis';
 import { garage } from './garage';
 import { identity } from './identity';
 import { skills } from './skills';
-import { missions } from './missions'; import { lifeSystem } from './life'; import { vendorSystem } from './life/vendors';
+import { missions } from './missions'; import { lifeSystem } from './life'; import { vendorSystem } from './life/vendors'; import { leisureSystem } from './leisure'; import { transportSystem } from './careers/transport'; import { racingSystem } from './careers/racing'; import { thiefSystem } from './careers/thief'; import { techSystem } from './careers/tech'; import { mechanicSystem } from './careers/mechanic';
 // net goes first: it signs the player in during init, before the lobby and before other systems read their saved state
 export const SYSTEMS: GameSystem[] = [
   netSystem,
@@ -14,6 +14,12 @@ export const SYSTEMS: GameSystem[] = [
   societySystem, nemesisSystem,
   garage, identity,
   missions, // missions, events, routes: content/missions.json etc.
+  thiefSystem, // pickpocketing (before life so a crouched E goes to the lift, not the chat pie)
   lifeSystem, // needs, smart objects, the pie, your room
   vendorSystem, // market women, mama put, suya, pay toilets: haggle for everything
+  leisureSystem, // casino and night club interiors
+  transportSystem, // okada / keke / danfo / ride-hailing on duty (J)
+  racingSystem, // night street races: sprint, circuit, drag
+  techSystem, // Hub 32 co-working: remote gigs for dollars
+  mechanicSystem, // roadside workshops: diagnose, parts, bolts
 ];

@@ -59,7 +59,7 @@ export class LifeView {
   focusOverride: THREE.Vector3 | null = null;
   time = 0; hurt = 0; phoneBlend = 0; phoneUp = false; firstPerson = false;
   /** game clock multiplier (sleep fast-forwards time) */
-  timeScale = 1;
+  timeScale = 1; indoor = false;
   crowd: { g: THREE.Object3D; x: number; z: number }[] = []; private crowdT = 0;
   /** LANDMAP: an aerial camera over the city with every plot outlined by status */
   landmap = { on: false, x: 0, z: 0, h: 320, sel: '', builtAt: { x: 1e9, z: 1e9 }, owned: [] as string[], lines: null as THREE.LineSegments | null, fill: null as THREE.Mesh | null };
@@ -198,6 +198,7 @@ export class LifeView {
     this.world.update(focus.x, focus.z);
     if (L.on) this.landmapFrame();
     const env = this.atmo.update(dt, focus, cam, 30 * this.timeScale);
+    if (this.indoor) this.atmo.rain.visible = false; // interiors (systems/life venues) have a roof even if we never draw it
     if (L.on) { const fg = this.scene.fog as THREE.FogExp2 | null; if (fg && 'density' in fg) fg.density = Math.min(fg.density, 0.00035); this.atmo.rain.visible = false; }
     (sim as any).wet = this.atmo.wet; (sim as any).water = this.atmo.water;
     this.fx.update(dt, cam.position, { active: false, pos: { x: 0, y: -999, z: 0 }, carried: false } as any, { cx: 0, cz: 0, r: 99999, active: false } as any, [], this.time);

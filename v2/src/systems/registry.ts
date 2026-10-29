@@ -19,7 +19,7 @@ export interface GameCtx {
   startJob?: (id: string) => void;
   /** other systems, by id, for cross-system calls */
   systems: Map<string, GameSystem>;
-  store: RegionStore; input: Input;
+  store: RegionStore; input: Input; /** road graph for routing (world/roadgraph.ts) */ graph?: import('../world/roadgraph').RoadGraph;
   /** modal UI: while open the sim is paused and game input is off. `full` also stops the world render (a full screen editor draws its own canvas). Calls nest. */
   setModal(on: boolean, full?: boolean): void;
   /** the player's land: plot ids owned and a lookup of any loaded plot */

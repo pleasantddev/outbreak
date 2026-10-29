@@ -116,7 +116,7 @@ async function boot() {
   hud.setLoad(1);
   hud.onAction = (app, id) => { for (const s of SYSTEMS) if (s.onAction?.(ctx!, app, id)) return; onPhoneAction(app, id); };
   ctx = { sim, view, hud, THREE, save, persist: () => persist({ ...state, cash: sim.cash }), get profile() { return profile ? { name: profile.name, accountId: (profile as any).accountId ?? (profile as any).id ?? '' } : null; }, startJob, systems: new Map(SYSTEMS.map((s) => [s.id, s] as [string, GameSystem])), store, loadRoute: loadRouteRegions, grantXp, playerLevel: () => (profile ? levelOf(profile.xp) : 1),
-    input, setModal, land: { owned: () => state.owned, plot: plotById }, blips: [] } as GameCtx;
+    input, setModal, land: { owned: () => state.owned, plot: plotById }, blips: [], graph } as GameCtx;
   if (net.serverMode) net.attachState(state);
   for (const s of SYSTEMS) await s.init?.(ctx);
   hud.onBuy = (id) => { buyPlot(id); };

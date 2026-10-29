@@ -476,6 +476,7 @@ export class LifeSim {
   // ---------------------------------------------------------------- traffic driving
   private drive(v: Vehicle, dt: number) {
     const d = this.drivers.get(v.id); const drv = this.actors[v.seats[0]!];
+    const ai = (drv as any)._ai as ((v: Vehicle, dt: number) => Command) | undefined; if (ai) { drv.cmd = ai(v, dt); return; } // scripted drivers (systems/careers/racing)
     if (!d) { drv.cmd = emptyCommand(); return; }
     let ln = this.net.lanes[d.lane]; if (!ln) { drv.cmd = emptyCommand(); return; }
     const p = v.body.translation(); const r = v.body.rotation();
