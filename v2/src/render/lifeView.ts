@@ -55,6 +55,8 @@ export class LifeView {
   cars = new Map<number, { m: CarModel | null; loading: boolean; key: string }>();
   loot = new Map<number, THREE.Object3D>();
   headlight: THREE.SpotLight; lightPool: THREE.PointLight[] = [];
+  /** a system can keep the world streaming around a place other than the player (for example while inside a house interior) */
+  focusOverride: THREE.Vector3 | null = null;
   time = 0; hurt = 0; phoneBlend = 0; phoneUp = false; firstPerson = false;
   crowd: { g: THREE.Object3D; x: number; z: number }[] = []; private crowdT = 0;
   /** LANDMAP: an aerial camera over the city with every plot outlined by status */
@@ -190,7 +192,7 @@ export class LifeView {
     cam.updateMatrixWorld(); this.frM.multiplyMatrices(cam.projectionMatrix, this.frInv.copy(cam.matrixWorld).invert()); this.fr.setFromProjectionMatrix(this.frM);
     const L = this.landmap;
     const focus0 = me.vehicle !== null ? (() => { const t = sim.vehicles[me.vehicle!].body.translation(); return new THREE.Vector3(t.x, t.y, t.z); })() : new THREE.Vector3(me.pos.x, me.pos.y, me.pos.z);
-    const focus = L.on ? new THREE.Vector3(L.x, 0, L.z) : focus0;
+    const focus = L.on ? new THREE.Vector3(L.x, 0, L.z) : this.focusOverride ?? focus0;
     this.world.update(focus.x, focus.z);
     if (L.on) this.landmapFrame();
     const env = this.atmo.update(dt, focus, cam);

@@ -199,6 +199,12 @@ export function registerPhoneApp(name: string, icon: string, color: string, rend
   EXT_APPS.set(name, { render, mode });
 }
 
+/** Systems add phone apps here: the grid icon, a gradient and a function that returns the app's HTML rows (buttons carry data-app / data-id and come back through GameSystem.onAction). */
+const APP_RENDER = new Map<string, (c: PhoneCtx, hud: LifeHud) => string>();
+export function registerApp(name: string, iconPath: string, gradient: string, render: (c: PhoneCtx, hud: LifeHud) => string) {
+  if (!APPS.some((a) => a[0] === name)) APPS.push([name, svg(iconPath), gradient]);
+  APP_RENDER.set(name, render);
+}
 export interface PhoneCtx { time: string; real: string; weather: string; season: string; day: number; cash: number; bank: number; plots: { plot: Plot; price: number; owned: boolean; dist: number }[]; jobs: { id: string; title: string; pay: number; desc: string; active: boolean }[]; texts: [string, string][]; potholes: { name: string; road: string; area: string; reported: string; placed: number; source: string }[]; quality: string }
 export interface ParcelInfo { id: string; title: string; area: string; owner: string; size: number; zone: string; price: number; owned: boolean; /** sold to another player (multiplayer) */ taken?: boolean; traits: [string, 'g' | 'r' | 'p' | ''][]; stats: [string, string][] }
 export interface HudFrame { time: string; real: string; weather: string; temp: number; area: string; street: string; weapon: string; weaponKind: 'none' | 'melee' | 'gun'; ammo: string; mag: string; aiming: boolean; inCar: boolean; bank: number; kmh: number; gear: string; rpm: number }
@@ -383,6 +389,7 @@ ${touch ? `<div id="tc">
     else if (name === 'Contacts') html = row(`${this.me.name} (you)`, this.me.id ? `Account ${this.me.id}` : 'Your number') + row('Mama Put', 'Under the bridge, Oshodi') + row('Conductor Sule', 'Oshodi park') + row('Baba Landlord', 'Sells land. Asks no questions. Charges for C of O.');
     else if (name === 'Settings') html = row('Graphics', `Quality: ${c.quality}<br>Auto adapts to your device while you play. Tap to cycle Auto, High, Medium, Low. F3 shows frame stats.`, ['Settings', 'quality', 'Change']) + row('Weather', 'Cycle the weather (testing)', ['Settings', 'weather', 'Next']) + row('Time', 'Jump one hour', ['Settings', 'hour', '+1 hour']) + row('Lobby', 'Save and go back to the lobby. Change your look or your name there.', ['Settings', 'lobby', 'Back to lobby']);
     else if (EXT_APPS.get(name)?.mode === 'replace') html = EXT_APPS.get(name)!.render(c);
+    else if (APP_RENDER.has(name)) html = APP_RENDER.get(name)!(c, this);
     else html = `<canvas id="pmap" width="400" height="400"></canvas>` + row('Legend', 'Teal: your route · Red dots: reported potholes · Purple: your land');
     const extra = EXT_APPS.get(name); if (extra?.mode === 'append') html += extra.render(c);
     L.innerHTML = html;

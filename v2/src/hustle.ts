@@ -57,6 +57,12 @@ let ctx: GameCtx | null = null;
 let sim: LifeSim, view: LifeView, input: Input, store: RegionStore, gov: Governor;
 const perfHud = new PerfHud(() => view, () => gov);
 let started = false; let acc = 0; let last = performance.now();
+/** modal UI from systems (garage, identity, housing): the sim pauses and game input goes off; `full` also stops the world render */
+let modalDepth = 0, modalFull = 0;
+function setModal(on: boolean, full = false) {
+  modalDepth = Math.max(0, modalDepth + (on ? 1 : -1)); if (full) modalFull = Math.max(0, modalFull + (on ? 1 : -1));
+  if (input) { input.enabled = modalDepth === 0 && !hud.landmapOn; if (modalDepth > 0) input.releasePointer(); }
+}
 const jobs: PhoneCtx['jobs'] = [];
 let activeJob: { id: string; title: string; pay: number; stage: 0 | 1; a: { x: number; z: number }; b: { x: number; z: number }; t: number; needCar: boolean } | null = null;
 const texts: [string, string][] = [['Unknown', 'Welcome to Lagos. Shine your eye.'], ['Mama Put', 'You still owe me ₦500 for the rice. I dey wait.'], ['Conductor Sule', 'If you wan work, come Oshodi park. Shout the route, collect the money, no steal.']];
@@ -111,12 +117,13 @@ async function boot() {
   hud.setLoad(1);
   makeJobs();
   hud.onAction = (app, id) => { for (const s of SYSTEMS) if (s.onAction?.(ctx!, app, id)) return; onPhoneAction(app, id); };
-  ctx = { sim, view, hud, THREE, save, persist: () => persist({ ...state, cash: sim.cash }), get profile() { return profile ? { name: profile.name, accountId: (profile as any).accountId ?? (profile as any).id ?? '' } : null; }, startJob, systems: new Map(SYSTEMS.map((s) => [s.id, s] as [string, GameSystem])) } as GameCtx;
+  ctx = { sim, view, hud, THREE, save, persist: () => persist({ ...state, cash: sim.cash }), get profile() { return profile ? { name: profile.name, accountId: (profile as any).accountId ?? (profile as any).id ?? '' } : null; }, startJob, systems: new Map(SYSTEMS.map((s) => [s.id, s] as [string, GameSystem])),
+    store, input, setModal, land: { owned: () => state.owned, plot: plotById }, blips: [] } as GameCtx;
   if (net.serverMode) net.attachState(state);
   for (const s of SYSTEMS) await s.init?.(ctx);
   hud.onBuy = (id) => { buyPlot(id); };
   bindLandmap();
-  (window as any).__hl = { sim, view, hud, state, get stage() { return stage; }, get profile() { return profile; }, gov, perf: perfHud, THREE, graph, guide, store, startJob, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
+  (window as any).__hl = { sim, view, hud, state, ctx, get stage() { return stage; }, get profile() { return profile; }, gov, perf: perfHud, THREE, graph, guide, store, startJob, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
     // test hook: run the sim without rendering, holding a command
     simulate(secs: number, patch: Partial<Command> & { pulse?: string[] } = {}) { for (let i = 0; i < secs * 60; i++) { const c: any = { ...emptyCommand(), yaw: sim.local.yaw, ...patch }; for (const k of patch.pulse ?? []) c[k] = Math.floor(i / 12) % 2 === 0; sim.setCommand(0, c); sim.step(1 / 60); if (i % 30 === 0) { view.world.update(sim.local.pos.x, sim.local.pos.z, true); syncColliders(true); } } view.handleEvents(sim.events, hud); sim.events.length = 0; },
     stoppedCar() { const m = sim.local.pos; return sim.liveVehicles().filter((v) => Math.abs(v.ctrl.currentVehicleSpeed()) < 2 && v.kind !== 'okada').sort((a, b) => { const pa = a.body.translation(), pb = b.body.translation(); return Math.hypot(pa.x - m.x, pa.z - m.z) - Math.hypot(pb.x - m.x, pb.z - m.z); })[0]; },
@@ -449,7 +456,7 @@ function loop(t: number) {
   const stageOn = !!stage?.active;
   const camInfo = stageOn ? ({ aimDir: new THREE.Vector3(0, 0, 1) } as ReturnType<typeof view.cam.update>) : view.cam.update(dt, sim as any, started ? lookX : 0, started ? lookY : 0, aiming);
   if (view.firstPerson && sim.local.vehicle !== null) cockpit();
-  if (started && !hud.landmapOn) {
+  if (started && !hud.landmapOn && modalDepth === 0) {
     const cmd = command(f, camInfo.aimDir, pad);
     acc += Math.min(dt, 0.1); let steps = 0;
     while (acc >= 1 / 60 && steps < 4) {
@@ -465,7 +472,7 @@ function loop(t: number) {
   syncColliders();
   view.phoneUp = hud.phoneUp;
   if (stageOn) { stage!.update(dt); front?.update(dt); }
-  view.frame(dt);
+  if (!modalFull) view.frame(dt);
   if (ctx && started) for (const s of SYSTEMS) s.frame?.(ctx, dt);
   if (stageOn) stage!.showPlayer(false);
   if (started) {
@@ -491,6 +498,7 @@ function loop(t: number) {
     const blips: { x: number; z: number; c: string; r?: number }[] = [];
     if (activeJob) { const tg = activeJob.stage === 0 ? activeJob.a : activeJob.b; blips.push({ x: tg.x, z: tg.z, c: '#3ddc84', r: 11 }); }
     for (const a of sim.actors) if (a.alive && a.role === 'police' && !(a as any)._gone) blips.push({ x: a.pos.x, z: a.pos.z, c: '#3b6cff', r: 6 });
+    if (ctx) for (const f of ctx.blips) blips.push(...f());
     plateUpdate();
     hud.drawRadar(sim.net, P.x, P.z, view.cam.yaw + Math.PI, blips, potholesNear(P.x, P.z, 160), state.owned.map((id) => state.ownedPts[id]).filter(Boolean), route, note);
     // prompts

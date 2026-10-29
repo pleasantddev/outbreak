@@ -5,6 +5,9 @@ import type { LifeSim } from '../sim/life';
 import type { LifeView } from '../render/lifeView';
 import type { LifeHud } from '../ui/lifeHud';
 import type { SimEvent } from '../sim/types';
+import type { RegionStore } from '../world/region';
+import type { Plot } from '../world/plots';
+import type { Input } from '../input/input';
 
 export interface GameCtx {
   sim: LifeSim; view: LifeView; hud: LifeHud; THREE: typeof THREE;
@@ -16,6 +19,13 @@ export interface GameCtx {
   startJob?: (id: string) => void;
   /** other systems, by id, for cross-system calls */
   systems: Map<string, GameSystem>;
+  store: RegionStore; input: Input;
+  /** modal UI: while open the sim is paused and game input is off. `full` also stops the world render (a full screen editor draws its own canvas). Calls nest. */
+  setModal(on: boolean, full?: boolean): void;
+  /** the player's land: plot ids owned and a lookup of any loaded plot */
+  land: { owned(): string[]; plot(id: string): Plot | null };
+  /** extra minimap blips (tracked cars, sites...), asked every frame */
+  blips: (() => { x: number; z: number; c: string; r?: number }[])[];
 }
 
 export interface GameSystem {
