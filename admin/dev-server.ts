@@ -92,6 +92,8 @@ const api = {
   db, dataDir: join(DEV, 'data'), live: liveHooks, version: 'dev-stub', log: (m: string) => console.log(m),
   route(method: string, path: string, h: H) { const keys: string[] = []; const re = new RegExp('^' + path.replace(/:[A-Za-z]+/g, (m) => { keys.push(m.slice(1)); return '([^/]+)'; }) + '/?$'); table.push({ method, re, keys, h }); },
 };
+// demo owner for the stub only (never set these in production): sign in with owner@hustlelife.dev / hustle-admin-2026
+process.env.ADMIN_SEED_EMAIL ??= 'owner@hustlelife.dev'; process.env.ADMIN_SEED_PASSWORD ??= 'hustle-admin-2026'; process.env.ADMIN_SEED_NAME ??= 'Demo Owner';
 const admin = register(api) as any;
 // the game's own content endpoint (net workstream owns the real one): GET public, PUT needs an admin token
 table.push({ method: 'GET', re: /^\/api\/content\/([a-z0-9_-]+)\/?$/, keys: ['kind'], h: (rq: any) => { try { return { status: 200, body: admin.content.read(rq.params.kind).doc }; } catch { return { status: 404, body: { error: 'no such content' } }; } } });
