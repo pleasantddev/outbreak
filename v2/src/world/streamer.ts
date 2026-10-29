@@ -2,12 +2,12 @@
 import * as THREE from 'three';
 import { RegionStore, type Region, type Road, type Building, type Pothole, type Area, type Rail, type Poi, type Water, RF, RAIL } from './region';
 import { buildTileField, areaSurfaces, waterSurfaces, mechanicSurfaces, SURF, type TileField } from './roadField';
-import { buildFeatures } from './features';
+import { buildFeatures, warmFeatures } from './features';
 import { makeGroundMaterial } from './ground';
 import { buildBuildingsG, makeBuildingMaterial } from './buildings';
 import { plotsForRegion, type Plot } from './plots';
 import { buildCompoundsG } from './compounds';
-import { buildProps } from './props';
+import { buildProps, warmProps } from './props';
 import { buildBridges, deckCollision, deckProfile } from './bridges';
 import type { TileCol } from '../sim/life';
 import { buildingHeight } from './buildings';
@@ -29,6 +29,7 @@ export class WorldStreamer {
   constructor(public renderer: THREE.WebGLRenderer, public store: RegionStore, public tg: TexSet, tw: TexSet, quality: 'low' | 'medium' | 'high') {
     this.radius = quality === 'high' ? 900 : quality === 'medium' ? 700 : 480;
     this.nearRes = quality === 'low' ? 256 : 512; this.farRes = quality === 'low' ? 64 : 128;
+    warmProps(); warmFeatures();
     this.buildMat = makeBuildingMaterial(tw);
     (this.buildMat as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
     const tl = new THREE.TextureLoader();
@@ -231,9 +232,13 @@ export class WorldStreamer {
     want.sort((a, b) => a.d - b.d);
     const keep = new Set(want.map((w) => `${w.ix},${w.iz}`));
     for (const [k, t] of this.tiles) if (!keep.has(k)) { this.disposeTile(t); this.tiles.delete(k); }
-    // small props (poles, lamps, trees: about a dozen draw calls a tile, doubled by the shadow pass) are not worth drawing in the far tiles
-    const propRange = R * 0.6;
-    for (const t of this.tiles.values()) { const mx = Math.max(t.x0, Math.min(cx, t.x0 + TILE)), mz = Math.max(t.z0, Math.min(cz, t.z0 + TILE)); t.props.visible = Math.hypot(mx - cx, mz - cz) < propRange; }
+    // small props are not worth drawing far away: each kind has its own range (set from the quality rung), and a whole tile's props go at the longest
+    const rg = this.ranges;
+    for (const t of this.tiles.values()) {
+      const mx = Math.max(t.x0, Math.min(cx, t.x0 + TILE)), mz = Math.max(t.z0, Math.min(cz, t.z0 + TILE)); const d = Math.hypot(mx - cx, mz - cz);
+      t.dist = d; const any = d < rg.tree; if (t.props.visible !== any) t.props.visible = any;
+      if (any) for (const c of t.props.children) { const v = d < (rg[c.userData.k as keyof typeof rg] ?? rg.tree); if (c.visible !== v) c.visible = v; }
+    }
     if (!this.job) {
       for (const w of want) {
         const k = `${w.ix},${w.iz}`; const t = this.tiles.get(k);
@@ -264,5 +269,7 @@ export class WorldStreamer {
   }
   /** main-thread milliseconds streaming may use per frame (every step is also cut into pieces of about slice.ms) */
   budgetMs = 4;
+  /** draw distance (m) per kind of small prop; LifeView sets these from the quality rung */
+  ranges = { lamp: 260, util: 160, tree: 480, clutter: 140 };
   get pending() { let n = 0; return n; }
 }

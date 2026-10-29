@@ -124,6 +124,7 @@ export class LifeView {
     }
     this.atmo.applyLevel(level);
     this.world.radius = L.radius;
+    this.world.ranges = { lamp: Math.min(L.propRange, 260), util: Math.min(L.propRange, 160), tree: L.propRange, clutter: Math.min(L.propRange, 140) };
     const sim = this.sim as any; sim.maxPeds = L.peds; sim.maxTraffic = L.traffic; sim.maxParked = L.parked;
   }
   resize() { const pr = pixelRatioFor(this.mobile); if (Math.abs(pr - this.renderer.getPixelRatio()) > 0.004) this.renderer.setPixelRatio(pr); const w = window.innerWidth, h = window.innerHeight; this.renderer.setSize(w, h, false); this.composer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
@@ -212,6 +213,7 @@ export class LifeView {
       const inView = self || d < 14 || this.sphereInView(a.pos.x, a.pos.y + 0.9, a.pos.z, 1.6);
       v.view.root.visible = inView && !(self && this.firstPerson && a.vehicle !== null);
       if (!self) v.view.setLod(d > (v.view.lodOn ? 18 : 24));
+      v.view.setShadow(this.L.shadowSize === 0 || d > this.L.shadowHalf * 0.95 ? 0 : d > 22 ? 1 : 2);
       const p = this.tmpP.set(a.pos.x, a.pos.y, a.pos.z); const dp = this.tmpD.copy(p).sub(v.last);
       const sp = Math.hypot(dp.x, dp.z) / Math.max(dt, 1e-3);
       if (Math.hypot(dp.x, dp.z) > 0.002) { v.moveYaw = Math.atan2(dp.x, dp.z); if (d * d < shR2) shadowDyn = true; }
@@ -252,7 +254,10 @@ export class LifeView {
       if (!c.m) continue;
       const m = c.m; const p = veh.body.translation(), r = veh.body.rotation();
       m.root.position.set(p.x, p.y, p.z); m.root.quaternion.set(r.x, r.y, r.z, r.w);
-      poseCar(m, veh.wheelSpin, veh.wheelSteer, (veh as any).doors);
+      const dist0 = Math.hypot(p.x - cam.position.x, p.z - cam.position.z);
+      // far cars swap to the merged model: no wheels, doors or interior to pose or draw
+      if (m.far && m.near) { const farNow = dist0 > this.L.carFar - (m.far.visible ? 6 : 0) && me.vehicle !== veh.id; if (m.far.visible !== farNow) { m.far.visible = farNow; m.near.visible = !farNow; } }
+      if (!m.far?.visible) poseCar(m, veh.wheelSpin, veh.wheelSteer, (veh as any).doors);
       const driven = veh.seats[0] !== null && !veh.destroyed;
       for (const h of m.headlights) h.emissiveIntensity = driven ? (night > 0.3 ? 8 : 0.6) : 0;
       for (const b of m.brake) b.emissiveIntensity = driven ? (veh.throttle < 0 || (sim.actors[veh.seats[0]!]?.cmd.jump) ? 6 : night > 0.3 ? 2 : 0.2) : 0;

@@ -44,6 +44,7 @@ export function* buildCompoundsG(plots: Plot[], near: (x: number, z: number) => 
     for (let k = 0; k < n; k++) { const [ax, az] = P(k), [bx, bz] = P(k + 1); const L = Math.hypot(bx - ax, bz - az); if (L < 4.5) continue; const d = roadDist((ax + bx) / 2, (az + bz) / 2); if (d < gd) { gd = d; gateEdge = k; } }
     if (gd > 16) gateEdge = -1;
     for (let k = 0; k < n; k++) {
+      if (slice.due()) yield;
       const [ax, az] = P(k), [bx, bz] = P(k + 1);
       const L = Math.hypot(bx - ax, bz - az); if (L < 0.5) continue;
       const tx = (bx - ax) / L, tz = (bz - az) / L;

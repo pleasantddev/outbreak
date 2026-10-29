@@ -106,6 +106,9 @@ function sharedGeos() {
   return shared;
 }
 
+/** Builds the lazily created shared geometry, materials and canvases up front (during the loading screen) so the first tile does not pay for them in one frame. */
+export function warmFeatures() { sharedGeos(); vertexMat(); fenceMaterial(); signMaterial(); }
+
 // ------------------------------------------------------------------------------------------------ builders
 export interface FeatureInput {
   x0: number; z0: number; size: number;

@@ -42,25 +42,62 @@ function sphereNormals(g: THREE.BufferGeometry, cx: number, cy: number, cz: numb
 }
 let mats: Record<string, THREE.Material> | null = null;
 let geos: Record<string, THREE.BufferGeometry> | null = null;
-export const propShared = { uNight: { value: 0 } };
+export const propShared = { uNight: { value: 0 }, uEmit: { value: 0 } };
+
+/** Part of a merged template: geometry plus the per-vertex surface data the shared prop materials read. */
+interface Part { g: THREE.BufferGeometry; color?: [number, number, number]; /** roughness, metalness, emissive, foliage */ p?: [number, number, number, number]; /** remap the 0..1 uv into this rectangle of the atlas: u0, v0, u1, v1 */ uv?: [number, number, number, number]; /** collapse every uv to the centre of the rectangle (flat colour patch) */ flat?: boolean }
+/** Merges template parts into one geometry with position, normal, uv, colour and a packed (rough, metal, emissive, foliage) attribute. */
+function mergeTemplate(parts: Part[]) {
+  const pos: number[] = [], nrm: number[] = [], uv: number[] = [], col: number[] = [], pp: number[] = [], idx: number[] = []; let o = 0;
+  for (const part of parts) {
+    const gi = part.g.index ? part.g.toNonIndexed() : part.g;
+    const P = gi.attributes.position, N = gi.attributes.normal, U = gi.attributes.uv; const n = P.count;
+    const c = part.color ?? [1, 1, 1], q = part.p ?? [0.8, 0, 0, 0];
+    for (let i = 0; i < n; i++) {
+      pos.push(P.getX(i), P.getY(i), P.getZ(i)); nrm.push(N.getX(i), N.getY(i), N.getZ(i));
+      let u0 = U ? U.getX(i) : 0, v0 = U ? U.getY(i) : 0;
+      if (part.uv) { const [a0, b0, a1, b1] = part.uv; if (part.flat) { u0 = (a0 + a1) / 2; v0 = (b0 + b1) / 2; } else { u0 = a0 + u0 * (a1 - a0); v0 = b0 + v0 * (b1 - b0); } }
+      uv.push(u0, v0); col.push(c[0], c[1], c[2]); pp.push(q[0], q[1], q[2], q[3]); idx.push(o + i);
+    }
+    o += n;
+  }
+  const m = new THREE.BufferGeometry();
+  m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); m.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3)); m.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  m.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); m.setAttribute('aP', new THREE.Float32BufferAttribute(pp, 4)); m.setIndex(idx);
+  return m;
+}
+/** One 1024 atlas for everything leafy or woody: broad leaves, palm fronds, bark and palm bark patches. */
+function propAtlas(broad: THREE.CanvasTexture, palm: THREE.CanvasTexture) {
+  const c = document.createElement('canvas'); c.width = c.height = 1024; const g = c.getContext('2d')!;
+  g.drawImage(broad.image as CanvasImageSource, 0, 0, 512, 512); g.drawImage(palm.image as CanvasImageSource, 512, 0, 512, 512);
+  g.fillStyle = '#3e3226'; g.fillRect(0, 512, 256, 512); g.fillStyle = '#5e5142'; g.fillRect(256, 512, 256, 512);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.generateMipmaps = true; return t;
+}
+const UV_BROAD: [number, number, number, number] = [0, 0.5, 0.5, 1], UV_PALM: [number, number, number, number] = [0.5, 0.5, 1, 1], UV_BARK: [number, number, number, number] = [0.02, 0.02, 0.23, 0.48], UV_PBARK: [number, number, number, number] = [0.27, 0.02, 0.48, 0.48];
+
+/** Shared solid prop material: vertex colours, per-vertex roughness / metalness and a night emissive channel (lamp heads), one program for every pole, lamp and rooftop thing. */
+function solidMaterial() {
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, emissive: new THREE.Color(0xffb060) });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uEmit = propShared.uEmit;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 aP; varying vec4 vP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvP = aP;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec4 vP; uniform float uEmit;')
+      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vP.x;').replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vP.y;')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance = emissive * vP.z * uEmit;');
+  };
+  m.customProgramCacheKey = () => 'hl-prop-solid';
+  return m;
+}
 function init() {
   if (mats) return;
   const leafBroad = leafTexture('broad'), leafPalm = leafTexture('palm');
-  const lampHead = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.5, metalness: 0.6, emissive: new THREE.Color(0xffb060), emissiveIntensity: 0 });
+  const atlas = propAtlas(leafBroad, leafPalm);
+  const solid = solidMaterial();
   mats = {
-    pole: new THREE.MeshStandardMaterial({ color: 0x7c7f82, roughness: 0.45, metalness: 0.8 }),
-    wood: new THREE.MeshStandardMaterial({ color: 0x4a3828, roughness: 0.9 }),
-    concretePole: new THREE.MeshStandardMaterial({ color: 0x9a9890, roughness: 0.85 }),
-    lampHead,
+    solid,
+    // trees and palms: trunk and foliage share the atlas, so a whole tree is one draw call
+    foliage: new THREE.MeshStandardMaterial({ map: atlas, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.88, envMapIntensity: 0.45, emissive: new THREE.Color(0x0d1a06), alphaToCoverage: true }),
     wire: new THREE.LineBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.85 }),
-    bark: new THREE.MeshStandardMaterial({ color: 0x3e3226, roughness: 0.95 }),
-    palmBark: new THREE.MeshStandardMaterial({ color: 0x5e5142, roughness: 0.95 }),
-    leaf: new THREE.MeshStandardMaterial({ map: leafBroad, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.85, envMapIntensity: 0.45, emissive: new THREE.Color(0x0d1a06), alphaToCoverage: true }),
-    frond: new THREE.MeshStandardMaterial({ map: leafPalm, alphaTest: 0.42, side: THREE.DoubleSide, roughness: 0.8, envMapIntensity: 0.45, emissive: new THREE.Color(0x0d1a06), alphaToCoverage: true }),
-    tank: new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.45 }),
-    tankBlue: new THREE.MeshStandardMaterial({ color: 0x1d4f8c, roughness: 0.4 }),
-    rebar: new THREE.MeshStandardMaterial({ color: 0x5a3a28, roughness: 0.7, metalness: 0.6 }),
-    dish: new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.4, metalness: 0.3, side: THREE.DoubleSide }),
   };
   const lampPole = new THREE.CylinderGeometry(0.07, 0.11, 9, 8).translate(0, 4.5, 0);
   const arm = new THREE.BoxGeometry(0.08, 0.08, 2.0).translate(0, 8.9, 0.95);
@@ -81,19 +118,20 @@ function init() {
   const fronds: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 14; i++) { const p = new THREE.PlaneGeometry(1.5, 4.6, 1, 4).translate(0, 2.3, 0); const pa = p.attributes.position; for (let k = 0; k < pa.count; k++) { const y = pa.getY(k); pa.setZ(k, -((y / 4.6) ** 2) * 1.6); } p.rotateX(-1.0 - (i % 3) * 0.28); p.rotateY((i / 14) * Math.PI * 2 + (i % 2) * 0.2); p.translate(0.25, 7.95, 0); fronds.push(p); }
   // leaves dissolve when the camera pushes into a crown, so the view never fills with foliage
-  for (const k of ['leaf', 'frond']) {
-    const m = mats[k] as THREE.MeshStandardMaterial;
+  { const m = mats.foliage as THREE.MeshStandardMaterial;
     m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\n float camD = length(vViewPosition); if (camD < 4.5 && fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) > (camD - 1.5) / 3.0) discard;'); };
-    m.customProgramCacheKey = () => 'hl-leaf-' + k;
-  }
+    m.customProgramCacheKey = () => 'hl-leaf-atlas'; }
+  const crownG = sphereNormals(mergeAll(crown), 0, 5.3, 0, 0.8), frondG = sphereNormals(mergeAll(fronds), 0.25, 7.6, 0, 0.6);
   geos = {
-    lampPole, arm, head, trunk, crown: sphereNormals(mergeAll(crown), 0, 5.3, 0, 0.8), palmTrunk, fronds: sphereNormals(mergeAll(fronds), 0.25, 7.6, 0, 0.6),
-    woodPole: new THREE.CylinderGeometry(0.11, 0.15, 9, 6).translate(0, 4.5, 0),
-    crossArm: new THREE.BoxGeometry(1.6, 0.1, 0.1).translate(0, 8.5, 0),
-    tank: new THREE.CylinderGeometry(0.75, 0.75, 1.5, 14).translate(0, 0.75 + 0.6, 0),
-    stand: new THREE.BoxGeometry(1.3, 0.6, 1.3).translate(0, 0.3, 0),
-    rebar: new THREE.CylinderGeometry(0.02, 0.02, 1.4, 4).translate(0, 0.7, 0),
-    dish: new THREE.SphereGeometry(0.45, 10, 6, 0, Math.PI * 2, 0, 0.9).rotateX(-1.2).translate(0, 0.8, 0),
+    // street light: pole, arm and head in one template; the head glows at night
+    lamp: mergeTemplate([{ g: lampPole, color: [0.49, 0.5, 0.51], p: [0.45, 0.8, 0, 0] }, { g: arm, color: [0.49, 0.5, 0.51], p: [0.45, 0.8, 0, 0] }, { g: head, color: [0.16, 0.16, 0.16], p: [0.5, 0.6, 1, 0] }]),
+    // PHCN pole: colour comes from the instance (wood or concrete)
+    util: mergeTemplate([{ g: new THREE.CylinderGeometry(0.11, 0.15, 9, 6).translate(0, 4.5, 0), p: [0.9, 0, 0, 0] }, { g: new THREE.BoxGeometry(1.6, 0.1, 0.1).translate(0, 8.5, 0), p: [0.9, 0, 0, 0] }]),
+    tree: mergeTemplate([{ g: trunk, uv: UV_BARK, flat: true, p: [0.95, 0, 0, 0] }, { g: crownG, uv: UV_BROAD, p: [0.88, 0, 0, 1] }]),
+    palm: mergeTemplate([{ g: palmTrunk, uv: UV_PBARK, flat: true, p: [0.95, 0, 0, 0] }, { g: frondG, uv: UV_PALM, p: [0.8, 0, 0, 1] }]),
+    tank: mergeTemplate([{ g: new THREE.BoxGeometry(1.3, 0.6, 1.3).translate(0, 0.3, 0), color: [0.08, 0.08, 0.08], p: [0.45, 0, 0, 0] }, { g: new THREE.CylinderGeometry(0.75, 0.75, 1.5, 14).translate(0, 0.75 + 0.6, 0), color: [0.08, 0.08, 0.08], p: [0.45, 0, 0, 0] }]),
+    rebar: mergeTemplate([{ g: new THREE.CylinderGeometry(0.02, 0.02, 1.4, 4).translate(0, 0.7, 0), color: [0.35, 0.23, 0.16], p: [0.7, 0.6, 0, 0] }]),
+    dish: mergeTemplate([{ g: new THREE.SphereGeometry(0.45, 10, 6, 0, Math.PI * 2, 0, 0.9).rotateX(-1.2).translate(0, 0.8, 0), color: [0.87, 0.87, 0.87], p: [0.4, 0.3, 0, 0] }]),
   };
 }
 function mergeAll(list: THREE.BufferGeometry[]) {
@@ -101,6 +139,9 @@ function mergeAll(list: THREE.BufferGeometry[]) {
   for (const g of list) { const gi = g.toNonIndexed(); pos.push(...gi.attributes.position.array); nrm.push(...gi.attributes.normal.array); uv.push(...gi.attributes.uv.array); const c = gi.attributes.position.count; for (let i = 0; i < c; i++) idx.push(o + i); o += c; }
   const m = new THREE.BufferGeometry(); m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); m.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3)); m.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); m.setIndex(idx); return m;
 }
+
+/** Creates the shared prop geometry, leaf textures and materials now instead of inside the first tile build. */
+export function warmProps() { init(); }
 
 export interface PropInput { x0: number; z0: number; size: number; roads: Road[]; trees: { x: number; z: number; palm: boolean; s: number }[]; tanks: number[]; bars: number[]; dishes: number[]; blocked: (x: number, z: number) => boolean }
 
@@ -134,28 +175,44 @@ export function buildProps(inp: PropInput) {
       acc += L;
     }
   }
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3(1, 1, 1);
-  const inst = (geo: THREE.BufferGeometry, mat: THREE.Material, list: number[], stride: number, f: (i: number) => [number, number, number, number, number]) => {
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3(1, 1, 1), pv = new THREE.Vector3();
+  /** One instanced draw per kind. `k` tags the mesh so the streamer can hide each kind at its own distance. */
+  const inst = (k: string, geo: THREE.BufferGeometry, mat: THREE.Material, list: number[], stride: number, f: (i: number) => [number, number, number, number, number], shadow: boolean, color?: THREE.Color) => {
     const n = list.length / stride; if (!n) return null;
-    const im = new THREE.InstancedMesh(geo, mat, n); im.castShadow = true; im.receiveShadow = true;
-    for (let i = 0; i < n; i++) { const [x, y, z, ry, s] = f(i); q.setFromAxisAngle(up, ry); sc.set(s, s, s); m4.compose(new THREE.Vector3(x, y, z), q, sc); im.setMatrixAt(i, m4); }
+    const im = new THREE.InstancedMesh(geo, mat, n); im.castShadow = shadow; im.receiveShadow = true; im.userData.k = k;
+    for (let i = 0; i < n; i++) { const [x, y, z, ry, s] = f(i); q.setFromAxisAngle(up, ry); sc.set(s, s, s); m4.compose(pv.set(x, y, z), q, sc); im.setMatrixAt(i, m4); if (color) im.setColorAt(i, color); }
     im.computeBoundingSphere(); g.add(im); return im;
   };
   const lampF = (i: number): [number, number, number, number, number] => [lamps[i * 3], 0, lamps[i * 3 + 1], lamps[i * 3 + 2], 1];
-  inst(Gs.lampPole, M.pole, lamps, 3, lampF); inst(Gs.arm, M.pole, lamps, 3, lampF); inst(Gs.head, M.lampHead, lamps, 3, lampF);
+  inst('lamp', Gs.lamp, M.solid, lamps, 3, lampF, true);
   const poleF = (i: number): [number, number, number, number, number] => [poles[i * 3], 0, poles[i * 3 + 1], poles[i * 3 + 2], 1];
-  inst(Gs.woodPole, hash(Math.floor(inp.x0), 3) > 0.5 ? M.wood : M.concretePole, poles, 3, poleF); inst(Gs.crossArm, M.wood, poles, 3, poleF);
-  if (wires.length) { const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(wires, 3)); g.add(new THREE.LineSegments(wg, M.wire)); }
+  inst('util', Gs.util, M.solid, poles, 3, poleF, false, new THREE.Color(hash(Math.floor(inp.x0), 3) > 0.5 ? 0x4a3828 : 0x9a9890));
+  if (wires.length) { const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(wires, 3)); const w = new THREE.LineSegments(wg, M.wire); w.userData.k = 'util'; g.add(w); }
   const broad = inp.trees.filter((t) => !t.palm && inTile(t.x, t.z)), palms = inp.trees.filter((t) => t.palm && inTile(t.x, t.z));
   const tf = (list: typeof broad) => (i: number): [number, number, number, number, number] => [list[i].x, 0, list[i].z, list[i].s * 6.28, 0.75 + list[i].s * 0.6];
-  inst(Gs.trunk, M.bark, broad.flatMap((t) => [t.x, t.z]), 2, tf(broad)); const cr = inst(Gs.crown, M.leaf, broad.flatMap((t) => [t.x, t.z]), 2, tf(broad)); if (cr) cr.castShadow = true;
-  inst(Gs.palmTrunk, M.palmBark, palms.flatMap((t) => [t.x, t.z]), 2, tf(palms)); inst(Gs.fronds, M.frond, palms.flatMap((t) => [t.x, t.z]), 2, tf(palms));
-  const tk = inp.tanks; const tankF = (i: number): [number, number, number, number, number] => [tk[i * 4], tk[i * 4 + 1], tk[i * 4 + 2], tk[i * 4 + 3] * 6, 1];
-  inst(Gs.stand, M.tank, tk, 4, tankF); inst(Gs.tank, M.tank, tk, 4, tankF);
-  const bf = (i: number): [number, number, number, number, number] => [inp.bars[i * 3], inp.bars[i * 3 + 1], inp.bars[i * 3 + 2], i, 1];
-  inst(Gs.rebar, M.rebar, inp.bars, 3, bf);
-  const df = (i: number): [number, number, number, number, number] => [inp.dishes[i * 4], inp.dishes[i * 4 + 1], inp.dishes[i * 4 + 2], inp.dishes[i * 4 + 3], 1];
-  inst(Gs.dish, M.dish, inp.dishes, 4, df);
+  inst('tree', Gs.tree, M.foliage, broad.flatMap((t) => [t.x, t.z]), 2, tf(broad), true);
+  inst('tree', Gs.palm, M.foliage, palms.flatMap((t) => [t.x, t.z]), 2, tf(palms), true);
+  // rooftop clutter (tanks, starter bars, dishes) is baked into one static mesh: a few hundred small things, one draw call, no shadows
+  { const pos: number[] = [], nrm: number[] = [], uv: number[] = [], col: number[] = [], pp: number[] = [], idx: number[] = []; let base = 0;
+    const nm = new THREE.Matrix3(); const v = new THREE.Vector3();
+    const bake = (geo: THREE.BufferGeometry, x: number, y: number, z: number, ry: number) => {
+      q.setFromAxisAngle(up, ry); m4.compose(pv.set(x, y, z), q, sc.set(1, 1, 1)); nm.getNormalMatrix(m4);
+      const P = geo.attributes.position, N = geo.attributes.normal, C = geo.attributes.color, A = geo.attributes.aP, I = geo.index!;
+      for (let i = 0; i < P.count; i++) {
+        v.set(P.getX(i), P.getY(i), P.getZ(i)).applyMatrix4(m4); pos.push(v.x, v.y, v.z); v.set(N.getX(i), N.getY(i), N.getZ(i)).applyMatrix3(nm).normalize(); nrm.push(v.x, v.y, v.z);
+        uv.push(0, 0); col.push(C.getX(i), C.getY(i), C.getZ(i)); pp.push(A.getX(i), A.getY(i), A.getZ(i), A.getW(i));
+      }
+      for (let i = 0; i < I.count; i++) idx.push(base + I.getX(i)); base += P.count;
+    };
+    for (let i = 0; i < inp.tanks.length / 4; i++) bake(Gs.tank, inp.tanks[i * 4], inp.tanks[i * 4 + 1], inp.tanks[i * 4 + 2], inp.tanks[i * 4 + 3] * 6);
+    for (let i = 0; i < inp.bars.length / 3; i++) bake(Gs.rebar, inp.bars[i * 3], inp.bars[i * 3 + 1], inp.bars[i * 3 + 2], i);
+    for (let i = 0; i < inp.dishes.length / 4; i++) bake(Gs.dish, inp.dishes[i * 4], inp.dishes[i * 4 + 1], inp.dishes[i * 4 + 2], inp.dishes[i * 4 + 3]);
+    if (idx.length) {
+      const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); cg.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3)); cg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      cg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); cg.setAttribute('aP', new THREE.Float32BufferAttribute(pp, 4)); cg.setIndex(idx); cg.computeBoundingSphere();
+      const cm = new THREE.Mesh(cg, M.solid); cm.userData.k = 'clutter'; cm.receiveShadow = true; cm.castShadow = false; g.add(cm);
+    }
+  }
   return { group: g, lamps };
 }
-export function setPropNight(n: number) { init(); (mats!.lampHead as THREE.MeshStandardMaterial).emissiveIntensity = n * 6; }
+export function setPropNight(n: number) { propShared.uEmit.value = n * 6; }

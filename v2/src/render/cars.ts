@@ -3,11 +3,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VEHICLES, type VehicleKind } from '../data/balance';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildVehicleModel } from './vehicles3d';
 
 export interface Door { node: THREE.Object3D; side: 1 | -1; slide: boolean; base: THREE.Vector3 }
-export interface CarModel { root: THREE.Group; body: THREE.Group; wheels: THREE.Object3D[]; wheelBase: THREE.Vector3[]; doors: Door[]; headlights: THREE.MeshStandardMaterial[]; brake: THREE.MeshStandardMaterial[]; smoke: THREE.Vector3; kind: VehicleKind; offsetY: number; /** body-space y of the ground under the wheels: seat data is ground-relative */ groundY: number; /** seat table key: model file name, or the kind for hand built vehicles */ key: string }
+export interface CarModel { /** the full model (doors, wheels, interior) and, for glTF cars, a merged far model with a handful of draw calls; LifeView shows one of them by distance */ near?: THREE.Object3D; far?: THREE.Object3D; root: THREE.Group; body: THREE.Group; wheels: THREE.Object3D[]; wheelBase: THREE.Vector3[]; doors: Door[]; headlights: THREE.MeshStandardMaterial[]; brake: THREE.MeshStandardMaterial[]; smoke: THREE.Vector3; kind: VehicleKind; offsetY: number; /** body-space y of the ground under the wheels: seat data is ground-relative */ groundY: number; /** seat table key: model file name, or the kind for hand built vehicles */ key: string }
 
+const NO_SHADOW = /glass|lamp|light|luz|brake|stop|chrome|cromo|hub|int|bajo|bottom|plast|wood|shield|carbon|ttr|tepian/;
 const FILES: Partial<Record<VehicleKind, string[]>> = { sedan: ['camry', 'camry', 'civic'], hatch: ['golf'], jeep: ['rrsport', 'gclass'], suv: ['rrsport'], police: ['gclass'], danfo: ['hiace'] };
 const PAINTS = [0xf2f2f0, 0x0d0d0f, 0x8c9096, 0x6e0f12, 0x1b2f4f, 0xc9c1b0, 0x24402a, 0xa07a28, 0x3c3c40, 0xb8b9bb];
 const cache = new Map<string, Promise<{ scene: THREE.Group; meta: any }>>();
@@ -15,6 +17,29 @@ const loader = new GLTFLoader();
 function load(name: string) {
   if (!cache.has(name)) cache.set(name, Promise.all([loader.loadAsync(`cars/${name}.wasm`), fetch(`cars/${name}.json`).then((r) => r.json())]).then(([g, meta]) => ({ scene: g.scene as THREE.Group, meta })));
   return cache.get(name)!;
+}
+/** Parts nobody can see from a distance: interior, underside, brake discs, seats. */
+const FAR_SKIP = /(^|[_ .-])(int|inside|interior|bajo|bottom|under|disk|discs|seat|cabin|wheel_inside)/i;
+const farCache = new Map<string, Map<THREE.Material, THREE.BufferGeometry>>();
+/** Every mesh of the source model (doors closed, wheels at rest) merged into one geometry per material. Built once per model file. */
+function farGeometries(name: string, scene: THREE.Group) {
+  let out = farCache.get(name); if (out) return out;
+  out = new Map(); farCache.set(name, out);
+  scene.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(scene.matrixWorld).invert();
+  const by = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  scene.traverse((o) => {
+    const me = o as THREE.Mesh; if (!me.isMesh || Array.isArray(me.material)) return;
+    const mt = me.material as THREE.Material; if (FAR_SKIP.test(mt.name || '')) return;
+    const g = new THREE.BufferGeometry(); const src = me.geometry; const n = src.attributes.position.count;
+    g.setAttribute('position', src.attributes.position.clone());
+    g.setAttribute('normal', src.attributes.normal ? src.attributes.normal.clone() : new THREE.Float32BufferAttribute(new Float32Array(n * 3), 3));
+    g.setAttribute('uv', src.attributes.uv ? src.attributes.uv.clone() : new THREE.Float32BufferAttribute(new Float32Array(n * 2), 2));
+    if (src.index) g.setIndex(src.index.clone()); else g.setIndex(Array.from({ length: n }, (_, i) => i));
+    g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, me.matrixWorld));
+    let l = by.get(mt); if (!l) by.set(mt, l = []); l.push(g);
+  });
+  for (const [mt, list] of by) { const g = mergeGeometries(list, false); if (g) out.set(mt, g); for (const x of list) x.dispose(); }
+  return out;
 }
 export async function preloadCars() { await Promise.all(['camry', 'civic', 'golf', 'rrsport', 'gclass', 'hiace'].map(load)); }
 
@@ -44,25 +69,35 @@ export async function buildCar(kind: VehicleKind, seed: number): Promise<CarMode
   const paint = kind === 'danfo' ? 0xe3a21a : kind === 'police' ? 0x16181c : PAINTS[seed % PAINTS.length];
   const wheels: THREE.Object3D[] = [], wheelBase: THREE.Vector3[] = [], doors: Door[] = [];
   const headlights: THREE.MeshStandardMaterial[] = [], brake: THREE.MeshStandardMaterial[] = [];
+  // one per-car material per source material (paint colour, glass, lamp and brake emissives); the near and far models share them
+  const memo = new Map<THREE.Material, THREE.Material>();
+  const conv = (s: THREE.MeshStandardMaterial): THREE.Material => {
+    let r = memo.get(s); if (r) return r; const n = (s.name || '').toLowerCase(); r = s;
+    if (n === 'paint') { const c = s.clone(); c.color.setHex(paint); (c as any).metalness = 0.5; c.roughness = 0.28; r = c; }
+    else if (/luz|lamp|light|fl_bulb|lampu/.test(n) && !/brake|3stop|red/.test(n)) { const c = s.clone(); c.emissive = new THREE.Color(0xfff2d0); c.emissiveIntensity = 0; headlights.push(c); r = c; }
+    else if (/brake|3stop|stop|red/.test(n)) { const c = s.clone(); c.emissive = new THREE.Color(0xff1a10); c.emissiveIntensity = 0; brake.push(c); r = c; }
+    else if (/glass/.test(n)) { const c = s.clone(); (c as any).transmission = 0; c.transparent = true; c.opacity = 0.42; c.roughness = 0.04; c.metalness = 0.2; c.color.setHex(0x1a2026); c.depthWrite = false; r = c; }
+    memo.set(s, r); return r;
+  };
   m.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (mesh.isMesh) {
       mesh.castShadow = true; mesh.receiveShadow = true;
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      const out = mats.map((mt) => {
-        const s = mt as THREE.MeshStandardMaterial; const n = (s.name || '').toLowerCase();
-        if (n === 'paint') { const c = s.clone(); c.color.setHex(paint); (c as any).metalness = 0.5; c.roughness = 0.28; return c; }
-        if (/luz|lamp|light|fl_bulb|lampu/.test(n) && !/brake|3stop|red/.test(n)) { const c = s.clone(); c.emissive = new THREE.Color(0xfff2d0); c.emissiveIntensity = 0; headlights.push(c); return c; }
-        if (/brake|3stop|stop|red/.test(n)) { const c = s.clone(); c.emissive = new THREE.Color(0xff1a10); c.emissiveIntensity = 0; brake.push(c); return c; }
-        if (/glass/.test(n)) { const c = s.clone(); (c as any).transmission = 0; c.transparent = true; c.opacity = 0.42; c.roughness = 0.04; c.metalness = 0.2; c.color.setHex(0x1a2026); c.depthWrite = false; return c; }
-        return s;
-      });
+      const out = mats.map((mt) => conv(mt as THREE.MeshStandardMaterial));
       mesh.material = Array.isArray(mesh.material) ? out : out[0];
       // trim, glass, lamps, interior and underside do not need to be in the shadow pass: about half of a car's shadow draw calls
-      const nm = ((mats[0] as THREE.Material).name || '').toLowerCase();
-      if (/glass|lamp|light|luz|brake|stop|chrome|cromo|hub|int|bajo|bottom|plast|wood|shield|carbon|ttr|tepian/.test(nm)) mesh.castShadow = false;
+      if (NO_SHADOW.test(((mats[0] as THREE.Material).name || '').toLowerCase())) mesh.castShadow = false;
     }
   });
+  // far model: the same car with every part merged by material (about 8 draw calls instead of 25 to 60), shown beyond the rung's carFar distance
+  const far = new THREE.Group(); far.position.copy(m.position); far.visible = false; body.add(far);
+  for (const [src, geo] of farGeometries(name, scene)) {
+    const mt = conv(src as THREE.MeshStandardMaterial); const me = new THREE.Mesh(geo, mt); me.receiveShadow = true;
+    me.castShadow = !NO_SHADOW.test((src.name || '').toLowerCase()); far.add(me);
+  }
+  // stripes and the light bar are shared by both models
+  const deco = new THREE.Group(); deco.position.copy(m.position); body.add(deco);
   m.traverse((o) => {
     const wm = /^wheel([0-3])$/.exec(o.name);
     if (wm) { wheels[+wm[1]] = o; wheelBase[+wm[1]] = o.position.clone(); }
@@ -74,17 +109,17 @@ export async function buildCar(kind: VehicleKind, seed: number): Promise<CarMode
     for (const side of [1, -1]) {
       const p = new THREE.Mesh(new THREE.PlaneGeometry(meta.length * 0.86, meta.length * 0.86 / 4), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -2 }));
       p.position.set(side * (meta.width / 2 - 0.115), kind === 'danfo' ? 0.95 : 0.92, 0); p.rotation.y = side * Math.PI / 2;
-      m.add(p);
+      deco.add(p);
     }
     if (kind === 'police') {
       const bar = new THREE.Group(); bar.position.set(0, meta.height + 0.04, -0.2);
       const red = new THREE.MeshStandardMaterial({ color: 0x400000, emissive: 0xff1010, emissiveIntensity: 0 }), blue = new THREE.MeshStandardMaterial({ color: 0x000040, emissive: 0x1040ff, emissiveIntensity: 0 });
       const a = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.22), red); a.position.x = 0.27; bar.add(a);
       const b = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.22), blue); b.position.x = -0.27; bar.add(b);
-      m.add(bar); (root as any).siren = [red, blue];
+      deco.add(bar); (root as any).siren = [red, blue];
     }
   }
-  return { root, body, wheels, wheelBase, doors, headlights, brake, smoke: new THREE.Vector3(0, 0.3, def.size[2] / 2 - 0.4), kind, offsetY, groundY: offsetY, key: name };
+  return { root, body, near: m, far, wheels, wheelBase, doors, headlights, brake, smoke: new THREE.Vector3(0, 0.3, def.size[2] / 2 - 0.4), kind, offsetY, groundY: offsetY, key: name };
 }
 
 function procedural(kind: VehicleKind, seed: number): CarModel {

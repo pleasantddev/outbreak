@@ -167,7 +167,7 @@ export class HumanView {
   /** bone rotations as the mixer left them: restored before each mixer update so procedural aim never accumulates */
   private snap: { b: THREE.Bone; q: THREE.Quaternion }[] = [];
   private skins: THREE.SkinnedMesh[] = []; private fullGeo: THREE.BufferGeometry[] = [];
-  lodOn = false;
+  lodOn = false; private shadowMode = 2; private bigSkins = new Set<THREE.SkinnedMesh>();
 
   constructor(assets: HumanAssets, look: CharacterLook, seed = Math.random() * 100) {
     this.id = rosterOf(look);
@@ -209,6 +209,8 @@ export class HumanView {
       }
       sm.material = mat;
     });
+    // the three largest meshes carry the silhouette: they are the only ones that cast a shadow once the person is a few metres away
+    [...this.skins].sort((a, b) => b.geometry.attributes.position.count - a.geometry.attributes.position.count).slice(0, 3).forEach((m) => this.bigSkins.add(m));
     this.handR = this.bones.get('hand_r');
     for (const b of this.bones.values()) this.snap.push({ b, q: b.quaternion.clone() });
     this.mixer = new THREE.AnimationMixer(this.model);
@@ -216,6 +218,11 @@ export class HumanView {
     this.play('Idle_Loop', 0);
   }
 
+  /** 0: casts no shadow, 1: only the biggest meshes, 2: everything. Shadow passes redraw skinned meshes every time (they are never frustum culled). */
+  setShadow(mode: 0 | 1 | 2) {
+    if (mode === this.shadowMode) return; this.shadowMode = mode;
+    for (const s of this.skins) s.castShadow = mode === 2 || (mode === 1 && this.bigSkins.has(s));
+  }
   /** Swaps the decimated geometry in for characters far from the camera. */
   setLod(on: boolean) {
     if (on === this.lodOn) return;
