@@ -6,6 +6,7 @@ import { emptyCommand, type Command } from './sim/types';
 import { HumanAssets } from './render/humans';
 import { LifeView } from './render/lifeView';
 import { SYSTEMS } from './systems';
+import { net } from './net/client';
 import type { GameCtx, GameSystem } from './systems/registry';
 import { preloadCars } from './render/cars';
 import { LifeHud, type PhoneCtx, type ParcelInfo } from './ui/lifeHud';
@@ -44,8 +45,9 @@ console.info(`[hl] quality ${pref} -> rung ${startLevel} ${LEVELS[startLevel].na
 document.body.style.cssText = 'margin:0;background:#000;overflow:hidden;touch-action:none';
 const canvas = document.createElement('canvas'); canvas.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;display:block'; document.body.appendChild(canvas);
 const hud = new LifeHud(touchDev);
-const save = (() => { try { return JSON.parse(localStorage.getItem('hustlelife') ?? '{}'); } catch { return {}; } })();
-const persist = (o: any) => { try { Object.assign(save, o); localStorage.setItem('hustlelife', JSON.stringify(save)); } catch { /* private mode */ } };
+// multiplayer (?server=): the account on the server owns the save, so nothing is read from or written to this browser
+const save: Record<string, any> = net.serverMode ? {} : (() => { try { return JSON.parse(localStorage.getItem('hustlelife') ?? '{}'); } catch { return {}; } })();
+const persist = (o: any) => { try { Object.assign(save, o); if (!net.serverMode) localStorage.setItem('hustlelife', JSON.stringify(save)); } catch { /* private mode */ } };
 const state: { bank: number; owned: string[]; ownedPts: Record<string, number[]>; model: string } = { bank: save.bank ?? 0, owned: save.owned ?? [], ownedPts: save.ownedPts ?? {}, model: save.model ?? 'survivor' };
 
 const PLAYER_LOOK: CharacterLook = { name: 'You', body: 'male', skin: 1, hair: 'buzzed', beard: false, top: 'tee', topPattern: 'solid', topColor: '#e8e0d0', topAccent: '#141414', pants: 'solid', pantsColor: '#1e2b3a', shoes: '#141414', head: 'none', vest: false, backpack: false, scars: 0, facePaint: 'none', model: 'survivor' } as CharacterLook;
@@ -110,6 +112,7 @@ async function boot() {
   makeJobs();
   hud.onAction = (app, id) => { for (const s of SYSTEMS) if (s.onAction?.(ctx!, app, id)) return; onPhoneAction(app, id); };
   ctx = { sim, view, hud, THREE, save, persist: () => persist({ ...state, cash: sim.cash }), get profile() { return profile ? { name: profile.name, accountId: (profile as any).accountId ?? (profile as any).id ?? '' } : null; }, startJob, systems: new Map(SYSTEMS.map((s) => [s.id, s] as [string, GameSystem])) } as GameCtx;
+  if (net.serverMode) net.attachState(state);
   for (const s of SYSTEMS) await s.init?.(ctx);
   hud.onBuy = (id) => { buyPlot(id); };
   bindLandmap();
@@ -125,7 +128,7 @@ async function boot() {
 }
 
 // ---------------------------------------------------------------- front end: profile, lobby, then the game
-const profileStore = new LocalProfileStore();
+const profileStore = net.serverMode ? net.profileStore() : new LocalProfileStore();
 let profile: Profile | null = null; let profileLive = false;
 let stage: LobbyStage | null = null; let front: FrontEnd | null = null;
 let playerLook: CharacterLook | null = null;
@@ -217,6 +220,7 @@ function startJob(id: string) {
   loadRouteRegions(me.pos.x, me.pos.z, b.x, b.z); guide.clear();
   hud.title(j.title.toUpperCase(), 'Go to the green marker on the radar.', 4);
   if (id === 'parcel') { sim.wanted = Math.max(sim.wanted, 1); sim.lastSeen = sim.time; }
+  net.jobStart(id);
 }
 function tickJob(dt: number) {
   if (!activeJob) return;
@@ -228,8 +232,14 @@ function tickJob(dt: number) {
   if (activeJob.needCar && activeJob.stage === 1 && !(me.vehicle !== null && sim.vehicles[me.vehicle].kind === 'danfo')) return;
   if (d < 6) {
     if (activeJob.stage === 0) { activeJob.stage = 1; hud.title('PICKED UP', `Now deliver it. ${Math.round(activeJob.t)}s left.`, 3); audio.ui('click'); }
-    else { sim.cash += activeJob.pay; hud.money(activeJob.pay); hud.title('HUSTLE DONE', `+₦${activeJob.pay.toLocaleString()}`, 3); grantXp(Math.max(10, Math.round(activeJob.pay / 100))); activeJob = null; jobs.forEach((x) => (x.active = false)); persist({ ...state, cash: sim.cash }); }
+    else { payJob(activeJob.id, activeJob.pay); hud.money(activeJob.pay); hud.title('HUSTLE DONE', `+₦${activeJob.pay.toLocaleString()}`, 3); grantXp(Math.max(10, Math.round(activeJob.pay / 100))); activeJob = null; jobs.forEach((x) => (x.active = false)); persist({ ...state, cash: sim.cash }); }
   }
+}
+
+/** Offline the wage is added here; online the server pays (and its wallet push moves sim.cash). */
+function payJob(id: string, pay: number) {
+  if (!net.serverMode) { sim.cash += pay; return; }
+  void net.jobDone(id).then((a) => { if (!a.ok) hud.title('NOT PAID', a.err ?? 'The server refused that hustle.', 4, true); });
 }
 
 // ---------------------------------------------------------------- land
@@ -246,6 +256,7 @@ function onPhoneAction(app: string, id: string) {
   if (app === 'Landmap') { if (!hud.landmapOn) toggleLandmap(); if (id) selectPlot(id); return; }
   if (app === 'Land') {
     const p = nearbyPlots().find((x) => x.plot.id === id); if (!p) return;
+    if (net.serverMode) { buyPlot(id); return; }
     const total = p.price; const pay = Math.min(sim.cash + state.bank, total);
     if (pay < total) { hud.title('NOT ENOUGH MONEY', `You need ₦${total.toLocaleString()}. Hustle more.`, 3, true); return; }
     let left = total; const fromBank = Math.min(state.bank, left); state.bank -= fromBank; left -= fromBank; sim.cash -= left;
@@ -253,6 +264,7 @@ function onPhoneAction(app: string, id: string) {
     hud.title('LAND IS YOURS', `${Math.round(p.plot.area)} m² · Survey plan and C of O are next.`, 4); persist({ ...state, cash: sim.cash });
   }
   if (app === 'Bank') {
+    if (net.serverMode) { if (id === 'deposit') void net.bank('deposit', Math.min(10000, sim.cash)); if (id === 'withdraw') void net.bank('withdraw', Math.min(10000, state.bank)); setTimeout(() => hud.refreshApp(), 400); return; }
     if (id === 'deposit') { const a = Math.min(10000, sim.cash); sim.cash -= a; state.bank += a; }
     if (id === 'withdraw') { const a = Math.min(10000, state.bank); state.bank -= a; sim.cash += Math.round(a * 0.985); }
     persist({ ...state, cash: sim.cash });
@@ -290,6 +302,7 @@ function hashStr(s: string) { let h = 2166136261; for (let i = 0; i < s.length; 
 function plotById(id: string): Plot | null { for (const list of view.world.plots.values()) for (const p of list) if (p.id === id) return p; return null; }
 function parcelInfo(p: Plot): ParcelInfo {
   const owned = state.owned.includes(p.id); const hs = hashStr(p.id);
+  const sold = net.serverMode && !owned ? net.plotOwners.get(p.id) : undefined;
   const zone = p.zone === 'vacant' ? 'Vacant land' : p.zone === 'unfinished' ? 'Uncompleted building' : p.zone === 'commercial' ? 'Shop front' : p.zone === 'industrial' ? 'Warehouse yard' : p.zone === 'institution' ? 'Institutional' : 'Residential';
   const ph = potholesNear(p.cx, p.cz, 90).length; const road = sim.net.near(p.cx, p.cz, 30).length > 0;
   const traits: ParcelInfo['traits'] = [[zone, 'p']];
@@ -299,7 +312,7 @@ function parcelInfo(p: Plot): ParcelInfo {
   if (p.zone === 'vacant' && hs % 3 === 0) traits.push(['Omo-onile wahala', 'r']);
   traits.push(['No C of O yet', '']);
   const price = plotPrice(p, p.cx, p.cz);
-  return { id: p.id, title: `${zone} · ${Math.round(p.area)} m²`, area: areaName(p.cx, p.cz) || 'Lagos', owner: owned ? 'You' : OWNERS[hs % OWNERS.length], size: p.area, zone, price, owned, traits,
+  return { id: p.id, title: `${zone} · ${Math.round(p.area)} m²`, area: areaName(p.cx, p.cz) || 'Lagos', owner: owned ? 'You' : sold?.name ?? OWNERS[hs % OWNERS.length], size: p.area, zone, price, owned, taken: !!sold, traits,
     stats: [['Size', `${Math.round(p.area)} m²`], ['Buildings', String(p.buildings.length)], ['From Oshodi', `${(Math.hypot(p.cx, p.cz) / 1000).toFixed(1)} km`], ['Rent / yr', `₦${Math.round(price * 0.055 / 1000).toLocaleString()}k`]] };
 }
 function parcelAt(x: number, z: number): ParcelInfo | null {
@@ -309,6 +322,7 @@ function parcelAt(x: number, z: number): ParcelInfo | null {
 function inPoly(x: number, z: number, p: ArrayLike<number>) { let c = false; for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) { const xi = p[i], zi = p[i + 1], xj = p[j], zj = p[j + 1]; if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c; } return c; }
 function buyPlot(id: string) {
   const p = plotById(id); if (!p || state.owned.includes(id)) return;
+  if (net.serverMode) { buyPlotOnline(p); return; }
   const total = plotPrice(p, p.cx, p.cz); if (sim.cash + state.bank < total) { hud.toast('Not enough money', `You need ₦${total.toLocaleString()}. Hustle more, or save in the bank.`, 'var(--red)', 'cash'); return; }
   let left = total; const fromBank = Math.min(state.bank, left); state.bank -= fromBank; left -= fromBank; sim.cash -= left;
   state.owned.push(id); state.ownedPts[id] = Array.from(p.pts).map((v) => Math.round(v * 10) / 10);
@@ -317,12 +331,28 @@ function buyPlot(id: string) {
   view.landmap.owned = state.owned; view.landmap.builtAt = { x: 1e9, z: 1e9 };
   hud.landmapPanel(parcelInfo(p), true);
 }
+/** Online the server checks the price, takes the money and decides who got there first. */
+function buyPlotOnline(p: Plot) {
+  if (net.plotOwners.has(p.id)) { hud.toast('Already sold', `${net.plotOwnerName(p.id) ?? 'Somebody'} owns that land.`, 'var(--red)', 'cash'); return; }
+  void net.buyPlot(p).then((r) => {
+    if (!r.ok) {
+      hud.toast(r.code === 'owned' ? 'Already sold' : 'Cannot buy', r.err ?? 'The purchase was refused.', 'var(--red)', 'cash');
+      if (r.code === 'owned') void net.refreshOwners(p.cx, p.cz, 400).then(() => { view.landmap.builtAt = { x: 1e9, z: 1e9 }; hud.landmapPanel(parcelInfo(p), false); });
+      return;
+    }
+    net.plotOwners.set(p.id, { owner: net.account?.id ?? '', name: net.name || null });
+    hud.toast('Land is yours', `${Math.round(p.area)} m² · survey plan and C of O are next.`, 'linear-gradient(160deg,#a78bfa,#6d3ef0)', 'land', 6);
+    view.landmap.owned = state.owned; view.landmap.builtAt = { x: 1e9, z: 1e9 };
+    hud.landmapPanel(parcelInfo(p), true);
+  });
+}
 function selectPlot(id: string) { const p = plotById(id); if (!p) return; view.landmap.x = p.cx; view.landmap.z = p.cz; view.landmapSelect(Array.from(p.pts)); const info = parcelInfo(p); hud.landmapPanel(info, sim.cash + state.bank >= info.price); }
 function toggleLandmap() {
   if (hud.landmapOn) { hud.landmapOpen(false); view.closeLandmap(); input.enabled = true; return; }
   if (hud.phoneUp) { hud.togglePhone(false); view.phoneUp = false; }
   input.releasePointer(); input.enabled = false;
   const me = sim.local; view.openLandmap(me.pos.x, me.pos.z, state.owned); hud.landmapOpen(true); hud.landmapPanel(null);
+  if (net.serverMode) { (view.landmap as any).taken = (pid: string) => net.plotOwners.has(pid) && !state.owned.includes(pid); void net.refreshOwners(me.pos.x, me.pos.z).then(() => { view.landmap.builtAt = { x: 1e9, z: 1e9 }; }); }
   const here = parcelAt(me.pos.x, me.pos.z); if (here) selectPlot(here.id);
 }
 const lmPtrs = new Map<number, { x: number; y: number }>(); let lmMoved = 0, lmPinch = 0;
