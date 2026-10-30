@@ -13,10 +13,12 @@ import { Pie, type PieItem } from './pie';
 import { LifeUi } from './ui';
 import { RT } from '../societyRuntime';
 import { net } from '../../net/client';
+import { inInteriorZone } from '../../net/rules';
 import { fullStory } from '../societyModel';
+import { people } from '../net';
 import type { HumanView } from '../../render/humans';
 
-export interface Thing { id: string; name: string; x: number; z: number; yaw: number; y?: number; actions: LifeAction[]; kind: 'object' | 'door' | 'npc' | 'self'; actor?: Actor; placed?: Placed; open?: () => void; reach?: number; verb?: string }
+export interface Thing { id: string; name: string; x: number; z: number; yaw: number; y?: number; actions: LifeAction[]; kind: 'object' | 'door' | 'npc' | 'self' | 'player'; actor?: Actor; placed?: Placed; open?: () => void; reach?: number; verb?: string }
 interface Running { a: LifeAction; thing: Thing; phase: 'walk' | 'do'; t: number; secs: number; give: Partial<Record<Need, number>>; walkT: number; path: { x: number; z: number }[]; best: number; bestT: number; spot: { x: number; z: number; y: number; yaw: number }; prop?: THREE.Object3D }
 interface Save { needs: NeedsState; food: number; fan: boolean; door: { x: number; z: number; yaw: number } | null; inside: boolean; tips: string[]; pantry: number; at?: string | null; vdoors?: Record<string, Door>; seen?: number }
 
@@ -25,7 +27,7 @@ const CAP = 0.9; // capsule centre above the feet
 // building kinds (world/region.ts BK): house 1, shops 2, flats 3, hotel 4, warehouse 5, institution 8, bank 13
 const VENUE_ANCHOR: Record<string, { x: number; z: number; kinds: number[] }> = {
   casino: { x: 1250, z: -560, kinds: [4, 2, 3] }, club: { x: 560, z: -90, kinds: [2, 4, 5] }, joint: { x: 1080, z: -150, kinds: [2, 1, 3] },
-  hub: { x: 700, z: -560, kinds: [2, 8, 3] }, bank: { x: 1150, z: -330, kinds: [13, 2, 3] } };
+  hub: { x: 700, z: -560, kinds: [2, 8, 3] }, bank: { x: 1150, z: -330, kinds: [13, 2, 3] }, power: { x: 420, z: -380, kinds: [8, 5, 3] } };
 const wrapA = (a: number) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
 
 class Life {
@@ -38,6 +40,13 @@ class Life {
   venues = new Map<string, Venue>(); private vdoorT = 3; private vdoorObj = new Map<string, THREE.Group>();
   /** other systems add interactables in the street (vendors, pay toilets, clubs) */
   providers: (() => Thing[])[] = [];
+  /** other systems can block an action with a reason (no water, no light) and hear when one starts (house.ts) */
+  gates: ((a: LifeAction, t: Thing) => string | null)[] = []; onBegin: ((a: LifeAction, t: Thing) => void)[] = [];
+  /** extra lines in your own menu (Z) from other systems, and who handles them */
+  selfItems: (() => PieItem[])[] = []; selfPick: ((id: string) => void)[] = [];
+  gate(a: LifeAction, t: Thing) { for (const g of this.gates) { const r = g(a, t); if (r) return r; } return null; }
+  /** a friend's room you were invited to (their street door) and whether you are in it right now */
+  invite: { owner: string; name: string; door: Door; until: number } | null = null; guest = false;
   constructor(public ctx: GameCtx) {}
 
   init() {
@@ -51,6 +60,7 @@ class Life {
 
   start() {
     this.buildLot();
+    net.on('social', (m: any) => this.onSocial(m));
     this.started = true; this.ui.show(true);
     if (!this.S.door) this.placeDoor(); else this.buildDoor();
     if (this.S.seen) { const off = Math.min(600, (Date.now() - this.S.seen) / 60000); if (off > 1) decay(this.S.needs, off * 0.25, {}, { sleeping: true, sitting: false, moving: 0 }); for (const k of NEEDS) this.S.needs.v[k] = Math.max(25, this.S.needs.v[k]); }
@@ -64,9 +74,13 @@ class Life {
 
   /** Your room is a private interior, GTA Online apartment style: every account gets its own slot far from the city,
    *  so in multiplayer nobody else's room sits on top of yours. Shared venues (casino, club...) are one instance. */
+  /** where an account's room sits in the interior zone (the server keeps rooms apart by account, so a shared slot is harmless) */
+  static slotOf(id: string) { let h = 2166136261; for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); } const slot = (h >>> 0) % 400; return new THREE.Vector3(30000 + (slot % 20) * 150, 0, 30000 + Math.floor(slot / 20) * 150); }
+  private ownOrigin = new THREE.Vector3(); private homeBody: any = null;
+  /** move the room (mesh, colliders, everything placed in it) to another slot: yours, or the friend's you are visiting */
+  private placeLot(o: THREE.Vector3) { HOME_ORIGIN.copy(o); this.lot.group.position.copy(o); this.homeBody?.setTranslation({ x: o.x, y: 0, z: o.z }, true); }
   private buildLot() {
-    const c = this.ctx; const id = c.profile?.accountId || c.profile?.name || 'local'; let h = 2166136261; for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
-    const slot = (h >>> 0) % 400; HOME_ORIGIN.set(30000 + (slot % 20) * 150, 0, 30000 + Math.floor(slot / 20) * 150);
+    const c = this.ctx; this.ownOrigin = Life.slotOf(c.profile?.accountId || c.profile?.name || 'local'); HOME_ORIGIN.copy(this.ownOrigin);
     this.lot = buildHome(); c.view.scene.add(this.lot.group);
     this.fanBlades = this.lot.placed.find((p) => p.def === 'fan')?.obj.getObjectByName('blades') ?? null;
     const W = c.sim.phys.world; const body = W.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(HOME_ORIGIN.x, 0, HOME_ORIGIN.z));
@@ -74,7 +88,7 @@ class Life {
       const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -b.yaw);
       W.createCollider(RAPIER.ColliderDesc.cuboid(b.w / 2, b.h / 2, b.d / 2).setTranslation(b.x, b.h / 2, b.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setCollisionGroups(groups(G.WORLD, 0xffff)), body);
     }
-    this.addCeil(body, this.lot); this.bodies.push(body);
+    this.addCeil(body, this.lot); this.bodies.push(body); this.homeBody = body;
   }
 
   // ---------------------------------------------------------------- the front door on the street
@@ -119,8 +133,16 @@ class Life {
   private addCeil(body: any, lot: Lot) { const c = lot.ceil; if (!c) return; this.ctx.sim.phys.world.createCollider(RAPIER.ColliderDesc.cuboid((c.x1 - c.x0) / 2, 0.1, (c.z1 - c.z0) / 2).setTranslation((c.x0 + c.x1) / 2, c.y + 0.1, (c.z0 + c.z1) / 2).setCollisionGroups(groups(G.WORLD, 0xffff)), body); }
   /** Every venue has a fixed anchor in the world. Its door goes on the best building face near the anchor, computed
    *  only from map data, so every player in the session finds the casino in the same place. */
+  /** every map region within r of (x, z) is loaded (and asks for the missing ones). Doors must be placed from the full
+   *  set, or a player who spawned far away would pick a different building than everybody else. */
+  private regionsReady(x: number, z: number, r: number) {
+    const st = this.ctx.store; let ok = true;
+    const [i0, j0] = st.regionOf(x - r, z - r), [i1, j1] = st.regionOf(x + r, z + r);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) if (st.has(i, j) && !st.get(i, j)) { ok = false; void st.load(i, j); }
+    return ok;
+  }
   private placeVenueDoor(v: Venue) {
-    const c = this.ctx; const A = VENUE_ANCHOR[v.id]; if (!A) return;
+    const c = this.ctx; const A = VENUE_ANCHOR[v.id]; if (!A || !this.regionsReady(A.x, A.z, 600)) return;
     const taken = [...this.venues.values()].filter((o) => o !== v && o.door).map((o) => o.door!);
     let best: Door | null = null, bs = -1e9;
     for (const r of c.store.regions.values()) for (const b of r.buildings) {
@@ -168,7 +190,7 @@ class Life {
   enterVenue(v: Venue) {
     const c = this.ctx; const why = v.refuse?.(); if (why) { c.hud.toast(v.title, why, 'var(--red)', 'msg', 3.5); return; }
     if (v.fee) { if (c.sim.cash < v.fee) { c.hud.toast(v.title, `Gate fee na ₦${v.fee.toLocaleString()}. Your pocket no reach.`, 'var(--red)', 'cash', 3.5); return; } c.sim.cash -= v.fee; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: -v.fee }); }
-    this.ui.black(async () => { if (!(await this.door(v.id))) return; const O = v.lot.group.position, s = v.lot.spawn; this.S.at = v.id; this.doorCool = 1.2; this.teleport(O.x + s.x, 0.02, O.z + s.z, s.yaw); c.view.cam.yaw = s.yaw; c.view.cam.pitch = -0.12; v.enter?.(); c.hud.title(v.title, v.sub, 2.5); });
+    this.ui.black(async () => { if (!(await this.door(v.id))) return; const O = v.lot.group.position, s = v.lot.spawn; this.S.at = v.id; this.doorCool = 1.2; const jx = (Math.random() - 0.5) * 1.6; this.teleport(O.x + s.x + jx, 0.02, O.z + s.z + Math.random() * 0.6, s.yaw); c.view.cam.yaw = s.yaw; c.view.cam.pitch = -0.12; v.enter?.(); c.hud.title(v.title, v.sub, 2.5); });
   }
   exitVenue() {
     const v = this.venue; if (!v) return; this.stop(true);
@@ -186,11 +208,18 @@ class Life {
   exit() {
     this.ui.black(async () => {
       if (!(await this.door(null))) return;
-      const d = this.S.door!; this.S.inside = false; this.doorCool = 1.2;
+      const d = this.guest && this.invite ? this.invite.door : this.S.door!; this.S.inside = false; this.doorCool = 1.2;
+      if (this.guest) { this.guest = false; this.placeLot(this.ownOrigin); }
       this.teleport(d.x + Math.sin(d.yaw) * 1.3, 0.05, d.z + Math.cos(d.yaw) * 1.3, d.yaw);
       for (let i = 0; i < 12; i++) { this.ctx.view.world.update(d.x, d.z, true); await new Promise((r) => setTimeout(r, 0)); }
       this.ctx.view.cam.yaw = d.yaw; this.persist();
     });
+  }
+  /** the server put us back on the other side of a door (it refused the hop): make the life state match the body */
+  private resync() {
+    const me = this.ctx.sim.local; if (!inInteriorZone(me.pos.x, me.pos.z)) { this.S.at = null; this.S.inside = false; return; }
+    if (Math.hypot(me.pos.x - HOME_ORIGIN.x, me.pos.z - HOME_ORIGIN.z) < 60) { this.S.inside = true; this.S.at = null; return; }
+    for (const v of this.venues.values()) { const O = v.lot.group.position; if (Math.hypot(me.pos.x - O.x, me.pos.z - O.z) < 60) { this.S.at = v.id; return; } }
   }
   /** online, ask the server before moving between the street and an interior (it judges the jump) */
   private async door(into: string | null) {
@@ -213,9 +242,12 @@ class Life {
       for (const p of this.lot.placed) { const d = DEFS[p.def]; if (!d.actions.length) continue; out.push({ id: p.def, name: d.name, x: HOME_ORIGIN.x + p.x, z: HOME_ORIGIN.z + p.z, yaw: p.yaw, actions: d.actions, kind: 'object', placed: p }); }
       const e = this.lot.exit; out.push({ id: 'exit', name: 'Front door', x: HOME_ORIGIN.x + e.x, z: HOME_ORIGIN.z + e.z + 1.0, yaw: Math.PI, actions: [{ id: 'out', label: 'Go outside', gain: {}, minutes: 0, clip: 'Idle_Loop', spot: [0, 0, 0] }], kind: 'door', reach: 1.6 });
     } else if (this.S.door) {
+      const iv = this.invite; if (iv && iv.until > Date.now() && Math.abs(iv.door.x - me.pos.x) < 6 && Math.abs(iv.door.z - me.pos.z) < 6) out.push({ id: 'visit', name: `${iv.name}'s room`, x: iv.door.x, z: iv.door.z, yaw: iv.door.yaw, actions: [{ id: 'visit', label: `Visit ${iv.name}`, gain: {}, minutes: 0, clip: 'Idle_Loop', spot: [0, 0, 0] }], kind: 'door' });
       const d = this.S.door; out.push({ id: 'home', name: 'Your house', x: d.x, z: d.z, yaw: d.yaw, actions: [{ id: 'in', label: 'Go inside', gain: {}, minutes: 0, clip: 'Idle_Loop', spot: [0, 0, 0] }], kind: 'door' });
     }
     if (!this.inside) for (const v of this.venues.values()) if (v.door && Math.abs(v.door.x - me.pos.x) < 5 && Math.abs(v.door.z - me.pos.z) < 5) out.push({ id: 'venue', name: v.title, x: v.door.x, z: v.door.z, yaw: v.door.yaw, actions: [{ id: 'vin:' + v.id, label: v.label ?? `Enter ${v.title}`, gain: {}, minutes: 0, clip: 'Idle_Loop', spot: [0, 0, 0] }], kind: 'door', reach: 2.6 });
+    // real people first: other players standing near you
+    for (const p of people.near(me.pos.x, me.pos.z, 2.8)) out.push({ id: 'player', name: p.name, x: p.x, z: p.z, yaw: 0, actions: [], kind: 'player', verb: `Meet ${p.name}`, reach: 2.8, open: () => this.piePlayer(p) });
     for (const a of this.ctx.sim.actors) {
       if (a === me || !a.alive || a.vehicle !== null || (a as any)._gone || (a as any)._vendor || a.role === 'police') continue;
       if (Math.abs(a.pos.x - me.pos.x) > 3 || Math.abs(a.pos.z - me.pos.z) > 3) continue;
@@ -243,9 +275,9 @@ class Life {
     const c = this.ctx; const me = c.sim.local; c.input.releasePointer();
     if (!t) { this.pieSelf(); return; }
     if (t.open) { t.open(); return; }
-    if (t.kind === 'door') { const a = t.actions[0]; if (a.id.startsWith('vin:')) this.enterVenue(this.venues.get(a.id.slice(4))!); else if (a.id === 'vout') this.exitVenue(); else a.id === 'in' ? this.enter() : this.exit(); return; }
+    if (t.kind === 'door') { const a = t.actions[0]; if (a.id.startsWith('vin:')) this.enterVenue(this.venues.get(a.id.slice(4))!); else if (a.id === 'vout') this.exitVenue(); else if (a.id === 'visit') this.visit(); else a.id === 'in' ? this.enter() : this.exit(); return; }
     if (t.kind === 'npc') { this.pieNpc(t); return; }
-    const items: PieItem[] = t.actions.filter((a) => this.allowed(a)).map((a) => ({ id: a.id, label: a.label, hint: a.effect === 'cook3' && this.S.pantry > 0 ? `Uses market foodstuff (${this.S.pantry} left)` : a.hint, cost: a.effect === 'cook3' && this.S.pantry > 0 ? undefined : a.cost, disabled: a.cost && c.sim.cash < a.cost && !(a.effect === 'cook3' && this.S.pantry > 0) ? 'No money' : a.when === 'hasFood' && this.S.food <= 0 ? 'Nothing inside' : undefined }));
+    const items: PieItem[] = t.actions.filter((a) => this.allowed(a)).map((a) => ({ id: a.id, label: a.label, hint: a.effect === 'cook3' && this.S.pantry > 0 ? `Uses market foodstuff (${this.S.pantry} left)` : a.hint, cost: a.effect === 'cook3' && this.S.pantry > 0 ? undefined : a.cost, disabled: a.cost && c.sim.cash < a.cost && !(a.effect === 'cook3' && this.S.pantry > 0) ? 'No money' : a.when === 'hasFood' && this.S.food <= 0 ? 'Nothing inside' : this.gate(a, t) ?? undefined }));
     if (!items.length) return;
     if (items.length === 1 && !items[0].disabled) { this.begin(t.actions.find((x) => x.id === items[0].id)!, t); return; } // one thing to do: just do it
     this.pie.show(t.name, t.id === 'cooler' ? `${this.S.food} plate${this.S.food === 1 ? '' : 's'} of food` : 'Choose', items, this.screenOf(t.x, 1.1, t.z), (id) => { const a = t.actions.find((x) => x.id === id)!; this.begin(a, t); });
@@ -263,6 +295,7 @@ class Life {
       { id: 'game', label: 'Play Ludo on phone', hint: '+Fun' }, { id: 'needs', label: 'How I dey?', hint: 'Needs and mood' },
     ];
     if (!this.inside && this.S.door) items.push({ id: 'home', label: 'Go home', hint: 'GPS to your room' });
+    for (const f of this.selfItems) items.push(...f());
     const phone = (label: string, gain: Partial<Record<Need, number>>, minutes: number): LifeAction => ({ id: 'phone', label, gain, minutes, clip: 'Idle_TalkingPhone_Loop', spot: [0, 0, 0], prop: 'phone', pose: 'phone' });
     this.pie.show('You', 'Your phone and your mood', items, { x: innerWidth / 2, y: innerHeight / 2 }, (id) => {
       const me = this.ctx.sim.local; const self: Thing = { id: 'self', name: 'You', x: me.pos.x, z: me.pos.z, yaw: me.yaw, actions: [], kind: 'self' };
@@ -270,9 +303,62 @@ class Life {
       if (id === 'scroll') this.begin({ ...phone('Scrolling', { fun: 16 }, 20), clip: 'Idle_Loop' }, self);
       if (id === 'game') this.begin({ ...phone('Playing Ludo', { fun: 24 }, 25), clip: 'Idle_Loop' }, self);
       if (id === 'needs') this.ui.sheet.classList.add('on');
+      for (const f of this.selfPick) f(id);
       if (id === 'home') this.ctx.hud.toast('GPS', 'Follow the house pin on your map.', 'linear-gradient(160deg,#2de0c8,#139a8a)', 'pin', 4);
     });
   }
+  // ---------------------------------------------------------------- real people (online)
+  private piePlayer(p: { id: number; name: string; level: number }) {
+    const c = this.ctx; const me = c.sim.local; const cash = c.sim.cash;
+    const items: PieItem[] = [
+      { id: 'hail', label: 'Hail them', hint: '+Social' }, { id: 'gist', label: 'Gist', hint: '+Social' },
+      { id: 'pay1', label: 'Send ₦1,000', cost: 1000, disabled: cash < 1000 ? 'No money' : undefined },
+      { id: 'pay5', label: 'Send ₦5,000', cost: 5000, disabled: cash < 5000 ? 'No money' : undefined },
+    ];
+    if (this.S.door && !this.guest && !this.venue) items.push({ id: 'invite', label: 'Invite to my room', hint: this.S.inside ? 'They walk in your door' : 'Then walk them home' });
+    const pick = (l: string[]) => l[(Math.random() * l.length) | 0];
+    const self = (): Thing => ({ id: 'self', name: 'You', x: me.pos.x, z: me.pos.z, yaw: me.yaw, actions: [], kind: 'self' });
+    this.pie.show(p.name, `Level ${p.level} · a real person`, items, { x: innerWidth / 2, y: innerHeight / 2 }, async (id) => {
+      if (id === 'hail' || id === 'gist') {
+        people.emote(c, id === 'hail' ? 'wave' : 'talk'); void net.act('social.greet', { to: p.id });
+        c.hud.say('You', pick(id === 'hail' ? ['How far!', 'My guy!', 'Ehen, na you?', 'Odogwu!'] : ['Wetin dey happen?', 'Gist me na.', 'You don hear wetin happen for Oshodi?']), 2.6);
+        if (id === 'hail') { this.S.needs.v.social = Math.min(100, this.S.needs.v.social + 8); addMoodlet(this.S.needs, 'hailed', `Hailed ${p.name}`, 3, 4); return; }
+        this.begin({ id: 'talk', label: `Gisting with ${p.name}`, gain: { social: 150, fun: 30 }, minutes: 10, clip: 'Idle_Talking_Loop', spot: [0, 0, 0] }, self()); return;
+      }
+      if (id === 'pay1' || id === 'pay5') {
+        const amount = id === 'pay1' ? 1000 : 5000; const r = await net.act('cash.transfer', { to: p.name, amount });
+        if (r.ok) { c.hud.toast('Sent', `₦${amount.toLocaleString()} to ${p.name}.`, 'linear-gradient(160deg,#59d98e,#14a05a)', 'cash', 3.5); addMoodlet(this.S.needs, 'generous', 'Felt generous', 4, 6); }
+        else c.hud.toast('Transfer', r.err ?? 'It did not go.', 'var(--red)', 'msg', 3.5);
+        return;
+      }
+      if (id === 'invite') {
+        const r = await net.act('social.invite', { to: p.id, door: this.S.door });
+        c.hud.toast('Invite', r.ok ? `${p.name} has your address. ${this.S.inside ? 'They can walk in.' : 'Go home and they can follow you in.'}` : (r.err ?? 'It did not go.'), r.ok ? 'linear-gradient(160deg,#2de0c8,#139a8a)' : 'var(--red)', 'pin', 4.5);
+      }
+    });
+  }
+  private onSocial(m: { kind: string; from: string; fromId: number; owner?: string; door?: Door }) {
+    const c = this.ctx;
+    if (m.kind === 'greet') { c.hud.toast(m.from, 'hailed you. Hail them back!', 'linear-gradient(160deg,#2de0c8,#139a8a)', 'msg', 4); this.S.needs.v.social = Math.min(100, this.S.needs.v.social + 4); return; }
+    if (m.kind === 'invite' && m.owner && m.door) {
+      const inv = { owner: m.owner, name: m.from, door: m.door, until: Date.now() + 15 * 60_000 };
+      c.hud.call(m.from, 'Come chill for my room', () => { this.invite = inv; c.hud.toast('Invite', `${m.from}'s door is the yellow pin on your map. Walk in when they are home.`, 'linear-gradient(160deg,#f59e0b,#b45309)', 'pin', 6); }, undefined, 20);
+      return;
+    }
+    if (m.kind === 'evict' && this.guest) { c.hud.toast(m.from, 'left the room, so you follow them out.', 'var(--pur)', 'msg', 4); this.exit(); }
+  }
+  /** walk into the room of someone who invited you: their slot, their furniture; the server checks the invite */
+  private visit() {
+    const iv = this.invite; if (!iv || this.run) return;
+    this.ui.black(async () => {
+      if (!(await this.door('home:' + iv.owner))) return;
+      this.guest = true; this.placeLot(Life.slotOf(iv.owner));
+      const s = this.lot.spawn; this.S.inside = true; this.doorCool = 1.2; this.ctx.view.cam.yaw = s.yaw; this.ctx.view.cam.pitch = -0.12;
+      this.teleport(HOME_ORIGIN.x + s.x, 0.02, HOME_ORIGIN.z + s.z, s.yaw);
+      this.ctx.hud.title(`${iv.name}'s room`.toUpperCase(), 'You are a guest. Behave yourself.', 2.5);
+    });
+  }
+
   private pieNpc(t: Thing) {
     const a = t.actor!; const cit = a.cid !== undefined ? RT.soc?.get(a.cid) : undefined; const name = cit ? `${cit.first} ${cit.last}` : a.name;
     const occ = cit && RT.soc ? RT.soc.C.occ[cit.occ]?.label : undefined;
@@ -317,8 +403,8 @@ class Life {
 
   // ---------------------------------------------------------------- running an action
   begin(a: LifeAction, t: Thing) {
-    this.stop(false);
-    const c = this.ctx;
+    const c = this.ctx; const why = this.gate(a, t); if (why) { c.hud.toast(t.name, why, 'var(--red)', 'msg', 3.5); return; }
+    this.stop(false); for (const f of this.onBegin) f(a, t);
     if (a.effect === 'cook3' && this.S.pantry > 0) { this.S.pantry--; a = { ...a, cost: 0 }; }
     if (a.cost) { if (c.sim.cash < a.cost) { c.hud.toast('No money', `You need ₦${a.cost.toLocaleString()}.`, 'var(--red)', 'cash'); return; } c.sim.cash -= a.cost; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: -a.cost }); }
     if (a.effect === 'eat1') this.S.food = Math.max(0, this.S.food - 1);
@@ -414,6 +500,7 @@ class Life {
   frame(dt: number) {
     const c = this.ctx; if (!this.started) return; const me = c.sim.local;
     c.view.timeScale = 1; // one shared world clock: nothing a player does speeds it up
+    if (inInteriorZone(me.pos.x, me.pos.z) !== this.inside) this.resync();
     this.doorCool = Math.max(0, this.doorCool - dt); if (!this.doorCool && !this.run && !this.pie.open && me.vehicle === null && me.alive) this.walkThrough();
     const dh = Math.min(dt, 0.25) / 60; // real minutes this frame
     const r = this.run;
@@ -465,7 +552,8 @@ class Life {
     const V = this.venue;
     if (V) { const O = V.lot.group.position, e = V.lot.exit; if (hit(O.x + e.x, O.z + e.z, 0, -1, 1.2)) this.exitVenue(); return; }
     if (this.S.inside) { const e = this.lot.exit; if (hit(HOME_ORIGIN.x + e.x, HOME_ORIGIN.z + e.z, 0, -1, 1.2)) this.exit(); return; }
-    const d = this.S.door; if (d && hit(d.x + Math.sin(d.yaw) * 0.6, d.z + Math.cos(d.yaw) * 0.6, -Math.sin(d.yaw), -Math.cos(d.yaw), 1.1)) { this.enter(); return; }
+    const iv = this.invite; if (iv && iv.until > Date.now() && hit(iv.door.x + Math.sin(iv.door.yaw) * 0.6, iv.door.z + Math.cos(iv.door.yaw) * 0.6, -Math.sin(iv.door.yaw), -Math.cos(iv.door.yaw), 1.1)) { this.doorCool = 3; this.visit(); return; }
+    const d = this.S.door; if (d && hit(d.x + Math.sin(d.yaw) * 0.6, d.z + Math.cos(d.yaw) * 0.6, -Math.sin(d.yaw), -Math.cos(d.yaw), 1.1)) { const b = (this.ctx.systems.get('bills') as any)?.api; if (b && !b.canEnterHome()) { this.doorCool = 4; return; } this.enter(); return; }
     for (const v of this.venues.values()) { const vd = v.door; if (!vd || v.fee) continue; if (hit(vd.x + Math.sin(vd.yaw) * 0.45, vd.z + Math.cos(vd.yaw) * 0.45, -Math.sin(vd.yaw), -Math.cos(vd.yaw), 1.2)) { const why = v.refuse?.(); if (why) { this.ctx.hud.toast(v.title, why, 'var(--red)', 'msg', 3.5); this.doorCool = 4; return; } this.enterVenue(v); return; } }
   }
 
@@ -490,8 +578,8 @@ class Life {
     const v = new THREE.Vector3(x, y, z).project(this.ctx.view.camera);
     return v.z > 1 ? { x: innerWidth / 2, y: innerHeight / 2 } : { x: (v.x * 0.5 + 0.5) * innerWidth, y: (-v.y * 0.5 + 0.5) * innerHeight };
   }
-  blips(out: { x: number; z: number; c: string; r?: number }[]) { if (this.inside) return; if (this.S.door) out.push({ x: this.S.door.x, z: this.S.door.z, c: '#2de0c8', r: 10 }); for (const v of this.venues.values()) { const p = v.door ?? VENUE_ANCHOR[v.id]; if (p) out.push({ x: p.x, z: p.z, c: v.blip, r: 9 }); } }
-  persist() { this.S.seen = Date.now(); this.ctx.save.life = this.S; this.ctx.persist(); }
+  blips(out: { x: number; z: number; c: string; r?: number }[]) { if (this.inside) return; if (this.S.door) out.push({ x: this.S.door.x, z: this.S.door.z, c: '#2de0c8', r: 10 }); if (this.invite && this.invite.until > Date.now()) out.push({ x: this.invite.door.x, z: this.invite.door.z, c: '#ffc53d', r: 10 }); for (const v of this.venues.values()) { const p = v.door ?? VENUE_ANCHOR[v.id]; if (p) out.push({ x: p.x, z: p.z, c: v.blip, r: 9 }); } }
+  persist() { this.S.seen = Date.now(); this.ctx.save.life = this.guest ? { ...this.S, inside: false } : this.S; this.ctx.persist(); }
   get needs() { return this.S.needs; }
   /** other systems (food vendors, toilets, clubs) run actions through the same runner */
   doAction(a: LifeAction, at?: { name: string; x: number; z: number; yaw: number }) {

@@ -8,6 +8,7 @@ import { RoadNet } from '../../world/roadnet';
 import { RT } from '../societyRuntime';
 import { sfx } from '../leisure/sfx';
 import { earn } from '../money';
+import { career } from './ranks';
 
 interface Pax { a: Actor; dest: { x: number; z: number; name: string }; fare: number; start: number; dist: number; mood: number; boarded: boolean; complain: number }
 interface Hailer { a: Actor; dest: { x: number; z: number; name: string }; t: number; mark: THREE.Mesh }
@@ -112,6 +113,7 @@ class Transport {
   }
   // ---------------------------------------------------------------- per frame
   frame(dt: number) {
+    { const v0 = this.veh(); this.ctx.hud.tcFlag?.('duty', !!(v0 && CAP[v0.kind])); this.ctx.hud.tcFlag?.('onduty', this.on); }
     if (!this.on) return; const c = this.ctx; const v = this.veh();
     if (!v || v.kind !== this.kind) { this.offDuty('You left the vehicle. Off duty.'); return; }
     const sp = Math.abs(v.ctrl.currentVehicleSpeed()); const t = v.body.translation();
@@ -142,7 +144,7 @@ class Transport {
     const speedy = mins < fair * 1.1 ? 0.15 : mins > fair * 2 ? -0.15 : 0; const mood = Math.max(0, Math.min(1.3, p.mood + speedy));
     const tip = mood > 1 ? r50(p.fare * 0.15) : 0; const pay = mood < 0.4 ? r50(p.fare * 0.7) : p.fare;
     c.sim.exitVehicle(p.a); this.release(p.a); this.pax.splice(this.pax.indexOf(p), 1);
-    earn(c, pay + tip, 'fare'); sfx('cash');
+    earn(c, Math.round((pay + tip) * career.mult('transport')), 'fare'); career.add('transport'); sfx('cash');
     this.earned += pay + tip; this.trips++;
     c.hud.say(p.a.name, mood < 0.4 ? pick(['See as you drive! Take this one, na all I go pay.', 'I no go pay full. You nearly kill me.']) : tip ? pick(['You try well, take extra.', 'Correct driver! Keep the change.']) : pick(['Thank you o.', 'Na here. God bless.', 'Okay, see you.']), 3);
     (c.systems.get('skills') as any)?.addXp?.(this.kind === 'okada' ? 'ride' : 'drive', Math.round(8 + p.dist / 120));

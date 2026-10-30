@@ -57,9 +57,19 @@ export class Input {
       for (const t of Array.from(te.changedTouches)) {
         const target = t.target as HTMLElement;
         // let real UI (start button, phone, menus) receive its tap; only the play area is ours
-        if (target.closest?.('button, a, input, select, #boot, #phone')) continue;
+        // a prompt you can tap ("TAP Sit on bed") counts as the interact button
+        const tap = target.closest?.('[data-tap]') as HTMLElement | null;
+        if (tap) { const v = tap.dataset.tap!; if (v.startsWith('key:')) dispatchEvent(new KeyboardEvent('keydown', { code: v.slice(4) })); else this.tpressed.add(v); e.preventDefault(); continue; }
+        if (target.closest?.('button, a, input, select, #boot, #phone, #pie, #ncores')) continue;
         const btn = target.closest?.('[data-tbtn]') as HTMLElement | null;
-        if (btn) { const id = btn.dataset.tbtn!; this.tbtn.add(id); this.tpressed.add(id); btn.classList.add('down'); (btn as any)._tid = t.identifier; e.preventDefault(); continue; }
+        if (btn) {
+          const id = btn.dataset.tbtn!; this.tbtn.add(id); this.tpressed.add(id); btn.classList.add('down'); (btn as any)._tid = t.identifier; e.preventDefault();
+          // buttons that stand in for a keyboard key (Z self menu, J duty) send that key to whoever listens for it
+          if (btn.dataset.key) dispatchEvent(new KeyboardEvent('keydown', { code: btn.dataset.key, key: btn.dataset.key.slice(3).toLowerCase() }));
+          continue;
+        }
+        // any other element that takes pointer events is real UI (a sheet, a card, a list): let it have the tap
+        if (target !== el && target !== el.parentElement && getComputedStyle(target).pointerEvents !== 'none' && target.closest?.('#hlhud .gl, [data-ui]')) continue;
         if (t.clientX < window.innerWidth * 0.42 && this.joy.id < 0) { this.joy = { x: 0, y: 0, active: true, id: t.identifier, ox: t.clientX, oy: t.clientY }; this.showJoy(t.clientX, t.clientY, 0, 0); }
         else if (this.lookTouch.id < 0) this.lookTouch = { id: t.identifier, x: t.clientX, y: t.clientY };
         e.preventDefault();

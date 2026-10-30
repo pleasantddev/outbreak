@@ -11,6 +11,7 @@ import { EMOTE_CLIP, RemoteWorld } from '../net/remote';
 import { EMOTES, F, VF, VKINDS, ANIMS, WEAPON_WIRE, type StateMsg, type VehState } from '../net/protocol';
 import { WEATHER_ORDER } from '../render/sky';
 import { TILE } from '../world/streamer';
+import { inInteriorZone } from '../net/rules';
 
 /** save keys the host game keeps in the account's wallet and land tables, never as blobs */
 const OWNED_BY_SERVER = new Set(['cash', 'bank', 'owned', 'ownedPts', 'model']);
@@ -91,7 +92,8 @@ function report(ctx: GameCtx) {
   if (!net.active) return;
   const m = snapshotOf(ctx); const now = performance.now();
   // a jump the player did not walk (respawn, fast travel): tell the server first so it does not call it a hack
-  if (lastPos && Math.hypot(m.x - lastPos.x, m.z - lastPos.z) > 45) net.teleported();
+  // (going through a door into or out of an interior is granted by its own `door` act, so it is not a teleport)
+  if (lastPos && Math.hypot(m.x - lastPos.x, m.z - lastPos.z) > 45 && inInteriorZone(m.x, m.z) === inInteriorZone(lastPos.x, lastPos.z)) net.teleported();
   lastPos = { x: m.x, z: m.z };
   if (lastSent && !changed(m, lastSent) && now - lastSentAt < 500) return;
   net.sendState(m); lastSent = m; lastSentAt = now;
@@ -150,6 +152,24 @@ function doEmote(ctx: GameCtx, name: (typeof EMOTES)[number]) {
   net.send({ t: 'emote', id: name });
   const def = EMOTE_CLIP[name]; (ctx.sim.local as any).emote = { clip: def.clip, until: performance.now() + def.secs * 1000 };
 }
+
+/** for the life system: real players around you (same space, the server only sends those), and your own emotes */
+export const people = {
+  near(x: number, z: number, r: number): { id: number; name: string; x: number; z: number; level: number }[] {
+    if (!remote || !net.active) return [];
+    const out: { id: number; name: string; x: number; z: number; level: number }[] = [];
+    for (const [id, p] of remote.players) { const s = p.buf[p.buf.length - 1]; if (!s || p.seat) continue; if (Math.hypot(s.x - x, s.z - z) <= r) out.push({ id, name: p.who?.name ?? 'Player', x: s.x, z: s.z, level: p.who?.level ?? 1 }); }
+    return out;
+  },
+  /** players driving near (x, z) (the agbero's customers) */
+  driving(x: number, z: number, r: number): { id: number; name: string; x: number; z: number }[] {
+    if (!remote || !net.active) return [];
+    const out: { id: number; name: string; x: number; z: number }[] = [];
+    for (const [id, p] of remote.players) { const s = p.buf[p.buf.length - 1]; if (!s || !p.seat) continue; if (Math.hypot(s.x - x, s.z - z) <= r) out.push({ id, name: p.who?.name ?? 'Driver', x: s.x, z: s.z }); }
+    return out;
+  },
+  emote(ctx: GameCtx, name: (typeof EMOTES)[number]) { if (net.active) doEmote(ctx, name); },
+};
 
 // ------------------------------------------------------------------------------------------ the system
 export const netSystem: GameSystem = {

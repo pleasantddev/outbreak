@@ -139,6 +139,25 @@ const css = `
 #tc .tb svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #tc .tb.pri{background:linear-gradient(180deg,rgba(139,92,246,.85),rgba(109,62,240,.85));border-color:rgba(255,255,255,.4);box-shadow:0 6px 18px rgba(109,62,240,.45)}
 #tc .tb.down{transform:scale(.92);background:rgba(255,255,255,.3)}
+#tc .tb.sq{border-radius:15px;width:46px;height:46px} #tc .tb.sq svg{width:21px;height:21px} #tc .tb b{font:800 11px Rajdhani,Inter,sans-serif;letter-spacing:1px}
+#tc .tb small{position:absolute;bottom:-17px;left:50%;transform:translateX(-50%);white-space:nowrap;font:700 11px Rajdhani,Inter,sans-serif;letter-spacing:.5px;color:#e9edf5;text-shadow:0 1px 3px #000}
+#tc [data-tbtn=fire]{right:max(22px,env(safe-area-inset-right));bottom:40px;width:78px;height:78px}
+#tc [data-tbtn=interact]{right:calc(max(22px,env(safe-area-inset-right)) + 92px);bottom:22px;width:60px;height:60px;border-color:rgba(45,224,200,.75)}
+#tc [data-tbtn=jump]{right:calc(max(22px,env(safe-area-inset-right)) + 10px);bottom:134px;width:56px;height:56px}
+#tc [data-tbtn=aim]{right:calc(max(22px,env(safe-area-inset-right)) + 86px);bottom:100px;width:52px;height:52px}
+#tc [data-tbtn=crouch]{right:calc(max(22px,env(safe-area-inset-right)) + 164px);bottom:22px;width:48px;height:48px}
+#tc [data-tbtn=reload]{right:calc(max(22px,env(safe-area-inset-right)) + 154px);bottom:84px;width:48px;height:48px}
+#tcrow{position:absolute;right:max(22px,env(safe-area-inset-right));top:calc(max(14px,env(safe-area-inset-top)) + 118px);display:flex;flex-direction:row-reverse;gap:8px}
+#tc #tcrow .tb{position:relative}
+#tc [data-tbtn=duty]{width:62px;display:none;border-color:#ffc53d;color:#ffc53d}
+#tc.duty [data-tbtn=duty]{display:flex} #tc.onduty [data-tbtn=duty]{background:rgba(255,197,61,.85);color:#0b0d14}
+#tc.car [data-tbtn=crouch],#tc.car [data-tbtn=reload],#tc.car [data-tbtn=me],#tc.car [data-tbtn=swap],#tc.car [data-tbtn=aim]{display:none}
+#tc.car [data-tbtn=fire] small{display:none}
+.touch #wcard{display:none!important}
+.touch #speedo{right:auto;left:50%;transform:translateX(-50%);bottom:max(6px,env(safe-area-inset-bottom));width:min(120px,26vh)}
+.touch #prompt{pointer-events:auto;top:auto;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 70px)}
+.touch #prompt kbd{background:var(--teal,#2de0c8)}
+#hlhud.titling #flash,#hlhud.titling #soc-tick{opacity:0!important;transition:opacity .3s}
 #joy-base{position:fixed;left:0;top:0;width:124px;height:124px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);background:radial-gradient(circle,rgba(45,224,200,.12),rgba(10,12,20,.25));transform:translate(-999px,-999px);pointer-events:none;z-index:4}
 #joy-knob{position:fixed;left:0;top:0;width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 0 0 6px rgba(45,224,200,.25);transform:translate(-999px,-999px);pointer-events:none;z-index:4}
 @media (max-width:760px){.pill{height:30px;font-size:15px;padding:0 11px 0 5px}.pill .ico{width:21px;height:21px}#p-time{height:26px;font-size:11px}#p-time .num{font-size:14px}#stars svg{width:13px;height:13px}
@@ -179,6 +198,8 @@ const I = {
   swap: 'M7 7h12l-3-3M17 17H5l3 3',
   crouch: 'M12 5a2 2 0 1 0 0 .01M9 21l2-7 4 1 1 6M8 11l4-2 3 2 2 3',
   map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14',
+  hand: 'M8 13V5.5a1.5 1.5 0 0 1 3 0V12m0-1.5v-6a1.5 1.5 0 0 1 3 0V12m0-5.5a1.5 1.5 0 0 1 3 0V13m0-3.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-2a6 6 0 0 1-4.6-2.2L4.2 15.6a1.6 1.6 0 0 1 2.5-2L8 15',
+  me: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
 };
 export const APPS: [string, string, string][] = [
   ['Map', svg(I.map), 'linear-gradient(160deg,#2de0c8,#139a8a)'],
@@ -227,11 +248,12 @@ export class LifeHud {
   private npShown = false;
   private callCb: { yes: () => void; no?: () => void } | null = null; private callT = 0; private callUntil = 0;
   private parcelId = ''; private lastFrame: HudFrame | null = null;
+  touch = false;
   private speedArc: SVGPathElement; private rpmArc: SVGPathElement;
   constructor(touch: boolean) {
     const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
     this.root = document.createElement('div'); document.body.appendChild(this.root);
-    const tb = (id: string, icon: string, style: string, pri = false, label = '') => `<div class="tb${pri ? ' pri' : ''}" data-tbtn="${id}" style="${style}">${icon ? svg(icon) : label}</div>`;
+    const tb = (id: string, icon: string, pri = false, key = '', cls = '', label = '') => `<div class="tb${pri ? ' pri' : ''}${cls ? ' ' + cls : ''}" data-tbtn="${id}"${key ? ` data-key="${key}"` : ''}>${icon ? svg(icon) : `<b>${label}</b>`}${id === 'fire' ? '<small id="tb-w"></small>' : ''}</div>`;
     this.root.innerHTML = `
 <div id="hlhud">
   <div id="toasts"></div>
@@ -266,16 +288,16 @@ export class LifeHud {
   <div id="lm-legend" class="gl"><span><i style="background:#8b5cf6"></i>Yours</span><span><i style="background:#49e08a"></i>Vacant</span><span><i style="background:#f59e0b"></i>Unfinished</span><span><i style="background:#9ba3b4"></i>Built</span></div>
   <div id="lm-panel" class="gl"><div class="empty">Tap any plot on the map to see who owns it, what it is worth, and to buy it.</div></div></div>
 ${touch ? `<div id="tc">
-  ${tb('fire', I.fist, 'right:24px;bottom:104px;width:78px;height:78px', true)}
-  ${tb('aim', I.aim, 'right:114px;bottom:150px')}
-  ${tb('jump', I.jump, 'right:24px;bottom:22px;width:60px;height:60px')}
-  ${tb('interact', I.car, 'right:110px;bottom:62px')}
-  ${tb('reload', I.reload, 'right:190px;bottom:22px;width:50px;height:50px')}
-  ${tb('crouch', I.crouch, 'right:190px;bottom:92px;width:50px;height:50px')}
-  ${tb('swap', I.swap, 'right:24px;top:210px;width:50px;height:50px')}
-  ${tb('phone', I.phone, 'right:84px;top:210px;width:50px;height:50px;border-radius:15px')}
-  ${tb('map', I.land, 'right:144px;top:210px;width:50px;height:50px;border-radius:15px')}
+  ${tb('fire', I.fist, true)}
+  ${tb('jump', I.jump)}
+  ${tb('interact', I.hand)}
+  ${tb('aim', I.aim)}
+  ${tb('crouch', I.crouch)}
+  ${tb('reload', I.reload)}
+  <div id="tcrow">${tb('swap', I.swap, false, '', 'sq')}${tb('phone', I.phone, false, '', 'sq')}${tb('map', I.land, false, '', 'sq')}${tb('me', I.me, false, 'KeyZ', 'sq')}${tb('duty', '', false, 'KeyJ', 'sq', 'DUTY')}</div>
 </div><div id="joy-base"></div><div id="joy-knob"></div>` : ''}`;
+    if (touch) { this.el('hlhud').classList.add('touch'); this.el('prompt').dataset.tap = 'interact'; }
+    this.touch = touch;
     this.radarCv = this.el('radar') as HTMLCanvasElement; this.radarG = this.radarCv.getContext('2d')!;
     this.speedArc = this.el('spd-arc') as unknown as SVGPathElement; this.rpmArc = this.el('rpm-arc') as unknown as SVGPathElement;
     this.renderApps();
@@ -311,9 +333,11 @@ ${touch ? `<div id="tc">
   // ---------------------------------------------------------------- messages
   say(who: string, text: string, secs = 3.4) { this.subQueue.push({ who, text, secs }); }
   help(html: string | null) { const h = this.el('help'); if (!html) { h.style.display = 'none'; return; } h.innerHTML = html; h.style.display = 'block'; }
-  title(t: string, small?: string, secs = 4, danger = false) { this.el('title-t').textContent = t; this.el('title-s').textContent = small ?? ''; const e = this.el('title'); e.classList.add('on'); e.classList.toggle('danger', danger); this.titleT = secs; }
+  title(t: string, small?: string, secs = 4, danger = false) { this.el('title-t').textContent = t; this.el('title-s').textContent = small ?? ''; const e = this.el('title'); e.classList.add('on'); e.classList.toggle('danger', danger); this.titleT = secs; this.el('hlhud').classList.add('titling'); }
   money(d: number) { const f = this.el('flash'); f.textContent = `${d > 0 ? '+' : '-'}${fmt(Math.abs(d))}`; f.style.color = d > 0 ? 'var(--grn)' : 'var(--red)'; f.style.opacity = '1'; this.flashT = 2.2; }
-  prompt(html: string | null) { const p = this.el('prompt'); if (!html) { p.style.display = 'none'; return; } p.innerHTML = html; p.style.display = 'block'; }
+  prompt(html: string | null) { const p = this.el('prompt'); if (!html) { p.style.display = 'none'; return; } if (this.touch) { const k = /<kbd>([A-Z])<\/kbd>/.exec(html)?.[1]; p.dataset.tap = !k || k === 'E' || k === 'F' ? 'interact' : `key:Key${k}`; html = html.replace(/<kbd>[A-Z]<\/kbd>/, '<kbd>TAP</kbd>'); } if (p.innerHTML !== html) p.innerHTML = html; p.style.display = 'block'; }
+  /** flags on the touch controls (car, duty, onduty) so systems can show the buttons that make sense right now */
+  tcFlag(flag: string, on: boolean) { document.getElementById('tc')?.classList.toggle(flag, on); }
   toast(title: string, body: string, color = 'var(--pur)', icon: keyof typeof I = 'msg', secs = 4.5) {
     const T = this.el('toasts'); const d = document.createElement('div'); d.className = 'toast gl';
     d.innerHTML = `<div class="ti" style="background:${color}">${svg(I[icon])}</div><div><h4>${title}</h4><p>${body}</p></div>`;
@@ -321,13 +345,19 @@ ${touch ? `<div id="tc">
     setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 450); }, secs * 1000);
   }
   /** Incoming call card. Answer with the button, Y / Enter, or gamepad A; decline with N or B. */
+  private callQueue: [string, string, () => void, (() => void) | undefined, number][] = [];
+  /** an incoming call card; a second call while one rings waits its turn (a player's invite must not be lost to Mama Put) */
   call(name: string, line: string, yes: () => void, no?: () => void, ringSecs = 12) {
-    ringSecs = Math.min(ringSecs, 12); this.callUntil = performance.now() + ringSecs * 1000;
+    if (this.callCb) { if (this.callQueue.length < 4) this.callQueue.push([name, line, yes, no, ringSecs]); return; }
+    ringSecs = Math.min(ringSecs, 20); this.callUntil = performance.now() + ringSecs * 1000;
     this.el('call-av').textContent = initials(name); this.el('call-n').textContent = name; this.el('call-l').textContent = line;
     this.el('call').classList.add('on'); this.callCb = { yes, no }; this.callT = ringSecs;
   }
   get ringing() { return !!this.callCb; }
-  answer(yes: boolean) { const c = this.callCb; if (!c) return; this.callCb = null; this.el('call').classList.remove('on'); if (yes) c.yes(); else c.no?.(); }
+  answer(yes: boolean) {
+    const c = this.callCb; if (!c) return; this.callCb = null; this.el('call').classList.remove('on'); if (yes) c.yes(); else c.no?.();
+    const n = this.callQueue.shift(); if (n) setTimeout(() => this.call(...n), 600);
+  }
   event(e: SimEvent) {
     if (e.t === 'announce') this.title(e.title, e.sub, 4.5, e.tone === 'danger');
     if (e.t === 'cash') this.money(e.amount);
@@ -381,6 +411,8 @@ ${touch ? `<div id="tc">
     this.el('appview').style.setProperty('--ac', color.replace(/linear-gradient\(160deg,([^,]+),.*/, '$1')); this.el('av-h').textContent = name;
     this.refreshApp(); this.el('appview').style.display = 'flex';
   }
+  /** open a phone app by name (from a menu in the world, e.g. "Check the books") */
+  openAppByName(name: string) { const i = APPS.findIndex((a) => a[0] === name); if (i < 0) return; this.togglePhone(true); this.sel = i; this.renderApps(); this.openApp(); }
   refreshApp() {
     const name = this.appOpen; if (!name) return; const L = this.el('av-l'); const c = this.ctx; if (!c) return;
     const row = (b: string, s: string, btn?: [string, string, string]) => `<div class="row"><b>${b}</b>${s}${btn ? `<br><button class="btn" data-app="${btn[0]}" data-id="${btn[1]}">${btn[2]}</button>` : ''}</div>`;
@@ -420,6 +452,7 @@ ${touch ? `<div id="tc">
     // weapon card on foot, speedo in a car
     const W = this.el('wcard') as HTMLElement, S = this.el('speedo') as HTMLElement;
     W.style.display = !s.inCar ? 'flex' : 'none'; S.style.display = s.inCar ? 'block' : 'none';
+    if (this.touch) { this.tcFlag('car', !!s.inCar); const tw = document.getElementById('tb-w'); const wl = s.weaponKind === 'gun' ? `${s.weapon} ${s.mag}/${s.ammo}` : (s.weapon || 'Fists'); if (tw && tw.textContent !== wl) tw.textContent = wl; }
     if (!s.inCar) {
       this.el('w-name').textContent = s.weapon || 'Fists';
       this.el('w-ico').innerHTML = svg(s.weaponKind === 'gun' ? I.gun : s.weaponKind === 'melee' ? I.blade : I.fist);
@@ -433,7 +466,7 @@ ${touch ? `<div id="tc">
     this.el('ph-t').textContent = s.time; this.el('ph-big').textContent = s.time; this.el('ph-s').textContent = `${s.weather} · ${s.area}`;
     if (this.subT > 0) { this.subT -= dt; if (this.subT <= 0) this.el('subs').innerHTML = ''; }
     if (this.subT <= 0 && this.subQueue.length) { const n = this.subQueue.shift()!; this.el('subs').innerHTML = `<span class="who">${n.who}</span> ${n.text}`; this.subT = n.secs; }
-    if (this.titleT > 0) { this.titleT -= dt; if (this.titleT <= 0) this.el('title').classList.remove('on'); }
+    if (this.titleT > 0) { this.titleT -= dt; if (this.titleT <= 0) { this.el('title').classList.remove('on'); this.el('hlhud').classList.remove('titling'); } }
     if (this.flashT > 0) { this.flashT -= dt; if (this.flashT <= 0) this.el('flash').style.opacity = '0'; }
     if (this.callCb) { this.callT -= dt; if (this.callT <= 0 || performance.now() > this.callUntil) this.answer(false); }
   }

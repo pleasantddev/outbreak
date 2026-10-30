@@ -10,6 +10,8 @@ import { banState, publicProfile } from '../accounts.ts';
 import type { Economy } from '../economy.ts';
 import type { ContentStore } from '../content.ts';
 import type { OnlineApi } from '../api.ts';
+import { Businesses } from '../business.ts';
+import { Grid as PowerGrid, FEEDERS } from '../grid.ts';
 import { HttpError } from '../auth.ts';
 import { run } from '../db.ts';
 import type { DB } from '../db.ts';
@@ -18,6 +20,7 @@ import {
   Writer, type ClientMsg, type Ent, type PlayerEnt, type ServerMsg, type StateMsg, type VehEnt, type WhoInfo,
 } from '../../../v2/src/net/protocol.ts';
 import { randomInt } from 'node:crypto';
+import { RaceLobbies } from './races.ts';
 import { BjTable, slotSpin, roulettePays, ROULETTE_KEYS, SLOT_BETS, inInteriorZone } from '../../../v2/src/net/rules.ts';
 import { cleanChat } from '../../../v2/src/net/rules.ts';
 import { Grid, cellCoord, keyOf, type GridNode } from './grid.ts';
@@ -60,7 +63,22 @@ export class Hub implements OnlineApi {
   private pingTimer: NodeJS.Timeout | null = null;
   private saveTimer: NodeJS.Timeout | null = null;
 
+  races: RaceLobbies;
+  biz: Businesses; power = new PowerGrid(); private lastSwitch = new Map<string, number>();
+  /** what the admin panel can steer in the game world */
+  get world() { return { grid: this.power, biz: this.biz }; }
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
+    this.biz = new Businesses(db, econ);
+    // light changes reach everybody at once; the shout goes to the feeders that just got light
+    this.power.on('change', (st: ReturnType<PowerGrid['state']>, prev: string) => {
+      this.broadcastJson({ t: 'grid', ...st });
+      if (prev) for (const f of FEEDERS) if (st.on[f.i] === '1' && prev[f.i] === '0') this.log.info(`grid: ${f.name} on`);
+    });
+    this.races = new RaceLobbies({
+      debit: (id, n, kind) => { this.econ.adjust(id, -n, 0, kind); }, credit: (id, n, kind) => { this.econ.adjust(id, n, 0, kind); },
+      broadcast: (l, msg) => { for (const id of l.members.keys()) { const c = this.byAccount.get(id); if (c) this.send(c, { ...msg, startIn: l.startAt ? l.startAt - performance.now() : 0 } as any); } },
+      flag: (id, what, info) => this.econ.flag(id, what, info), now: () => performance.now(),
+    });
     this.wss = new WebSocketServer({ noServer: true, maxPayload: MAX_WS_PAYLOAD, perMessageDeflate: false });
     econ.on('wallet', (w: { accountId: string; cash: number; bank: number; why: string }) => { const c = this.byAccount.get(w.accountId); if (c) this.send(c, { t: 'wallet', cash: w.cash, bank: w.bank, why: w.why }); });
     econ.on('plot', (p: { id: string; ownerId: string | null; ownerName: string | null }) => this.broadcastJson({ t: 'plot', id: p.id, owner: p.ownerId, ownerName: p.ownerName }));
@@ -148,7 +166,7 @@ export class Hub implements OnlineApi {
     const st = this.econ.state(auth.account.id);
     this.send(c, {
       t: 'welcome', id, v: PROTOCOL_VERSION, tickHz: this.cfg.tickHz, serverTime: this.now(), epoch: Date.now(), cell: CELL, wallet: w, plots: this.econ.plotsOf(auth.account.id).map((p) => p.id),
-      online: this.conns.size, profile: publicProfile(profile), role: auth.account.role, motd: this.cfg.motd,
+      online: this.conns.size, profile: publicProfile(profile), role: auth.account.role, motd: this.cfg.motd, grid: this.power.state(),
       state: { ...st.blobs, vehicles: st.vehicles, skills: st.skills, missions: st.missions, pos: last },
     });
     this.log.info(`join ${profile.name} (#${id}) online=${this.conns.size}`);
@@ -158,6 +176,7 @@ export class Hub implements OnlineApi {
 
   private drop(c: Conn) {
     if (c.dead) return; c.dead = true;
+    try { this.races.leave(c.account.id); } catch { /* not racing */ }
     this.conns.delete(c.id); if (this.byAccount.get(c.account.id) === c) this.byAccount.delete(c.account.id);
     this.grid.remove(c);
     if (c.veh) this.removeVehicle(c.veh);
@@ -285,7 +304,8 @@ export class Hub implements OnlineApi {
   private systemChat(text: string, except?: Conn) { for (const c of this.conns.values()) if (c !== except) this.send(c, { t: 'chat', ch: 'system', from: 'Lagos', fromId: 0, text, ts: Date.now() }); }
   private toNear(c: Conn, msg: ServerMsg, radius: number, includeSelf: boolean) {
     const sent = new Set<Conn>();
-    this.grid.near(c.x, c.z, radius, (n) => { if (n.kind === 'p') { const o = n as unknown as Conn; if (o === c && !includeSelf) return; sent.add(o); } });
+    const space = this.spaceOf(c);
+    this.grid.near(c.x, c.z, radius, (n) => { if (n.kind === 'p') { const o = n as unknown as Conn; if ((o === c && !includeSelf) || this.spaceOf(o) !== space) return; sent.add(o); } });
     if (includeSelf) sent.add(c);
     for (const o of sent) this.send(o, msg);
   }
@@ -322,13 +342,51 @@ export class Hub implements OnlineApi {
         case 'state.put': this.econ.putState(id, m.key, m.value); ok(); break;
         case 'door': { // walking into or out of an interior (GTA Online style loaded interiors)
           const now = performance.now(); if (now - c.ms.lastDoor < 1000) throw new HttpError(429, 'Slow down.'); c.ms.lastDoor = now;
-          const into = typeof m.into === 'string' && m.into ? String(m.into).slice(0, 24) : null;
+          let into = typeof m.into === 'string' && m.into ? String(m.into).slice(0, 64) : null;
+          // every account has its own room: "home" is yours, "home:<account>" is somebody else's and needs their invite
+          if (into === 'home') into = `home:${id}`;
+          else if (into?.startsWith('home:') && into !== `home:${id}`) this.checkVisit(c, into.slice(5));
           if (into) { c.ms.doorFrom = { x: c.ms.x, z: c.ms.z }; c.ms.interior = into; c.ms.exitTo = null; }
-          else { if (!c.ms.interior) throw new HttpError(400, 'You are not inside anywhere.'); c.ms.exitTo = c.ms.doorFrom; c.ms.interior = null; }
+          else {
+            if (!c.ms.interior) throw new HttpError(400, 'You are not inside anywhere.');
+            const was = c.ms.interior; c.ms.exitTo = c.ms.doorFrom; c.ms.exitFrom = was; c.ms.interior = null;
+            if (was === `home:${id}`) this.evictGuests(c); // the owner left: guests go out with them, GTA Online style
+          }
           c.ms.tpUntil = now + 3000; ok({ into }); break;
         }
         case 'race.enter': ok({ ...this.econ.raceEnter(id, m.wager, m.rivals) }); break;
+        case 'race.join': ok({ lobby: this.races.join(id, c.profile.name, { x: c.ms.x, z: c.ms.z }, m), ...this.walletOf(c) }); break;
+        case 'race.leave': this.races.leave(id); ok({ ...this.walletOf(c) }); break;
+        case 'race.start': ok({ lobby: this.races.start(id, m.len) }); break;
+        case 'race.finish': ok({ lobby: this.races.finish(id, m.ms, m.len) }); break;
         case 'casino': ok(this.casino(c, m)); break;
+        case 'social.greet': { const o = this.nearConn(c, m.to, 12); this.send(o, { t: 'social', kind: 'greet', from: c.profile.name, fromId: c.id }); ok(); break; }
+        case 'social.invite': ok(this.invite(c, m)); break;
+        case 'social.ticket': { // an agbero asks a driver for the park ticket; the driver decides on their phone
+          const o = this.nearConn(c, m.to, 12); if (!o.veh) throw new HttpError(400, 'They are not driving.');
+          const k = `${id}>${o.account.id}`; const last = this.lastSwitch.get(k) ?? 0; if (Date.now() - last < 60_000) throw new HttpError(429, 'You just asked them.'); this.lastSwitch.set(k, Date.now());
+          this.send(o, { t: 'social', kind: 'ticket', from: c.profile.name, fromId: c.id, amount: 300 }); ok(); break;
+        }
+        case 'grid.get': ok({ board: this.power.board() }); break;
+        case 'grid.switch': { // only from the control room, and not faster than a real hand on a real switch
+          if (c.ms.interior !== 'power') throw new HttpError(400, 'You are not in the control room.');
+          const last = this.lastSwitch.get(id) ?? 0; if (Date.now() - last < 1500) throw new HttpError(429, 'Easy on the switches.'); this.lastSwitch.set(id, Date.now());
+          const f = Math.floor(Number(m.f)); if (!FEEDERS.some((x) => x.i === f)) throw new HttpError(400, 'No such feeder.');
+          ok({ state: this.power.switch(f, !!m.on, c.profile.name, Number(m.inHours) || 0, Number(m.hours) || undefined) }); break;
+        }
+        case 'biz.all': ok({ list: this.biz.all() }); break;
+        case 'biz.mine': ok({ list: this.biz.mine(id) }); break;
+        case 'biz.get': ok({ biz: this.biz.get(String(m.site ?? '')) }); break;
+        case 'biz.buy': {
+          const r = this.biz.buy(id, m.site, m.type, this.at(c)); ok({ ...r.wallet, biz: r.biz });
+          this.broadcastJson({ t: 'biz', site: r.biz.site, type: r.biz.type, ownerName: c.profile.name }); break;
+        }
+        case 'biz.collect': { const r = this.biz.collect(id, m.site, this.at(c)); ok({ ...r.wallet, amount: r.amount, biz: r.biz }); break; }
+        case 'biz.restock': { const r = this.biz.restock(id, m.site, this.at(c)); ok({ ...r.wallet, cost: r.cost, biz: r.biz }); break; }
+        case 'biz.serve': {
+          const r = this.biz.serve(id, m.site, this.at(c)); ok({ ...r.wallet, item: r.item });
+          const oc = this.byAccount.get(r.owner); if (oc) this.send(oc, { t: 'toast', title: 'Customer', body: `${c.profile.name} bought from your shop. ₦${r.item.price.toLocaleString('en-NG')} in the till.` }); break;
+        }
         case 'tp': case 'respawn': {
           const now = performance.now();
           if (now - c.ms.lastTp < 10_000) { this.econ.flag(id, 'tp-spam', { a: m.a }); throw new HttpError(429, 'Too many teleports.'); }
@@ -338,6 +396,40 @@ export class Hub implements OnlineApi {
       }
     } catch (e) { fail(e); }
   }
+  // ------------------------------------------------------------------------------------------ people: greetings and room invites
+  /** account -> who invited them into their room, until when, and the room door (so the guest can find it) */
+  private invites = new Map<string, { owner: string; name: string; until: number }>();
+  /** players see each other only in the same space: the street, one venue, or one person's room */
+  private spaceOf(c: Conn) { return c.ms.interior ?? ''; }
+  private at(c: Conn) { return { x: c.ms.x, z: c.ms.z, interior: c.ms.interior }; }
+  private nearConn(c: Conn, to: unknown, r: number): Conn {
+    const o = this.conns.get(Number(to)); if (!o || o === c || o.dead || !o.haveState) throw new HttpError(404, 'They are not around.');
+    if (this.spaceOf(o) !== this.spaceOf(c) || Math.hypot(o.ms.x - c.ms.x, o.ms.z - c.ms.z) > r) throw new HttpError(400, 'Get closer to them first.');
+    return o;
+  }
+  private invite(c: Conn, m: Record<string, unknown>) {
+    const o = this.nearConn(c, m.to, 15); const id = c.account.id;
+    if (c.ms.interior && c.ms.interior !== `home:${id}`) throw new HttpError(400, 'Invite them from the street or your room.');
+    const d = m.door as { x?: unknown; z?: unknown; yaw?: unknown } | undefined;
+    const door = d && [d.x, d.z, d.yaw].every((v) => typeof v === 'number' && Number.isFinite(v)) ? { x: d.x as number, z: d.z as number, yaw: d.yaw as number } : null;
+    if (!door) throw new HttpError(400, 'You have no room to invite them to.');
+    this.invites.set(o.account.id, { owner: id, name: c.profile.name, until: Date.now() + 15 * 60_000 });
+    this.send(o, { t: 'social', kind: 'invite', from: c.profile.name, fromId: c.id, owner: id, door });
+    return { to: o.profile.name };
+  }
+  /** a guest may walk into someone's room only with a live invite, while the owner is home, from near the owner's door */
+  private checkVisit(c: Conn, owner: string) {
+    const inv = this.invites.get(c.account.id);
+    if (!inv || inv.owner !== owner || inv.until < Date.now()) throw new HttpError(403, 'You were not invited.');
+    const oc = this.byAccount.get(owner);
+    if (!oc || oc.ms.interior !== `home:${owner}`) throw new HttpError(400, `${inv.name} is not home right now.`);
+    const at = oc.ms.doorFrom; if (!at || Math.hypot(c.ms.x - at.x, c.ms.z - at.z) > 30) throw new HttpError(400, 'Go to their door first.');
+  }
+  private evictGuests(owner: Conn) {
+    const room = `home:${owner.account.id}`;
+    for (const o of this.conns.values()) if (o !== owner && o.ms.interior === room) this.send(o, { t: 'social', kind: 'evict', from: owner.profile.name, fromId: owner.id });
+  }
+
   // ------------------------------------------------------------------------------------------ casino: all randomness and money on the server
   private bj = new Map<string, BjTable>();
   private casino(c: Conn, m: Record<string, unknown>) {
@@ -375,6 +467,7 @@ export class Hub implements OnlineApi {
   // ------------------------------------------------------------------------------------------ snapshots
   private tick() {
     this.tickN++; this.stats0.ticks++;
+    if (this.tickN % this.cfg.tickHz === 0) { this.races.tick(); this.power.tick(); }
     const R = this.cfg.interestRings; const now = performance.now();
     // parked cars time out
     if (this.tickN % (this.cfg.tickHz * 10) === 0) { const t = Date.now(); for (const v of [...this.vehicles.values()]) if (v.parkedAt && t - v.parkedAt > PARKED_TTL) this.removeVehicle(v); }
@@ -385,10 +478,11 @@ export class Hub implements OnlineApi {
       if (c.ws.bufferedAmount > 512 * 1024) { c.skippedSnaps++; this.stats0.dropsBackpressure++; continue; } // slow link: skip, the next delta still applies
       const w = this.writer; const countAt = beginSnapshot(w, { time: nowMs, ack: c.lastSeq });
       const visible = new Set<number>(); let count = 0; const newcomers: Conn[] = [];
-      const tier = (this.tickN + c.id) | 0;
+      const tier = (this.tickN + c.id) | 0; const space = this.spaceOf(c);
       this.grid.around(c.cx, c.cz, R, (n, ring) => {
         if (n === c || n === (c.veh as Node | null) || (n.kind === 'v' && (n as VNode).owner === c)) return;
-        if (n.kind === 'p') { const o = n as unknown as Conn; if (!o.haveState) return; }
+        if (n.kind === 'p') { const o = n as unknown as Conn; if (!o.haveState || this.spaceOf(o) !== space) return; }
+        else if (space) return; // cars live on the street
         visible.add(n.id);
         const base = c.known.get(n.id) ?? null;
         if (base && ring > NEAR_RINGS_FULL_RATE) { const every = ring === 2 ? 3 : 6; if (tier % every !== 0) return; }
@@ -403,7 +497,8 @@ export class Hub implements OnlineApi {
       for (const id of c.known.keys()) {
         if (visible.has(id)) continue;
         const node = id & VEH_BIT ? this.vehicles.get(id) : this.conns.get(id);
-        if (node && Math.max(Math.abs(node.cx - c.cx), Math.abs(node.cz - c.cz)) <= R + 1 && (node.kind !== 'p' || (node as unknown as Conn).haveState)) continue;
+        const same = node && (node.kind === 'p' ? (node as unknown as Conn).haveState && this.spaceOf(node as unknown as Conn) === space : !space);
+        if (node && same && Math.max(Math.abs(node.cx - c.cx), Math.abs(node.cz - c.cz)) <= R + 1) continue;
         removed.push(id);
       }
       for (const id of removed) { c.known.delete(id); c.knownWho.delete(id); }

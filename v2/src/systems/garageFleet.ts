@@ -19,7 +19,10 @@ export interface OwnedCar {
   reg: null | { nin: string; at: number; lga: string; docs: 'receipt' | 'papers' };
   receipt: boolean; papers: boolean; status: CarStatus;
   x: number; z: number; yaw: number; usedAt: number; boughtAt: number; stolen?: StolenRec;
+  /** condition 0..100 of each part, and km driven (systems/wear.ts) */
+  wear?: CarWear;
 }
+export interface CarWear { engine: number; oil: number; tyres: number; brakes: number; body: number; km: number }
 export interface FleetState { cars: OwnedCar[]; seq: number; plates: string[]; designs: { id: string; name: string; model: string; doc: string; at: number }[]; fines: number }
 
 export const OWNABLE: VehicleKind[] = ['sedan', 'hatch', 'jeep', 'suv', 'danfo'];

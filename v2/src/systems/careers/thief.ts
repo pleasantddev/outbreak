@@ -6,6 +6,7 @@ import type { Actor, Command } from '../../sim/types';
 import { RT } from '../societyRuntime';
 import { sfx } from '../leisure/sfx';
 import { earn } from '../money';
+import { career } from './ranks';
 
 const css = `
 #pp{position:fixed;left:50%;top:58%;transform:translate(-50%,-50%);z-index:9;display:none;width:260px;text-align:center;font-family:Inter,sans-serif;color:#fff}
@@ -58,7 +59,7 @@ class Thief {
   private success(a: Actor) {
     const c = this.ctx; this.close(a); const cit = (a as any).cid !== undefined ? RT.soc?.get((a as any).cid) : undefined;
     const rich = cit ? 0.5 + Math.max(0, Math.min(1, cit.hrich)) * 2.5 : 1; const amt = Math.round((400 + Math.random() * 3500) * rich / 50) * 50;
-    earn(c, amt, 'street'); sfx('cash');
+    earn(c, amt, 'street'); career.add('street'); sfx('cash');
     (c.systems.get('skills') as any)?.addXp?.('stealth', 14); c.hud.toast('Lifted', `₦${amt.toLocaleString()} from ${a.name}. Walk, don't run.`, 'linear-gradient(160deg,#334155,#0f172a)', 'cash', 3.5);
     if (cit && RT.nem) setTimeout(() => RT.nem!.remember(cit, 'robbed', a.pos, 'wallet vanished', 0.2), 20000);
   }

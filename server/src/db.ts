@@ -147,6 +147,18 @@ const MIGRATIONS: string[] = [
   CREATE INDEX vreg_owner ON vehicle_registry(owner_id);
   CREATE TABLE kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
   `,
+  // v3: small businesses on shop fronts (rules in v2/src/net/rules.ts, run by src/business.ts)
+  `
+  CREATE TABLE businesses (
+    site TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES accounts(id),
+    type TEXT NOT NULL,
+    stock REAL NOT NULL, till REAL NOT NULL, debt REAL NOT NULL DEFAULT 0,
+    hour INTEGER NOT NULL, bought_at INTEGER NOT NULL,
+    log TEXT NOT NULL DEFAULT '[]'
+  );
+  CREATE INDEX biz_owner ON businesses(owner_id);
+  `,
 ];
 
 export function openDb(file: string): DB {

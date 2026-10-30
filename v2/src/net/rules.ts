@@ -101,3 +101,113 @@ export class BjTable {
   private finish(net: number, msg: string) { this.net = net; this.msg = msg; this.phase = 'done'; return this; }
   view() { return { ph: this.ph, dh: this.phase === 'play' ? [this.dh[0]] : this.dh, phase: this.phase, net: this.net, msg: this.msg, bet: this.bet }; }
 }
+
+// ------------------------------------------------------------------------------------------ the one world clock
+/** Server and every client read the same clock: game hours since the epoch at 30x (a 48 minute day). Hour of day is
+ *  this % 24 and the day number is floor(this / 24). */
+export const WORLD_SPEED = 30, WORLD_START_HOUR = 7.2;
+export const worldHours = (ms: number) => WORLD_START_HOUR + ((ms / 1000) * WORLD_SPEED) / 3600;
+
+// ------------------------------------------------------------------------------------------ businesses
+/** Lagos Life style small businesses on real shop fronts: you buy the shop, keep it stocked, staff and light are paid
+ *  at 6pm every game day out of the till, and you walk over to collect the till (GTA nightclub safe style). Other
+ *  players can buy from your shop and that money lands in your till. All of it runs on the server. */
+export interface BizType {
+  id: string; name: string; sign: string; price: number;
+  /** money a full day of trade brings at full stock on an average site */
+  gross: number; upkeep: number; restock: number; till: number; open: [number, number];
+  /** what a customer can buy there (price goes into the owner's till) */
+  sells: { label: string; price: number; gain: Record<string, number>; mins: number }; blurb: string;
+}
+export const BIZ_TYPES: BizType[] = [
+  { id: 'kiosk', name: 'Provision kiosk', sign: 'PROVISION STORE', price: 250_000, gross: 12_000, upkeep: 2_000, restock: 5_000, till: 45_000, open: [7, 22], sells: { label: 'Biscuit and a cold Malta', price: 700, gain: { hunger: 18, fun: 6 }, mins: 2 }, blurb: 'Sweets, Indomie, Malta, recharge card. Small but steady.' },
+  { id: 'pos', name: 'POS stand', sign: 'POS · CASH OUT', price: 400_000, gross: 18_000, upkeep: 3_000, restock: 7_000, till: 70_000, open: [8, 21], sells: { label: 'Cash out (bank to hand, ₦300 charge)', price: 300, gain: {}, mins: 1 }, blurb: 'Everybody needs cash in hand. Area boys know that too.' },
+  { id: 'salon', name: 'Barbing salon', sign: 'BARBING SALON', price: 900_000, gross: 34_000, upkeep: 8_000, restock: 8_000, till: 130_000, open: [9, 21], sells: { label: 'Low cut with sharp line-up', price: 2_500, gain: { hygiene: 25, fun: 10, social: 15 }, mins: 6 }, blurb: 'Clippers, gist and generator noise. Busy on Saturdays.' },
+  { id: 'buka', name: 'Buka', sign: 'BUKA · FOOD IS READY', price: 1_500_000, gross: 56_000, upkeep: 13_000, restock: 20_000, till: 210_000, open: [7, 20], sells: { label: 'Amala, ewedu and two meat', price: 2_200, gain: { hunger: 60, comfort: 10 }, mins: 6 }, blurb: 'Amala, rice, swallow. Feed the street and the street pays.' },
+  { id: 'carwash', name: 'Car wash', sign: 'CAR WASH', price: 2_500_000, gross: 90_000, upkeep: 20_000, restock: 12_000, till: 340_000, open: [8, 19], sells: { label: 'Wash and vacuum', price: 3_000, gain: { comfort: 15, fun: 5 }, mins: 5 }, blurb: 'Hose, foam, boys with rags. Big money, big wages.' },
+];
+export const BIZ_MAX = 4, BIZ_STOCK_DAY = 40, BIZ_REACH = 25;
+export const bizType = (id: string) => BIZ_TYPES.find((t) => t.id === id);
+/** site ids carry their own street position (whole metres), so the server can check you are standing there */
+export const siteId = (x: number, z: number) => `s:${Math.round(x)}:${Math.round(z)}`;
+export function sitePos(id: string): { x: number; z: number } | null { const m = /^s:(-?\d{1,6}):(-?\d{1,6})$/.exec(id); return m ? { x: +m[1], z: +m[2] } : null; }
+/** foot traffic of a site, 0.85 to 1.25, the same for everyone */
+export function siteTraffic(id: string) { let h = 2166136261; for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); } return 0.85 + ((h >>> 0) % 41) / 100; }
+export interface BizState { stock: number; till: number; debt: number; hour: number; log: { d: number; t: string; n: number }[] }
+/** Run a business forward hour by hour from b.hour to `to` (game hours): trade while open and stocked, and at 18:00
+ *  pay staff and light from the till (what the till cannot cover becomes debt), then the day's street luck. */
+export function bizStep(b: BizState, t: BizType, site: string, to: number, rand: () => number) {
+  const from = Math.max(b.hour, to - 24 * 14); const hrs = t.open[1] - t.open[0]; const traffic = siteTraffic(site);
+  for (let h = Math.floor(from) + 1; h <= Math.floor(to); h++) {
+    const hod = ((h % 24) + 24) % 24, day = Math.floor(h / 24);
+    const shut = b.debt >= t.upkeep * 3; // staff do not work three days unpaid
+    if (!shut && hod >= t.open[0] && hod < t.open[1] && b.stock > 0) {
+      const rush = hod >= 12 && hod < 14 ? 1.3 : hod >= 17 && hod < 19 ? 1.25 : 0.88;
+      b.till = Math.min(t.till, b.till + (t.gross / hrs) * traffic * rush); b.stock = Math.max(0, b.stock - BIZ_STOCK_DAY / hrs);
+    }
+    if (hod === 18) {
+      const pay = t.upkeep; const p = Math.min(pay, b.till); b.till -= p; b.debt += pay - p;
+      if (b.debt > 0 && b.till > 0) { const q = Math.min(b.debt, b.till); b.debt -= q; b.till -= q; }
+      const r = rand(); const strike = b.debt >= t.upkeep * 3;
+      if (r < 0.12) { const n = Math.min(b.till, Math.round(t.gross * 0.08)); b.till -= n; b.log.push({ d: day, t: 'Area boys came for their settlement.', n: -n }); }
+      else if (r < 0.18) { const n = Math.min(b.till, 2_000); b.till -= n; b.log.push({ d: day, t: 'Council men collected signboard levy.', n: -n }); }
+      else if (r < 0.3 && !strike && b.stock > 0) { const n = Math.round(t.gross * 0.15); b.till = Math.min(t.till, b.till + n); b.log.push({ d: day, t: 'A big customer bought plenty.', n }); }
+      else b.log.push({ d: day, t: strike ? 'Staff did not come. They want their money.' : b.stock <= 0 ? 'Nothing to sell today. Restock.' : 'Staff and light paid.', n: -p });
+      if (b.log.length > 8) b.log.splice(0, b.log.length - 8);
+    }
+  }
+  b.hour = Math.max(b.hour, Math.floor(to)); b.till = Math.round(b.till); b.debt = Math.round(b.debt);
+  return b;
+}
+
+// ------------------------------------------------------------------------------------------ the power grid
+/** Lagos on 4 km feeders. Server and clients agree on which feeder a point is in; src/data/feeders.json (built by
+ *  tools/feeders.ts from the map) names them and gives each its load (buildings) and tariff band. */
+export const GRID = {
+  x0: -22000, z0: -20000, cell: 4000, w: 9, h: 8,
+  of(x: number, z: number) { const i = Math.max(0, Math.min(8, Math.floor((x + 22000) / 4000))), j = Math.max(0, Math.min(7, Math.floor((z + 20000) / 4000))); return i + j * 9; },
+  center(f: number) { return { x: -22000 + (f % 9) * 4000 + 2000, z: -20000 + Math.floor(f / 9) * 4000 + 2000 }; },
+};
+export type Band = 'A' | 'B' | 'C';
+/** hours of light per day each band gets on the default load-shedding plan */
+export const BAND_HOURS: Record<Band, number> = { A: 20, B: 15, C: 10 };
+const gh = (a: number, b: number) => { let h = Math.imul(a + 0x9e37, 2654435761) ^ Math.imul(b + 0x85eb, 2246822519); h ^= h >>> 15; h = Math.imul(h, 2654435761); return (h ^ (h >>> 13)) >>> 0; };
+/** the default plan: two blackout blocks a day per feeder, placed by a hash of the feeder and the day */
+export function scheduledOn(f: number, band: Band, hours: number) {
+  const day = Math.floor(hours / 24), hod = ((hours % 24) + 24) % 24; const off = 24 - BAND_HOURS[band];
+  const h = gh(f, day); const a = Math.ceil(off / 2), b = off - a; const s1 = h % 24, s2 = (s1 + 10 + ((h >>> 8) % 5)) % 24;
+  const inB = (s: number, len: number) => len > 0 && ((hod - s + 24) % 24) < len;
+  return !(inB(s1, a) || inB(s2, b));
+}
+/** how much the grid can carry right now (in the same units as feeder load), before operators and events */
+export function generation(hours: number, totalLoad: number) {
+  const day = Math.floor(hours / 24); const h = gh(day, 77);
+  const gas = 0.55 + ((h % 1000) / 1000) * 0.35; // gas supply varies by day: 55% to 90% of demand
+  return Math.round(totalLoad * gas);
+}
+/** the grid as the server sends it: one character per feeder ("1" light, "0" none), generation, and a collapse flag */
+export interface GridState { on: string; gen: number; load: number; collapse: boolean; by?: Record<number, string> }
+export const GRID_OVERRIDE_HOURS = 3;
+export interface FeederDef { i: number; name: string; load: number; band: Band }
+const h32 = (a: number, b: number) => { let h = Math.imul(a ^ 0x5bd1e995, 2654435761) ^ Math.imul(b + 17, 2246822519); h ^= h >>> 15; return h >>> 0; };
+/** the national grid falls over now and then (about one game day in twelve), for one to three game hours */
+export function gridCollapsed(h: number) {
+  const day = Math.floor(h / 24); const r = h32(day, 99); if (r % 12 !== 0) return false;
+  const start = (r >>> 8) % 24, len = 1 + ((r >>> 16) % 3); const hod = h % 24; return hod >= start && hod < start + len;
+}
+/** Which feeders have light at game hour h: forced (admin) beats operator switches beats the plan, then feeders are
+ *  shed (plan before operators, band C before B before A) until the load fits what the grid can carry. */
+export function gridState(feeders: FeederDef[], h: number, o: { forced?: Map<number, { on: boolean }>; override?: Map<number, { on: boolean; by: string; from?: number }>; collapseUntil?: number; genScale?: number } = {}): GridState {
+  const on = new Array(GRID.w * GRID.h).fill('0'); const by: Record<number, string> = {};
+  if (h < (o.collapseUntil ?? 0) || gridCollapsed(h)) return { on: on.join(''), gen: 0, load: 0, collapse: true };
+  const total = feeders.reduce((s, f) => s + f.load, 0); const gen = Math.round(generation(h, total) * (o.genScale ?? 1));
+  const want = feeders.map((f) => {
+    const fo = o.forced?.get(f.i), op0 = o.override?.get(f.i); const op = op0 && h >= (op0.from ?? -Infinity) ? op0 : undefined;
+    if (op && !fo) by[f.i] = op.by;
+    return { f, v: fo ? fo.on : op ? op.on : scheduledOn(f.i, f.band, h), pri: fo ? 0 : op ? 1 : f.band === 'A' ? 2 : f.band === 'B' ? 3 : 4, r: h32(f.i, Math.floor(h / 24)) };
+  });
+  let load = want.filter((w) => w.v).reduce((s, w) => s + w.f.load, 0);
+  for (const w of want.filter((x) => x.v && x.pri > 0).sort((a, b) => b.pri - a.pri || a.r - b.r)) { if (load <= gen) break; w.v = false; load -= w.f.load; }
+  for (const w of want) if (w.v) on[w.f.i] = '1';
+  return { on: on.join(''), gen, load, collapse: false, by };
+}
