@@ -8,11 +8,21 @@ import { propShared, setPropNight } from '../world/props';
 import { LEVELS, type Level } from './quality';
 import { setSignNight } from '../world/signs';
 
+/** Sky colours by sun elevation in degrees: [elevation, zenith rgb, horizon rgb]. Lagos light is warm and hazy: the horizon never goes cold grey, and night keeps an orange city glow low in the sky. */
+const SKY_KEYS: [number, [number, number, number], [number, number, number]][] = [
+  [-20, [0.005, 0.008, 0.026], [0.050, 0.044, 0.070]],
+  [-10, [0.016, 0.034, 0.115], [0.110, 0.120, 0.270]],
+  [-4,  [0.060, 0.100, 0.300], [0.780, 0.340, 0.300]],
+  [1.5, [0.150, 0.250, 0.520], [1.000, 0.560, 0.270]],
+  [9,   [0.160, 0.320, 0.660], [0.960, 0.770, 0.560]],
+  [26,  [0.110, 0.300, 0.690], [0.720, 0.800, 0.900]],
+  [75,  [0.095, 0.280, 0.690], [0.640, 0.770, 0.920]],
+];
 export type WeatherName = 'clear' | 'hot' | 'harmattan' | 'fog' | 'rain' | 'storm';
 interface W { label: string; cover: number; dens: number; haze: number; fog: number; tint: [number, number, number]; sun: number; rain: number; wetRate: number; dry: number; dust: number; low: number }
 export const WEATHER: Record<WeatherName, W> = {
-  clear:     { label: 'Clear',          cover: 0.32, dens: 0.9, haze: 0.15, fog: 0.00045, tint: [0.62, 0.74, 0.9],  sun: 1.0,  rain: 0,   wetRate: 0,    dry: 0.012, dust: 0,    low: 0 },
-  hot:       { label: 'Hot and hazy',   cover: 0.18, dens: 0.6, haze: 0.45, fog: 0.0009,  tint: [0.8, 0.8, 0.76],   sun: 1.12, rain: 0,   wetRate: 0,    dry: 0.03,  dust: 0.15, low: 0 },
+  clear:     { label: 'Clear',          cover: 0.32, dens: 0.9, haze: 0.15, fog: 0.0008, tint: [0.62, 0.74, 0.9],  sun: 1.0,  rain: 0,   wetRate: 0,    dry: 0.012, dust: 0,    low: 0 },
+  hot:       { label: 'Hot and hazy',   cover: 0.18, dens: 0.6, haze: 0.45, fog: 0.0013,  tint: [0.8, 0.8, 0.76],   sun: 1.12, rain: 0,   wetRate: 0,    dry: 0.03,  dust: 0.15, low: 0 },
   harmattan: { label: 'Harmattan haze', cover: 0.06, dens: 0.4, haze: 1.0,  fog: 0.0042,  tint: [0.84, 0.68, 0.5],  sun: 0.62, rain: 0,   wetRate: 0,    dry: 0.05,  dust: 1,    low: 0 },
   fog:       { label: 'Morning fog',    cover: 0.55, dens: 0.7, haze: 0.8,  fog: 0.011,   tint: [0.76, 0.78, 0.8],  sun: 0.4,  rain: 0,   wetRate: 0.004,dry: 0.0,   dust: 0,    low: 1 },
   rain:      { label: 'Rain',           cover: 0.86, dens: 1.6, haze: 0.5,  fog: 0.0028,  tint: [0.5, 0.55, 0.62],  sun: 0.25, rain: 1,   wetRate: 0.03, dry: 0,     dust: 0,    low: 0.3 },
@@ -241,11 +251,13 @@ export class Atmosphere {
     const day = THREE.MathUtils.smoothstep(elev, -5, 12);
     const night = 1 - THREE.MathUtils.smoothstep(elev, -10, 3);
     const golden = THREE.MathUtils.smoothstep(elev, -4, 4) * (1 - THREE.MathUtils.smoothstep(elev, 6, 22));
-    // sky palette
+    // sky palette: zenith and horizon colour as a function of the sun's elevation (blue hour, afterglow, golden hour, warm afternoon, day)
     const U = this.domeMat.uniforms;
     const K = this.k;
-    const zen = K.zen.setRGB(0.12, 0.3, 0.68).lerp(K.a.setRGB(0.18, 0.22, 0.38), golden * 0.6).lerp(K.b.setRGB(0.006, 0.01, 0.03), night);
-    const hor = K.hor.setRGB(0.62, 0.74, 0.88).lerp(K.a.setRGB(1.0, 0.56, 0.3), golden).lerp(K.b.setRGB(0.02, 0.03, 0.06), night);
+    let k1 = 0; while (k1 < SKY_KEYS.length - 2 && elev > SKY_KEYS[k1 + 1][0]) k1++;
+    const ka = SKY_KEYS[k1], kb = SKY_KEYS[k1 + 1]; const kt = THREE.MathUtils.clamp((elev - ka[0]) / (kb[0] - ka[0]), 0, 1); const ks = kt * kt * (3 - 2 * kt);
+    const zen = K.zen.setRGB(ka[1][0], ka[1][1], ka[1][2]).lerp(K.a.setRGB(kb[1][0], kb[1][1], kb[1][2]), ks);
+    const hor = K.hor.setRGB(ka[2][0], ka[2][1], ka[2][2]).lerp(K.a.setRGB(kb[2][0], kb[2][1], kb[2][2]), ks);
     const tint = K.tint.setRGB(W.tint[0], W.tint[1], W.tint[2]);
     const grey = (c: THREE.Color, a: number) => { const l = c.r * 0.3 + c.g * 0.59 + c.b * 0.11; return c.lerp(K.c.setRGB(l, l, l).multiply(tint).multiplyScalar(1.25), a); };
     grey(zen, W.cover * 0.75 + W.haze * 0.4); grey(hor, W.cover * 0.5 + W.haze * 0.55);

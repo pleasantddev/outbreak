@@ -17,7 +17,7 @@ GO = """async (s) => { const hl = window.__hl, v = hl.view, a = v.atmo, me = hl.
   hl.view.gov && 0;
   let stable = 0, last = -1;
   for (let i = 0; i < 900 && stable < 8; i++) { v.world.update(s.x, s.z, true); await sleep(40); const n = v.world.tiles.size; if (!v.world.job && n === last) stable++; else stable = 0; last = n; }
-  if (s.walk) { const net = hl.sim.net, RN = net.constructor; let bd = 1e9, bw = null; for (const id of net.nearWalks(s.x, s.z, 200)) { const w = net.walks[id]; const pr = RN.project(w.pts, s.x, s.z); if (pr.d < bd) { bd = pr.d; bw = RN.at(w.pts, Math.max(0, pr.s + (s.ahead ?? 0))); } }
+  if (s.walk) { const net = hl.sim.net, RN = net.constructor; let bd = 1e9, bw = null; const ids = net.nearWalks(s.x, s.z, s.cr ?? 200).sort((a, b) => a - b); const pickIds = s.cand !== undefined ? [ids[(s.cand * 7 + 3) % ids.length]] : ids; for (const id of pickIds) { const w = net.walks[id]; const pr = s.cand !== undefined ? { s: w.len * ((s.cand * 0.37) % 1), d: 0 } : RN.project(w.pts, s.x, s.z); if (pr.d < bd) { bd = pr.d; bw = RN.at(w.pts, Math.max(0, pr.s + (s.ahead ?? 0))); } }
     if (bw) { s.yaw = bw.yaw + (s.turn ?? 0); s.ox = -Math.sin(s.yaw) * 4 + (bw.x - s.x); s.oz = -Math.cos(s.yaw) * 4 + (bw.z - s.z); s.h = 2.5; s.pitch = 9; s.found = [Math.round(bw.x), Math.round(bw.z), +s.yaw.toFixed(2)]; } }
   const dy = Math.tan((s.pitch ?? 8) * Math.PI / 180), yaw = s.yaw ?? 0;
   const eye = { x: s.x + (s.ox ?? 0), y: s.h ?? 1.7, z: s.z + (s.oz ?? 0) };
