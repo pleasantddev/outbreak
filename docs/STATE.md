@@ -8,7 +8,11 @@
   prune dist: devm, assets/tex, assets/chars, assets/anim/*.glb, tex/g0_arm_*; publish in <=58 MB batches with
   `files` + `root`, only changed files; null out removed ones).
 - Server: /home/claude/hl/server (net branch, merged). Admin app: /home/claude/hl/admin (merged).
-- Systems registry: v2/src/systems/index.ts (net, skills, society, nemesis, garage, identity, missions).
+- Systems registry: v2/src/systems/index.ts (net, skills, society, nemesis, garage, identity, missions, life, vendors,
+  decor, house, power, business, bills, leisure, ranks, agbero, transport, racing, tech, mechanic, wear, bank, powerjob, boys).
+- Stable test build: `npx vite build --outDir /tmp/hlbuild` + `npx vite preview --outDir /tmp/hlbuild --port 5211` (the dev
+  server reloads on every edit and breaks long browser tests). Online tests: scratchpad online/online.py; offline feature
+  tests: scratchpad feat/run.py with ?auto=1&server=off.
 - Old worktrees under /home/claude/wt/* are merged; the six agents of 22 Oct are retired (do not resume them).
 - Heartbeat: keep one send_later scheduled (240 min) with the message "Heartbeat (autonomous mode) ...".
 
@@ -20,3 +24,9 @@
 - 30 Oct 10:00 UTC: published Version 7 to the artifact (GTA play style, life depth, online rules, venues, careers,
   ranks, bills, merged look pass a14aaa1). Local test server: `cd server && PORT=8787 DATA_DIR=/tmp/hlsrv npx tsx src/main.ts`;
   two-player browser test: scratchpad online/online.py (signs up accounts over HTTP, injects the token).
+- 30 Oct afternoon: founder brief 2 (16:14): agbero career, wear and tear (cars, houses: pipes, water, gen), a power
+  company players work at that moves light around the map, windows lit only with power, rearrangeable decoratable rooms
+  with interior designers, admin control of it all; pilots and airports later. Built: power grid (server-run feeders,
+  control room job, admin board), wear (cars + house + gen + artisans), agbero, decor + designers, admin World page,
+  businesses, social layer (meet, send money, invites, visits), mobile touch layout. Server tests 74/74.
+  Teammate (hl-look): windows and street lamps follow the grid (powerShared.uGrid) with per-building gens.
