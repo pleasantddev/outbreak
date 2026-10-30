@@ -1,6 +1,7 @@
 // Lagos buildings from OSM footprints: raised plinth, painted plaster or bare block, windows with frames,
 // burglar bars and louvres, shopfronts with roller shutters, parapet roofs, long-span aluminium hip roofs,
 // unfinished shells with starter bars. One merged mesh per tile, PBR from the wall texture array.
+import { lampShared, LAMP_GLSL } from './lamps';
 import * as THREE from 'three';
 import { BK, type Building } from './region';
 import { Geo, hash, polyArea, obb, slice } from './geo';
@@ -141,7 +142,7 @@ export function* buildBuildingsG(list: Building[], ox: number, oz: number): Gene
 
 export function makeBuildingMaterial(tex: TexSet) {
   const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0 });
-  const uniforms = { uWD: { value: tex.diff }, uWN: { value: tex.nor }, uWA: { value: tex.arm }, ...buildingShared };
+  const uniforms = { uWD: { value: tex.diff }, uWN: { value: tex.nor }, uWA: { value: tex.arm }, ...buildingShared, ...lampShared };
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
@@ -157,6 +158,7 @@ float bn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return m
 vec3 signCol(float r){ vec3 c = vec3(0.78, 0.12, 0.1); c = mix(c, vec3(0.1, 0.34, 0.62), step(0.17, r)); c = mix(c, vec3(0.95, 0.78, 0.15), step(0.34, r)); c = mix(c, vec3(0.1, 0.5, 0.28), step(0.5, r)); c = mix(c, vec3(0.93, 0.93, 0.9), step(0.64, r)); c = mix(c, vec3(0.9, 0.42, 0.12), step(0.78, r)); c = mix(c, vec3(0.45, 0.12, 0.38), step(0.9, r)); return c; }
 float pat(float x, float duty){ float f = fract(x); float w = max(fwidth(x), 1e-4); float m = smoothstep(duty - w, duty + w, f); return mix(m, 1.0 - duty, smoothstep(0.3, 0.8, w)); }
 float wav(float x){ return sin(x) * (1.0 - smoothstep(0.8, 2.4, fwidth(x))); }
+${LAMP_GLSL}
 vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`)
       .replace('#include <map_fragment>', `
 {
@@ -239,6 +241,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
       float aw = awn * (1.0 - pil) * step(2.1, ff) * step(ff, 2.6);
       vec3 ac1 = mix(vec3(0.78, 0.14, 0.1), vec3(0.14, 0.4, 0.62), step(0.5, bh(vec2(ci, seed + 12.0)))); ac1 = mix(ac1, vec3(0.16, 0.5, 0.3), step(0.8, bh(vec2(ci, seed + 13.0))));
       BC = mix(BC, mix(ac1, vec3(0.93, 0.92, 0.88), pat(u * 2.6, 0.5)) * (0.78 + 0.22 * (ff - 2.1) * 2.0), aw);
+      BE += aw * open * uNight * 0.2 + (1.0 - pil) * step(1.7, ff) * step(ff, 2.1) * awn * open * uNight * 0.5;
       // painted signboard: flat colour, border line, blocky letters
       float sr = bh(vec2(ci, seed + 7.0));
       vec3 sc = signCol(sr);
@@ -283,7 +286,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
           BC = mix(glass, frc, fm); BR = mix(0.3, 0.55, fm); BM = 0.0; BGL = 1.0 - fm;
           BN = vec3(0.0, 0.0, 1.0);
           float lit = step(0.55, bh(vec2(ci + seed, fi * 7.0))) * uNight;
-          BE += lit * (1.0 - fm) * (1.0 - dark * 0.9) * (curt > 0.5 ? 1.3 : 1.0); BEC = mix(vec3(1.0, 0.72, 0.4), vec3(0.7, 0.85, 1.0), step(0.78, rnd * 0.0 + bh(vec2(ci, fi + seed + 9.0))));
+          BE += lit * (1.0 - fm) * (1.0 - dark * 0.9) * (curt > 0.5 ? 1.5 : 1.15); BEC = mix(vec3(1.0, 0.72, 0.4), vec3(0.7, 0.85, 1.0), step(0.78, rnd * 0.0 + bh(vec2(ci, fi + seed + 9.0))));
           // burglar bars on the low floors: upright bars, two rails, white or black paint
           float barOn = step(rs2, 0.65) * (1.0 - step(1.5, fi)) * (1.0 - step(0.5, bal));
           float bars = max(pat(fx * 8.0, 0.8), max(step(abs(fyy - 0.5), 0.022), step(abs(fyy - 0.18), 0.018))) * barOn;
@@ -337,7 +340,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
         normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
       }`)
       .replace('#include <aomap_fragment>', '#include <aomap_fragment>\nreflectedLight.indirectDiffuse *= BAO;')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += BEC * BE;');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += BEC * BE + lampLight(vWP, normalize(vWN)) * BC;');
   };
   m.customProgramCacheKey = () => 'hl-building';
   return m;

@@ -13,11 +13,11 @@ vec3 lampLight(vec3 P, vec3 N){
   for (int i = 0; i < ${MAX_LAMPS}; i++) {
     vec4 L = uLamps[i]; if (L.w <= 0.001) break;
     vec3 d = vec3(L.x, 8.4, L.z) - P; float r2 = dot(d, d);
-    float fall = smoothstep(30.0 * 30.0, 6.0 * 6.0, r2);
+    float fall = smoothstep(26.0 * 26.0, 5.0 * 5.0, r2);
     float ndl = max(dot(N, d * inversesqrt(r2)), 0.0);
     // a sodium lamp throws a cone down and out: weaker towards the horizon
     float cone = smoothstep(0.1, 0.6, normalize(d).y);
-    acc += vec3(1.0, 0.64, 0.32) * (L.w * fall * ndl * (0.35 + 0.65 * cone) / (1.0 + r2 * 0.03));
+    acc += vec3(1.0, 0.64, 0.32) * (L.w * fall * ndl * (0.3 + 0.7 * cone) / (1.0 + r2 * 0.02));
   }
   return acc;
 }`;
