@@ -17,3 +17,6 @@
   car during the drive step, check society/nemesis ambush tuning). Next: roadmap A (life sim core).
 - 30 Oct: founder correction applied (see ROADMAP "Course correction"): GTA camera/controls, walk-in loaded
   interiors, shared clock, real-time needs, server-authoritative casino/earnings/doors. Server tests 63/63.
+- 30 Oct 10:00 UTC: published Version 7 to the artifact (GTA play style, life depth, online rules, venues, careers,
+  ranks, bills, merged look pass a14aaa1). Local test server: `cd server && PORT=8787 DATA_DIR=/tmp/hlsrv npx tsx src/main.ts`;
+  two-player browser test: scratchpad online/online.py (signs up accounts over HTTP, injects the token).
