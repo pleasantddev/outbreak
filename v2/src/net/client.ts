@@ -149,7 +149,7 @@ export class NetClient {
       case 'wallet': this.setWallet(m.cash, m.bank, true); this.emit('wallet', m); break;
       case 'plot': if (m.owner) this.plotOwners.set(m.id, { owner: m.owner, name: m.ownerName }); else this.plotOwners.delete(m.id); this.emit('plot', m); break;
       case 'kick': this.kickReason = m.reason; this.emit('kick', m.reason); break;
-      case 'fix': case 'chat': case 'emote': case 'toast': case 'content': this.emit(m.t, m); break;
+      case 'fix': case 'chat': case 'emote': case 'toast': case 'content': case 'lobby': this.emit(m.t, m); break;
     }
   }
   private onClosed(code: number, reason: string) {

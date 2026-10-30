@@ -270,7 +270,8 @@ export type ServerMsg =
   | { t: 'fix'; x: number; y: number; z: number; seq: number; why: string }
   | { t: 'content'; kind: string; etag: string }
   | { t: 'kick'; reason: string }
-  | { t: 'toast'; title: string; body: string };
+  | { t: 'toast'; title: string; body: string }
+  | { t: 'lobby'; key: string; state: string; [k: string]: unknown };
 
 /** Actions a client may send in `act`. The server owns the rules for each. */
 export const ACTS = ['plot.buy', 'bank.deposit', 'bank.withdraw', 'cash.transfer', 'cash.delta', 'job.start', 'job.done', 'shop.buy', 'state.put', 'tp', 'respawn'] as const;

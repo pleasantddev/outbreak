@@ -13,6 +13,7 @@ import { Pie, type PieItem } from './pie';
 import { LifeUi } from './ui';
 import { RT } from '../societyRuntime';
 import { net } from '../../net/client';
+import { inInteriorZone } from '../../net/rules';
 import { fullStory } from '../societyModel';
 import type { HumanView } from '../../render/humans';
 
@@ -168,7 +169,7 @@ class Life {
   enterVenue(v: Venue) {
     const c = this.ctx; const why = v.refuse?.(); if (why) { c.hud.toast(v.title, why, 'var(--red)', 'msg', 3.5); return; }
     if (v.fee) { if (c.sim.cash < v.fee) { c.hud.toast(v.title, `Gate fee na ₦${v.fee.toLocaleString()}. Your pocket no reach.`, 'var(--red)', 'cash', 3.5); return; } c.sim.cash -= v.fee; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: -v.fee }); }
-    this.ui.black(async () => { if (!(await this.door(v.id))) return; const O = v.lot.group.position, s = v.lot.spawn; this.S.at = v.id; this.doorCool = 1.2; this.teleport(O.x + s.x, 0.02, O.z + s.z, s.yaw); c.view.cam.yaw = s.yaw; c.view.cam.pitch = -0.12; v.enter?.(); c.hud.title(v.title, v.sub, 2.5); });
+    this.ui.black(async () => { if (!(await this.door(v.id))) return; const O = v.lot.group.position, s = v.lot.spawn; this.S.at = v.id; this.doorCool = 1.2; const jx = (Math.random() - 0.5) * 1.6; this.teleport(O.x + s.x + jx, 0.02, O.z + s.z + Math.random() * 0.6, s.yaw); c.view.cam.yaw = s.yaw; c.view.cam.pitch = -0.12; v.enter?.(); c.hud.title(v.title, v.sub, 2.5); });
   }
   exitVenue() {
     const v = this.venue; if (!v) return; this.stop(true);
@@ -191,6 +192,12 @@ class Life {
       for (let i = 0; i < 12; i++) { this.ctx.view.world.update(d.x, d.z, true); await new Promise((r) => setTimeout(r, 0)); }
       this.ctx.view.cam.yaw = d.yaw; this.persist();
     });
+  }
+  /** the server put us back on the other side of a door (it refused the hop): make the life state match the body */
+  private resync() {
+    const me = this.ctx.sim.local; if (!inInteriorZone(me.pos.x, me.pos.z)) { this.S.at = null; this.S.inside = false; return; }
+    if (Math.hypot(me.pos.x - HOME_ORIGIN.x, me.pos.z - HOME_ORIGIN.z) < 60) { this.S.inside = true; this.S.at = null; return; }
+    for (const v of this.venues.values()) { const O = v.lot.group.position; if (Math.hypot(me.pos.x - O.x, me.pos.z - O.z) < 60) { this.S.at = v.id; return; } }
   }
   /** online, ask the server before moving between the street and an interior (it judges the jump) */
   private async door(into: string | null) {
@@ -414,6 +421,7 @@ class Life {
   frame(dt: number) {
     const c = this.ctx; if (!this.started) return; const me = c.sim.local;
     c.view.timeScale = 1; // one shared world clock: nothing a player does speeds it up
+    if (inInteriorZone(me.pos.x, me.pos.z) !== this.inside) this.resync();
     this.doorCool = Math.max(0, this.doorCool - dt); if (!this.doorCool && !this.run && !this.pie.open && me.vehicle === null && me.alive) this.walkThrough();
     const dh = Math.min(dt, 0.25) / 60; // real minutes this frame
     const r = this.run;
@@ -465,7 +473,7 @@ class Life {
     const V = this.venue;
     if (V) { const O = V.lot.group.position, e = V.lot.exit; if (hit(O.x + e.x, O.z + e.z, 0, -1, 1.2)) this.exitVenue(); return; }
     if (this.S.inside) { const e = this.lot.exit; if (hit(HOME_ORIGIN.x + e.x, HOME_ORIGIN.z + e.z, 0, -1, 1.2)) this.exit(); return; }
-    const d = this.S.door; if (d && hit(d.x + Math.sin(d.yaw) * 0.6, d.z + Math.cos(d.yaw) * 0.6, -Math.sin(d.yaw), -Math.cos(d.yaw), 1.1)) { this.enter(); return; }
+    const d = this.S.door; if (d && hit(d.x + Math.sin(d.yaw) * 0.6, d.z + Math.cos(d.yaw) * 0.6, -Math.sin(d.yaw), -Math.cos(d.yaw), 1.1)) { const b = (this.ctx.systems.get('bills') as any)?.api; if (b && !b.canEnterHome()) { this.doorCool = 4; return; } this.enter(); return; }
     for (const v of this.venues.values()) { const vd = v.door; if (!vd || v.fee) continue; if (hit(vd.x + Math.sin(vd.yaw) * 0.45, vd.z + Math.cos(vd.yaw) * 0.45, -Math.sin(vd.yaw), -Math.cos(vd.yaw), 1.2)) { const why = v.refuse?.(); if (why) { this.ctx.hud.toast(v.title, why, 'var(--red)', 'msg', 3.5); this.doorCool = 4; return; } this.enterVenue(v); return; } }
   }
 
