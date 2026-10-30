@@ -143,7 +143,7 @@ function mergeAll(list: THREE.BufferGeometry[]) {
 /** Creates the shared prop geometry, leaf textures and materials now instead of inside the first tile build. */
 export function warmProps() { init(); }
 
-export interface PropInput { x0: number; z0: number; size: number; roads: Road[]; trees: { x: number; z: number; palm: boolean; s: number }[]; tanks: number[]; bars: number[]; dishes: number[]; blocked: (x: number, z: number) => boolean }
+export interface PropInput { x0: number; z0: number; size: number; roads: Road[]; trees: { x: number; z: number; palm: boolean; s: number }[]; tanks: number[]; bars: number[]; dishes: number[]; blocked: (x: number, z: number) => boolean; poleBad?: (x: number, z: number) => boolean }
 
 export function buildProps(inp: PropInput) {
   init();
@@ -166,9 +166,11 @@ export function buildProps(inp: PropInput) {
       const step = major ? 34 : 38;
       for (let s = (step - (acc % step)) % step; s < L; s += step) {
         const side = major ? ((Math.floor((acc + s) / step) % 2) * 2 - 1) : 1;
-        const off = hw + (major ? 0.55 : vg + 0.6);
+        // lamps sit just behind the kerb; where the verge is narrow the walking line (roadnet.ts) would touch them, so they step back behind it
+        const walkLine = hw + Math.min(vg * 0.45, 2.2) + 0.3;
+        let off = hw + (major ? 0.55 : vg + 0.6); if (Math.abs(off - walkLine) < 0.8) off = walkLine + 0.85;
         const x = ax + tx * s - tz * off * side, z = az + tz * s + tx * off * side;
-        if (!inTile(x, z) || inp.blocked(x, z)) { lastPole = null; continue; }
+        if (!inTile(x, z) || inp.blocked(x, z) || (inp.poleBad && inp.poleBad(x, z))) { lastPole = null; continue; }
         if (major) lamps.push(x, z, Math.atan2(tz * side, -tx * side) + Math.PI);
         else { poles.push(x, z, Math.atan2(tx, tz)); if (lastPole && Math.hypot(lastPole[0] - x, lastPole[1] - z) < 60) { for (const dl of [-0.6, 0, 0.6]) { const cx2 = Math.cos(Math.atan2(tx, tz)) * dl, cz2 = -Math.sin(Math.atan2(tx, tz)) * dl; for (let q = 0; q < 6; q++) { const t0 = q / 6, t1 = (q + 1) / 6; const sag = (t: number) => 8.45 - 0.9 * 4 * t * (1 - t); wires.push(lastPole[0] + (x - lastPole[0]) * t0 + cx2, sag(t0), lastPole[1] + (z - lastPole[1]) * t0 + cz2, lastPole[0] + (x - lastPole[0]) * t1 + cx2, sag(t1), lastPole[1] + (z - lastPole[1]) * t1 + cz2); } } } lastPole = [x, z]; }
       }

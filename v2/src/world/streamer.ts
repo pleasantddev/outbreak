@@ -133,7 +133,7 @@ export class WorldStreamer {
       }
     }
     const blocked = (x: number, z: number) => own.some((b) => Math.abs(b.cx - x) < 30 && Math.abs(b.cz - z) < 30 && pointInPoly(x, z, b.pts));
-    const props = buildProps({ x0, z0, size: TILE, roads: roads.filter((r) => r.pts.length), trees, tanks: bb.tanks, bars: bb.bars, dishes: bb.dishes, blocked });
+    const props = buildProps({ x0, z0, size: TILE, roads: roads.filter((r) => r.pts.length), trees, tanks: bb.tanks, bars: bb.bars, dishes: bb.dishes, blocked, poleBad: (x, z) => rc.poleBad(x, z) });
     props.group.position.set(-x0, 0, -z0); group.add(props.group);
     this.stage = 'finish'; yield;
     // bridges whose first point is in this tile own their deck
