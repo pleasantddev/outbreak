@@ -14,6 +14,7 @@ SETUP = """() => { const hl = window.__hl, v = hl.view, a = v.atmo;
 GO = """async (s) => { const hl = window.__hl, v = hl.view, a = v.atmo, me = hl.sim.local; const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   me.pos = { x: s.x, y: 0.05, z: s.z }; me.body.setTranslation({ x: s.x, y: 1, z: s.z }, true);
   if (s.hour !== undefined) { a.hour = s.hour; a.envT = 99; }
+  if (s.grid) { const P = window.__power; P.frame = () => {}; P.set({ on: (s.grid === 'off' ? '0' : '1').repeat(72), gen: 0, load: 0, collapse: s.grid === 'off' }); }
   hl.view.gov && 0;
   let stable = 0, last = -1;
   for (let i = 0; i < 900 && stable < 8; i++) { v.world.update(s.x, s.z, true); await sleep(40); const n = v.world.tiles.size; if (!v.world.job && n === last) stable++; else stable = 0; last = n; }

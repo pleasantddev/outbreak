@@ -21,3 +21,7 @@ vec3 lampLight(vec3 P, vec3 N){
   }
   return acc;
 }`;
+
+/** About one lamp in ten is solar and stays lit when its feeder is off. Same hash on the GPU (props.ts) so a lamp head and its light pool agree. */
+export function solarLamp(x: number, z: number) { const v = Math.sin(Math.floor(x / 8) * 12.9898 + Math.floor(z / 8) * 78.233) * 43758.5453; return v - Math.floor(v) < 0.1; }
+export const SOLAR_GLSL = /* glsl */ `float solarLamp(vec2 p){ return step(fract(sin(dot(floor(p / 8.0), vec2(12.9898, 78.233))) * 43758.5453), 0.1); }`;

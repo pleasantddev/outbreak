@@ -2,12 +2,13 @@
 // burglar bars and louvres, shopfronts with roller shutters, parapet roofs, long-span aluminium hip roofs,
 // unfinished shells with starter bars. One merged mesh per tile, PBR from the wall texture array.
 import { lampShared, LAMP_GLSL } from './lamps';
+import { powerShared, POWER_GLSL } from '../systems/power';
 import * as THREE from 'three';
 import { BK, type Building } from './region';
 import { Geo, hash, polyArea, obb, slice } from './geo';
 import type { TexSet } from './texsets';
 
-export const buildingShared = { uNight: { value: 0 }, uWet: { value: 0 }, uDust: { value: 0 } };
+export const buildingShared = { uNight: { value: 0 }, uWet: { value: 0 }, uDust: { value: 0 }, uBT: { value: 0 } };
 export const FLOOR = 3.1, PLINTH = 0.45;
 
 const PAINT: [number, number, number][] = [
@@ -142,7 +143,7 @@ export function* buildBuildingsG(list: Building[], ox: number, oz: number): Gene
 
 export function makeBuildingMaterial(tex: TexSet) {
   const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0 });
-  const uniforms = { uWD: { value: tex.diff }, uWN: { value: tex.nor }, uWA: { value: tex.arm }, ...buildingShared, ...lampShared };
+  const uniforms = { uWD: { value: tex.diff }, uWN: { value: tex.nor }, uWA: { value: tex.arm }, ...buildingShared, ...lampShared, ...powerShared };
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
@@ -151,7 +152,7 @@ export function makeBuildingMaterial(tex: TexSet) {
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-uniform highp sampler2DArray uWD; uniform highp sampler2DArray uWN; uniform highp sampler2DArray uWA; uniform float uNight; uniform float uWet; uniform float uDust;
+uniform highp sampler2DArray uWD; uniform highp sampler2DArray uWN; uniform highp sampler2DArray uWA; uniform float uNight; uniform float uWet; uniform float uDust; uniform float uBT;
 varying float vMat; varying vec3 vTint; varying vec4 vInfo; varying vec2 vEdge; varying vec2 vUv2; varying vec3 vWP; varying vec3 vWN;
 float bh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float bn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(bh(i), bh(i+vec2(1,0)), f.x), mix(bh(i+vec2(0,1)), bh(i+vec2(1,1)), f.x), f.y); }
@@ -159,6 +160,7 @@ vec3 signCol(float r){ vec3 c = vec3(0.78, 0.12, 0.1); c = mix(c, vec3(0.1, 0.34
 float pat(float x, float duty){ float f = fract(x); float w = max(fwidth(x), 1e-4); float m = smoothstep(duty - w, duty + w, f); return mix(m, 1.0 - duty, smoothstep(0.3, 0.8, w)); }
 float wav(float x){ return sin(x) * (1.0 - smoothstep(0.8, 2.4, fwidth(x))); }
 ${LAMP_GLSL}
+${POWER_GLSL}
 vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`)
       .replace('#include <map_fragment>', `
 {
@@ -190,6 +192,13 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
     float levels = floor(vInfo.x + 0.5), seed = floor(vInfo.y * 16.0 + 0.5) / 16.0, kind = floor(vInfo.z + 0.5);
     float u = vUv2.x, v = vUv2.y, L = vEdge.x, H = vEdge.y;
     float rs = bh(vec2(seed, 1.0)), rs2 = bh(vec2(seed, 2.0));
+    // power: a window only glows when its feeder has light, or when the building runs a generator (about 1 in 5, nearly half of the flats, hotels and banks): dimmer, warmer, a little unsteady
+    float gridOn = gridAt(vWP.xz);
+    float genThr = (kind > 2.5 && kind < 4.5) || (kind > 12.5 && kind < 13.5) ? 0.45 : 0.2;
+    float genOn = step(1.0 - genThr, bh(vec2(seed, 31.0)));
+    float flick = 0.75 + 0.25 * bn(vec2(uBT * 2.5, seed));
+    float pw = max(gridOn, genOn * 0.5 * flick);
+    float genOnly = (1.0 - gridOn) * genOn;
     // plinth, ground splash, parapet cap
     BC = mix(BC, BC * vec3(0.62, 0.58, 0.55), 1.0 - smoothstep(0.34, 0.46, v));
     BC *= mix(0.82, 1.0, smoothstep(0.45, 1.8, v));
@@ -215,7 +224,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
       float fr = min(1.0, mul1 + spand);
       BC = mix(gl, vec3(0.3, 0.31, 0.33), fr); BR = mix(0.25, 0.55, fr); BM = mix(0.1, 0.2, fr); BGL = 1.0 - fr;
       BN = vec3(0.0, 0.0, 1.0);
-      BE += (1.0 - fr) * uNight * 0.55; BEC = vec3(0.85, 0.95, 1.0);
+      BE += (1.0 - fr) * uNight * 0.55 * pw; BEC = vec3(0.85, 0.95, 1.0);
     }
     bool shop = kind > 1.5 && kind < 2.5 && fi < 1.0 && fi >= 0.0;
     float rnd = bh(vec2(ci, fi + seed));
@@ -233,7 +242,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
       vec3 shopC = open > 0.5 ? inside : shutC * rib * (0.92 + 0.08 * bn(vec2(u * 2.0, v * 3.0)));
       BC = mix(BC, shopC, zone);
       BR = mix(BR, open > 0.5 ? 0.7 : 0.6, zone); BM = mix(BM, open > 0.5 ? 0.0 : 0.15, zone);
-      BE += zone * open * uNight * 0.3; BEC = vec3(1.0, 0.72, 0.4);
+      BE += zone * open * uNight * 0.3 * pw; BEC = vec3(1.0, 0.72, 0.4);
       // frame lines round the bay opening
       float fl = (1.0 - pil) * (step(ff, 0.16) * step(0.1, ff) + step(2.49, ff) * step(ff, 2.55) + step(bayX, 0.03) + step(0.97, bayX) * step(0.1, ff) * step(ff, 2.55));
       BC = mix(BC, BC * 0.55, min(fl, 1.0) * zone);
@@ -241,7 +250,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
       float aw = awn * (1.0 - pil) * step(2.1, ff) * step(ff, 2.6);
       vec3 ac1 = mix(vec3(0.78, 0.14, 0.1), vec3(0.14, 0.4, 0.62), step(0.5, bh(vec2(ci, seed + 12.0)))); ac1 = mix(ac1, vec3(0.16, 0.5, 0.3), step(0.8, bh(vec2(ci, seed + 13.0))));
       BC = mix(BC, mix(ac1, vec3(0.93, 0.92, 0.88), pat(u * 2.6, 0.5)) * (0.78 + 0.22 * (ff - 2.1) * 2.0), aw);
-      BE += aw * open * uNight * 0.2 + (1.0 - pil) * step(1.7, ff) * step(ff, 2.1) * awn * open * uNight * 0.5;
+      BE += (aw * open * uNight * 0.2 + (1.0 - pil) * step(1.7, ff) * step(ff, 2.1) * awn * open * uNight * 0.5) * pw;
       // painted signboard: flat colour, border line, blocky letters
       float sr = bh(vec2(ci, seed + 7.0));
       vec3 sc = signCol(sr);
@@ -253,7 +262,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
       vec3 ink = mix(vec3(0.97, 0.95, 0.9), vec3(0.08), step(0.34, sr) * step(sr, 0.5) + step(0.64, sr) * step(sr, 0.78));
       vec3 sBC = mix(sc, ink, ltr); sBC = mix(sBC, ink, min(sedge, 1.0) * 0.8);
       BC = mix(BC, sBC, sz); BR = mix(BR, 0.5, sz); BM = mix(BM, 0.0, sz);
-      BE += sz * uNight * 0.18 * (1.0 - ltr);
+      BE += sz * uNight * 0.18 * (1.0 - ltr) * pw;
     } else if (fi >= 0.0 && fi < levels && inCols * step(0.1, bh(vec2(ci * 3.1, seed + 17.0 + step(fi, 0.5) * 9.0))) > 0.5 && kind != 6.0 && kind != 7.0 && kind != 5.0 && kind != 11.0 && kind != 10.0 && kind != 14.0 && kind != 16.0 && kind != 13.0 && kind != 15.0) {
       bool unfinished = kind > 8.5 && kind < 9.5;
       bool door = fi < 0.5 && ci == floor(bh(vec2(seed, 3.0)) * nC);
@@ -286,7 +295,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
           BC = mix(glass, frc, fm); BR = mix(0.3, 0.55, fm); BM = 0.0; BGL = 1.0 - fm;
           BN = vec3(0.0, 0.0, 1.0);
           float lit = step(0.55, bh(vec2(ci + seed, fi * 7.0))) * uNight;
-          BE += lit * (1.0 - fm) * (1.0 - dark * 0.9) * (curt > 0.5 ? 1.5 : 1.15); BEC = mix(vec3(1.0, 0.72, 0.4), vec3(0.7, 0.85, 1.0), step(0.78, rnd * 0.0 + bh(vec2(ci, fi + seed + 9.0))));
+          BE += pw * lit * (1.0 - fm) * (1.0 - dark * 0.9) * (curt > 0.5 ? 1.5 : 1.15); BEC = mix(vec3(1.0, 0.72, 0.4), vec3(0.7, 0.85, 1.0), step(0.78, rnd * 0.0 + bh(vec2(ci, fi + seed + 9.0))));
           // burglar bars on the low floors: upright bars, two rails, white or black paint
           float barOn = step(rs2, 0.65) * (1.0 - step(1.5, fi)) * (1.0 - step(0.5, bal));
           float bars = max(pat(fx * 8.0, 0.8), max(step(abs(fyy - 0.5), 0.022), step(abs(fyy - 0.18), 0.018))) * barOn;
@@ -325,6 +334,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
       // floor slab band
       BC *= 1.0 - (1.0 - step(0.08, ff)) * step(1.0, fi) * 0.0;
     }
+    BEC = mix(BEC, vec3(1.0, 0.55, 0.22), genOnly);
     // weathering patches
     BC *= mix(0.86, 1.04, bn(vec2(u * 0.35, v * 0.5) + seed));
   }

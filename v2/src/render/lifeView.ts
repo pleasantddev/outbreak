@@ -18,7 +18,8 @@ import type { Actor, Loot, SimEvent } from '../sim/types';
 import { WEAPONS, VEHICLES, type WeaponId } from '../data/balance';
 import { audio } from '../audio/audio';
 import { RoadNet } from '../world/roadnet';
-import { lampShared } from '../world/lamps';
+import { lampShared, solarLamp } from '../world/lamps';
+import { power } from '../systems/power';
 const RoadNetAt = RoadNet.at;
 function pointInPolyArr(x: number, z: number, p: ArrayLike<number>) { let c = false; for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) { const xi = p[i], zi = p[i + 1], xj = p[j], zj = p[j + 1]; if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c; } return c; }
 
@@ -300,8 +301,8 @@ export class LifeView {
         const L = this.world.lamps; const spots: { x: number; z: number; r: number; d: number }[] = [];
         for (let i = 0; i < L.length; i += 3) { const d = (L[i] - focus.x) ** 2 + (L[i + 1] - focus.z) ** 2; if (d < 110 * 110) spots.push({ x: L[i], z: L[i + 1], r: L[i + 2], d }); }
         spots.sort((a, b) => a.d - b.d);
-        for (let i = 0; i < U.length; i++) { const s = spots[i]; if (s) U[i].set(s.x + Math.sin(s.r) * 1.9, 0, s.z + Math.cos(s.r) * 1.9, 1.9 * night); else U[i].set(0, 0, 0, 0); }
-        this.lightPool.forEach((l, i) => { const s = spots[i]; if (!s || i >= 2) { l.intensity = 0; return; } l.position.set(s.x + Math.sin(s.r) * 1.9, 8.6, s.z + Math.cos(s.r) * 1.9); l.intensity = 160 * night; });
+        for (let i = 0; i < U.length; i++) { const s = spots[i]; if (s) { const hx = s.x + Math.sin(s.r) * 1.9, hz = s.z + Math.cos(s.r) * 1.9; U[i].set(hx, 0, hz, power.on(s.x, s.z) || solarLamp(hx, hz) ? 1.9 * night : 0); } else U[i].set(0, 0, 0, 0); }
+        this.lightPool.forEach((l, i) => { const s = spots[i]; if (!s || i >= 2) { l.intensity = 0; return; } l.position.set(s.x + Math.sin(s.r) * 1.9, 8.6, s.z + Math.cos(s.r) * 1.9); l.intensity = (power.on(s.x, s.z) || solarLamp(l.position.x, l.position.z) ? 160 : 0) * night; });
       } else { for (const u of U) u.w = 0; this.lightPool.forEach((l) => (l.intensity = 0)); }
     }
 

@@ -2,6 +2,8 @@
 // wires along the streets, almond, mango and palm trees, rooftop water tanks, dishes and starter bars.
 import * as THREE from 'three';
 import { hash } from './geo';
+import { powerShared, POWER_GLSL } from '../systems/power';
+import { SOLAR_GLSL } from './lamps';
 import { ROAD, RF, type Road } from './region';
 import { halfWidth, verge, isMajor } from './roadspec';
 
@@ -79,11 +81,11 @@ const UV_BROAD: [number, number, number, number] = [0, 0.5, 0.5, 1], UV_PALM: [n
 function solidMaterial() {
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, emissive: new THREE.Color(0xffb060) });
   m.onBeforeCompile = (sh) => {
-    sh.uniforms.uEmit = propShared.uEmit;
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 aP; varying vec4 vP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvP = aP;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec4 vP; uniform float uEmit;')
+    sh.uniforms.uEmit = propShared.uEmit; sh.uniforms.uGrid = powerShared.uGrid;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 aP; varying vec4 vP; varying vec3 vPW;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvP = aP;').replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n#ifdef USE_INSTANCING\nvPW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;\n#else\nvPW = (modelMatrix * vec4(transformed, 1.0)).xyz;\n#endif');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec4 vP; varying vec3 vPW; uniform float uEmit;' + POWER_GLSL + SOLAR_GLSL)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vP.x;').replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vP.y;')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance = emissive * vP.z * uEmit;');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance = emissive * vP.z * uEmit * max(gridAt(vPW.xz), solarLamp(vPW.xz));');
   };
   m.customProgramCacheKey = () => 'hl-prop-solid';
   return m;
