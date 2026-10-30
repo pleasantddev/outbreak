@@ -8,7 +8,7 @@ import { plaster, tiles, lino, terrazzo } from './tex';
 export const HOME_ORIGIN = new THREE.Vector3(30000, 0, 30000);
 export interface Placed { def: string; x: number; z: number; yaw: number; obj: THREE.Object3D; label?: string }
 export interface Wall { mesh: THREE.Mesh; nx: number; nz: number; cx: number; cz: number; full: number }
-export interface Lot { group: THREE.Group; walls: Wall[]; boxes: { x: number; z: number; w: number; d: number; h: number; yaw: number }[]; placed: Placed[]; spawn: { x: number; z: number; yaw: number }; exit: { x: number; z: number }; lights: THREE.PointLight[]; rooms: { name: string; x0: number; z0: number; x1: number; z1: number }[] }
+export interface Lot { group: THREE.Group; walls: Wall[]; boxes: { x: number; z: number; w: number; d: number; h: number; yaw: number }[]; placed: Placed[]; spawn: { x: number; z: number; yaw: number }; exit: { x: number; z: number }; lights: THREE.PointLight[]; ceil?: { x0: number; z0: number; x1: number; z1: number; y: number }; rooms: { name: string; x0: number; z0: number; x1: number; z1: number }[] }
 
 const WALL_H = 2.85, T = 0.12;
 
@@ -53,7 +53,7 @@ export function buildHome(): Lot {
   const gapsAt = (zs: number[], w = 0.9) => zs.map((z) => [z - w / 2, z + w / 2] as [number, number]);
   wall(-1, 0, -1, 14, mat.corridor, gapsAt(doorZ));
   wall(1, 0, 1, 14, mat.corridor, gapsAt(doorZ));
-  wall(-4.6, 0, 4.6, 0, mat.outer, [[4.6 - 0.45, 4.6 + 0.45]]); // front wall with the entrance
+  wall(-4.6, 0, 4.6, 0, mat.outer, [[4.6 - 0.6, 4.6 + 0.6]]); // front wall with the entrance
   wall(-4.6, 0, -4.6, 14, mat.outer); wall(4.6, 0, 4.6, 14, mat.outer, [[4.9, 6.1]]); // window in your room
   for (const z of [3.5, 7, 10.5]) { wall(-4.6, z, -1, z, mat.corridor); wall(1, z, 4.6, z, z === 3.5 || z === 7 ? mat.room : mat.corridor); }
   wall(-4.6, 14, 4.6, 14, mat.corridor, [[4.05 - 0.4, 4.05 + 0.4], [5.15 - 0.4, 5.15 + 0.4]]); // doors to bath (x=-0.55) and toilet (x=0.55)
@@ -107,13 +107,15 @@ export function buildHome(): Lot {
   const line = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 8, 4), metal); line.rotation.z = Math.PI / 2; line.position.set(-5, 1.9, -4.5); g.add(line);
   const cloths = [0xe53935, 0x1e88e5, 0xfdd835, 0x43a047, 0xffffff, 0x8e24aa];
   for (let i = 0; i < 6; i++) { const c = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.9), new THREE.MeshStandardMaterial({ color: cloths[i], side: THREE.DoubleSide, roughness: 0.9 })); c.position.set(-8.2 + i * 1.2, 1.45, -4.5); c.rotation.y = 0.05 * i; g.add(c); }
+  // the ceiling: painted board, seen from inside only
+  { const cm = new THREE.MeshStandardMaterial({ map: plaster('#ece6d6', 91), roughness: 0.95, side: THREE.BackSide }); const cl = new THREE.Mesh(new THREE.PlaneGeometry(9.2, 16.4), cm); cl.rotation.x = -Math.PI / 2; cl.position.set(0, 2.85, 8.2); g.add(cl); }
   // light: warm bulb in your room, a cold tube in the corridor, a dim one in the bathroom
   const lights: THREE.PointLight[] = [];
   const bulb = (x: number, y: number, z: number, col: number, I: number, r: number) => { const l = new THREE.PointLight(col, I, r, 1.6); l.position.set(x, y, z); g.add(l); lights.push(l); const m = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: col })); m.position.copy(l.position); g.add(m); };
   bulb(2.8, 2.6, 5.2, 0xffd6a0, 9, 7); bulb(0, 2.7, 7, 0xdff4ff, 7, 11); bulb(0, 2.6, 15.2, 0xfff0d0, 4, 4.5);
   return {
     group: g, walls, boxes, placed, lights,
-    spawn: { x: 3.0, z: 5.0, yaw: Math.PI }, exit: { x: 0, z: -1.2 },
+    spawn: { x: 0, z: 1.1, yaw: 0 }, exit: { x: 0, z: -0.9 }, ceil: { x0: -4.6, z0: 0, x1: 4.6, z1: 16.4, y: 2.85 },
     rooms: [{ name: 'Your room', x0: 1, z0: 3.5, x1: 4.6, z1: 7 }, { name: 'Corridor', x0: -1, z0: 0, x1: 1, z1: 14 }, { name: 'Bathroom', x0: -2.2, z0: 14, x1: 0, z1: 16.4 }, { name: 'Toilet', x0: 0, z0: 14, x1: 2.2, z1: 16.4 }],
   };
 }

@@ -11,7 +11,7 @@ import { addMoodlet } from '../life/needs';
 import { Builder, canvasTex, M, box } from '../leisure/build';
 import { sfx } from '../leisure/sfx';
 
-export const BANK_ORIGIN = new THREE.Vector3(40000, 0, 30000);
+export const BANK_ORIGIN = new THREE.Vector3(40000, 0, 36000);
 const DEN = [{ v: 1000, c: '#7e57c2', t: '#ede7f6' }, { v: 500, c: '#26a69a', t: '#e0f2f1' }, { v: 200, c: '#8d6e63', t: '#efebe9' }, { v: 100, c: '#ef5350', t: '#ffebee' }];
 const css = `
 #bank{position:fixed;inset:0;z-index:10;display:none;align-items:center;justify-content:center;background:rgba(4,10,20,.55);font-family:Inter,sans-serif;color:#0f172a}
@@ -40,7 +40,7 @@ class Bank {
     B.add(box(6, 0.04, 0.04, M(0x7f1d1d, 0.6), 1, 0.85, 4.5));
     B.solid(box(0.9, 1.8, 0.6, M(0x334155, 0.4, { metalness: 0.5 }), -7.8, 0.9, 2), 0.9, 0.6, 1.8);
     for (const [x, z] of [[-4, 3], [4, 3], [0, 9.5], [-5, 9.5], [5, 9.5]]) { B.light(x, 2.8, z, 0xf8fafc, 6, 9); B.add(box(1.4, 0.04, 0.3, new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), x, 3.0, z)); }
-    const lot = B.lot({ x: W - 1.2, z: 1.2, yaw: 0 }, [{ name: 'Bank', x0: -W, z0: 0, x1: W, z1: D }]); lot.exit = { x: W, z: -1 };
+    const lot = B.lot({ x: 0, z: 1.6, yaw: 0 }, [{ name: 'Bank', x0: -W, z0: 0, x1: W, z1: D }], 0xf1f5f9);
     this.venue = { id: 'bank', title: 'FIRST HUSTLE BANK', sub: 'Teller jobs available · 8am to 4pm', lot, door: null, blip: '#3b82f6', label: 'Enter First Hustle Bank', cam: { d: 10, pitch: 0.95 }, things: () => this.things(), enter: () => this.enter(), exit: () => this.exit(), refuse: () => { const h = ctx.view.atmo.hour; return h < 8 || h >= 16 ? 'Banking hall opens 8am to 4pm.' : null; } };
   }
   get life() { return lifeSystem.api!; }

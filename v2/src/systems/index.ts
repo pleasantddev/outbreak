@@ -6,7 +6,7 @@ import { nemesisSystem } from './nemesis';
 import { garage } from './garage';
 import { identity } from './identity';
 import { skills } from './skills';
-import { missions } from './missions'; import { lifeSystem } from './life'; import { vendorSystem } from './life/vendors'; import { leisureSystem } from './leisure'; import { transportSystem } from './careers/transport'; import { racingSystem } from './careers/racing'; import { thiefSystem } from './careers/thief'; import { techSystem } from './careers/tech'; import { mechanicSystem } from './careers/mechanic'; import { boysSystem } from './careers/yahoo'; import { bankSystem } from './careers/bank'; import { autonomySystem } from './life/autonomy';
+import { missions } from './missions'; import { lifeSystem } from './life'; import { vendorSystem } from './life/vendors'; import { leisureSystem } from './leisure'; import { transportSystem } from './careers/transport'; import { racingSystem } from './careers/racing'; import { thiefSystem } from './careers/thief'; import { techSystem } from './careers/tech'; import { mechanicSystem } from './careers/mechanic'; import { boysSystem } from './careers/yahoo'; import { bankSystem } from './careers/bank';
 // net goes first: it signs the player in during init, before the lobby and before other systems read their saved state
 export const SYSTEMS: GameSystem[] = [
   netSystem,
@@ -24,5 +24,4 @@ export const SYSTEMS: GameSystem[] = [
   mechanicSystem, // roadside workshops: diagnose, parts, bolts
   bankSystem, // First Hustle Bank: teller shifts
   boysSystem, // the yahoo crew: satire with consequences
-  autonomySystem, // free will at home when you leave the controls alone
 ];

@@ -12,6 +12,8 @@ export class ThirdPersonCamera {
   pivot = new THREE.Vector3();
   aimPoint = new THREE.Vector3();
   sens = 1; invertY = false; baseFov = 70;
+  /** inside a building: pull the camera in, GTA does the same in tight interiors */
+  indoor = false;
   constructor(public cam: THREE.PerspectiveCamera) {}
 
   addShake(a: number) { this.shake = Math.min(1.2, this.shake + a); }
@@ -28,7 +30,7 @@ export class ThirdPersonCamera {
     this.pitch = THREE.MathUtils.clamp(this.pitch, -1.25, 1.1);
     this.kick *= Math.exp(-10 * dt);
 
-    let targetDist = aiming ? (scoped ? 0.9 : 1.55) : a.sprinting ? 4.1 : 3.5;
+    let targetDist = aiming ? (scoped ? 0.9 : 1.55) : this.indoor ? 2.5 : a.sprinting ? 4.1 : 3.5;
     let targetShoulder = aiming ? 0.62 : 0.55;
     let pivotY = a.crouch ? 1.15 : 1.6;
     let base = new THREE.Vector3(a.pos.x, a.pos.y, a.pos.z);

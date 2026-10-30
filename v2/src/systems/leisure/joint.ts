@@ -9,7 +9,7 @@ import { addMoodlet } from '../life/needs';
 import { Builder, canvasTex, M, box, cyl } from './build';
 import { sfx } from './sfx';
 
-export const JOINT_ORIGIN = new THREE.Vector3(38000, 0, 30000);
+export const JOINT_ORIGIN = new THREE.Vector3(38000, 0, 36000);
 const css = `
 #ayo{position:fixed;inset:0;z-index:10;display:none;align-items:center;justify-content:center;background:rgba(10,6,2,.6);font-family:Inter,sans-serif;color:#fff7ed}
 #ayo.on{display:flex} #ayo .bd{width:min(680px,96vw);border-radius:26px;padding:18px;background:linear-gradient(180deg,#6b3f1d,#4a2a12);border:3px solid #2b1608;box-shadow:inset 0 2px 0 rgba(255,255,255,.15),0 30px 80px rgba(0,0,0,.6)}
@@ -59,7 +59,7 @@ export class Joint {
     { const t = new THREE.Group(); t.position.set(-5.6, 0, 9.4); t.add(box(1.6, 0.06, 0.8, M(0x6d4c41, 0.6), 0, 0.72, 0)); t.add(box(1.4, 0.12, 0.45, M(0x8d5524, 0.5), 0, 0.81, 0)); for (let i = 0; i < 12; i++) t.add(cyl(0.07, 0.07, 0.02, M(0x2b1608, 0.8), -0.55 + (i % 6) * 0.22, 0.875, i < 6 ? 0.1 : -0.1, 12)); for (const sx of [-0.7, 0.7]) t.add(box(0.06, 0.72, 0.7, M(0x6d4c41, 0.6), sx, 0.36, 0)); B.solid(t, 1.6, 0.8, 0.85); chair(-5.6, 8.65, 0, 0x1e88e5); chair(-5.6, 10.15, Math.PI, 0xe53935); }
     for (const [x, z] of [[-4, 3], [4, 3], [0, 7]]) { B.light(x, 2.7, z, 0xfff1d6, 5, 8); B.add(box(1.2, 0.04, 0.1, new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), x, 2.95, z)); }
     B.sign('OLUWOLE SPOT', 0, 2.95, 0.12, 0, 4, '#fde68a');
-    const lot = B.lot({ x: W - 1.2, z: 1.2, yaw: 0 }, [{ name: 'Joint', x0: -W, z0: 0, x1: W, z1: D }]); lot.exit = { x: W, z: -1 };
+    const lot = B.lot({ x: 0, z: 1.6, yaw: 0 }, [{ name: 'Joint', x0: -W, z0: 0, x1: W, z1: D }], 0xd8d2c0);
     this.venue = { id: 'joint', title: 'OLUWOLE SPOT', sub: 'Beer parlour · Live football · Ayo', lot, door: null, blip: '#fde68a', label: 'Enter Oluwole Spot', cam: { d: 9.5, pitch: 0.95 }, things: () => this.things(), enter: () => this.enter(), exit: () => this.exit(), frame: (dt) => this.frame(dt), refuse: () => { const h = ctx.view.atmo.hour; return h >= 2 && h < 10 ? 'Oluwole Spot opens 10am. Even beer parlour need sleep.' : null; } };
     const O = JOINT_ORIGIN; void O; (this as any)._seats = seats;
     this.spots = [
@@ -81,7 +81,7 @@ export class Joint {
     const m = this.match;
     const opt = (side: 'h' | 'a' | 'd', label: string) => `<button class="b" data-s="${side}">${label}</button>`;
     this.el.innerHTML = `<div class="bd"><div class="top"><b>${m.home} vs ${m.away}</b><button class="x">✕</button></div><p style="margin:0 0 10px;font-size:13.5px">The boys dey argue. Put ₦5,000 on it?</p><div class="bar">${opt('h', m.home)}${opt('d', 'Draw')}${opt('a', m.away)}<button class="b" data-s="n">Just watch</button></div></div>`; this.el.classList.add('on'); c.setModal(true);
-    const go = (s: string) => { this.el.classList.remove('on'); c.setModal(false); if (s !== 'n' && this.pay(5000)) this.bet = { side: s as any, amt: 5000 }; const seat = (this as any)._seats[7]; this.life.doAction({ id: 'watch', label: `Watching ${m.home} vs ${m.away}`, gain: { fun: 60, social: 40, comfort: 20 }, minutes: 90, clip: 'Sitting_Idle_Loop', spot: [0, 0, 0], sitting: true, ff: 6, y: 0.02 }, { name: 'match', x: JOINT_ORIGIN.x + seat.x, z: JOINT_ORIGIN.z + seat.z - 0.1, yaw: Math.PI }); };
+    const go = (s: string) => { this.el.classList.remove('on'); c.setModal(false); if (s !== 'n' && this.pay(5000)) this.bet = { side: s as any, amt: 5000 }; const seat = (this as any)._seats[7]; this.life.doAction({ id: 'watch', label: `Watching ${m.home} vs ${m.away}`, gain: { fun: 60, social: 40, comfort: 20 }, minutes: 90, clip: 'Sitting_Idle_Loop', spot: [0, 0, 0], sitting: true, secs: 60, give: { fun: 45, social: 30, comfort: 15 }, y: 0.02 }, { name: 'match', x: JOINT_ORIGIN.x + seat.x, z: JOINT_ORIGIN.z + seat.z - 0.1, yaw: Math.PI }); };
     this.el.querySelector('.x')!.addEventListener('click', () => { this.el.classList.remove('on'); c.setModal(false); }); this.el.querySelectorAll('[data-s]').forEach((b) => b.addEventListener('click', () => go((b as HTMLElement).dataset.s!)));
   }
   private ayo() {

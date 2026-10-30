@@ -31,7 +31,11 @@ export class Builder {
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / 4), new THREE.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false, side: THREE.DoubleSide })); m.position.set(x, y, z); m.rotation.y = yaw; this.g.add(m); return m;
   }
-  lot(spawn: Lot['spawn'], rooms: Lot['rooms'] = []): Lot { const v = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshBasicMaterial({ color: 0x030305 })); v.rotation.x = -Math.PI / 2; v.position.y = 0.004; v.renderOrder = -1; this.g.add(v); return { group: this.g, walls: this.walls, boxes: this.boxes, placed: [], spawn, exit: { x: spawn.x, z: spawn.z }, lights: this.lights, rooms }; }
+  lot(spawn: Lot['spawn'], rooms: Lot['rooms'] = [], ceilColor = 0x1a1a1f): Lot {
+    const v = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshBasicMaterial({ color: 0x030305 })); v.rotation.x = -Math.PI / 2; v.position.y = 0.004; v.renderOrder = -1; this.g.add(v);
+    const r = rooms[0]; let ceil: Lot['ceil'];
+    if (r) { const c = new THREE.Mesh(new THREE.PlaneGeometry(r.x1 - r.x0, r.z1 - r.z0), new THREE.MeshStandardMaterial({ color: ceilColor, roughness: 0.9, side: THREE.BackSide })); c.rotation.x = -Math.PI / 2; c.position.set((r.x0 + r.x1) / 2, WALL_H, (r.z0 + r.z1) / 2); this.g.add(c); ceil = { x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1, y: WALL_H }; }
+    return { group: this.g, walls: this.walls, boxes: this.boxes, placed: [], spawn, exit: { x: 0, z: -0.7 }, lights: this.lights, rooms, ceil }; }
 }
 export function canvasTex(w: number, h: number, draw: (x: CanvasRenderingContext2D) => void, rep = 1) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d')!); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep); t.anisotropy = 8; return t;

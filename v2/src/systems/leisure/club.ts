@@ -9,7 +9,7 @@ import { addMoodlet } from '../life/needs';
 import { Builder, canvasTex, M, box, cyl } from './build';
 import { sfx, beat, audioTime } from './sfx';
 
-export const CLUB_ORIGIN = new THREE.Vector3(34000, 0, 30000);
+export const CLUB_ORIGIN = new THREE.Vector3(34000, 0, 36000);
 const css = `
 #rg{position:fixed;inset:0;z-index:10;display:none;pointer-events:none;font-family:Inter,sans-serif;color:#fff}
 #rg.on{display:block}
@@ -90,7 +90,7 @@ export class Club {
     // light beams from the ceiling rig
     for (let i = 0; i < 6; i++) { const b = new THREE.Mesh(new THREE.ConeGeometry(0.9, 6, 16, 1, true), new THREE.MeshBasicMaterial({ color: [0xff3dbb, 0x40c4ff, 0x69f0ae, 0xffc93c, 0x8b5cf6, 0xff7043][i], transparent: true, opacity: 0.12, depthWrite: false, toneMapped: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); b.position.set(-4 + i * 1.6, 3.4, 8); b.geometry.translate(0, -3, 0); B.g.add(b); this.beams.push(b); }
     B.light(0, 3, 7.5, 0xff3dbb, 8, 12); B.light(-6, 3, 4, 0x40c4ff, 6, 10); B.light(6, 3, 10, 0x8b5cf6, 6, 10); B.light(0, 2.5, D - 2, 0xffffff, 4, 6);
-    const lot = B.lot({ x: W - 1.2, z: 1.2, yaw: 0 }, [{ name: 'Club', x0: -W, z0: 0, x1: W, z1: D }]); lot.exit = { x: W, z: -1 };
+    const lot = B.lot({ x: 0, z: 1.6, yaw: 0 }, [{ name: 'Club', x0: -W, z0: 0, x1: W, z1: D }]);
     this.venue = { id: 'club', title: 'EUPHORIA', sub: 'Night club · Thu to Sun, 9pm till late', lot, door: null, blip: '#ff3dbb', label: 'Enter Euphoria (₦5,000)', fee: 5000, cam: { d: 11, pitch: 0.95 }, things: () => this.things(), enter: () => this.enter(), exit: () => this.exit(), frame: (dt) => this.frame(dt), refuse: () => this.refuse() };
     const O = CLUB_ORIGIN;
     this.spots = [

@@ -8,15 +8,17 @@ import { wood, ankara, plaster } from './tex';
 export type Pose = 'brush' | 'eat' | 'drink' | 'bucket' | 'phone' | 'cook' | 'wash' | 'read';
 export interface LifeAction {
   id: string; label: string;
-  /** need change per game hour while the action runs */
+  /** legacy rate per game hour; used only when `give`/`secs` are not set (then total = gain * minutes / 60) */
   gain: Partial<Record<Need, number>>;
-  /** game minutes; with `fill` the action ends early when that need is full */
+  /** legacy duration in game minutes; with `fill` the action ends early when that need is full */
   minutes: number; fill?: Need;
   clip: string; hold?: number; speed?: number;
   /** where the player goes, in object-local metres, and the facing relative to the object's front (radians) */
   spot: [number, number, number]; y?: number;
   cost?: number; moodlet?: [string, string, number, number];
-  /** game clock multiplier while running (sleep) */
+  /** REAL seconds the action takes and the total it gives over that time (online: the world clock never skips) */
+  secs?: number; give?: Partial<Record<Need, number>>;
+  /** legacy: ignored, kept so old content parses */
   ff?: number; sleeping?: boolean; sitting?: boolean;
   pose?: Pose; prop?: 'brush' | 'plate' | 'cup' | 'bowl' | 'phone' | 'spoon' | 'book' | 'bottle';
   /** shown in the pie as the effect hint */
@@ -49,7 +51,7 @@ export const DEFS: Record<string, SmartDef> = {
       return g;
     },
     actions: [
-      { id: 'sleep', label: 'Sleep', hint: '+Energy', gain: { energy: 12.5 }, minutes: 8 * 60, fill: 'energy', clip: 'LayToIdle', hold: 0.0, spot: [0, -0.1, Math.PI], y: 0.58, ff: 48, sleeping: true, moodlet: ['rested', 'Well rested', 12, 6], when: 'tired' },
+      { id: 'sleep', label: 'Sleep (rest a while)', hint: '+Energy', gain: { energy: 12.5 }, minutes: 8 * 60, fill: 'energy', clip: 'LayToIdle', hold: 0.0, spot: [0, -0.1, Math.PI], y: 0.58, ff: 48, sleeping: true, moodlet: ['rested', 'Well rested', 12, 6] },
       { id: 'nap', label: 'Take a nap', hint: '+Energy', gain: { energy: 14 }, minutes: 90, clip: 'LayToIdle', hold: 0.0, spot: [0, -0.1, Math.PI], y: 0.58, ff: 24, sleeping: true },
       { id: 'relax', label: 'Lie down, scroll phone', hint: '+Fun +Comfort', gain: { fun: 8, comfort: 20 }, minutes: 45, clip: 'LayToIdle', hold: 0.0, spot: [0, -0.1, Math.PI], y: 0.58, ff: 6, prop: 'phone', pose: 'phone' },
     ],
@@ -181,4 +183,23 @@ export function propMesh(kind: NonNullable<LifeAction['prop']>) {
   if (kind === 'book') box(g, 0.15, 0.03, 0.21, 0, 0, 0.08, M(0x6a1b9a, 0.6));
   if (kind === 'bottle') cyl(g, 0.03, 0.03, 0.22, 0, 0, 0.08, M(0x2e7d32, 0.2, 0.1));
   return g;
+}
+
+/** Real-time tuning for every home action: [seconds, what it gives in total]. Sleep is a rest, not a time skip: lie down,
+ *  energy climbs about a point a second, get up whenever you like. */
+const TUNE: Record<string, [number, Partial<Record<Need, number>>]> = {
+  'bed.sleep': [75, { energy: 70, comfort: 15 }], 'bed.nap': [25, { energy: 22 }], 'bed.relax': [20, { fun: 12, comfort: 15 }],
+  'sink.brush': [10, { hygiene: 12 }], 'sink.wash': [6, { hygiene: 8 }], 'sink.mirror': [5, { fun: 5 }],
+  'toilet.use': [9, { bladder: 100, hygiene: -2 }], 'bucket.bath': [22, { hygiene: 100, comfort: 10 }],
+  'stove.cook': [30, { fun: 4 }], 'stove.noodles': [12, {}], 'cooler.eat': [14, { hunger: 45 }], 'cooler.water': [4, { hunger: 5, bladder: -10 }],
+  'chair.sit': [15, { comfort: 40 }], 'chair.phone': [20, { fun: 12, social: 8, comfort: 10 }],
+  'tv.watch': [30, { fun: 20, comfort: 10 }], 'tv.football': [45, { fun: 28, social: 4 }],
+  'fan.toggle': [2, {}], 'wardrobe.change': [6, { fun: 5 }], 'table.read': [25, { fun: 6, comfort: 5 }],
+};
+for (const d of Object.values(DEFS)) for (const a of d.actions) { const t = TUNE[`${d.id}.${a.id}`]; if (t) { a.secs = t[0]; a.give = t[1]; a.ff = undefined; } }
+/** seconds and totals for any action, including ones other systems build the legacy way */
+export function planOf(a: LifeAction): { secs: number; give: Partial<Record<Need, number>> } {
+  if (a.secs !== undefined) return { secs: a.secs, give: a.give ?? {} };
+  const give: Partial<Record<Need, number>> = {}; for (const [k, v] of Object.entries(a.gain)) give[k as Need] = (v ?? 0) * a.minutes / 60;
+  return { secs: Math.max(3, Math.min(45, a.minutes * 0.35)), give };
 }

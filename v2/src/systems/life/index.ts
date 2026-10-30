@@ -1,11 +1,12 @@
-// The life sim: needs that run on game time, smart objects with actions, the interaction pie, your first room
-// (a Sims-style lot with a cutaway camera), people you can gist with, and the consequences of neglect.
+// The life layer on top of the open world: needs that run on game time, objects you use (bed, sink, toilet, stove),
+// a GTA-style interaction list, walk-in interiors (your room, the casino, the club...) loaded on their own like GTA's
+// interiors, people you can gist with, and the consequences of neglect. Camera and controls stay third person.
 import * as THREE from 'three';
 import type { GameCtx, GameSystem } from '../registry';
 import type { Command, Actor } from '../../sim/types';
 import { RAPIER, G, groups } from '../../sim/physics';
 import { freshNeeds, decay, moodOf, addMoodlet, NEEDS, type NeedsState, type Need } from './needs';
-import { DEFS, propMesh, type LifeAction } from './objects';
+import { DEFS, propMesh, planOf, type LifeAction } from './objects';
 import { buildHome, HOME_ORIGIN, type Lot, type Placed } from './home';
 import type { Venue, Door } from './venue';
 import { Pie, type PieItem } from './pie';
@@ -15,10 +16,15 @@ import { fullStory } from '../societyModel';
 import type { HumanView } from '../../render/humans';
 
 export interface Thing { id: string; name: string; x: number; z: number; yaw: number; y?: number; actions: LifeAction[]; kind: 'object' | 'door' | 'npc' | 'self'; actor?: Actor; placed?: Placed; open?: () => void; reach?: number; verb?: string }
-interface Running { a: LifeAction; thing: Thing; phase: 'walk' | 'do'; t: number; walkT: number; path: { x: number; z: number }[]; best: number; bestT: number; spot: { x: number; z: number; y: number; yaw: number }; prop?: THREE.Object3D }
-interface Save { needs: NeedsState; food: number; fan: boolean; door: { x: number; z: number; yaw: number } | null; inside: boolean; tips: string[]; pantry: number; at?: string | null; vdoors?: Record<string, Door> }
+interface Running { a: LifeAction; thing: Thing; phase: 'walk' | 'do'; t: number; secs: number; give: Partial<Record<Need, number>>; walkT: number; path: { x: number; z: number }[]; best: number; bestT: number; spot: { x: number; z: number; y: number; yaw: number }; prop?: THREE.Object3D }
+interface Save { needs: NeedsState; food: number; fan: boolean; door: { x: number; z: number; yaw: number } | null; inside: boolean; tips: string[]; pantry: number; at?: string | null; vdoors?: Record<string, Door>; seen?: number }
 
 const CAP = 0.9; // capsule centre above the feet
+/** where the shared venues are in the world (around Oshodi, where everybody starts) */
+// building kinds (world/region.ts BK): house 1, shops 2, flats 3, hotel 4, warehouse 5, institution 8, bank 13
+const VENUE_ANCHOR: Record<string, { x: number; z: number; kinds: number[] }> = {
+  casino: { x: 1250, z: -560, kinds: [4, 2, 3] }, club: { x: 560, z: -90, kinds: [2, 4, 5] }, joint: { x: 1080, z: -150, kinds: [2, 1, 3] },
+  hub: { x: 700, z: -560, kinds: [2, 8, 3] }, bank: { x: 1150, z: -330, kinds: [13, 2, 3] } };
 const wrapA = (a: number) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
 
 class Life {
@@ -26,8 +32,8 @@ class Life {
   run: Running | null = null; lastHour = -1; started = false; doorObj: THREE.Group | null = null; fanBlades: THREE.Object3D | null = null;
   near: Thing | null = null; private saveT = 0; private warnT: Record<string, number> = {}; private bodies: any[] = [];
   private talkWith: Actor | null = null;
-  /** Sims-style clock speed chosen by the player (1, 3, 8); actions like sleep multiply on top */
-  speed = 1;
+  /** a short lockout after going through a door so you do not bounce straight back */
+  private doorCool = 0;
   venues = new Map<string, Venue>(); private vdoorT = 3; private vdoorObj = new Map<string, THREE.Group>();
   /** other systems add interactables in the street (vendors, pay toilets, clubs) */
   providers: (() => Thing[])[] = [];
@@ -37,31 +43,37 @@ class Life {
     const c = this.ctx;
     const s = c.save.life as Save | undefined;
     this.S = s && s.needs ? Object.assign({ food: 0, fan: false, door: null, inside: false, tips: [], pantry: 0 }, s) as Save : { needs: freshNeeds(), food: 1, fan: false, door: null, inside: false, tips: [], pantry: 0 };
-    this.lot = buildHome(); c.view.scene.add(this.lot.group);
-    this.fanBlades = this.lot.placed.find((p) => p.def === 'fan')?.obj.getObjectByName('blades') ?? null;
-    // the room is solid: walls and big furniture become static colliders
-    const W = c.sim.phys.world; const body = W.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(HOME_ORIGIN.x, 0, HOME_ORIGIN.z));
-    for (const b of this.lot.boxes) {
-      const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -b.yaw);
-      W.createCollider(RAPIER.ColliderDesc.cuboid(b.w / 2, b.h / 2, b.d / 2).setTranslation(b.x, b.h / 2, b.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setCollisionGroups(groups(G.WORLD, 0xffff)), body);
-    }
-    this.bodies.push(body);
     this.ui.onCancel = () => this.stop(true);
-    this.ui.onSpeed = (v) => { this.speed = v; this.ui.setSpeed(v); };
     addEventListener('keydown', (e) => this.key(e));
     (window as any).__life = this;
   }
 
   start() {
+    this.buildLot();
     this.started = true; this.ui.show(true);
     if (!this.S.door) this.placeDoor(); else this.buildDoor();
-    this.lastHour = -1;
+    if (this.S.seen) { const off = Math.min(600, (Date.now() - this.S.seen) / 60000); if (off > 1) decay(this.S.needs, off * 0.25, {}, { sleeping: true, sitting: false, moving: 0 }); for (const k of NEEDS) this.S.needs.v[k] = Math.max(25, this.S.needs.v[k]); }
     if (this.S.inside) this.enter(false);
     if (this.S.at) { const v = this.venues.get(this.S.at); this.S.at = null; const d = v?.door; if (d) this.teleport(d.x + Math.sin(d.yaw) * 1.4, 0.05, d.z + Math.cos(d.yaw) * 1.4, d.yaw); }
     for (const v of this.venues.values()) this.placeVenueDoor(v);
     const tip = (id: string, title: string, body: string, ms: number) => { if (this.S.tips.includes(id)) return; setTimeout(() => { this.ctx.hud.toast(title, body, 'linear-gradient(160deg,#2de0c8,#139a8a)', 'pin', 7); this.S.tips.push(id); }, ms); };
-    tip('home', 'Your room is ready', 'Landlord don give you key. Follow the house pin on the map. Press E near anything to see what you can do with it.', 24000);
-    tip('needs', 'Mind yourself', 'The rings at the bottom are your needs. Eat, sleep, bath, gist with people, have fun. Tap them for details.', 52000);
+    tip('home', 'Your room is ready', 'Landlord don give you key. Follow the house pin on the map and walk in the door. Press E at anything to use it.', 24000);
+    tip('needs', 'Mind yourself', 'The small rings under your map are your needs. Eat, sleep, bath, gist, have fun. Tap them for details, Z for your own menu.', 52000);
+  }
+
+  /** Your room is a private interior, GTA Online apartment style: every account gets its own slot far from the city,
+   *  so in multiplayer nobody else's room sits on top of yours. Shared venues (casino, club...) are one instance. */
+  private buildLot() {
+    const c = this.ctx; const id = c.profile?.accountId || c.profile?.name || 'local'; let h = 2166136261; for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
+    const slot = (h >>> 0) % 400; HOME_ORIGIN.set(30000 + (slot % 20) * 150, 0, 30000 + Math.floor(slot / 20) * 150);
+    this.lot = buildHome(); c.view.scene.add(this.lot.group);
+    this.fanBlades = this.lot.placed.find((p) => p.def === 'fan')?.obj.getObjectByName('blades') ?? null;
+    const W = c.sim.phys.world; const body = W.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(HOME_ORIGIN.x, 0, HOME_ORIGIN.z));
+    for (const b of this.lot.boxes) {
+      const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -b.yaw);
+      W.createCollider(RAPIER.ColliderDesc.cuboid(b.w / 2, b.h / 2, b.d / 2).setTranslation(b.x, b.h / 2, b.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setCollisionGroups(groups(G.WORLD, 0xffff)), body);
+    }
+    this.addCeil(body, this.lot); this.bodies.push(body);
   }
 
   // ---------------------------------------------------------------- the front door on the street
@@ -99,21 +111,46 @@ class Life {
     this.venues.set(v.id, v); const c = this.ctx; c.view.scene.add(v.lot.group);
     const O = v.lot.group.position; const W = c.sim.phys.world; const body = W.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(O.x, 0, O.z));
     for (const b of v.lot.boxes) { const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -b.yaw); W.createCollider(RAPIER.ColliderDesc.cuboid(b.w / 2, b.h / 2, b.d / 2).setTranslation(b.x, b.h / 2, b.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setCollisionGroups(groups(G.WORLD, 0xffff)), body); }
+    this.addCeil(body, v.lot);
     if (this.started) this.placeVenueDoor(v);
   }
-  /** each venue gets a front door on a commercial building a little way from home, saved so it stays put */
+  /** a lid on every interior so the camera stays inside like it would in a real building */
+  private addCeil(body: any, lot: Lot) { const c = lot.ceil; if (!c) return; this.ctx.sim.phys.world.createCollider(RAPIER.ColliderDesc.cuboid((c.x1 - c.x0) / 2, 0.1, (c.z1 - c.z0) / 2).setTranslation((c.x0 + c.x1) / 2, c.y + 0.1, (c.z0 + c.z1) / 2).setCollisionGroups(groups(G.WORLD, 0xffff)), body); }
+  /** Every venue has a fixed anchor in the world. Its door goes on the best building face near the anchor, computed
+   *  only from map data, so every player in the session finds the casino in the same place. */
   private placeVenueDoor(v: Venue) {
-    const c = this.ctx; const saved = (this.S.vdoors ??= {})[v.id]; if (saved) { v.door = saved; this.buildVenueDoor(v); return; }
-    const home = this.S.door ?? { x: c.sim.local.pos.x, z: c.sim.local.pos.z }; const taken = Object.values(this.S.vdoors);
-    let best: Door | null = null, bs = -1e9; const want = v.id === 'casino' ? 520 : v.id === 'club' ? 420 : 300;
-    for (const list of c.view.world.plots.values()) for (const p of list) {
-      if (p.zone !== 'commercial' || !p.buildings.length) continue; const d0 = Math.hypot(p.cx - home.x, p.cz - home.z); if (d0 < 120 || d0 > 1400) continue;
-      if (taken.some((t) => Math.hypot(t.x - p.cx, t.z - p.cz) < 120)) continue;
-      const b = p.buildings[0]; const pts = b.pts; const n = pts.length / 2; let edge: Door | null = null, el = 0;
-      for (let i = 0; i < n; i++) { const ax = pts[i * 2], az = pts[i * 2 + 1], bx = pts[((i + 1) % n) * 2], bz = pts[((i + 1) % n) * 2 + 1]; const L = Math.hypot(bx - ax, bz - az); if (L < 6 || L < el) continue; let nx = -(bz - az) / L, nz = (bx - ax) / L; const mx = (ax + bx) / 2, mz = (az + bz) / 2; if ((mx - b.cx) * nx + (mz - b.cz) * nz < 0) { nx = -nx; nz = -nz; } el = L; edge = { x: mx + nx * 0.25, z: mz + nz * 0.25, yaw: Math.atan2(nx, nz) }; }
-      if (!edge) continue; const score = -Math.abs(d0 - want) + el * 3 + (p.rich ?? 0) * 200; if (score > bs) { bs = score; best = edge; }
+    const c = this.ctx; const A = VENUE_ANCHOR[v.id]; if (!A) return;
+    const taken = [...this.venues.values()].filter((o) => o !== v && o.door).map((o) => o.door!);
+    let best: Door | null = null, bs = -1e9;
+    for (const r of c.store.regions.values()) for (const b of r.buildings) {
+      if (b.dead || Math.abs(b.cx - A.x) > 600 || Math.abs(b.cz - A.z) > 600) continue;
+      const pref = A.kinds.indexOf(b.kind); if (pref < 0 || b.area < 120) continue;
+      const pts = b.pts; const n = pts.length / 2;
+      for (let i = 0; i < n; i++) { const ax = pts[i * 2], az = pts[i * 2 + 1], bx = pts[((i + 1) % n) * 2], bz = pts[((i + 1) % n) * 2 + 1]; const L = Math.hypot(bx - ax, bz - az); if (L < 7) continue;
+        let nx = -(bz - az) / L, nz = (bx - ax) / L; const mx = (ax + bx) / 2, mz = (az + bz) / 2; if ((mx - b.cx) * nx + (mz - b.cz) * nz < 0) { nx = -nx; nz = -nz; }
+        if (taken.some((t) => Math.hypot(t.x - mx, t.z - mz) < 60)) continue;
+        const score = -Math.hypot(mx - A.x, mz - A.z) - pref * 120 + Math.min(L, 30) * 2 + Math.min(b.area, 2500) / 40;
+        if (score > bs) { bs = score; best = { x: mx + nx * 0.25, z: mz + nz * 0.25, yaw: Math.atan2(nx, nz) }; } }
     }
-    if (!best) return; this.S.vdoors[v.id] = best; v.door = best; this.buildVenueDoor(v); this.persist();
+    if (!best) return; v.door = best; this.buildVenueDoor(v);
+  }
+  /** Map footprints and the drawn/colliding walls can differ by a metre or two (declutter trims them), so once the
+   *  walls near a door exist, cast a ray at the building and sit the door exactly on the real wall. */
+  private snapDoor(d: Door): Door | null {
+    const ph = this.ctx.sim.phys; const nx = Math.sin(d.yaw), nz = Math.cos(d.yaw);
+    for (const off of [0, -1.2, 1.2]) {
+      const ox = d.x + nx * 7 + nz * off, oz = d.z + nz * 7 - nx * off;
+      const hit = ph.ray({ x: ox, y: 1.2, z: oz }, { x: -nx, y: 0, z: -nz }, 14, groups(0xffff, G.WORLD));
+      if (hit && hit.t > 1) return { x: hit.point.x - nz * off + nx * 0.06, z: hit.point.z + nx * off + nz * 0.06, yaw: d.yaw };
+    }
+    return null;
+  }
+  private snapT = 0; private snapped = new Set<string>();
+  private snapDoors() {
+    const me = this.ctx.sim.local; const todo: [string, Door, (d: Door) => void][] = [];
+    if (this.S.door && !this.snapped.has('home')) todo.push(['home', this.S.door, (d) => { this.S.door = d; this.buildDoor(); this.persist(); }]);
+    for (const v of this.venues.values()) if (v.door && !this.snapped.has(v.id)) todo.push([v.id, v.door, (d) => { v.door = d; this.buildVenueDoor(v); }]);
+    for (const [id, d, set] of todo) { if (Math.hypot(d.x - me.pos.x, d.z - me.pos.z) > 120) continue; const s = this.snapDoor(d); if (s) { this.snapped.add(id); if (Math.hypot(s.x - d.x, s.z - d.z) > 0.05) set(s); } }
   }
   private buildVenueDoor(v: Venue) {
     const d = v.door!; this.vdoorObj.get(v.id)?.removeFromParent(); const g = new THREE.Group();
@@ -130,15 +167,15 @@ class Life {
   enterVenue(v: Venue) {
     const c = this.ctx; const why = v.refuse?.(); if (why) { c.hud.toast(v.title, why, 'var(--red)', 'msg', 3.5); return; }
     if (v.fee) { if (c.sim.cash < v.fee) { c.hud.toast(v.title, `Gate fee na ₦${v.fee.toLocaleString()}. Your pocket no reach.`, 'var(--red)', 'cash', 3.5); return; } c.sim.cash -= v.fee; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: -v.fee }); }
-    this.ui.black(() => { const O = v.lot.group.position, s = v.lot.spawn; this.S.at = v.id; const rm = v.lot.rooms[0]; const fy = rm ? Math.atan2((rm.x0 + rm.x1) / 2 - s.x, (rm.z0 + rm.z1) / 2 - s.z) : s.yaw; this.teleport(O.x + s.x, 0.02, O.z + s.z, fy); c.view.cam.yaw = fy; v.enter?.(); c.hud.title(v.title, v.sub, 2.5); });
+    this.ui.black(() => { const O = v.lot.group.position, s = v.lot.spawn; this.S.at = v.id; this.doorCool = 1.2; this.teleport(O.x + s.x, 0.02, O.z + s.z, s.yaw); c.view.cam.yaw = s.yaw; c.view.cam.pitch = -0.12; v.enter?.(); c.hud.title(v.title, v.sub, 2.5); });
   }
   exitVenue() {
     const v = this.venue; if (!v) return; this.stop(true);
-    this.ui.black(async () => { v.exit?.(); this.S.at = null; const d = v.door!; this.teleport(d.x + Math.sin(d.yaw) * 1.4, 0.05, d.z + Math.cos(d.yaw) * 1.4, d.yaw); for (let i = 0; i < 12; i++) { this.ctx.view.world.update(d.x, d.z, true); await new Promise((r) => setTimeout(r, 0)); } this.ctx.view.cam.yaw = d.yaw; });
+    this.ui.black(async () => { v.exit?.(); this.S.at = null; this.doorCool = 1.2; const d = v.door!; this.teleport(d.x + Math.sin(d.yaw) * 1.4, 0.05, d.z + Math.cos(d.yaw) * 1.4, d.yaw); for (let i = 0; i < 12; i++) { this.ctx.view.world.update(d.x, d.z, true); await new Promise((r) => setTimeout(r, 0)); } this.ctx.view.cam.yaw = d.yaw; });
   }
   enter(fade = true) {
     const go = () => {
-      const s = this.lot.spawn; this.S.inside = true;
+      const s = this.lot.spawn; this.S.inside = true; this.doorCool = 1.2; this.ctx.view.cam.yaw = s.yaw; this.ctx.view.cam.pitch = -0.12;
       this.teleport(HOME_ORIGIN.x + s.x, 0.02, HOME_ORIGIN.z + s.z, s.yaw);
       this.ctx.hud.title('HOME', 'Room 4, Bello Compound', 2.5); this.persist();
     };
@@ -146,7 +183,7 @@ class Life {
   }
   exit() {
     this.ui.black(async () => {
-      const d = this.S.door!; this.S.inside = false;
+      const d = this.S.door!; this.S.inside = false; this.doorCool = 1.2;
       this.teleport(d.x + Math.sin(d.yaw) * 1.3, 0.05, d.z + Math.cos(d.yaw) * 1.3, d.yaw);
       for (let i = 0; i < 12; i++) { this.ctx.view.world.update(d.x, d.z, true); await new Promise((r) => setTimeout(r, 0)); }
       this.ctx.view.cam.yaw = d.yaw; this.persist();
@@ -161,11 +198,11 @@ class Life {
     const out: Thing[] = []; const me = this.ctx.sim.local;
     const V = this.venue;
     if (V) {
-      const O = V.lot.group.position, e = V.lot.spawn; out.push({ id: 'exit', name: 'Exit', x: O.x + e.x, z: O.z + e.z - 0.9, yaw: Math.PI, actions: [{ id: 'vout', label: 'Go outside', gain: {}, minutes: 0, clip: 'Idle_Loop', spot: [0, 0, 0] }], kind: 'door', reach: 1.8 });
+      const O = V.lot.group.position, e = V.lot.exit; out.push({ id: 'exit', name: 'Exit', x: O.x + e.x, z: O.z + e.z + 0.9, yaw: Math.PI, actions: [{ id: 'vout', label: 'Go outside', gain: {}, minutes: 0, clip: 'Idle_Loop', spot: [0, 0, 0] }], kind: 'door', reach: 1.6 });
       for (const t of V.things?.() ?? []) out.push(t);
     } else if (this.S.inside) {
       for (const p of this.lot.placed) { const d = DEFS[p.def]; if (!d.actions.length) continue; out.push({ id: p.def, name: d.name, x: HOME_ORIGIN.x + p.x, z: HOME_ORIGIN.z + p.z, yaw: p.yaw, actions: d.actions, kind: 'object', placed: p }); }
-      const e = this.lot.exit; out.push({ id: 'exit', name: 'Front door', x: HOME_ORIGIN.x + 0, z: HOME_ORIGIN.z + 0.1, yaw: Math.PI, actions: [{ id: 'out', label: 'Go outside', gain: {}, minutes: 0, clip: 'Idle_Loop', spot: [0, 0, 0] }], kind: 'door' }); void e;
+      const e = this.lot.exit; out.push({ id: 'exit', name: 'Front door', x: HOME_ORIGIN.x + e.x, z: HOME_ORIGIN.z + e.z + 1.0, yaw: Math.PI, actions: [{ id: 'out', label: 'Go outside', gain: {}, minutes: 0, clip: 'Idle_Loop', spot: [0, 0, 0] }], kind: 'door', reach: 1.6 });
     } else if (this.S.door) {
       const d = this.S.door; out.push({ id: 'home', name: 'Your house', x: d.x, z: d.z, yaw: d.yaw, actions: [{ id: 'in', label: 'Go inside', gain: {}, minutes: 0, clip: 'Idle_Loop', spot: [0, 0, 0] }], kind: 'door' });
     }
@@ -201,7 +238,8 @@ class Life {
     if (t.kind === 'npc') { this.pieNpc(t); return; }
     const items: PieItem[] = t.actions.filter((a) => this.allowed(a)).map((a) => ({ id: a.id, label: a.label, hint: a.effect === 'cook3' && this.S.pantry > 0 ? `Uses market foodstuff (${this.S.pantry} left)` : a.hint, cost: a.effect === 'cook3' && this.S.pantry > 0 ? undefined : a.cost, disabled: a.cost && c.sim.cash < a.cost && !(a.effect === 'cook3' && this.S.pantry > 0) ? 'No money' : a.when === 'hasFood' && this.S.food <= 0 ? 'Nothing inside' : undefined }));
     if (!items.length) return;
-    this.pie.show(t.name, t.id === 'cooler' ? `${this.S.food} plate${this.S.food === 1 ? '' : 's'} of food` : 'What you wan do?', items, this.screenOf(t.x, 1.1, t.z), (id) => { const a = t.actions.find((x) => x.id === id)!; this.begin(a, t); });
+    if (items.length === 1 && !items[0].disabled) { this.begin(t.actions.find((x) => x.id === items[0].id)!, t); return; } // one thing to do: just do it
+    this.pie.show(t.name, t.id === 'cooler' ? `${this.S.food} plate${this.S.food === 1 ? '' : 's'} of food` : 'Choose', items, this.screenOf(t.x, 1.1, t.z), (id) => { const a = t.actions.find((x) => x.id === id)!; this.begin(a, t); });
     void me;
   }
   private allowed(a: LifeAction) {
@@ -217,7 +255,7 @@ class Life {
     ];
     if (!this.inside && this.S.door) items.push({ id: 'home', label: 'Go home', hint: 'GPS to your room' });
     const phone = (label: string, gain: Partial<Record<Need, number>>, minutes: number): LifeAction => ({ id: 'phone', label, gain, minutes, clip: 'Idle_TalkingPhone_Loop', spot: [0, 0, 0], prop: 'phone', pose: 'phone' });
-    this.pie.show('You', 'Phone in hand', items, { x: innerWidth / 2, y: innerHeight / 2 }, (id) => {
+    this.pie.show('You', 'Your phone and your mood', items, { x: innerWidth / 2, y: innerHeight / 2 }, (id) => {
       const me = this.ctx.sim.local; const self: Thing = { id: 'self', name: 'You', x: me.pos.x, z: me.pos.z, yaw: me.yaw, actions: [], kind: 'self' };
       if (id === 'call') this.begin({ ...phone('Calling your people', { social: 22, fun: 4 }, 25), clip: 'Idle_TalkingPhone_Loop', pose: undefined }, self);
       if (id === 'scroll') this.begin({ ...phone('Scrolling', { fun: 16 }, 20), clip: 'Idle_Loop' }, self);
@@ -278,7 +316,7 @@ class Life {
     let spot: Running['spot'];
     if (t.kind === 'self') spot = { x: c.sim.local.pos.x, z: c.sim.local.pos.z, y: c.sim.local.pos.y, yaw: t.yaw };
     else { const [lx, lz, ly] = a.spot; const cs = Math.cos(t.yaw), sn = Math.sin(t.yaw); spot = { x: t.x + lx * cs + lz * sn, z: t.z - lx * sn + lz * cs, y: a.y ?? 0.02, yaw: wrapA(t.yaw + ly) }; }
-    this.run = { a, thing: t, phase: t.kind === 'self' ? 'do' : 'walk', t: 0, walkT: 0, spot, path: this.route(spot), best: 1e9, bestT: 0 };
+    this.run = { a, thing: t, phase: t.kind === 'self' ? 'do' : 'walk', t: 0, walkT: 0, spot, path: this.route(spot), best: 1e9, bestT: 0, ...planOf(a) };
     if (this.run.phase === 'do') this.arrive();
   }
   private arrive() {
@@ -301,7 +339,7 @@ class Life {
       if (r.a.effect === 'cook1') { this.S.food += 1; c.hud.toast('Noodles ready', 'One plate dey the cooler.', 'linear-gradient(160deg,#ff8a5c,#d1452c)', 'msg', 3); }
       if (r.a.effect === 'study') (c.systems.get('skills') as any)?.addXp?.('charm', 15);
       if (r.a.effect === 'outfit') this.changeOutfit();
-      if (r.a.sleeping && r.a.id === 'sleep') c.hud.title('GOOD MORNING', c.view.atmo.timeString(), 2.5);
+      if (r.a.sleeping && r.a.id === 'sleep') c.hud.toast('Rested', 'You feel better. The city did not wait for you.', 'linear-gradient(160deg,#6366f1,#312e81)', 'msg', 3);
     }
     this.persist();
   }
@@ -348,7 +386,7 @@ class Life {
     if (this.pie.open) { c.mx = c.mz = 0; c.interact = false; c.fire = false; c.jump = false; return; }
     const r = this.run; const wantMove = Math.hypot(c.mx, c.mz) > 0.35 || c.jump;
     if (r && wantMove && (r.phase === 'do' || r.walkT > 0.4)) { this.stop(true); return; }
-    if (c.interact && !r) { const t = this.pickNear(); const carNear = this.ctx.sim.liveVehicles().some((v) => { const p = v.body.translation(); return Math.hypot(p.x - me.pos.x, p.z - me.pos.z) < 3.2; }); if (t && (!carNear || t.kind !== 'npc')) { c.interact = false; this.openPie(t); return; } if (!t && !carNear && me.vehicle === null) { c.interact = false; this.openPie(null); return; } }
+    if (c.interact && !r) { const t = this.pickNear(); const carNear = this.ctx.sim.liveVehicles().some((v) => { const p = v.body.translation(); return Math.hypot(p.x - me.pos.x, p.z - me.pos.z) < 3.2; }); if (t && (!carNear || t.kind !== 'npc')) { c.interact = false; this.openPie(t); return; } }
     if (!r) { if (this.S.needs.v.energy < 10) c.sprint = false; return; }
     if (r.phase === 'walk') {
       while (r.path.length && Math.hypot(r.path[0].x - me.pos.x, r.path[0].z - me.pos.z) < 0.35) r.path.shift();
@@ -366,25 +404,26 @@ class Life {
   }
   frame(dt: number) {
     const c = this.ctx; if (!this.started) return; const me = c.sim.local;
-    { const r0 = this.run; const danger = c.sim.wanted > 0 || me.vehicle !== null || !me.alive; if (danger && this.speed !== 1) { this.speed = 1; this.ui.setSpeed(1); } c.view.timeScale = (r0 && r0.phase === 'do' && r0.a.ff ? r0.a.ff : 1) * this.speed; }
-    const h = c.view.atmo.hour + c.view.atmo.day * 24; if (this.lastHour < 0) this.lastHour = h;
-    let dh = h - this.lastHour; this.lastHour = h; if (dh < 0 || dh > 2) dh = 0;
+    c.view.timeScale = 1; // one shared world clock: nothing a player does speeds it up
+    this.doorCool = Math.max(0, this.doorCool - dt); if (!this.doorCool && !this.run && !this.pie.open && me.vehicle === null && me.alive) this.walkThrough();
+    const dh = Math.min(dt, 0.25) / 60; // real minutes this frame
     const r = this.run;
     const active: Partial<Record<Need, number>> = {};
-    if (r && r.phase === 'do') for (const [k, v] of Object.entries(r.a.gain)) active[k as Need] = (v ?? 0) + (this.S.fan && this.S.inside && k === 'comfort' ? 4 : 0);
-    if (this.S.fan && this.S.inside && !active.comfort) active.comfort = 2;
-    const speed = Math.hypot(me.ext?.x ?? 0, 0) || me.speed || 0;
+    if (r && r.phase === 'do') for (const [k, v] of Object.entries(r.give)) active[k as Need] = ((v ?? 0) / Math.max(1, r.secs)) * 60;
+    if (this.S.fan && this.S.inside) active.comfort = (active.comfort ?? 0) + 0.8;
+    const speed = me.speed || 0;
     decay(this.S.needs, dh, active, { sleeping: !!(r?.phase === 'do' && r.a.sleeping), sitting: !!(r?.phase === 'do' && r.a.sitting) || me.vehicle !== null, moving: speed });
     if (r && r.phase === 'do') {
-      r.t += dh * 60; const p = r.a.minutes ? r.t / r.a.minutes : 1;
+      r.t += Math.min(dt, 0.25); const p = r.t / r.secs;
       this.ui.action(r.a.label, Math.min(1, r.a.fill ? Math.max(p, this.S.needs.v[r.a.fill] / 100) : p));
-      if (r.t >= r.a.minutes || (r.a.fill && this.S.needs.v[r.a.fill] >= 99) || (r.a.sleeping && r.a.id === 'sleep' && this.S.needs.v.energy >= 99 && c.view.atmo.hour > 5 && c.view.atmo.hour < 12)) this.stop(false);
+      if (r.t >= r.secs || (r.a.fill && this.S.needs.v[r.a.fill] >= 99.5)) this.stop(false);
     } else if (r) this.ui.action(r.a.label, 0);
     this.consequences(dh);
     const mood = moodOf(this.S.needs); this.ui.update(this.S.needs, mood);
     if (this.fanBlades && this.S.fan) this.fanBlades.rotation.z += dt * 18;
     this.venue?.frame?.(dt);
-    this.vdoorT -= dt; if (this.vdoorT <= 0) { this.vdoorT = 5; if (!this.inside) for (const v of this.venues.values()) if (!v.door) this.placeVenueDoor(v); }
+    this.snapT -= dt; if (this.snapT <= 0 && !this.inside) { this.snapT = 1; this.snapDoors(); }
+    this.vdoorT -= dt; if (this.vdoorT <= 0) { this.vdoorT = 2; if (!this.inside) for (const v of this.venues.values()) if (!v.door) this.placeVenueDoor(v); }
     for (const g of this.vdoorObj.values()) { const r = g.getObjectByName('ring'); if (r) r.scale.setScalar(1 + Math.sin(performance.now() / 300) * 0.06); }
     const ring = this.doorObj?.getObjectByName('ring'); if (ring) { (ring as THREE.Mesh).scale.setScalar(1 + Math.sin(performance.now() / 300) * 0.06); }
     this.near = this.run || this.pie.open ? null : this.pickNear();
@@ -404,40 +443,36 @@ class Life {
     if (n.v.comfort < 12) addMoodlet(n, 'sore', 'Body pain', -6, 1);
   }
 
-  // ---------------------------------------------------------------- camera: Sims cutaway when inside
+  // ---------------------------------------------------------------- interiors keep the normal third person camera
   preRender() {
-    const c = this.ctx; const V = this.venue; const lot = V ? V.lot : this.lot;
-    c.view.indoor = this.inside;
-    if (!this.inside || c.sim.local.vehicle !== null) { for (const w of this.lot.walls) this.wallFull(w, true); return; }
-    const me = c.sim.local; const cam = c.view.camera; const yaw = c.view.cam.yaw; const pitch = V?.cam?.pitch ?? 0.92, d = V?.cam?.d ?? 7.4; const O = lot.group.position;
-    const tx = me.pos.x, ty = me.pos.y + 0.9, tz = me.pos.z;
-    cam.position.set(tx - Math.sin(yaw) * Math.cos(pitch) * d, ty + Math.sin(pitch) * d, tz - Math.cos(yaw) * Math.cos(pitch) * d);
-    cam.lookAt(tx, ty, tz); cam.updateMatrixWorld();
-    const fx = Math.sin(yaw), fz = Math.cos(yaw);
-    for (const w of lot.walls) {
-      const wx = O.x + w.cx - tx, wz = O.z + w.cz - tz;
-      const along = wx * fx + wz * fz;
-      this.wallFull(w, along > 0.6 && Math.hypot(wx, wz) < (V ? 30 : 9));
-    }
+    const c = this.ctx; const ins = this.inside && c.sim.local.vehicle === null;
+    c.view.indoor = ins; (c.view.cam as any).indoor = ins;
   }
-  private wallFull(w: Lot['walls'][number], full: boolean) {
-    const s = full ? 1 : 0.16; if (Math.abs(w.mesh.scale.y - s) < 1e-3) return;
-    w.mesh.scale.y = s; w.mesh.position.y = (w.full * s) / 2;
+  /** walk into a doorway and you are through it; the cut hides the interior loading, like GTA */
+  private walkThrough() {
+    const me = this.ctx.sim.local; const mv = Math.hypot(me.cmd?.mx ?? 0, me.cmd?.mz ?? 0); if (mv < 0.3) return; const fx = me.cmd.mx / mv, fz = me.cmd.mz / mv;
+    /** inside radius r of (x, z) and walking roughly along (wx, wz) */
+    const hit = (x: number, z: number, wx: number, wz: number, r = 0.85) => Math.hypot(x - me.pos.x, z - me.pos.z) <= r && fx * wx + fz * wz > 0.35;
+    const V = this.venue;
+    if (V) { const O = V.lot.group.position, e = V.lot.exit; if (hit(O.x + e.x, O.z + e.z, 0, -1, 1.2)) this.exitVenue(); return; }
+    if (this.S.inside) { const e = this.lot.exit; if (hit(HOME_ORIGIN.x + e.x, HOME_ORIGIN.z + e.z, 0, -1, 1.2)) this.exit(); return; }
+    const d = this.S.door; if (d && hit(d.x + Math.sin(d.yaw) * 0.6, d.z + Math.cos(d.yaw) * 0.6, -Math.sin(d.yaw), -Math.cos(d.yaw), 1.1)) { this.enter(); return; }
+    for (const v of this.venues.values()) { const vd = v.door; if (!vd || v.fee) continue; if (hit(vd.x + Math.sin(vd.yaw) * 0.45, vd.z + Math.cos(vd.yaw) * 0.45, -Math.sin(vd.yaw), -Math.cos(vd.yaw), 1.2)) { const why = v.refuse?.(); if (why) { this.ctx.hud.toast(v.title, why, 'var(--red)', 'msg', 3.5); this.doorCool = 4; return; } this.enterVenue(v); return; } }
   }
 
   // ---------------------------------------------------------------- input, prompt, misc
   private key(e: KeyboardEvent) {
-    if (e.code === 'BracketRight' || e.code === 'BracketLeft') { const L = [1, 3, 8]; const i = Math.max(0, Math.min(2, L.indexOf(this.speed) + (e.code === 'BracketRight' ? 1 : -1))); this.speed = L[i]; this.ui.setSpeed(this.speed); return; }
+    if (e.code === 'KeyZ' && !e.repeat && !this.pie.open && !this.run && this.started && this.ctx.sim.local.vehicle === null && !(document.activeElement instanceof HTMLInputElement)) { this.ctx.input.releasePointer(); this.pieSelf(); return; }
     if (!this.pie.open) return;
     if (e.code === 'Escape' || e.code === 'Backspace') { this.pie.close(); e.preventDefault(); }
     const n = +e.key; if (n >= 1 && n <= 9) { this.pie.pick(n - 1); e.preventDefault(); }
-    if (e.code === 'ArrowRight' || e.code === 'ArrowDown' || e.code === 'KeyD' || e.code === 'KeyS') this.pie.move(1);
-    if (e.code === 'ArrowLeft' || e.code === 'ArrowUp' || e.code === 'KeyA' || e.code === 'KeyW') this.pie.move(-1);
-    if (e.code === 'Enter' || e.code === 'Space') { this.pie.confirm(); e.preventDefault(); }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') this.pie.move(1);
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') this.pie.move(-1);
+    if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyE' || e.code === 'KeyF') { this.pie.confirm(); e.preventDefault(); }
   }
   prompt(): string | null {
     if (this.run || this.pie.open) return null; const t = this.near; if (!t) return null;
-    if (t.kind === 'door') return `<kbd>E</kbd>${t.actions[0].label}`;
+    if (t.kind === 'door') return t.actions[0].id.startsWith('vin:') && !this.venues.get(t.actions[0].id.slice(4))?.fee ? `Walk in · ${t.name}` : `<kbd>E</kbd>${t.actions[0].label}`;
     if (t.kind === 'npc') return `<kbd>E</kbd>Talk to ${t.name}`;
     if (t.verb) return `<kbd>E</kbd>${t.verb}`;
     return `<kbd>E</kbd>${t.name}`;
@@ -446,8 +481,8 @@ class Life {
     const v = new THREE.Vector3(x, y, z).project(this.ctx.view.camera);
     return v.z > 1 ? { x: innerWidth / 2, y: innerHeight / 2 } : { x: (v.x * 0.5 + 0.5) * innerWidth, y: (-v.y * 0.5 + 0.5) * innerHeight };
   }
-  blips(out: { x: number; z: number; c: string; r?: number }[]) { if (this.inside) return; if (this.S.door) out.push({ x: this.S.door.x, z: this.S.door.z, c: '#2de0c8', r: 10 }); for (const v of this.venues.values()) if (v.door) out.push({ x: v.door.x, z: v.door.z, c: v.blip, r: 9 }); }
-  persist() { this.ctx.save.life = this.S; this.ctx.persist(); }
+  blips(out: { x: number; z: number; c: string; r?: number }[]) { if (this.inside) return; if (this.S.door) out.push({ x: this.S.door.x, z: this.S.door.z, c: '#2de0c8', r: 10 }); for (const v of this.venues.values()) { const p = v.door ?? VENUE_ANCHOR[v.id]; if (p) out.push({ x: p.x, z: p.z, c: v.blip, r: 9 }); } }
+  persist() { this.S.seen = Date.now(); this.ctx.save.life = this.S; this.ctx.persist(); }
   get needs() { return this.S.needs; }
   /** other systems (food vendors, toilets, clubs) run actions through the same runner */
   doAction(a: LifeAction, at?: { name: string; x: number; z: number; yaw: number }) {

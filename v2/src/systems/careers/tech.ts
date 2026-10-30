@@ -10,7 +10,7 @@ import { addMoodlet } from '../life/needs';
 import { Builder, canvasTex, M, box, cyl } from '../leisure/build';
 import { sfx } from '../leisure/sfx';
 
-export const HUB_ORIGIN = new THREE.Vector3(36000, 0, 30000);
+export const HUB_ORIGIN = new THREE.Vector3(36000, 0, 36000);
 
 /** snippets with exactly one bug; `bug` is the 0-based line and `why` explains it */
 const BUGS: { lang: string; lines: string[]; bug: number; why: string }[] = [
@@ -71,7 +71,7 @@ class TechHub {
     const pp = new THREE.Group(); pp.position.set(5.5, 0, 2.3); pp.add(box(2.7, 0.05, 1.5, M(0x1565c0, 0.5), 0, 0.76, 0)); pp.add(box(0.02, 0.15, 1.5, M(0xffffff, 0.5), 0, 0.85, 0)); B.solid(pp, 2.7, 1.5, 0.8);
     for (const [x, z, c] of [[-7.5, 10.5, 0xff7043], [-6.2, 11, 0x26a69a], [-7.8, 9, 0xffca28]] as number[][]) { const bb = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 10), M(c, 0.9)); bb.position.set(x, 0.32, z); bb.scale.set(1, 0.65, 1); B.add(bb); }
     for (const [x, z] of [[-4, 3], [3, 3], [-4, 9], [3, 9]]) { B.light(x, 2.8, z, 0xf4f8ff, 6, 9); B.add(box(1.4, 0.04, 0.2, new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), x, 3.0, z)); }
-    const lot = B.lot({ x: W - 1.2, z: 1.2, yaw: 0 }, [{ name: 'Hub', x0: -W, z0: 0, x1: W, z1: D }]); lot.exit = { x: W, z: -1 };
+    const lot = B.lot({ x: 0, z: 1.6, yaw: 0 }, [{ name: 'Hub', x0: -W, z0: 0, x1: W, z1: D }], 0xf2f2ee);
     this.venue = { id: 'hub', title: 'HUB 32', sub: 'Co-working · Wi-Fi that works (mostly)', lot, door: null, blip: '#58a6ff', label: 'Enter Hub 32 (day pass ₦3,000)', fee: 3000, cam: { d: 10, pitch: 0.95 }, things: () => this.things(), enter: () => this.enter(), exit: () => this.exit(), refuse: () => { const h = this.ctx.view.atmo.hour; return h < 7 || h >= 23 ? 'Hub 32 opens 7am till 11pm.' : null; } };
   }
   init() { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); this.el = document.createElement('div'); this.el.id = 'tech'; document.body.appendChild(this.el); (window as any).__hub = this; }

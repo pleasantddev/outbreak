@@ -9,7 +9,7 @@ import { Builder, canvasTex, M, box, cyl } from './build';
 import { CasinoGames } from './games';
 import { sfx } from './sfx';
 
-export const CASINO_ORIGIN = new THREE.Vector3(32000, 0, 30000);
+export const CASINO_ORIGIN = new THREE.Vector3(32000, 0, 36000);
 
 function carpet() {
   return canvasTex(256, 256, (x) => {
@@ -67,11 +67,10 @@ export function buildCasino(): { venue: Omit<Venue, 'things'>; seats: { id: stri
   }
   // cashier cage
   { const cage = new THREE.Group(); cage.position.set(6.5, 0, 14.6); cage.add(box(3.6, 1.1, 0.6, M(0x3b2414, 0.4), 0, 0.55, 0)); for (let i = 0; i < 10; i++) cage.add(box(0.03, 1.4, 0.03, goldM, -1.7 + i * 0.38, 1.8, 0.25)); B.solid(cage, 3.6, 0.6, 2.5); staff.push({ x: 6.5, z: 15.3, yaw: Math.PI, role: 'Cashier', clip: 'Idle_Loop' }); }
-  staff.push({ x: W - 3.8, z: 1.0, yaw: 0, role: 'Bouncer', clip: 'Idle_FoldArms_Loop' }, { x: W + 0.8 - 4.4, z: 1.0, yaw: 0, role: 'Bouncer', clip: 'Idle_FoldArms_Loop' });
+  staff.push({ x: -1.9, z: 0.9, yaw: Math.PI, role: 'Bouncer', clip: 'Idle_FoldArms_Loop' }, { x: 1.9, z: 0.9, yaw: Math.PI, role: 'Bouncer', clip: 'Idle_FoldArms_Loop' });
   // chandeliers and fill light
   for (const [x, z] of [[-4, 4], [4, 4], [-4, 11], [4, 11], [0, 7.5]]) { B.add(cyl(0.4, 0.15, 0.3, new THREE.MeshBasicMaterial({ color: 0xfff3c4, toneMapped: false }), x, 3.15, z, 12)); B.light(x, 2.9, z, 0xffe0a8, 5, 9); }
-  const lot = B.lot({ x: W - 1.2 - 0 , z: 1.2, yaw: 0 }, [{ name: 'Casino floor', x0: -W, z0: 0, x1: W, z1: D }]);
-  lot.spawn = { x: W - 1.2, z: 1.3, yaw: 0 }; lot.exit = { x: W, z: -1 };
+  const lot = B.lot({ x: 0, z: 1.6, yaw: 0 }, [{ name: 'Casino floor', x0: -W, z0: 0, x1: W, z1: D }], 0x2a0d12);
   return { venue: { id: 'casino', title: 'GOLDEN PALM', sub: 'Casino and lounge · 18+ in spirit, 16+ in game', lot, door: null, blip: '#ffc93c', label: 'Enter the casino', fee: 0, cam: { d: 10.5, pitch: 0.95 } }, seats, staff };
 }
 
