@@ -14,7 +14,7 @@ export interface MoveState {
   x: number; y: number; z: number; at: number; // last accepted position and server time (ms)
   credit: number; strikes: number; strikeAt: number; tpUntil: number; fixUntil: number; lastTp: number;
   /** inside an interior (granted by a `door` act), where we came in, and where a pending exit must land */
-  interior: string | null; doorFrom: { x: number; z: number } | null; exitTo: { x: number; z: number } | null; lastDoor: number;
+  interior: string | null; doorFrom: { x: number; z: number } | null; exitTo: { x: number; z: number } | null; lastDoor: number; exitFrom?: string | null;
 }
 export const newMoveState = (x: number, y: number, z: number, now: number): MoveState => ({ x, y, z, at: now, credit: FOOT_MAX * CREDIT_SECONDS, strikes: 0, strikeAt: now, tpUntil: 0, fixUntil: 0, lastTp: -1e9, interior: null, doorFrom: null, exitTo: null, lastDoor: -1e9 });
 
@@ -43,7 +43,8 @@ export function judgeMove(s: MoveState, m: StateMsg, now: number, bounds: [numbe
   s.credit = Math.min(vmax * CREDIT_SECONDS, s.credit + vmax * dt);
   // going through a door: one hop into the interior zone, or one hop back out to near where we came in
   if (now < s.tpUntil && dist > s.credit + 1.5 && (inside !== inInteriorZone(s.x, s.z))) {
-    if (!inside && (!s.exitTo || Math.hypot(m.x - s.exitTo.x, m.z - s.exitTo.z) > 120)) return { ok: false, reason: 'door-exit', hard: true };
+    // a refused exit leaves the player inside, so the rubber band and the server agree about where they are
+    if (!inside && (!s.exitTo || Math.hypot(m.x - s.exitTo.x, m.z - s.exitTo.z) > 120)) { s.interior = s.exitFrom ?? 'unknown'; s.exitTo = null; s.tpUntil = 0; return { ok: false, reason: 'door-exit', hard: true }; }
     s.exitTo = null; s.tpUntil = 0; s.credit = 0; return { ok: true };
   }
   if (now < s.tpUntil) { // a granted teleport or respawn: one jump, then the normal rules resume

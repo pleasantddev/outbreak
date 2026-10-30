@@ -18,7 +18,10 @@ describe('interiors (GTA Online style loaded rooms)', () => {
     st.interior = 'casino'; st.doorFrom = { x: 900, z: -330 }; st.tpUntil = 4000;
     expect(judgeMove(st, msg(32000, 36001), 1200, B).ok).toBe(true); st.x = 32000; st.z = 36001; st.at = 1200;
     st.interior = null; st.exitTo = { x: 900, z: -330 }; st.tpUntil = 6000;
+    st.exitFrom = 'casino';
     expect(judgeMove(st, msg(5000, 5000), 1300, B).ok).toBe(false);
+    expect(st.interior).toBe('casino'); // refused exit keeps them inside
+    st.interior = null; st.exitTo = { x: 900, z: -330 }; st.tpUntil = 6000;
     expect(judgeMove(st, msg(901, -328), 1400, B).ok).toBe(true);
   });
   it('door act grants entry, casino only works inside the casino, and pays from the server', async () => {

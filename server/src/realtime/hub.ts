@@ -332,7 +332,7 @@ export class Hub implements OnlineApi {
           const now = performance.now(); if (now - c.ms.lastDoor < 1000) throw new HttpError(429, 'Slow down.'); c.ms.lastDoor = now;
           const into = typeof m.into === 'string' && m.into ? String(m.into).slice(0, 24) : null;
           if (into) { c.ms.doorFrom = { x: c.ms.x, z: c.ms.z }; c.ms.interior = into; c.ms.exitTo = null; }
-          else { if (!c.ms.interior) throw new HttpError(400, 'You are not inside anywhere.'); c.ms.exitTo = c.ms.doorFrom; c.ms.interior = null; }
+          else { if (!c.ms.interior) throw new HttpError(400, 'You are not inside anywhere.'); c.ms.exitTo = c.ms.doorFrom; c.ms.exitFrom = c.ms.interior; c.ms.interior = null; }
           c.ms.tpUntil = now + 3000; ok({ into }); break;
         }
         case 'race.enter': ok({ ...this.econ.raceEnter(id, m.wager, m.rivals) }); break;
