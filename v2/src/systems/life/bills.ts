@@ -9,6 +9,7 @@
 import type { GameCtx, GameSystem } from '../registry';
 import type { Actor } from '../../sim/types';
 import { registerApp } from '../../ui/lifeHud';
+import { power } from '../power';
 import { lifeSystem } from './index';
 import { addMoodlet } from './needs';
 import { spend } from '../money';
@@ -58,7 +59,8 @@ class BillsSys {
     c.hud.toast('Landlord', 'Thank you. See you next Saturday.', 'linear-gradient(160deg,#2de0c8,#139a8a)', 'msg', 3.5); return true;
   }
   /** area blackouts: an hour or two most evenings, the same for everyone because it is a function of the world clock */
-  outage() { const { day, hour } = this.cal(); const h = (Math.imul(day + 13, 2654435761) >>> 0) % 100; const start = 18 + (h % 4); const len = 1 + ((h >> 3) % 3); return h < 70 && hour >= start && hour < start + len; }
+  /** no light on the home's feeder (the grid, server-run online: systems/power.ts) */
+  outage() { const d = this.life?.S.door; return d ? !power.on(d.x, d.z) : false; }
   frame(dt: number) {
     const c = this.ctx; const L = this.life; if (!L?.started) return; const { hour } = this.cal();
     // rent: text on Saturday morning, padlock after two missed weeks
@@ -69,7 +71,7 @@ class BillsSys {
     const home = L.S.inside && !L.venue && !L.guest; const night = hour >= 18.5 || hour < 6.5; const out = this.outage();
     if (home && (night || L.S.fan)) this.B.units = Math.max(0, this.B.units - dt * (0.02 + (L.S.fan ? 0.03 : 0)));
     const on = !(out || this.B.units <= 0);
-    if (on !== this.lightsOn) { this.lightsOn = on; for (const l of L.lot.lights) l.visible = on; if (!on && L.S.fan) { L.S.fan = false; } if (home) c.hud.toast(on ? 'Light don come!' : 'NEPA!', on ? 'UP NEPA! The whole compound shout.' : out ? 'NEPA don take light for the whole area.' : 'Your prepaid units don finish. Buy more on the Home app.', on ? 'linear-gradient(160deg,#facc15,#ca8a04)' : 'var(--red)', 'msg', 4); }
+    if (on !== this.lightsOn) { this.lightsOn = on; for (const l of L.lot.lights) l.visible = on; if (!on && L.S.fan) { L.S.fan = false; } if (home && !on && !out) c.hud.toast('Units finish', 'Your prepaid units don finish. Buy more on the Home app.', 'var(--red)', 'msg', 4); } // the grid's own shout comes from systems/power.ts
     this.outageT += dt; if (this.outageT > 20) { this.outageT = 0; this.persist(); }
     // the ChopNow rider
     const r = this.rider; if (r) {

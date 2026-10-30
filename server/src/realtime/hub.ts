@@ -11,6 +11,7 @@ import type { Economy } from '../economy.ts';
 import type { ContentStore } from '../content.ts';
 import type { OnlineApi } from '../api.ts';
 import { Businesses } from '../business.ts';
+import { Grid as PowerGrid, FEEDERS } from '../grid.ts';
 import { HttpError } from '../auth.ts';
 import { run } from '../db.ts';
 import type { DB } from '../db.ts';
@@ -63,9 +64,16 @@ export class Hub implements OnlineApi {
   private saveTimer: NodeJS.Timeout | null = null;
 
   races: RaceLobbies;
-  private biz: Businesses;
+  biz: Businesses; power = new PowerGrid(); private lastSwitch = new Map<string, number>();
+  /** what the admin panel can steer in the game world */
+  get world() { return { grid: this.power, biz: this.biz }; }
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
     this.biz = new Businesses(db, econ);
+    // light changes reach everybody at once; the shout goes to the feeders that just got light
+    this.power.on('change', (st: ReturnType<PowerGrid['state']>, prev: string) => {
+      this.broadcastJson({ t: 'grid', ...st });
+      if (prev) for (const f of FEEDERS) if (st.on[f.i] === '1' && prev[f.i] === '0') this.log.info(`grid: ${f.name} on`);
+    });
     this.races = new RaceLobbies({
       debit: (id, n, kind) => { this.econ.adjust(id, -n, 0, kind); }, credit: (id, n, kind) => { this.econ.adjust(id, n, 0, kind); },
       broadcast: (l, msg) => { for (const id of l.members.keys()) { const c = this.byAccount.get(id); if (c) this.send(c, { ...msg, startIn: l.startAt ? l.startAt - performance.now() : 0 } as any); } },
@@ -158,7 +166,7 @@ export class Hub implements OnlineApi {
     const st = this.econ.state(auth.account.id);
     this.send(c, {
       t: 'welcome', id, v: PROTOCOL_VERSION, tickHz: this.cfg.tickHz, serverTime: this.now(), epoch: Date.now(), cell: CELL, wallet: w, plots: this.econ.plotsOf(auth.account.id).map((p) => p.id),
-      online: this.conns.size, profile: publicProfile(profile), role: auth.account.role, motd: this.cfg.motd,
+      online: this.conns.size, profile: publicProfile(profile), role: auth.account.role, motd: this.cfg.motd, grid: this.power.state(),
       state: { ...st.blobs, vehicles: st.vehicles, skills: st.skills, missions: st.missions, pos: last },
     });
     this.log.info(`join ${profile.name} (#${id}) online=${this.conns.size}`);
@@ -354,6 +362,13 @@ export class Hub implements OnlineApi {
         case 'casino': ok(this.casino(c, m)); break;
         case 'social.greet': { const o = this.nearConn(c, m.to, 12); this.send(o, { t: 'social', kind: 'greet', from: c.profile.name, fromId: c.id }); ok(); break; }
         case 'social.invite': ok(this.invite(c, m)); break;
+        case 'grid.get': ok({ board: this.power.board() }); break;
+        case 'grid.switch': { // only from the control room, and not faster than a real hand on a real switch
+          if (c.ms.interior !== 'power') throw new HttpError(400, 'You are not in the control room.');
+          const last = this.lastSwitch.get(id) ?? 0; if (Date.now() - last < 1500) throw new HttpError(429, 'Easy on the switches.'); this.lastSwitch.set(id, Date.now());
+          const f = Math.floor(Number(m.f)); if (!FEEDERS.some((x) => x.i === f)) throw new HttpError(400, 'No such feeder.');
+          ok({ state: this.power.switch(f, !!m.on, c.profile.name) }); break;
+        }
         case 'biz.all': ok({ list: this.biz.all() }); break;
         case 'biz.mine': ok({ list: this.biz.mine(id) }); break;
         case 'biz.get': ok({ biz: this.biz.get(String(m.site ?? '')) }); break;
@@ -447,7 +462,7 @@ export class Hub implements OnlineApi {
   // ------------------------------------------------------------------------------------------ snapshots
   private tick() {
     this.tickN++; this.stats0.ticks++;
-    if (this.tickN % this.cfg.tickHz === 0) this.races.tick();
+    if (this.tickN % this.cfg.tickHz === 0) { this.races.tick(); this.power.tick(); }
     const R = this.cfg.interestRings; const now = performance.now();
     // parked cars time out
     if (this.tickN % (this.cfg.tickHz * 10) === 0) { const t = Date.now(); for (const v of [...this.vehicles.values()]) if (v.parkedAt && t - v.parkedAt > PARKED_TTL) this.removeVehicle(v); }

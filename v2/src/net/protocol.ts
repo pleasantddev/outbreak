@@ -259,7 +259,7 @@ export type ClientMsg =
 export interface WhoInfo { id: number; name: string; model: string; skin: number; outfit: string; level: number; role?: string }
 
 export type ServerMsg =
-  | { t: 'welcome'; id: number; v: number; tickHz: number; serverTime: number; epoch: number; cell: number; wallet: { cash: number; bank: number }; plots: string[]; online: number; profile: unknown; role: string; state: Record<string, unknown>; motd?: string }
+  | { t: 'welcome'; id: number; v: number; tickHz: number; serverTime: number; epoch: number; cell: number; wallet: { cash: number; bank: number }; plots: string[]; online: number; profile: unknown; role: string; state: Record<string, unknown>; motd?: string; grid?: import('./rules').GridState }
   | { t: 'pong'; c: number; s: number }
   | { t: 'who'; list: WhoInfo[] }
   | { t: 'chat'; ch: 'near' | 'global' | 'whisper' | 'system'; from: string; fromId: number; text: string; ts: number }
@@ -275,7 +275,9 @@ export type ServerMsg =
   /** another player did something to you: greeted you, invited you to their room, or (as the owner) left it with you inside */
   | { t: 'social'; kind: 'greet' | 'invite' | 'evict'; from: string; fromId: number; owner?: string; door?: { x: number; z: number; yaw: number } }
   /** somebody bought a shop: the signboard on that site changes for everyone */
-  | { t: 'biz'; site: string; type: string; ownerName: string };
+  | { t: 'biz'; site: string; type: string; ownerName: string }
+  /** the power grid changed: one character per feeder, generation, load, collapse (rules.ts GridState) */
+  | ({ t: 'grid' } & import('./rules').GridState);
 
 /** Actions a client may send in `act`. The server owns the rules for each. */
 export const ACTS = ['plot.buy', 'bank.deposit', 'bank.withdraw', 'cash.transfer', 'cash.delta', 'job.start', 'job.done', 'shop.buy', 'state.put', 'tp', 'respawn'] as const;

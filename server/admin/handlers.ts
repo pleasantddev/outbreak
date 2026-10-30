@@ -10,7 +10,11 @@ import { hasErrors, validateContent } from './validate';
 
 export interface HostReq { method: string; path: string; params: Record<string, string>; query: Record<string, string>; body: any; headers: Record<string, string>; ip: string }
 export interface HostRes { status?: number; body?: any }
-export interface AdminDeps { db: SqlDb; dataDir: string; contentSeedDirs: string[]; live?: () => LiveHooks | null; version?: string; log?: (m: string) => void; setupCode?: string }
+/** game world controls the server hands the admin: the power grid and the businesses (see server/src/grid.ts, business.ts) */
+export interface WorldHooks {
+  grid: { board(): any; force(f: number | 'all', on: boolean | null, hours?: number): any; collapse(hours: number): any; genScale: number; tick(): any };
+}
+export interface AdminDeps { db: SqlDb; dataDir: string; contentSeedDirs: string[]; live?: () => LiveHooks | null; world?: () => WorldHooks | null; version?: string; log?: (m: string) => void; setupCode?: string }
 export interface RouteDef { method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; path: string; auth: boolean; handler: (req: HostReq) => Promise<HostRes> | HostRes }
 
 class HttpError extends Error { constructor(public status: number, msg: string, public extra?: any) { super(msg); } }
@@ -248,6 +252,31 @@ export function buildAdmin(deps: AdminDeps) {
     return { purchase: n, note: p.provider === 'manual' ? null : `Marked refunded here. Send the refund to ${p.provider} separately (ref ${p.ref ?? 'none'}) until the payment webhook is wired.` };
   });
   route('GET', '/store/revenue', 'store.view', (c) => store.revenue(Math.min(180, Math.max(7, Number(c.req.query.days) || 30))));
+
+  // ---------- the world: power grid and businesses
+  const world = () => { const w = deps.world?.() ?? null; if (!w) throw bad('The game world is not attached to this server.'); return w; };
+  route('GET', '/world/grid', 'liveops.view', () => world().grid.board());
+  route('POST', '/world/grid', 'liveops.edit', (c) => {
+    const b = c.req.body ?? {}; const g = world().grid;
+    if (typeof b.collapse === 'number') { g.collapse(Math.max(0, Math.min(24, b.collapse))); audit(c, 'grid.collapse', 'grid', 'all', b.collapse > 0 ? `Collapsed the national grid for ${b.collapse} game hours` : 'Restored the national grid'); }
+    if (typeof b.genScale === 'number') { g.genScale = Math.max(0, Math.min(2, b.genScale)); g.tick(); audit(c, 'grid.gen', 'grid', 'all', `Generation set to ${Math.round(g.genScale * 100)}%`); }
+    if (b.feeder !== undefined) {
+      const f = b.feeder === 'all' ? 'all' : Math.floor(Number(b.feeder)); if (f !== 'all' && !Number.isFinite(f)) throw bad('Bad feeder');
+      const on = b.on === null || b.on === 'auto' ? null : !!b.on; g.force(f, on, Math.max(1, Math.min(240, Number(b.hours) || 24)));
+      audit(c, 'grid.force', 'grid', String(f), on === null ? `Feeder ${f} back on the plan` : `Feeder ${f} forced ${on ? 'ON' : 'OFF'}`);
+    }
+    return g.board();
+  });
+  route('GET', '/world/businesses', 'economy.view', () => ({ list: db.prepare('SELECT b.*, f.name AS owner_name FROM businesses b LEFT JOIN profiles f ON f.account_id=b.owner_id ORDER BY b.bought_at DESC LIMIT 500').all() }));
+  route('POST', '/world/businesses/:site', 'economy.edit', (c) => {
+    const site = c.req.params.site; const b = c.req.body ?? {}; const row = db.prepare('SELECT * FROM businesses WHERE site=?').get(site) as any; if (!row) throw bad('No such business');
+    if (b.repossess) { db.prepare('DELETE FROM businesses WHERE site=?').run(site); audit(c, 'biz.repossess', 'business', site, `Repossessed ${row.type} at ${site}`); return { ok: true }; }
+    const num = (v: unknown, lo: number, hi: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : undefined);
+    const till = num(b.till, 0, 1e9), stock = num(b.stock, 0, 100), debt = num(b.debt, 0, 1e9);
+    db.prepare('UPDATE businesses SET till=COALESCE(?,till), stock=COALESCE(?,stock), debt=COALESCE(?,debt) WHERE site=?').run(till ?? null, stock ?? null, debt ?? null, site);
+    audit(c, 'biz.edit', 'business', site, `Edited ${row.type} at ${site}: ${JSON.stringify({ till, stock, debt })}`);
+    return db.prepare('SELECT * FROM businesses WHERE site=?').get(site);
+  });
 
   // ---------- live ops
   route('GET', '/ops/status', 'liveops.view', () => {

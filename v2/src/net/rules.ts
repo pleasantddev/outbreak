@@ -159,3 +159,55 @@ export function bizStep(b: BizState, t: BizType, site: string, to: number, rand:
   b.hour = Math.max(b.hour, Math.floor(to)); b.till = Math.round(b.till); b.debt = Math.round(b.debt);
   return b;
 }
+
+// ------------------------------------------------------------------------------------------ the power grid
+/** Lagos on 4 km feeders. Server and clients agree on which feeder a point is in; src/data/feeders.json (built by
+ *  tools/feeders.ts from the map) names them and gives each its load (buildings) and tariff band. */
+export const GRID = {
+  x0: -22000, z0: -20000, cell: 4000, w: 9, h: 8,
+  of(x: number, z: number) { const i = Math.max(0, Math.min(8, Math.floor((x + 22000) / 4000))), j = Math.max(0, Math.min(7, Math.floor((z + 20000) / 4000))); return i + j * 9; },
+  center(f: number) { return { x: -22000 + (f % 9) * 4000 + 2000, z: -20000 + Math.floor(f / 9) * 4000 + 2000 }; },
+};
+export type Band = 'A' | 'B' | 'C';
+/** hours of light per day each band gets on the default load-shedding plan */
+export const BAND_HOURS: Record<Band, number> = { A: 20, B: 15, C: 10 };
+const gh = (a: number, b: number) => { let h = Math.imul(a + 0x9e37, 2654435761) ^ Math.imul(b + 0x85eb, 2246822519); h ^= h >>> 15; h = Math.imul(h, 2654435761); return (h ^ (h >>> 13)) >>> 0; };
+/** the default plan: two blackout blocks a day per feeder, placed by a hash of the feeder and the day */
+export function scheduledOn(f: number, band: Band, hours: number) {
+  const day = Math.floor(hours / 24), hod = ((hours % 24) + 24) % 24; const off = 24 - BAND_HOURS[band];
+  const h = gh(f, day); const a = Math.ceil(off / 2), b = off - a; const s1 = h % 24, s2 = (s1 + 10 + ((h >>> 8) % 5)) % 24;
+  const inB = (s: number, len: number) => len > 0 && ((hod - s + 24) % 24) < len;
+  return !(inB(s1, a) || inB(s2, b));
+}
+/** how much the grid can carry right now (in the same units as feeder load), before operators and events */
+export function generation(hours: number, totalLoad: number) {
+  const day = Math.floor(hours / 24); const h = gh(day, 77);
+  const gas = 0.55 + ((h % 1000) / 1000) * 0.35; // gas supply varies by day: 55% to 90% of demand
+  return Math.round(totalLoad * gas);
+}
+/** the grid as the server sends it: one character per feeder ("1" light, "0" none), generation, and a collapse flag */
+export interface GridState { on: string; gen: number; load: number; collapse: boolean; by?: Record<number, string> }
+export const GRID_OVERRIDE_HOURS = 3;
+export interface FeederDef { i: number; name: string; load: number; band: Band }
+const h32 = (a: number, b: number) => { let h = Math.imul(a ^ 0x5bd1e995, 2654435761) ^ Math.imul(b + 17, 2246822519); h ^= h >>> 15; return h >>> 0; };
+/** the national grid falls over now and then (about one game day in twelve), for one to three game hours */
+export function gridCollapsed(h: number) {
+  const day = Math.floor(h / 24); const r = h32(day, 99); if (r % 12 !== 0) return false;
+  const start = (r >>> 8) % 24, len = 1 + ((r >>> 16) % 3); const hod = h % 24; return hod >= start && hod < start + len;
+}
+/** Which feeders have light at game hour h: forced (admin) beats operator switches beats the plan, then feeders are
+ *  shed (plan before operators, band C before B before A) until the load fits what the grid can carry. */
+export function gridState(feeders: FeederDef[], h: number, o: { forced?: Map<number, { on: boolean }>; override?: Map<number, { on: boolean; by: string }>; collapseUntil?: number; genScale?: number } = {}): GridState {
+  const on = new Array(GRID.w * GRID.h).fill('0'); const by: Record<number, string> = {};
+  if (h < (o.collapseUntil ?? 0) || gridCollapsed(h)) return { on: on.join(''), gen: 0, load: 0, collapse: true };
+  const total = feeders.reduce((s, f) => s + f.load, 0); const gen = Math.round(generation(h, total) * (o.genScale ?? 1));
+  const want = feeders.map((f) => {
+    const fo = o.forced?.get(f.i), op = o.override?.get(f.i);
+    if (op && !fo) by[f.i] = op.by;
+    return { f, v: fo ? fo.on : op ? op.on : scheduledOn(f.i, f.band, h), pri: fo ? 0 : op ? 1 : f.band === 'A' ? 2 : f.band === 'B' ? 3 : 4, r: h32(f.i, Math.floor(h / 24)) };
+  });
+  let load = want.filter((w) => w.v).reduce((s, w) => s + w.f.load, 0);
+  for (const w of want.filter((x) => x.v && x.pri > 0).sort((a, b) => b.pri - a.pri || a.r - b.r)) { if (load <= gen) break; w.v = false; load -= w.f.load; }
+  for (const w of want) if (w.v) on[w.f.i] = '1';
+  return { on: on.join(''), gen, load, collapse: false, by };
+}
