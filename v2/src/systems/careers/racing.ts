@@ -116,7 +116,7 @@ class Racing {
   }
   start() {
     const c = this.ctx; const m = (this as any)._m as Meet; const me = c.sim.local; if (me.vehicle === null) return this.closeSel();
-    if (c.sim.cash < this.choice.wager) return; const course = this.course(m, this.choice.type);
+    if (c.sim.cash < this.choice.wager) { c.hud.toast('Race', `You need ₦${this.choice.wager.toLocaleString()} to enter.`, 'var(--red)', 'cash', 3); return; } const course = this.course(m, this.choice.type);
     if (!course) { c.hud.toast('Race', 'The boys no fit agree on a route. Try another race.', 'var(--red)', 'msg', 3); return; }
     this.closeSel(); c.sim.cash -= this.choice.wager; c.sim.events.push({ t: 'cash', actor: me.id, amount: -this.choice.wager } as any); this.clearCrowd();
     const pts = course.pts; const cum = [0]; for (let i = 2; i < pts.length; i += 2) cum.push(cum[cum.length - 1] + Math.hypot(pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1]));
