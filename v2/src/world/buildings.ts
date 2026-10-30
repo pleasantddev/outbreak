@@ -154,6 +154,7 @@ uniform highp sampler2DArray uWD; uniform highp sampler2DArray uWN; uniform high
 varying float vMat; varying vec3 vTint; varying vec4 vInfo; varying vec2 vEdge; varying vec2 vUv2; varying vec3 vWP; varying vec3 vWN;
 float bh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float bn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(bh(i), bh(i+vec2(1,0)), f.x), mix(bh(i+vec2(0,1)), bh(i+vec2(1,1)), f.x), f.y); }
+vec3 signCol(float r){ vec3 c = vec3(0.78, 0.12, 0.1); c = mix(c, vec3(0.1, 0.34, 0.62), step(0.17, r)); c = mix(c, vec3(0.95, 0.78, 0.15), step(0.34, r)); c = mix(c, vec3(0.1, 0.5, 0.28), step(0.5, r)); c = mix(c, vec3(0.93, 0.93, 0.9), step(0.64, r)); c = mix(c, vec3(0.9, 0.42, 0.12), step(0.78, r)); c = mix(c, vec3(0.45, 0.12, 0.38), step(0.9, r)); return c; }
 vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`)
       .replace('#include <map_fragment>', `
 {
@@ -171,7 +172,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
     float bar = step(0.75, fract(u * 6.0)); float plate = step(v, H * 0.55);
     float mid = 1.0 - step(0.04, abs(u - L * 0.5));
     BC = vTint * mix(0.85, 1.0, bar) * (plate > 0.5 ? 1.0 : 0.9); BC *= 1.0 - mid * 0.5;
-    BM = 0.55; BR = 0.42 + 0.2 * bn(vUv2 * 3.0); BN = vec3(0.0, 0.0, 1.0);
+    BM = 0.3; BR = 0.5 + 0.2 * bn(vUv2 * 3.0); BN = vec3(0.0, 0.0, 1.0);
     if (plate < 0.5 && bar < 0.5) { BC = vec3(0.0); }
   }
   if (vInfo.w > 4.5 && vInfo.w < 5.5) { // compound wall: coping band and dirt splash
@@ -183,73 +184,140 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
   if (isWall > 0.5) {
     float levels = vInfo.x, seed = vInfo.y, kind = vInfo.z;
     float u = vUv2.x, v = vUv2.y, L = vEdge.x, H = vEdge.y;
-    // plinth and splash grime
-    if (v < 0.45) { BC = mix(BC, vec3(0.42, 0.4, 0.38), 0.55); }
-    BC *= mix(0.72, 1.0, smoothstep(0.0, 1.3, v));
-    // rain streaks below sills and the parapet line
+    float rs = bh(vec2(seed, 1.0)), rs2 = bh(vec2(seed, 2.0));
+    // plinth, ground splash, parapet cap
+    BC = mix(BC, BC * vec3(0.62, 0.58, 0.55), 1.0 - smoothstep(0.34, 0.46, v));
+    BC *= mix(0.82, 1.0, smoothstep(0.45, 1.8, v));
+    BC *= 1.0 - smoothstep(H - 0.16, H - 0.1, v) * 0.16;
+    // bay grid: 3 m columns, 3.1 m storeys above a 0.45 m plinth
     float colW = 3.0; float nC = floor(L / colW); float off = (L - nC * colW) * 0.5;
     float cu = (u - off) / colW; float ci = floor(cu); float cf = fract(cu);
     float inCols = step(0.0, cu) * step(cu, nC) * step(1.0, nC);
     float fy = (v - 0.45) / 3.1; float fi = floor(fy); float ff = fract(fy) * 3.1;
+    // slab edge at every upper floor and a faint rain streak under it
+    float slab = step(1.0, fi) * (1.0 - smoothstep(0.0, 0.1, ff));
+    BC *= 1.0 - slab * 0.2;
+    BC *= 1.0 + step(1.0, fi) * smoothstep(0.1, 0.14, ff) * (1.0 - smoothstep(0.14, 0.24, ff)) * 0.05;
     float streak = bh(vec2(ci, seed)) * smoothstep(1.0, 0.0, ff - 0.9) * step(0.9, ff) * inCols;
-    BC *= 1.0 - streak * 0.18 * smoothstep(0.42, 0.58, abs(cf - 0.5) < 0.2 ? 1.0 : 0.0);
+    BC *= 1.0 - streak * 0.1 * step(abs(cf - 0.5), 0.2);
     bool glassBk = (kind > 12.5 && kind < 13.5) || (kind > 14.5 && kind < 15.5);
     if (glassBk && v > 0.6 && v < H - 0.35) {
       // curtain wall: tinted glass in 1.5 m bays, dark mullions, spandrel at each slab
       float bay = fract(u / 1.5); float mul1 = step(bay, 0.04) + step(0.96, bay);
       float sp = fract((v - 0.45) / 3.1) * 3.1; float spand = step(sp, 0.35) + step(2.95, sp);
       float fx2 = u * 0.7 + v * 0.35;
-      vec3 gl = mix(vec3(0.07, 0.17, 0.22), vec3(0.34, 0.52, 0.6), 0.5 + 0.5 * sin(fx2 + bn(vec2(u * 0.4, v * 0.3)) * 3.0));
+      vec3 gl = mix(vec3(0.1, 0.24, 0.3), vec3(0.42, 0.62, 0.7), 0.5 + 0.5 * sin(fx2 + bn(vec2(u * 0.4, v * 0.3)) * 3.0));
       float fr = min(1.0, mul1 + spand);
-      BC = mix(gl, vec3(0.2, 0.21, 0.23), fr); BR = mix(0.12, 0.5, fr); BM = mix(0.35, 0.5, fr); BGL = 1.0 - fr;
+      BC = mix(gl, vec3(0.3, 0.31, 0.33), fr); BR = mix(0.25, 0.55, fr); BM = mix(0.1, 0.2, fr); BGL = 1.0 - fr;
       BN = vec3(0.0, 0.0, 1.0);
       BE += (1.0 - fr) * uNight * 0.55; BEC = vec3(0.85, 0.95, 1.0);
     }
     bool shop = kind > 1.5 && kind < 2.5 && fi < 1.0 && fi >= 0.0;
     float rnd = bh(vec2(ci, fi + seed));
     if (shop && inCols > 0.5) {
-      // roller shutters and a painted signboard band
-      float sh = step(0.08, cf) * step(cf, 0.92) * step(0.1, ff) * step(ff, 2.55);
-      vec3 shutC = mix(vec3(0.55, 0.56, 0.58), vec3(0.62, 0.18, 0.12), step(0.7, rnd)); shutC = mix(shutC, vec3(0.12, 0.3, 0.55), step(0.86, rnd));
-      float open = step(0.45, bh(vec2(ci, seed + 4.0)));
-      vec3 inside = vec3(0.08, 0.07, 0.06) + vec3(0.35, 0.3, 0.22) * bn(vec2(u * 3.0, v * 4.0)) * 0.5;
-      float rib = 0.85 + 0.15 * sin(v * 60.0);
-      BC = mix(BC, open > 0.5 && ff < 2.2 ? inside : shutC * rib, sh); BR = mix(BR, 0.55, sh); BM = mix(BM, open > 0.5 ? 0.0 : 0.5, sh);
-      BE += sh * open * uNight * 0.8; BEC = vec3(1.0, 0.85, 0.6);
-      float sign = step(2.6, ff) * step(ff, 3.05);
-      vec3 sc = vec3(bh(vec2(ci, 7.0 + seed)), bh(vec2(ci, 8.0 + seed)), bh(vec2(ci, 9.0 + seed)));
-      BC = mix(BC, mix(sc, vec3(0.95), step(0.6, bn(vec2(u * 6.0, v * 9.0)))), sign * 0.9);
-    } else if (fi >= 0.0 && fi < levels && inCols > 0.5 && kind != 6.0 && kind != 7.0 && kind != 5.0 && kind != 11.0 && kind != 10.0 && kind != 14.0 && kind != 16.0 && kind != 13.0 && kind != 15.0) {
+      float pil = step(cf, 0.06) + step(0.94, cf);
+      float bayX = (cf - 0.06) / 0.88;
+      float zone = (1.0 - pil) * step(0.1, ff) * step(ff, 2.55);
+      float awn = step(0.6, bh(vec2(ci, seed + 9.0)));
+      vec3 shutC = mix(vec3(0.5, 0.52, 0.54), vec3(0.56, 0.2, 0.14), step(0.62, rnd)); shutC = mix(shutC, vec3(0.17, 0.35, 0.52), step(0.82, rnd)); shutC = mix(shutC, vec3(0.2, 0.42, 0.28), step(0.92, rnd));
+      float open = step(0.5, bh(vec2(ci, seed + 4.0)));
+      float row = floor(ff * 2.2); float shelf = step(0.45, fract(ff * 2.2));
+      vec3 goods = mix(vec3(0.45), vec3(bh(vec2(floor(bayX * 7.0), row + seed)), bh(vec2(floor(bayX * 7.0) + 3.0, row + seed)), bh(vec2(floor(bayX * 7.0) + 7.0, row + seed))), 0.45);
+      vec3 inside = vec3(0.07, 0.06, 0.05) + goods * 0.16 * shelf + vec3(0.32, 0.24, 0.14) * (1.0 - ff / 2.6) * 0.12;
+      float rib = 0.88 + 0.12 * sin(v * 55.0);
+      vec3 shopC = open > 0.5 ? inside : shutC * rib * (0.92 + 0.08 * bn(vec2(u * 2.0, v * 3.0)));
+      BC = mix(BC, shopC, zone);
+      BR = mix(BR, open > 0.5 ? 0.7 : 0.6, zone); BM = mix(BM, open > 0.5 ? 0.0 : 0.15, zone);
+      BE += zone * open * uNight * 0.3; BEC = vec3(1.0, 0.72, 0.4);
+      // frame lines round the bay opening
+      float fl = (1.0 - pil) * (step(ff, 0.16) * step(0.1, ff) + step(2.49, ff) * step(ff, 2.55) + step(bayX, 0.03) + step(0.97, bayX) * step(0.1, ff) * step(ff, 2.55));
+      BC = mix(BC, BC * 0.55, min(fl, 1.0) * zone);
+      // fabric awning over some bays
+      float aw = awn * (1.0 - pil) * step(2.1, ff) * step(ff, 2.6);
+      vec3 ac1 = mix(vec3(0.78, 0.14, 0.1), vec3(0.14, 0.4, 0.62), step(0.5, bh(vec2(ci, seed + 12.0)))); ac1 = mix(ac1, vec3(0.16, 0.5, 0.3), step(0.8, bh(vec2(ci, seed + 13.0))));
+      BC = mix(BC, mix(ac1, vec3(0.93, 0.92, 0.88), step(0.5, fract(u * 2.6))) * (0.78 + 0.22 * (ff - 2.1) * 2.0), aw);
+      // painted signboard: flat colour, border line, blocky letters
+      float sr = bh(vec2(ci, seed + 7.0));
+      vec3 sc = signCol(sr);
+      float sz = step(2.62, ff) * step(ff, 3.08);
+      float sedge = step(ff, 2.68) + step(3.02, ff) + step(cf, 0.04) + step(0.96, cf);
+      float lu = cf * 16.0; float lc = floor(lu); float lf = fract(lu);
+      float ltr = step(0.42, bh(vec2(lc + ci * 31.0, seed))) * step(0.18, lf) * step(lf, 0.78) * step(2.74, ff) * step(ff, 2.96) * step(0.14, cf) * step(cf, 0.86);
+      ltr *= 1.0 - step(0.5, bh(vec2(lc, seed + 2.0))) * step(0.42, fract(ff * 4.8)) * step(fract(ff * 4.8), 0.58);
+      vec3 ink = mix(vec3(0.97, 0.95, 0.9), vec3(0.08), step(0.34, sr) * step(sr, 0.5) + step(0.64, sr) * step(sr, 0.78));
+      vec3 sBC = mix(sc, ink, ltr); sBC = mix(sBC, ink, min(sedge, 1.0) * 0.8);
+      BC = mix(BC, sBC, sz); BR = mix(BR, 0.5, sz); BM = mix(BM, 0.0, sz);
+      BE += sz * uNight * 0.18 * (1.0 - ltr);
+    } else if (fi >= 0.0 && fi < levels && inCols * step(0.1, bh(vec2(ci * 3.1, seed + 17.0 + step(fi, 0.5) * 9.0))) > 0.5 && kind != 6.0 && kind != 7.0 && kind != 5.0 && kind != 11.0 && kind != 10.0 && kind != 14.0 && kind != 16.0 && kind != 13.0 && kind != 15.0) {
       bool unfinished = kind > 8.5 && kind < 9.5;
       bool door = fi < 0.5 && ci == floor(bh(vec2(seed, 3.0)) * nC);
-      float ww = door ? 0.18 : 0.21, wb = door ? 0.0 : 0.95, wt = door ? 2.25 : 2.3;
+      float bal = (!door && fi >= 1.0 && rs > 0.5 && bh(vec2(ci + 5.0, fi + seed)) > 0.55 && !unfinished) ? 1.0 : 0.0;
+      float ww = door ? 0.18 : (bal > 0.5 ? 0.28 : 0.21), wb = door ? 0.0 : (bal > 0.5 ? 0.1 : 0.95), wt = door ? 2.25 : 2.3;
       float win = step(0.5 - ww, cf) * step(cf, 0.5 + ww) * step(wb, ff) * step(ff, wt);
+      float acOn = step(0.74, bh(vec2(ci * 1.7 + seed, fi + 3.0))) * (1.0 - bal) * (door ? 0.0 : 1.0) * (unfinished ? 0.0 : 1.0) * step(0.5, rs2 + 0.2);
       if (win > 0.5) {
         float fx = (cf - (0.5 - ww)) / (2.0 * ww), fyy = (ff - wb) / (wt - wb);
-        float frame = 1.0 - step(0.05, fx) * step(fx, 0.95) * step(0.05, fyy) * step(fyy, 0.95);
-        if (unfinished) { BC = vec3(0.03); BR = 0.95; BN = vec3(0.0, 0.0, 1.0); }
-        else if (door) { BC = mix(vec3(0.12, 0.08, 0.05), vec3(0.25, 0.25, 0.27), step(0.5, rnd)); BR = 0.5; BM = step(0.5, rnd) * 0.6; BN = vec3(0.0, 0.0, 1.0); BC *= 1.0 - frame * 0.3; }
+        float frame = 1.0 - step(0.055, fx) * step(fx, 0.945) * step(0.05, fyy) * step(fyy, 0.95);
+        float mid = (1.0 - step(0.03, abs(fx - 0.5))) * (1.0 - step(0.5, bal));
+        float transom = step(abs(fyy - 0.72), 0.018) * (1.0 - step(0.5, bal)) * step(0.5, rs);
+        float fm = max(max(frame, mid), transom);
+        if (unfinished) { BC = vec3(0.05); BR = 0.95; BN = vec3(0.0, 0.0, 1.0); }
+        else if (door) { BC = mix(vec3(0.16, 0.1, 0.06), vec3(0.3, 0.3, 0.32), step(0.5, rnd)); BC = mix(BC, BC * 1.4, step(0.5, fract(fx * 5.0)) * 0.3); BR = 0.55; BM = step(0.5, rnd) * 0.2; BN = vec3(0.0, 0.0, 1.0); BC *= 1.0 - frame * 0.3; }
         else {
-          float louvre = step(0.6, rnd);
-          vec3 glass = mix(vec3(0.05, 0.06, 0.07), vec3(0.14, 0.17, 0.19), bh(vec2(ci * 3.0, fi)));
-          if (louvre > 0.5) glass *= 0.75 + 0.25 * step(0.5, fract(fyy * 9.0));
-          float mid = 1.0 - step(0.03, abs(fx - 0.5));
-          vec3 frc = mix(vec3(0.85, 0.85, 0.83), vec3(0.24, 0.16, 0.1), step(0.55, bh(vec2(seed, 11.0))));
-          BC = mix(glass, frc, max(frame, mid)); BR = mix(0.06, 0.5, max(frame, mid)); BM = mix(0.6, 0.2, max(frame, mid)); BGL = 1.0 - max(frame, mid);
-          // burglar-proof bars
-          float bars = step(0.9, fract(fx * 7.0)) * step(bh(vec2(seed, 2.0)), 0.75);
-          BC = mix(BC, vec3(0.04), bars); BR = mix(BR, 0.4, bars); BGL *= 1.0 - bars;
+          vec3 glass = mix(vec3(0.5, 0.62, 0.72), vec3(0.1, 0.14, 0.2), fyy) * (0.72 + 0.28 * bh(vec2(ci * 3.0, fi)));
+          float ty = rnd;
+          float louv = step(0.4, ty) * step(ty, 0.62);
+          float curt = step(0.62, ty) * step(ty, 0.85);
+          float dark = step(0.85, ty);
+          glass = mix(glass, glass * (0.55 + 0.45 * step(0.5, fract(fyy * 10.0))) + 0.05, louv);
+          vec3 cc = mix(vec3(0.86, 0.8, 0.68), vec3(0.62, 0.3, 0.26), step(0.5, bh(vec2(ci + 2.0, fi + seed)))); cc = mix(cc, vec3(0.45, 0.58, 0.5), step(0.8, bh(vec2(ci + 4.0, fi + seed))));
+          cc *= 0.7 + 0.3 * sin(fx * 26.0) * (1.0 - fyy * 0.4);
+          glass = mix(glass, cc, curt);
+          glass = mix(glass, vec3(0.03, 0.03, 0.035), dark);
+          // recessed look: shadow along the top and left reveal
+          glass *= 1.0 - (1.0 - smoothstep(0.0, 0.16, 1.0 - fyy)) * 0.35 * (1.0 - curt) - (1.0 - smoothstep(0.0, 0.1, fx)) * 0.2;
+          vec3 frc = mix(vec3(0.9, 0.9, 0.88), vec3(0.3, 0.2, 0.12), step(0.55, bh(vec2(seed, 11.0))));
+          BC = mix(glass, frc, fm); BR = mix(0.3, 0.55, fm); BM = 0.0; BGL = 1.0 - fm;
           BN = vec3(0.0, 0.0, 1.0);
           float lit = step(0.55, bh(vec2(ci + seed, fi * 7.0))) * uNight;
-          BE += lit * BGL * 1.4; BEC = mix(vec3(1.0, 0.75, 0.45), vec3(0.7, 0.85, 1.0), step(0.75, rnd));
+          BE += lit * (1.0 - fm) * (1.0 - dark * 0.9) * (curt > 0.5 ? 1.3 : 1.0); BEC = mix(vec3(1.0, 0.72, 0.4), vec3(0.7, 0.85, 1.0), step(0.78, rnd * 0.0 + bh(vec2(ci, fi + seed + 9.0))));
+          // burglar bars on the low floors: upright bars, two rails, white or black paint
+          float barOn = step(rs2, 0.65) * (1.0 - step(1.5, fi)) * (1.0 - step(0.5, bal));
+          float bars = max(step(0.8, fract(fx * 8.0)), max(step(abs(fyy - 0.5), 0.022), step(abs(fyy - 0.18), 0.018))) * barOn;
+          vec3 barC = mix(vec3(0.05), vec3(0.9, 0.9, 0.87), step(0.55, bh(vec2(seed, 5.0))));
+          BC = mix(BC, barC, bars * 0.95); BR = mix(BR, 0.55, bars); BM = mix(BM, 0.1, bars); BE *= 1.0 - bars;
         }
       } else {
-        // sill and lintel shadows
-        float sill = step(0.5 - ww - 0.04, cf) * step(cf, 0.5 + ww + 0.04) * step(wb - 0.08, ff) * step(ff, wb);
-        BC *= 1.0 - sill * 0.35;
+        // sill below, lintel shadow above, only round windows
+        float wx = step(0.5 - ww - 0.04, cf) * step(cf, 0.5 + ww + 0.04);
+        BC = mix(BC, vec3(0.8, 0.78, 0.74), wx * step(wb - 0.09, ff) * step(ff, wb) * (1.0 - bal));
+        BC *= 1.0 - wx * step(wb - 0.4, ff) * step(ff, wb - 0.09) * 0.1 * (1.0 - bal);
+        BC *= 1.0 - wx * step(wt, ff) * step(ff, wt + 0.09) * 0.2;
+      }
+      // balcony: concrete slab edge and railing in front of the door
+      if (bal > 0.5) {
+        float rx = step(0.5 - 0.35, cf) * step(cf, 0.5 + 0.35);
+        float slabE = rx * step(ff, 0.12);
+        float rail = rx * step(0.12, ff) * step(ff, 1.06);
+        float bar = step(0.62, fract(u * 9.0)) * step(ff, 1.0) + step(1.0, ff) * step(ff, 1.06);
+        BC = mix(BC, vec3(0.74, 0.72, 0.68), slabE);
+        BC = mix(BC, vec3(0.12, 0.12, 0.13), rail * min(bar, 1.0) * 0.95);
+        BC *= 1.0 - rx * step(1.06, ff) * 0.0;
+      }
+      // split AC unit in the gap beside the window, with a stain under it
+      if (acOn > 0.5) {
+        float au = (cf - 0.74) / 0.2, av = (ff - 1.45) / 0.5;
+        float inU = step(0.0, au) * step(au, 1.0) * step(0.0, av) * step(av, 1.0);
+        vec3 acc = vec3(0.86, 0.87, 0.88) * (0.9 + 0.1 * av);
+        acc = mix(acc, vec3(0.3), step(av, 0.16) * 0.5);
+        float fan = 1.0 - smoothstep(0.26, 0.3, length(vec2(au - 0.5, (av - 0.52) * 0.8)));
+        acc = mix(acc, vec3(0.1, 0.1, 0.12), fan * 0.7);
+        BC = mix(BC, acc, inU); BR = mix(BR, 0.45, inU);
+        float st = step(0.82, cf) * step(cf, 0.86) * step(1.0, ff) * step(ff, 1.45);
+        BC *= 1.0 - st * 0.12;
       }
       // floor slab band
-      BC *= 1.0 - (1.0 - step(0.08, ff)) * step(1.0, fi) * 0.12;
+      BC *= 1.0 - (1.0 - step(0.08, ff)) * step(1.0, fi) * 0.0;
     }
     // weathering patches
     BC *= mix(0.86, 1.04, bn(vec2(u * 0.35, v * 0.5) + seed));

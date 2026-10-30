@@ -15,14 +15,15 @@ const SKY_KEYS: [number, [number, number, number], [number, number, number]][] =
   [-4,  [0.060, 0.100, 0.300], [0.780, 0.340, 0.300]],
   [1.5, [0.150, 0.250, 0.520], [1.000, 0.560, 0.270]],
   [9,   [0.160, 0.320, 0.660], [0.960, 0.770, 0.560]],
-  [26,  [0.110, 0.300, 0.690], [0.720, 0.800, 0.900]],
+  [17,  [0.130, 0.300, 0.650], [0.900, 0.790, 0.640]],
+  [32,  [0.110, 0.300, 0.690], [0.740, 0.800, 0.880]],
   [75,  [0.095, 0.280, 0.690], [0.640, 0.770, 0.920]],
 ];
 export type WeatherName = 'clear' | 'hot' | 'harmattan' | 'fog' | 'rain' | 'storm';
 interface W { label: string; cover: number; dens: number; haze: number; fog: number; tint: [number, number, number]; sun: number; rain: number; wetRate: number; dry: number; dust: number; low: number }
 export const WEATHER: Record<WeatherName, W> = {
-  clear:     { label: 'Clear',          cover: 0.32, dens: 0.9, haze: 0.15, fog: 0.0008, tint: [0.62, 0.74, 0.9],  sun: 1.0,  rain: 0,   wetRate: 0,    dry: 0.012, dust: 0,    low: 0 },
-  hot:       { label: 'Hot and hazy',   cover: 0.18, dens: 0.6, haze: 0.45, fog: 0.0013,  tint: [0.8, 0.8, 0.76],   sun: 1.12, rain: 0,   wetRate: 0,    dry: 0.03,  dust: 0.15, low: 0 },
+  clear:     { label: 'Clear',          cover: 0.32, dens: 0.9, haze: 0.15, fog: 0.0008, tint: [0.76, 0.81, 0.88], sun: 1.0,  rain: 0,   wetRate: 0,    dry: 0.012, dust: 0,    low: 0 },
+  hot:       { label: 'Hot and hazy',   cover: 0.18, dens: 0.6, haze: 0.45, fog: 0.0013,  tint: [0.88, 0.83, 0.74],  sun: 1.12, rain: 0,   wetRate: 0,    dry: 0.03,  dust: 0.15, low: 0 },
   harmattan: { label: 'Harmattan haze', cover: 0.06, dens: 0.4, haze: 1.0,  fog: 0.0042,  tint: [0.84, 0.68, 0.5],  sun: 0.62, rain: 0,   wetRate: 0,    dry: 0.05,  dust: 1,    low: 0 },
   fog:       { label: 'Morning fog',    cover: 0.55, dens: 0.7, haze: 0.8,  fog: 0.011,   tint: [0.76, 0.78, 0.8],  sun: 0.4,  rain: 0,   wetRate: 0.004,dry: 0.0,   dust: 0,    low: 1 },
   rain:      { label: 'Rain',           cover: 0.86, dens: 1.6, haze: 0.5,  fog: 0.0028,  tint: [0.5, 0.55, 0.62],  sun: 0.25, rain: 1,   wetRate: 0.03, dry: 0,     dust: 0,    low: 0.3 },
@@ -56,7 +57,7 @@ vec3 skyColor(vec3 d){
   vec3 c = mix(uZenith, uHorizon, hz);
   if (y < 0.0) c = mix(uHorizon, uGround, smoothstep(0.0, -0.25, y));
   float mu = dot(d, uSunDir);
-  float mie = pow(max(mu, 0.0), 8.0) * 0.35 + pow(max(mu, 0.0), 64.0) * 0.9;
+  float mie = pow(max(mu, 0.0), 8.0) * 0.5 + pow(max(mu, 0.0), 64.0) * 1.1;
   c += uSunCol * mie * (0.4 + uHaze * 0.8) * (1.0 - uNight);
   c = mix(c, uTint * dot(c, vec3(0.33)) * 1.4, uHaze * 0.35);
   return c;
@@ -98,7 +99,7 @@ void main(){
   float T = 1.0; vec3 L = vec3(0.0);
   float mu = dot(dir, uSunDir);
   float phase = mix(hg(mu, 0.6), hg(mu, -0.2), 0.35) * 4.0;
-  vec3 amb = mix(uHorizon, uZenith, 0.6) * 0.9;
+  vec3 amb = (mix(uHorizon, uZenith, 0.5) * 1.15 + vec3(0.14, 0.13, 0.12) * (1.0 - uNight));
   for (float i = 0.0; i < 48.0; i++) {
     if (i >= steps || T < 0.03) break;
     vec3 p = uCam + dir * (t0 + (i + jit) * dt);
@@ -108,7 +109,7 @@ void main(){
       for (float j = 1.0; j <= 4.0; j++) od += density(p + uSunDir * j * 110.0, true);
       float light = exp(-od * 1.1) * (1.0 - exp(-od * 2.2)) * 2.0 + exp(-od * 0.35) * 0.25;
       float h = (p.y - BASE) / (TOP - BASE);
-      vec3 col = uSunCol * light * phase * (1.0 - uNight * 0.92) + amb * (0.35 + 0.65 * h);
+      vec3 col = uSunCol * light * phase * (1.0 - uNight * 0.92) + amb * (0.5 + 0.5 * h);
       float a = 1.0 - exp(-d * dt * 0.012);
       L += T * a * col; T *= 1.0 - a;
     }
@@ -250,7 +251,7 @@ export class Atmosphere {
     this.sunDir.setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - elev), THREE.MathUtils.degToRad(az));
     const day = THREE.MathUtils.smoothstep(elev, -5, 12);
     const night = 1 - THREE.MathUtils.smoothstep(elev, -10, 3);
-    const golden = THREE.MathUtils.smoothstep(elev, -4, 4) * (1 - THREE.MathUtils.smoothstep(elev, 6, 22));
+    const golden = THREE.MathUtils.smoothstep(elev, -4, 4) * (1 - THREE.MathUtils.smoothstep(elev, 7, 30));
     // sky palette: zenith and horizon colour as a function of the sun's elevation (blue hour, afterglow, golden hour, warm afternoon, day)
     const U = this.domeMat.uniforms;
     const K = this.k;
@@ -260,8 +261,8 @@ export class Atmosphere {
     const hor = K.hor.setRGB(ka[2][0], ka[2][1], ka[2][2]).lerp(K.a.setRGB(kb[2][0], kb[2][1], kb[2][2]), ks);
     const tint = K.tint.setRGB(W.tint[0], W.tint[1], W.tint[2]);
     const grey = (c: THREE.Color, a: number) => { const l = c.r * 0.3 + c.g * 0.59 + c.b * 0.11; return c.lerp(K.c.setRGB(l, l, l).multiply(tint).multiplyScalar(1.25), a); };
-    grey(zen, W.cover * 0.75 + W.haze * 0.4); grey(hor, W.cover * 0.5 + W.haze * 0.55);
-    const sunCol = K.sun.setRGB(1, 0.62 + 0.36 * (1 - golden), 0.38 + 0.56 * (1 - golden)).multiplyScalar(day * (0.25 + 0.75 * W.sun));
+    grey(zen, (W.cover * 0.75 + W.haze * 0.4) * (1 - golden * 0.5)); grey(hor, (W.cover * 0.5 + W.haze * 0.55) * (1 - golden * 0.6));
+    const sunCol = K.sun.setRGB(1, 0.58 + 0.34 * (1 - golden), 0.3 + 0.5 * (1 - golden)).multiplyScalar(day * (0.25 + 0.75 * W.sun));
     U.uZenith.value.copy(zen); U.uHorizon.value.copy(hor); U.uGround.value.copy(hor).multiplyScalar(0.55); U.uSunCol.value.copy(sunCol);
     U.uHaze.value = W.haze; U.uNight.value = night; U.uTint.value.copy(tint);
     U.uStars.value = night * (1 - W.cover) * (1 - W.haze * 0.8); U.uTime.value += dt;
@@ -292,7 +293,7 @@ export class Atmosphere {
     this.sun.color.copy(sunCol).multiplyScalar(1 / Math.max(0.001, day * (0.25 + 0.75 * W.sun)));
     this.sun.intensity = 4.6 * day * W.sun * cloudShade + this.lightning * 8;
     const moonDir = this.tmpV4.copy(this.sunDir).negate().add(this.tmpMoon.set(0.25, 0.1, 0)).normalize();
-    if (night > 0.5) { this.sun.color.setRGB(0.6, 0.7, 1.0); this.sun.intensity = 0.35 * (1 - W.cover * 0.8) + this.lightning * 8; }
+    if (night > 0.5) { this.sun.color.setRGB(0.6, 0.7, 1.0); this.sun.intensity = 0.6 * (1 - W.cover * 0.8) + this.lightning * 8; }
     const ld = night > 0.5 ? moonDir : this.sunDir;
     // snap the shadow box to whole texels in light space so shadow edges do not crawl while moving
     const tex = this.shadowOn ? (2 * this.L.shadowHalf) / this.sun.shadow.mapSize.x : 1;
@@ -312,12 +313,12 @@ export class Atmosphere {
       }
     }
     this.hemi.color.copy(zen).lerp(K.white, 0.25);
-    this.hemi.groundColor.setRGB(0.36, 0.28, 0.22).multiplyScalar(0.25 + 0.75 * day);
-    this.hemi.intensity = 0.25 + 1.25 * day * (0.6 + 0.4 * W.cover) + night * 0.35 + this.lightning * 3;
+    this.hemi.groundColor.setRGB(0.52, 0.4, 0.29).multiplyScalar(0.3 + 0.7 * day);
+    this.hemi.intensity = 0.3 + 1.35 * day * (0.6 + 0.4 * W.cover) + night * 0.6 + this.lightning * 3;
     // fog matches the horizon
     const fogC = K.fog.copy(hor).lerp(tint, W.haze * 0.4);
     (this.scene.fog as THREE.FogExp2).color.copy(fogC); (this.scene.fog as THREE.FogExp2).density = W.fog * (1 + night * 0.4);
-    this.renderer.toneMappingExposure = 0.55 + night * 0.55;
+    this.renderer.toneMappingExposure = 0.62 + night * 0.6;
     // rain, puddles and drying
     this.wet = THREE.MathUtils.clamp(this.wet + (W.rain > 0.1 ? dt * 0.08 * W.rain : -dt * (0.004 + W.dry * 0.2 * day)), 0, 1);
     this.water = THREE.MathUtils.clamp(this.water + dt * (W.wetRate * 0.5) - dt * W.dry * 0.04 * (0.3 + day), 0, 1);

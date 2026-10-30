@@ -51,6 +51,16 @@ export class RoadClear {
     }
     return best;
   }
+  /** Poles and lamps must not stand on a carriageway or on a walking line of any road (they would snag walkers and cars). */
+  poleBad(x: number, z: number) {
+    const l = this.grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!l) return false;
+    for (let q = 0; q < l.length; q++) {
+      const si = l[q]; const d = this.segDist(x, z, si * 4);
+      if (d < this.hw[si] + 0.3) return true;
+      const w = this.walk[si]; if (w > 0 ? Math.abs(d - w) < 0.7 : d < 0.8) return true;
+    }
+    return false;
+  }
   /** Nearest segment: index, foot point and distance. */
   nearest(x: number, z: number) {
     const l = this.grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!l) return null;
