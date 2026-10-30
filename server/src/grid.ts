@@ -13,7 +13,7 @@ export const FEEDERS: FeederDef[] = JSON.parse(readFileSync(resolve(here, '../..
 
 export class Grid extends EventEmitter {
   /** operator switches: hold until `until` (game hours) */
-  override = new Map<number, { on: boolean; until: number; by: string }>();
+  override = new Map<number, { on: boolean; until: number; by: string; from?: number }>();
   /** admin forcing: holds until cleared (or until `until` if set) */
   forced = new Map<number, { on: boolean; until: number }>();
   collapseUntil = 0; genScale = 1; private last = ''; total = FEEDERS.reduce((s, f) => s + f.load, 0);
@@ -28,10 +28,12 @@ export class Grid extends EventEmitter {
   }
   /** called every second by the hub: tells listeners when any feeder changes */
   tick() { const s = this.state(); const k = s.on + (s.collapse ? 'x' : ''); if (k !== this.last) { const prev = this.last; this.last = k; this.emit('change', s, prev); } return s; }
-  /** an operator in the control room flips a feeder; returns the new state */
-  switch(f: number, on: boolean, by: string) {
+  /** an operator in the control room flips a feeder now, or schedules it: `inHours` from now (up to 12), for `hours`
+   *  (up to 6). Returns the new state. */
+  switch(f: number, on: boolean, by: string, inHours = 0, hours = GRID_OVERRIDE_HOURS) {
     if (!FEEDERS.some((x) => x.i === f)) throw new Error('no such feeder');
-    this.override.set(f, { on, until: this.hours() + GRID_OVERRIDE_HOURS, by }); return this.tick();
+    const now = this.hours(); const from = now + Math.max(0, Math.min(12, inHours || 0)); const len = Math.max(0.5, Math.min(6, hours || GRID_OVERRIDE_HOURS));
+    this.override.set(f, { on, until: from + len, by, from: inHours > 0 ? from : undefined }); return this.tick();
   }
   force(f: number | 'all', on: boolean | null, hours = 24) {
     const ids = f === 'all' ? FEEDERS.map((x) => x.i) : [f];

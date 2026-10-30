@@ -5,7 +5,7 @@ import { registerApp } from '../../ui/lifeHud';
 import { lifeSystem } from '../life';
 import { addMoodlet } from '../life/needs';
 
-export type CareerId = 'transport' | 'mechanic' | 'tech' | 'bank' | 'trader' | 'racer' | 'street';
+export type CareerId = 'transport' | 'mechanic' | 'tech' | 'bank' | 'trader' | 'racer' | 'street' | 'power' | 'agbero' | 'designer';
 interface CareerDef { id: CareerId; name: string; ranks: string[]; xp: number[]; unit: string }
 export const CAREERS: CareerDef[] = [
   { id: 'transport', name: 'Transport', unit: 'trips', ranks: ['Rookie rider', 'Area rider', 'Union member', 'Park regular', 'Transport oga'], xp: [0, 8, 25, 60, 140] },
@@ -14,6 +14,9 @@ export const CAREERS: CareerDef[] = [
   { id: 'bank', name: 'Banking', unit: 'customers', ranks: ['Teller trainee', 'Teller', 'Senior teller', 'Supervisor', 'Branch manager'], xp: [0, 20, 60, 150, 320] },
   { id: 'trader', name: 'Trading', unit: 'deals', ranks: ['Customer', 'Regular', 'Price sabi', 'Market name', 'Iya/Baba Oloja'], xp: [0, 10, 30, 70, 150] },
   { id: 'racer', name: 'Street racing', unit: 'wins', ranks: ['Unknown', 'Local name', 'Hot hands', 'Street legend', 'King of the expressway'], xp: [0, 2, 6, 15, 35] },
+  { id: 'power', name: 'Power', unit: 'tasks', ranks: ['Meter reader', 'Lineman', 'Shift operator', 'Control engineer', 'Chief engineer'], xp: [0, 10, 30, 75, 160] },
+  { id: 'agbero', name: 'Park union', unit: 'tickets', ranks: ['Area boy', 'Ticket boy', 'Agbero', 'Park marshal', 'Park chairman'], xp: [0, 25, 80, 200, 450] },
+  { id: 'designer', name: 'Interior design', unit: 'rooms', ranks: ['Helper', 'Decorator', 'Designer', 'Senior designer', 'Studio owner'], xp: [0, 3, 10, 25, 60] },
   { id: 'street', name: 'Street', unit: 'lifts', ranks: ['Nobody', 'Small boy', 'Known face', 'Feared', 'Area father'], xp: [0, 5, 15, 40, 90] },
 ];
 

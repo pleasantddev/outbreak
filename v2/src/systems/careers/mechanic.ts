@@ -110,4 +110,6 @@ class Mechanic {
   blips(out: { x: number; z: number; c: string; r?: number }[]) { for (const s of this.shops) if (s.g) out.push({ x: s.x, z: s.z, c: '#ffc107', r: 5 }); }
 }
 let K: Mechanic | null = null;
+/** where the roadside workshops are (the wear system services your car there) */
+export const mechanicShops = () => (K?.shops ?? []).filter((s) => s.g && s.oga);
 export const mechanicSystem: GameSystem = { id: 'mechanic', init(ctx) { K = new Mechanic(ctx); K.init(); }, frame(_c, dt) { K?.frame(dt); }, blips(_c, out) { K?.blips(out); } };

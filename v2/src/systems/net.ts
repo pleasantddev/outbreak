@@ -161,6 +161,13 @@ export const people = {
     for (const [id, p] of remote.players) { const s = p.buf[p.buf.length - 1]; if (!s || p.seat) continue; if (Math.hypot(s.x - x, s.z - z) <= r) out.push({ id, name: p.who?.name ?? 'Player', x: s.x, z: s.z, level: p.who?.level ?? 1 }); }
     return out;
   },
+  /** players driving near (x, z) (the agbero's customers) */
+  driving(x: number, z: number, r: number): { id: number; name: string; x: number; z: number }[] {
+    if (!remote || !net.active) return [];
+    const out: { id: number; name: string; x: number; z: number }[] = [];
+    for (const [id, p] of remote.players) { const s = p.buf[p.buf.length - 1]; if (!s || !p.seat) continue; if (Math.hypot(s.x - x, s.z - z) <= r) out.push({ id, name: p.who?.name ?? 'Driver', x: s.x, z: s.z }); }
+    return out;
+  },
   emote(ctx: GameCtx, name: (typeof EMOTES)[number]) { if (net.active) doEmote(ctx, name); },
 };
 

@@ -10,6 +10,7 @@ import type { GameCtx, GameSystem } from '../registry';
 import type { Actor } from '../../sim/types';
 import { registerApp } from '../../ui/lifeHud';
 import { power } from '../power';
+import { houseSystem } from './house';
 import { lifeSystem } from './index';
 import { addMoodlet } from './needs';
 import { spend } from '../money';
@@ -68,9 +69,9 @@ class BillsSys {
     if (owed >= 1 && this.B.textedWeek !== this.week()) { this.B.textedWeek = this.week(); c.hud.toast('Landlord', owed >= 2 ? 'Two weeks now. If I no see my money, padlock go enter your door.' : `Rent don due. ₦${RENT.toLocaleString()}. Pay on your phone (Home app).`, 'linear-gradient(160deg,#fb923c,#c2410c)', 'msg', 6); this.persist(); }
     if (owed >= 3 && !this.B.locked) { this.B.locked = true; c.hud.toast('Landlord', 'I don lock your room. Pay everything plus ₦2,000 fine.', 'var(--red)', 'msg', 6); this.persist(); }
     // light: units drain while you are home in the evening or the fan is on
-    const home = L.S.inside && !L.venue && !L.guest; const night = hour >= 18.5 || hour < 6.5; const out = this.outage();
-    if (home && (night || L.S.fan)) this.B.units = Math.max(0, this.B.units - dt * (0.02 + (L.S.fan ? 0.03 : 0)));
-    const on = !(out || this.B.units <= 0);
+    const home = L.S.inside && !L.venue && !L.guest; const night = hour >= 18.5 || hour < 6.5; const H = houseSystem.api; const gen = !!H?.genRunning(); const out = H ? !H.powered() : this.outage();
+    if (home && (night || L.S.fan) && !gen) this.B.units = Math.max(0, this.B.units - dt * (0.02 + (L.S.fan ? 0.03 : 0)));
+    const on = !out && (gen || this.B.units > 0);
     if (on !== this.lightsOn) { this.lightsOn = on; for (const l of L.lot.lights) l.visible = on; if (!on && L.S.fan) { L.S.fan = false; } if (home && !on && !out) c.hud.toast('Units finish', 'Your prepaid units don finish. Buy more on the Home app.', 'var(--red)', 'msg', 4); } // the grid's own shout comes from systems/power.ts
     this.outageT += dt; if (this.outageT > 20) { this.outageT = 0; this.persist(); }
     // the ChopNow rider

@@ -197,12 +197,12 @@ export function gridCollapsed(h: number) {
 }
 /** Which feeders have light at game hour h: forced (admin) beats operator switches beats the plan, then feeders are
  *  shed (plan before operators, band C before B before A) until the load fits what the grid can carry. */
-export function gridState(feeders: FeederDef[], h: number, o: { forced?: Map<number, { on: boolean }>; override?: Map<number, { on: boolean; by: string }>; collapseUntil?: number; genScale?: number } = {}): GridState {
+export function gridState(feeders: FeederDef[], h: number, o: { forced?: Map<number, { on: boolean }>; override?: Map<number, { on: boolean; by: string; from?: number }>; collapseUntil?: number; genScale?: number } = {}): GridState {
   const on = new Array(GRID.w * GRID.h).fill('0'); const by: Record<number, string> = {};
   if (h < (o.collapseUntil ?? 0) || gridCollapsed(h)) return { on: on.join(''), gen: 0, load: 0, collapse: true };
   const total = feeders.reduce((s, f) => s + f.load, 0); const gen = Math.round(generation(h, total) * (o.genScale ?? 1));
   const want = feeders.map((f) => {
-    const fo = o.forced?.get(f.i), op = o.override?.get(f.i);
+    const fo = o.forced?.get(f.i), op0 = o.override?.get(f.i); const op = op0 && h >= (op0.from ?? -Infinity) ? op0 : undefined;
     if (op && !fo) by[f.i] = op.by;
     return { f, v: fo ? fo.on : op ? op.on : scheduledOn(f.i, f.band, h), pri: fo ? 0 : op ? 1 : f.band === 'A' ? 2 : f.band === 'B' ? 3 : 4, r: h32(f.i, Math.floor(h / 24)) };
   });

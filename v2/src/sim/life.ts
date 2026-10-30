@@ -745,7 +745,10 @@ export class LifeSim {
     else brake = (v as any).parked ? def.brake * 2 : def.brake * 0.3;
     const speed = v.ctrl.currentVehicleSpeed();
     if (throttle !== 0 && Math.sign(throttle) !== Math.sign(speed) && Math.abs(speed) > 1.5) { brake = def.brake; throttle = 0; }
-    const engineK = Math.max(0.15, v.engine / def.engine);
+    // wear (systems/wear.ts): a tired engine pulls less, worn pads stop late, bald tyres slide, a dying engine cuts out
+    const W = (v as any).wear as { power: number; brake: number; grip: number; cut: number } | undefined;
+    if (W && W.cut > 0) { W.cut -= dt; throttle = 0; }
+    const engineK = Math.max(0.15, v.engine / def.engine) * (W ? W.power : 1);
     const flat = v.tires.filter((t) => t <= 0).length;
     const plr = !!driver && driver.role === 'player'; const rider = v.kind === 'okada' || v.kind === 'keke';
     const top = def.topSpeed * (1 - flat * 0.18) * (v.engine <= 0 ? 0 : 1) * (plr ? this.mod(rider ? 'ride.top' : 'drive.top') : 1);
@@ -759,8 +762,8 @@ export class LifeSim {
       const front = i < 2;
       v.ctrl.setWheelSteering(i, front ? v.steer : 0);
       v.ctrl.setWheelEngineForce(i, (front && rwd) || (!front && !rwd && v.kind !== 'okada' && v.kind !== 'keke') ? 0 : force);
-      v.ctrl.setWheelBrake(i, brake);
-      v.ctrl.setWheelFrictionSlip(i, (v.kind === 'okada' ? 3.2 : 2.2) * (v.tires[i] <= 0 ? 0.35 : 1) * (1 - 0.25 * ((this as any).wet ?? 0)) * (plr ? this.mod(rider ? 'ride.grip' : 'drive.grip') : 1));
+      v.ctrl.setWheelBrake(i, brake * (W ? W.brake : 1));
+      v.ctrl.setWheelFrictionSlip(i, (v.kind === 'okada' ? 3.2 : 2.2) * (v.tires[i] <= 0 ? 0.35 : 1) * (1 - 0.25 * ((this as any).wet ?? 0)) * (plr ? this.mod(rider ? 'ride.grip' : 'drive.grip') : 1) * (W ? W.grip : 1));
     }
     v.ctrl.updateVehicle(dt, undefined, groups(G.VEHICLE, G.WORLD | G.SHIELD));
     v.wheelSteer = v.steer; for (let i = 0; i < 4; i++) v.wheelSpin[i] = v.ctrl.wheelRotation(i) ?? 0;

@@ -27,7 +27,7 @@ const CAP = 0.9; // capsule centre above the feet
 // building kinds (world/region.ts BK): house 1, shops 2, flats 3, hotel 4, warehouse 5, institution 8, bank 13
 const VENUE_ANCHOR: Record<string, { x: number; z: number; kinds: number[] }> = {
   casino: { x: 1250, z: -560, kinds: [4, 2, 3] }, club: { x: 560, z: -90, kinds: [2, 4, 5] }, joint: { x: 1080, z: -150, kinds: [2, 1, 3] },
-  hub: { x: 700, z: -560, kinds: [2, 8, 3] }, bank: { x: 1150, z: -330, kinds: [13, 2, 3] } };
+  hub: { x: 700, z: -560, kinds: [2, 8, 3] }, bank: { x: 1150, z: -330, kinds: [13, 2, 3] }, power: { x: 420, z: -380, kinds: [8, 5, 3] } };
 const wrapA = (a: number) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
 
 class Life {
@@ -40,6 +40,11 @@ class Life {
   venues = new Map<string, Venue>(); private vdoorT = 3; private vdoorObj = new Map<string, THREE.Group>();
   /** other systems add interactables in the street (vendors, pay toilets, clubs) */
   providers: (() => Thing[])[] = [];
+  /** other systems can block an action with a reason (no water, no light) and hear when one starts (house.ts) */
+  gates: ((a: LifeAction, t: Thing) => string | null)[] = []; onBegin: ((a: LifeAction, t: Thing) => void)[] = [];
+  /** extra lines in your own menu (Z) from other systems, and who handles them */
+  selfItems: (() => PieItem[])[] = []; selfPick: ((id: string) => void)[] = [];
+  gate(a: LifeAction, t: Thing) { for (const g of this.gates) { const r = g(a, t); if (r) return r; } return null; }
   /** a friend's room you were invited to (their street door) and whether you are in it right now */
   invite: { owner: string; name: string; door: Door; until: number } | null = null; guest = false;
   constructor(public ctx: GameCtx) {}
@@ -272,7 +277,7 @@ class Life {
     if (t.open) { t.open(); return; }
     if (t.kind === 'door') { const a = t.actions[0]; if (a.id.startsWith('vin:')) this.enterVenue(this.venues.get(a.id.slice(4))!); else if (a.id === 'vout') this.exitVenue(); else if (a.id === 'visit') this.visit(); else a.id === 'in' ? this.enter() : this.exit(); return; }
     if (t.kind === 'npc') { this.pieNpc(t); return; }
-    const items: PieItem[] = t.actions.filter((a) => this.allowed(a)).map((a) => ({ id: a.id, label: a.label, hint: a.effect === 'cook3' && this.S.pantry > 0 ? `Uses market foodstuff (${this.S.pantry} left)` : a.hint, cost: a.effect === 'cook3' && this.S.pantry > 0 ? undefined : a.cost, disabled: a.cost && c.sim.cash < a.cost && !(a.effect === 'cook3' && this.S.pantry > 0) ? 'No money' : a.when === 'hasFood' && this.S.food <= 0 ? 'Nothing inside' : undefined }));
+    const items: PieItem[] = t.actions.filter((a) => this.allowed(a)).map((a) => ({ id: a.id, label: a.label, hint: a.effect === 'cook3' && this.S.pantry > 0 ? `Uses market foodstuff (${this.S.pantry} left)` : a.hint, cost: a.effect === 'cook3' && this.S.pantry > 0 ? undefined : a.cost, disabled: a.cost && c.sim.cash < a.cost && !(a.effect === 'cook3' && this.S.pantry > 0) ? 'No money' : a.when === 'hasFood' && this.S.food <= 0 ? 'Nothing inside' : this.gate(a, t) ?? undefined }));
     if (!items.length) return;
     if (items.length === 1 && !items[0].disabled) { this.begin(t.actions.find((x) => x.id === items[0].id)!, t); return; } // one thing to do: just do it
     this.pie.show(t.name, t.id === 'cooler' ? `${this.S.food} plate${this.S.food === 1 ? '' : 's'} of food` : 'Choose', items, this.screenOf(t.x, 1.1, t.z), (id) => { const a = t.actions.find((x) => x.id === id)!; this.begin(a, t); });
@@ -290,6 +295,7 @@ class Life {
       { id: 'game', label: 'Play Ludo on phone', hint: '+Fun' }, { id: 'needs', label: 'How I dey?', hint: 'Needs and mood' },
     ];
     if (!this.inside && this.S.door) items.push({ id: 'home', label: 'Go home', hint: 'GPS to your room' });
+    for (const f of this.selfItems) items.push(...f());
     const phone = (label: string, gain: Partial<Record<Need, number>>, minutes: number): LifeAction => ({ id: 'phone', label, gain, minutes, clip: 'Idle_TalkingPhone_Loop', spot: [0, 0, 0], prop: 'phone', pose: 'phone' });
     this.pie.show('You', 'Your phone and your mood', items, { x: innerWidth / 2, y: innerHeight / 2 }, (id) => {
       const me = this.ctx.sim.local; const self: Thing = { id: 'self', name: 'You', x: me.pos.x, z: me.pos.z, yaw: me.yaw, actions: [], kind: 'self' };
@@ -297,6 +303,7 @@ class Life {
       if (id === 'scroll') this.begin({ ...phone('Scrolling', { fun: 16 }, 20), clip: 'Idle_Loop' }, self);
       if (id === 'game') this.begin({ ...phone('Playing Ludo', { fun: 24 }, 25), clip: 'Idle_Loop' }, self);
       if (id === 'needs') this.ui.sheet.classList.add('on');
+      for (const f of this.selfPick) f(id);
       if (id === 'home') this.ctx.hud.toast('GPS', 'Follow the house pin on your map.', 'linear-gradient(160deg,#2de0c8,#139a8a)', 'pin', 4);
     });
   }
@@ -396,8 +403,8 @@ class Life {
 
   // ---------------------------------------------------------------- running an action
   begin(a: LifeAction, t: Thing) {
-    this.stop(false);
-    const c = this.ctx;
+    const c = this.ctx; const why = this.gate(a, t); if (why) { c.hud.toast(t.name, why, 'var(--red)', 'msg', 3.5); return; }
+    this.stop(false); for (const f of this.onBegin) f(a, t);
     if (a.effect === 'cook3' && this.S.pantry > 0) { this.S.pantry--; a = { ...a, cost: 0 }; }
     if (a.cost) { if (c.sim.cash < a.cost) { c.hud.toast('No money', `You need ₦${a.cost.toLocaleString()}.`, 'var(--red)', 'cash'); return; } c.sim.cash -= a.cost; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: -a.cost }); }
     if (a.effect === 'eat1') this.S.food = Math.max(0, this.S.food - 1);

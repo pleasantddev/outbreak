@@ -362,12 +362,17 @@ export class Hub implements OnlineApi {
         case 'casino': ok(this.casino(c, m)); break;
         case 'social.greet': { const o = this.nearConn(c, m.to, 12); this.send(o, { t: 'social', kind: 'greet', from: c.profile.name, fromId: c.id }); ok(); break; }
         case 'social.invite': ok(this.invite(c, m)); break;
+        case 'social.ticket': { // an agbero asks a driver for the park ticket; the driver decides on their phone
+          const o = this.nearConn(c, m.to, 12); if (!o.veh) throw new HttpError(400, 'They are not driving.');
+          const k = `${id}>${o.account.id}`; const last = this.lastSwitch.get(k) ?? 0; if (Date.now() - last < 60_000) throw new HttpError(429, 'You just asked them.'); this.lastSwitch.set(k, Date.now());
+          this.send(o, { t: 'social', kind: 'ticket', from: c.profile.name, fromId: c.id, amount: 300 }); ok(); break;
+        }
         case 'grid.get': ok({ board: this.power.board() }); break;
         case 'grid.switch': { // only from the control room, and not faster than a real hand on a real switch
           if (c.ms.interior !== 'power') throw new HttpError(400, 'You are not in the control room.');
           const last = this.lastSwitch.get(id) ?? 0; if (Date.now() - last < 1500) throw new HttpError(429, 'Easy on the switches.'); this.lastSwitch.set(id, Date.now());
           const f = Math.floor(Number(m.f)); if (!FEEDERS.some((x) => x.i === f)) throw new HttpError(400, 'No such feeder.');
-          ok({ state: this.power.switch(f, !!m.on, c.profile.name) }); break;
+          ok({ state: this.power.switch(f, !!m.on, c.profile.name, Number(m.inHours) || 0, Number(m.hours) || undefined) }); break;
         }
         case 'biz.all': ok({ list: this.biz.all() }); break;
         case 'biz.mine': ok({ list: this.biz.mine(id) }); break;
