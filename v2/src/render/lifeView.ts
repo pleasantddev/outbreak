@@ -200,6 +200,7 @@ export class LifeView {
     const focus = L.on ? new THREE.Vector3(L.x, 0, L.z) : this.focusOverride ?? focus0;
     this.world.update(focus.x, focus.z);
     if (L.on) this.landmapFrame();
+    this.atmo.indoor = this.indoor;
     const env = this.atmo.update(dt, focus, cam, 30 * this.timeScale);
     if (this.indoor) this.atmo.rain.visible = false; // interiors (systems/life venues) have a roof even if we never draw it
     if (L.on) { const fg = this.scene.fog as THREE.FogExp2 | null; if (fg && 'density' in fg) fg.density = Math.min(fg.density, 0.00035); this.atmo.rain.visible = false; }
