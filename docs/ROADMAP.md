@@ -77,3 +77,14 @@ Cars, Courses, LagosBet), shared venues with opening hours, governor election, 3
   from the phone (+15% delivery). Other players buy from your shop and the money lands in your till. Phone: Business.
 - Mobile: touch layout for short landscape phones, Me and Duty buttons, tappable prompt, list close button.
 Next: shared casino tables, player market stalls, Jobs/Bank/Invest phone apps, shift tasks, onboarding pass.
+
+## Founder brief 2 (30 Oct 16:14)
+"Make agbero a valid career path; cars and vehicles slowly wear down, other items too, most especially houses needing
+renovation: pipes and water around the house, pipes burst, gen breakdown; a Lagos power plant where players work and
+schedule lights on and off in different parts of the map; windows lit only where there is a light source; rooms
+rearrangeable and decoratable, with interior designers; pilots and airports later; an admin panel that controls it all."
+Status (30 Oct evening): all built except airports. Power grid (server feeders, control room job with scheduling,
+admin board), windows and lamps follow the grid with per-building gens (teammate), wear on cars (servicing,
+vulcanizers) and houses (pipes, wiring, roof, tank, gen, artisans, renovation), agbero (park union both ways: collect as
+agbero, pay as a driver on duty), decor (arrange, OjaHome, paint, floors, designers), admin World page + wear tuning.
+Later: pilots and airports (MMA Ikeja), player mechanics serving player cars, phone battery and clothes wear.
