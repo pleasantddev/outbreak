@@ -293,7 +293,7 @@ export class Atmosphere {
     this.sun.color.copy(sunCol).multiplyScalar(1 / Math.max(0.001, day * (0.25 + 0.75 * W.sun)));
     this.sun.intensity = 4.6 * day * W.sun * cloudShade + this.lightning * 8;
     const moonDir = this.tmpV4.copy(this.sunDir).negate().add(this.tmpMoon.set(0.25, 0.1, 0)).normalize();
-    if (night > 0.5) { this.sun.color.setRGB(0.6, 0.7, 1.0); this.sun.intensity = 0.6 * (1 - W.cover * 0.8) + this.lightning * 8; }
+    if (night > 0.5) { this.sun.color.setRGB(0.5, 0.62, 1.0); this.sun.intensity = 0.4 * (1 - W.cover * 0.8) + this.lightning * 8; }
     const ld = night > 0.5 ? moonDir : this.sunDir;
     // snap the shadow box to whole texels in light space so shadow edges do not crawl while moving
     const tex = this.shadowOn ? (2 * this.L.shadowHalf) / this.sun.shadow.mapSize.x : 1;
@@ -314,11 +314,11 @@ export class Atmosphere {
     }
     this.hemi.color.copy(zen).lerp(K.white, 0.25);
     this.hemi.groundColor.setRGB(0.52, 0.4, 0.29).multiplyScalar(0.3 + 0.7 * day);
-    this.hemi.intensity = 0.3 + 1.35 * day * (0.6 + 0.4 * W.cover) + night * 0.6 + this.lightning * 3;
+    this.hemi.intensity = 0.14 + 1.5 * day * (0.6 + 0.4 * W.cover) + night * 0.06 + this.lightning * 3;
     // fog matches the horizon
     const fogC = K.fog.copy(hor).lerp(tint, W.haze * 0.4);
     (this.scene.fog as THREE.FogExp2).color.copy(fogC); (this.scene.fog as THREE.FogExp2).density = W.fog * (1 + night * 0.4);
-    this.renderer.toneMappingExposure = 0.62 + night * 0.6;
+    this.renderer.toneMappingExposure = 0.62 + night * 0.28;
     // rain, puddles and drying
     this.wet = THREE.MathUtils.clamp(this.wet + (W.rain > 0.1 ? dt * 0.08 * W.rain : -dt * (0.004 + W.dry * 0.2 * day)), 0, 1);
     this.water = THREE.MathUtils.clamp(this.water + dt * (W.wetRate * 0.5) - dt * W.dry * 0.04 * (0.3 + day), 0, 1);

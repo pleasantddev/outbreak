@@ -19,6 +19,8 @@ GO = """async (s) => { const hl = window.__hl, v = hl.view, a = v.atmo, me = hl.
   for (let i = 0; i < 900 && stable < 8; i++) { v.world.update(s.x, s.z, true); await sleep(40); const n = v.world.tiles.size; if (!v.world.job && n === last) stable++; else stable = 0; last = n; }
   if (s.walk) { const net = hl.sim.net, RN = net.constructor; let bd = 1e9, bw = null; const ids = net.nearWalks(s.x, s.z, s.cr ?? 200).sort((a, b) => a - b); const pickIds = s.cand !== undefined ? [ids[(s.cand * 7 + 3) % ids.length]] : ids; for (const id of pickIds) { const w = net.walks[id]; const pr = s.cand !== undefined ? { s: w.len * ((s.cand * 0.37) % 1), d: 0 } : RN.project(w.pts, s.x, s.z); if (pr.d < bd) { bd = pr.d; bw = RN.at(w.pts, Math.max(0, pr.s + (s.ahead ?? 0))); } }
     if (bw) { s.yaw = bw.yaw + (s.turn ?? 0); s.ox = -Math.sin(s.yaw) * 4 + (bw.x - s.x); s.oz = -Math.cos(s.yaw) * 4 + (bw.z - s.z); s.h = 2.5; s.pitch = 9; s.found = [Math.round(bw.x), Math.round(bw.z), +s.yaw.toFixed(2)]; } }
+  if (s.lamp) { const L = v.world.lamps; let bi = -1, bd = 1e12; for (let i = 0; i < L.length; i += 3) { const d = (L[i] - s.x) ** 2 + (L[i + 1] - s.z) ** 2; if (d < bd) { bd = d; bi = i; } }
+    if (bi >= 0) { const yw = s.yaw ?? 0; s.ox = L[bi] - Math.sin(yw) * (s.back ?? 10) - s.x; s.oz = L[bi + 1] - Math.cos(yw) * (s.back ?? 10) - s.z; s.found = [Math.round(L[bi]), Math.round(L[bi + 1])]; } }
   const dy = Math.tan((s.pitch ?? 8) * Math.PI / 180), yaw = s.yaw ?? 0;
   const eye = { x: s.x + (s.ox ?? 0), y: s.h ?? 1.7, z: s.z + (s.oz ?? 0) };
   v.debugCam = { x: eye.x, y: eye.y, z: eye.z, tx: eye.x + Math.sin(yaw) * 20, ty: eye.y - dy * 20, tz: eye.z + Math.cos(yaw) * 20, fov: s.fov ?? 65 };

@@ -299,7 +299,7 @@ export class LifeView {
         const L = this.world.lamps; const spots: { x: number; z: number; r: number; d: number }[] = [];
         for (let i = 0; i < L.length; i += 3) { const d = (L[i] - focus.x) ** 2 + (L[i + 1] - focus.z) ** 2; if (d < 110 * 110) spots.push({ x: L[i], z: L[i + 1], r: L[i + 2], d }); }
         spots.sort((a, b) => a.d - b.d);
-        for (let i = 0; i < U.length; i++) { const s = spots[i]; if (s) U[i].set(s.x + Math.sin(s.r) * 1.9, 0, s.z + Math.cos(s.r) * 1.9, 1.5 * night); else U[i].set(0, 0, 0, 0); }
+        for (let i = 0; i < U.length; i++) { const s = spots[i]; if (s) U[i].set(s.x + Math.sin(s.r) * 1.9, 0, s.z + Math.cos(s.r) * 1.9, 1.9 * night); else U[i].set(0, 0, 0, 0); }
         this.lightPool.forEach((l, i) => { const s = spots[i]; if (!s || i >= 2) { l.intensity = 0; return; } l.position.set(s.x + Math.sin(s.r) * 1.9, 8.6, s.z + Math.cos(s.r) * 1.9); l.intensity = 160 * night; });
       } else { for (const u of U) u.w = 0; this.lightPool.forEach((l) => (l.intensity = 0)); }
     }

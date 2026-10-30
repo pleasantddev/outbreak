@@ -174,7 +174,7 @@ export function makeGroundMaterial(tex: TexSet) {
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = 0.0;')
       .replace('#include <normal_fragment_maps>', 'normal = normalize((viewMatrix * vec4(GS.nrm, 0.0)).xyz);')
       .replace('#include <aomap_fragment>', '#include <aomap_fragment>\nreflectedLight.indirectDiffuse *= GS.ao; reflectedLight.indirectSpecular *= mix(GS.ao, 1.0, GW);')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += lampLight(vWP, GS.nrm) * diffuseColor.rgb * (1.0 - GW * 0.7);');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += lampLight(vWP, GS.nrm) * (diffuseColor.rgb * 1.2 + 0.02) * (1.0 - GW * 0.7);');
   };
   m.customProgramCacheKey = () => 'hl-ground';
   (m as any).hlUniforms = uniforms;
