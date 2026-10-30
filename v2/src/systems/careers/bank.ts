@@ -11,6 +11,7 @@ import { addMoodlet } from '../life/needs';
 import { Builder, canvasTex, M, box } from '../leisure/build';
 import { sfx } from '../leisure/sfx';
 import { earn } from '../money';
+import { career } from './ranks';
 
 export const BANK_ORIGIN = new THREE.Vector3(40000, 0, 36000);
 const DEN = [{ v: 1000, c: '#7e57c2', t: '#ede7f6' }, { v: 500, c: '#26a69a', t: '#e0f2f1' }, { v: 200, c: '#8d6e63', t: '#efebe9' }, { v: 100, c: '#ef5350', t: '#ffebee' }];
@@ -79,7 +80,7 @@ class Bank {
   }
   end() {
     const s = this.shift; if (!s) return; const c = this.ctx; this.shift = null; this.el.classList.remove('on'); c.setModal(false); (c.sim.local as any).act = undefined;
-    if (s.pay) earn(c, s.pay, 'work');
+    if (s.pay) earn(c, Math.round(s.pay * career.mult('bank')), 'work'); career.add('bank', Math.max(0, s.served - s.errors));
     const L = this.life; L.needs.v.energy = Math.max(0, L.needs.v.energy - s.served * 1.5); L.needs.v.fun = Math.max(0, L.needs.v.fun - s.served);
     if (s.served >= 8 && s.errors === 0) addMoodlet(L.needs, 'employee', 'Employee of the day', 8, 8); else if (s.errors > 3) addMoodlet(L.needs, 'query', 'Got a query from the manager', -8, 8);
     c.hud.toast('Shift over', `${s.served} customers, ${s.errors} errors. ₦${s.pay.toLocaleString()} paid.`, 'linear-gradient(160deg,#3b82f6,#1e3a8a)', 'cash', 4.5);

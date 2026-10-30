@@ -10,6 +10,7 @@ import { halfWidth } from '../../world/roadspec';
 import { M, box, cyl } from '../leisure/build';
 import { sfx } from '../leisure/sfx';
 import { earn, spend } from '../money';
+import { career } from './ranks';
 
 interface Fault { id: string; label: string; symptoms: string[]; part: string; partCost: number; labour: number; bolts: number }
 const FAULTS: Fault[] = [
@@ -98,7 +99,7 @@ class Mechanic {
   private strike() { const d = this.dial; if (!d) return; cancelAnimationFrame(d.raf); this.dial = null; const x = (Math.sin(d.t * 2.6 - Math.PI / 2) + 1) / 2; (this as any)._hit(x >= d.z0 && x <= d.z0 + d.w); }
   private payout(res: boolean[]) {
     const c = this.ctx; const j = this.job!; const q = res.filter(Boolean).length / res.length + j.good * 0.3; const bill = j.f.partCost + j.f.labour; const cost = j.fake ? Math.round(j.f.partCost * 0.35 / 50) * 50 : j.f.partCost;
-    const paid = q < 0.4 ? Math.round(bill * 0.5) : bill; const share = Math.round((paid - cost) * 0.6 / 50) * 50; // Oga takes his cut
+    const paid = q < 0.4 ? Math.round(bill * 0.5) : bill; const share = Math.round(((paid - cost) * 0.6 * (paid > cost ? career.mult('mechanic') : 1)) / 50) * 50; career.add('mechanic'); // Oga takes his cut
     if (share > 0) earn(c, share, 'work'); else spend(c, -share); sfx(share > 0 ? 'cash' : 'lose'); j.jobs++; j.earned += share;
     (c.systems.get('skills') as any)?.addXp?.('mech', Math.round(12 + q * 25)); if (j.fake && Math.random() < 0.45) this.comeback.push({ owner: j.owner, t: 90 + Math.random() * 240 });
     this.life.needs.v.energy = Math.max(0, this.life.needs.v.energy - 6); this.life.needs.v.hygiene = Math.max(0, this.life.needs.v.hygiene - 8);

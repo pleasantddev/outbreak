@@ -10,6 +10,7 @@ import { addMoodlet } from '../life/needs';
 import { Builder, canvasTex, M, box, cyl } from '../leisure/build';
 import { sfx } from '../leisure/sfx';
 import { earn } from '../money';
+import { career } from './ranks';
 
 export const HUB_ORIGIN = new THREE.Vector3(36000, 0, 36000);
 
@@ -95,7 +96,7 @@ class TechHub {
     const me = c.sim.local; (me as any).act = { clip: 'Sitting_Idle_Loop', yaw: Math.PI };
   }
   private pay(usd: number, quality: number, what: string) {
-    const c = this.ctx; const n = Math.round(usd * quality * this.rate / 50) * 50; const L = this.life;
+    const c = this.ctx; const n = Math.round(usd * quality * this.rate * career.mult('tech') / 50) * 50; const L = this.life; career.add('tech');
     L.needs.v.energy = Math.max(0, L.needs.v.energy - 7); L.needs.v.fun = Math.min(100, L.needs.v.fun + (quality > 0.6 ? 8 : -4));
     if (n > 0) { earn(c, n, 'work'); sfx('cash'); }
     (c.systems.get('skills') as any)?.addXp?.('hack', Math.round(10 + quality * 30)); this.done++;

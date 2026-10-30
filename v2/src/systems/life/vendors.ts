@@ -10,6 +10,7 @@ import { halfWidth, verge } from '../../world/roadspec';
 import { lifeSystem, type Thing } from './index';
 import { addMoodlet } from './needs';
 import { openDeal, play, type Good, type Persona, type Memory, type DealState, type Move } from './haggle';
+import { career } from '../careers/ranks';
 
 type Kind = 'market' | 'mamaput' | 'suya' | 'corn' | 'water' | 'toilet' | 'recharge' | 'okrika';
 interface Stall { key: string; kind: Kind; x: number; z: number; yaw: number; who: Persona; group: THREE.Group | null; actor: Actor | null; seed: number }
@@ -265,7 +266,7 @@ class Vendors {
     const c = this.ctx; const L = this.life; const mem = this.memOf(s); const g = d.good; const n = d.qty;
     c.sim.cash -= d.price; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: -d.price } as any);
     const fair = d.fair * n; const saved = fair - d.price;
-    mem.deals++; mem.regard = Math.min(1, mem.regard + (d.price >= fair ? 0.1 : saved > fair * 0.15 ? 0.01 : 0.05));
+    mem.deals++; if (!g.fixed) career.add('trader'); mem.regard = Math.min(1, mem.regard + (d.price >= fair ? 0.1 : saved > fair * 0.15 ? 0.01 : 0.05));
     if (!g.fixed) this.skills?.addXp?.('trade', Math.round(5 + Math.max(0, saved / Math.max(1, fair)) * 40));
     if (saved > fair * 0.12) addMoodlet(L.needs, 'bargain', 'Got a bargain', 5, 3);
     L.needs.v.social = Math.min(100, L.needs.v.social + 4 + d.rounds);

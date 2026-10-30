@@ -12,6 +12,7 @@ import { RT } from '../societyRuntime';
 import { sfx } from '../leisure/sfx';
 import { earn, online } from '../money';
 import { net } from '../../net/client';
+import { career } from './ranks';
 
 type RaceType = 'sprint' | 'circuit' | 'drag';
 interface Meet { x: number; z: number; yaw: number; name: string; ax: number; az: number }
@@ -151,7 +152,7 @@ class Racing {
   onLobby(l: any) {
     const c = this.ctx; const prev = this.lobby; this.lobby = l; this.drawLobby();
     if (l.results) { const meId = (net as any).account?.id; const mine = l.results.find((x: any) => x.id === meId); const n = l.members.length;
-      if (mine?.place === 1) { this.cred++; c.hud.title('YOU WIN', `₦${Math.round(l.wager * n * 0.8).toLocaleString()} from the pot · street cred ${this.cred}`, 4); sfx('win'); }
+      if (mine?.place === 1) { this.cred++; career.add('racer'); c.hud.title('YOU WIN', `₦${Math.round(l.wager * n * 0.8).toLocaleString()} from the pot · street cred ${this.cred}`, 4); sfx('win'); }
       else c.hud.title(mine ? `${mine.place}${mine.place === 2 ? 'ND' : mine.place === 3 ? 'RD' : 'TH'} PLACE` : 'DID NOT FINISH', l.results[0] ? `${l.results[0].name} took the pot` : '', 3.5);
       this.lobby = null; setTimeout(() => this.drawLobby(), 6000); this.persist(); return; }
     if (l.state === 'countdown' && prev?.state !== 'countdown' && this.lobbyMeet) {
@@ -240,7 +241,7 @@ class Racing {
     const ahead = r.rivals.filter((R) => R.done && R.done < (r.finish || now)).length; const place = how === 'dnf' ? r.rivals.length + 1 : ahead + 1;
     const pot = r.wager * (r.rivals.length + 1); const win = place === 1 ? Math.round(pot * 0.8) : place === 2 && r.rivals.length > 1 ? r.wager : 0;
     if (win) earn(c, win, 'race');
-    if (place === 1) { this.cred++; c.hud.title('YOU WIN', `₦${win.toLocaleString()} · street cred ${this.cred}`, 3.5); sfx('win'); (c.systems.get('skills') as any)?.addXp?.('drive', 60 + Math.round(r.len / 40)); (lifeNeeds(c))?.(); }
+    if (place === 1) { this.cred++; career.add('racer'); c.hud.title('YOU WIN', `₦${win.toLocaleString()} · street cred ${this.cred}`, 3.5); sfx('win'); (c.systems.get('skills') as any)?.addXp?.('drive', 60 + Math.round(r.len / 40)); (lifeNeeds(c))?.(); }
     else c.hud.title(how === 'dnf' ? 'DID NOT FINISH' : `${place}${place === 2 ? 'ND' : place === 3 ? 'RD' : 'TH'} PLACE`, win ? `Money back: ₦${win.toLocaleString()}` : 'Better luck next time', 3);
     // tidy up: rivals become ordinary traffic and drive off into the night
     setTimeout(() => { for (const R of r.rivals) { (R.drv as any)._ai = undefined; (R.drv as any)._keep = false; (R.v as any)._keep = false; } for (const g of r.rings) g.removeFromParent(); r.arch?.removeFromParent(); }, 4000);

@@ -34,7 +34,7 @@ async function ensureSession() {
 function goOffline() { const u = new URL(location.href); u.searchParams.set('server', 'off'); location.href = u.toString(); }
 
 async function pullAccount(ctx: GameCtx) {
-  net.getCash = () => ctx.sim.cash; net.onCash = (c) => { ctx.sim.cash = c; };
+  net.getCash = () => ctx.sim.cash; net.onCash = (c) => { ctx.sim.cash = c; }; (window as any).__net = net;
   const [w, plots, st] = await Promise.all([
     net.api<{ cash: number; bank: number }>('GET', '/api/me/wallet'),
     net.api<{ items: { id: string; pts: number[] | null }[] }>('GET', '/api/me/plots').catch(() => ({ items: [] })),
