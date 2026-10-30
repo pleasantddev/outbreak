@@ -16,7 +16,9 @@ float gridAt(vec2 p) { float i = clamp(floor((p.x - (${GRID.x0}.0)) / ${GRID.cel
 `;
 
 class Power {
-  st: GridState = { on: '1'.repeat(GRID.w * GRID.h), gen: 0, load: 0, collapse: false }; private t = 0; private mine = -1; private mineOn: boolean | null = null; private el!: HTMLElement;
+  st: GridState = { on: '1'.repeat(GRID.w * GRID.h), gen: 0, load: 0, collapse: false };
+  /** testing and screenshots: pin the grid to this string (72 chars of 0/1) until cleared */
+  force: string | null = null; private t = 0; private mine = -1; private mineOn: boolean | null = null; private el!: HTMLElement;
   constructor(private ctx: GameCtx) {}
   init() {
     registerApp('Light', 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z', 'linear-gradient(160deg,#facc15,#ca8a04)', () => this.html());
@@ -50,7 +52,7 @@ class Power {
   }
   frame(dt: number) {
     this.t -= dt; if (this.t > 0) return; this.t = 2;
-    if (!net.active) this.set(gridState(FEEDERS, this.hours())); else this.check();
+    if (this.force) this.set({ on: this.force, gen: 0, load: 0, collapse: !this.force.includes('1') }); else if (!net.active) this.set(gridState(FEEDERS, this.hours())); else this.check();
   }
   private html() {
     const me = this.ctx.sim.local; const f = this.feeder(me.pos.x, me.pos.z); const h = this.hours();
