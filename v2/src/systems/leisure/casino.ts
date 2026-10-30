@@ -6,7 +6,8 @@ import type { Venue } from '../life/venue';
 import type { Thing } from '../life/index';
 import { addMoodlet } from '../life/needs';
 import { Builder, canvasTex, M, box, cyl } from './build';
-import { CasinoGames } from './games';
+import { CasinoGames, localBackend, type CasinoBackend } from './games';
+import { net } from '../../net/client';
 import { sfx } from './sfx';
 
 export const CASINO_ORIGIN = new THREE.Vector3(32000, 0, 36000);
@@ -80,7 +81,15 @@ export class Casino {
   constructor(private ctx: GameCtx, private life: { needs: any; doAction: (a: any) => void; ui: any }) {
     const b = buildCasino(); this.seats = b.seats; this.staff = b.staff; this.wheel = (b.venue.lot.group as any).userData.wheel ?? null;
     this.venue = { ...b.venue, things: () => this.things(), enter: () => this.enter(), exit: () => this.exit(), frame: (dt) => this.frame(dt), refuse: () => this.refuse() };
-    this.games = new CasinoGames({ get: () => ctx.sim.cash, add: (n) => { ctx.sim.cash += n; ctx.sim.events.push({ t: 'cash', actor: ctx.sim.local.id, amount: n } as any); } }, (g, r) => this.result(g, r));
+    const wallet = { get: () => ctx.sim.cash, add: (n: number) => { ctx.sim.cash += n; ctx.sim.events.push({ t: 'cash', actor: ctx.sim.local.id, amount: n } as any); } };
+    // online the server deals the cards and owns the money; offline the same rules run here
+    const remote: CasinoBackend = {
+      slots: async (bet) => { const r = await net.act('casino', { game: 'slots', bet }); return r.ok ? { reels: r.reels, win: r.win } : { err: r.err ?? 'Try again.' }; },
+      roulette: async (bets) => { const r = await net.act('casino', { game: 'roulette', bets }); return r.ok ? { n: r.num, back: r.back, staked: r.staked } : { err: r.err ?? 'Try again.' }; },
+      bj: async (op, bet) => { const r = await net.act('casino', { game: 'bj', op, bet }); return r.ok ? (r as any) : { err: r.err ?? 'Try again.' }; },
+    };
+    const local = localBackend(wallet);
+    this.games = new CasinoGames(wallet, (g, r) => this.result(g, r), { slots: (b) => (net.active ? remote : local).slots(b), roulette: (b) => (net.active ? remote : local).roulette(b), bj: (o, b) => (net.active ? remote : local).bj(o, b) });
     this.games.setSfx(sfx);
   }
   private refuse() { const h = this.ctx.view.atmo.hour; if (h >= 6 && h < 14) return 'Golden Palm opens 2pm till 6am.'; if (this.ctx.sim.wanted >= 2) return 'Bouncer: "Police dey find you. Go away."'; return null; }

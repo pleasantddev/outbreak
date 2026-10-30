@@ -7,7 +7,7 @@ import type { DB } from './db.ts';
 import { all, one, run } from './db.ts';
 import { HttpError } from './auth.ts';
 import type { ContentStore } from './content.ts';
-import { plotPriceOf, withdrawNet } from '../../v2/src/net/rules.ts';
+import { plotPriceOf, withdrawNet, EARN_RULES } from '../../v2/src/net/rules.ts';
 
 export interface Wallet { cash: number; bank: number }
 export interface PlayerRow { account_id: string; cash: number; bank: number; x: number | null; y: number | null; z: number | null; vehicles: string; skills: string; missions: string; blobs: string; play_seconds: number; updated_at: number }
@@ -215,14 +215,25 @@ export class Economy extends EventEmitter {
   clientDelta(accountId: string, d: number, why: string): Wallet {
     d = Math.trunc(d); if (!Number.isFinite(d) || d === 0) return this.wallet(accountId);
     if (d < 0) return this.adjust(accountId, d, 0, 'client.spend', { note: why.slice(0, 40), clamp: true });
-    if (!GAIN_REASONS.includes(why)) { this.flag(accountId, 'unsanctioned-gain', { d, why }); return this.wallet(accountId); }
-    const cap = GAIN_CAP_PER_MIN;
-    const e = this.earned.get(accountId); const now = Date.now();
-    const cur = !e || now - e.t > 60000 ? { t: now, sum: 0 } : e;
-    if (cur.sum + d > cap) { this.flag(accountId, 'gain-cap', { d, why, sum: cur.sum }); this.earned.set(accountId, cur); return this.wallet(accountId); }
-    cur.sum += d; this.earned.set(accountId, cur);
+    const rule = EARN_RULES[why]; if (!rule) { this.flag(accountId, 'unsanctioned-gain', { d, why }); return this.wallet(accountId); }
+    if (why === 'race') { const e = this.raceEscrow.get(accountId); if (!e || d > e.max || Date.now() - e.t < 20_000) { this.flag(accountId, 'race-unbacked', { d, e }); return this.wallet(accountId); } this.raceEscrow.delete(accountId); }
+    const now = Date.now(); const k = accountId + ':' + why; const w = this.earnWin.get(k) ?? { m: now, msum: 0, h: now, hsum: 0 };
+    if (now - w.m > 60_000) { w.m = now; w.msum = 0; } if (now - w.h > 3_600_000) { w.h = now; w.hsum = 0; }
+    if (w.msum + d > rule.perMin || w.hsum + d > rule.perHour) { this.flag(accountId, 'gain-cap', { d, why, min: w.msum, hour: w.hsum }); this.earnWin.set(k, w); return this.wallet(accountId); }
+    w.msum += d; w.hsum += d; this.earnWin.set(k, w); this.noteIncome(accountId, d);
     return this.adjust(accountId, d, 0, 'client.gain', { note: why.slice(0, 40) });
   }
+  private earnWin = new Map<string, { m: number; msum: number; h: number; hsum: number }>();
+  /** a street race wager: taken now, and the most the race can pay back is remembered for `clientDelta('race')` */
+  private raceEscrow = new Map<string, { t: number; max: number }>();
+  raceEnter(accountId: string, wager: unknown, rivals: unknown): Wallet {
+    const w = Math.floor(Number(wager)); const r = Math.max(1, Math.min(7, Math.floor(Number(rivals) || 1)));
+    if (![5000, 20000, 100000, 500000].includes(w)) throw new HttpError(400, 'Bad wager.');
+    const out = this.adjust(accountId, -w, 0, 'race.enter');
+    this.raceEscrow.set(accountId, { t: Date.now(), max: Math.round(w * (r + 1) * 0.8) }); return out;
+  }
+  /** casino money moves: the stake leaves first, winnings come back from the house */
+  casino(accountId: string, dCash: number, game: string): Wallet { return this.adjust(accountId, dCash, 0, dCash < 0 ? 'casino.bet' : 'casino.win', { note: game }); }
   private noteIncome(accountId: string, n: number) {
     const e = this.earned.get(accountId); const now = Date.now();
     const cur = !e || now - e.t > 3600_000 ? { t: now, sum: 0 } : e; cur.sum += n; this.earned.set(accountId, cur);
@@ -282,5 +293,5 @@ export class Economy extends EventEmitter {
   lastPosition(accountId: string) { const p = this.ensurePlayer(accountId); return p.x === null || p.z === null ? null : { x: p.x, y: p.y ?? 0, z: p.z }; }
 }
 
-export const GAIN_REASONS = ['loot', 'pickup', 'sale', 'mission', 'reward'];
+export const GAIN_REASONS = Object.keys(EARN_RULES);
 export const GAIN_CAP_PER_MIN = 25_000;

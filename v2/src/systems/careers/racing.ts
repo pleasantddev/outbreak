@@ -10,6 +10,8 @@ import { VEHICLES, type VehicleKind } from '../../data/balance';
 import type { RoadGraph } from '../../world/roadgraph';
 import { RT } from '../societyRuntime';
 import { sfx } from '../leisure/sfx';
+import { earn, online } from '../money';
+import { net } from '../../net/client';
 
 type RaceType = 'sprint' | 'circuit' | 'drag';
 interface Meet { x: number; z: number; yaw: number; name: string; ax: number; az: number }
@@ -118,7 +120,14 @@ class Racing {
     const c = this.ctx; const m = (this as any)._m as Meet; const me = c.sim.local; if (me.vehicle === null) return this.closeSel();
     if (c.sim.cash < this.choice.wager) { c.hud.toast('Race', `You need ₦${this.choice.wager.toLocaleString()} to enter.`, 'var(--red)', 'cash', 3); return; } const course = this.course(m, this.choice.type);
     if (!course) { c.hud.toast('Race', 'The boys no fit agree on a route. Try another race.', 'var(--red)', 'msg', 3); return; }
-    this.closeSel(); c.sim.cash -= this.choice.wager; c.sim.events.push({ t: 'cash', actor: me.id, amount: -this.choice.wager } as any); this.clearCrowd();
+    this.closeSel();
+    if (online()) { this.pending = true; void net.act('race.enter', { wager: this.choice.wager, rivals: this.choice.type === 'drag' ? 1 : 3 }).then((r) => { this.pending = false; if (!r.ok) { c.hud.toast('Race', r.err ?? 'The organiser refused your money.', 'var(--red)', 'msg', 3); return; } this.go(m, course); }); return; }
+    c.sim.cash -= this.choice.wager; c.sim.events.push({ t: 'cash', actor: me.id, amount: -this.choice.wager } as any);
+    this.go(m, course);
+  }
+  private pending = false;
+  private go(m: Meet, course: { pts: number[]; laps: number }) {
+    const c = this.ctx; const me = c.sim.local; if (me.vehicle === null) return; this.clearCrowd();
     const pts = course.pts; const cum = [0]; for (let i = 2; i < pts.length; i += 2) cum.push(cum[cum.length - 1] + Math.hypot(pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1]));
     const len = cum[cum.length - 1]; const checks: number[] = []; const step = this.choice.type === 'drag' ? 1e9 : 160; let lastS = 0; for (let i = 1; i < cum.length; i++) if (cum[i] - lastS > step) { checks.push(i); lastS = cum[i]; } checks.push(cum.length - 1);
     // grid: two rows behind the line
@@ -193,7 +202,7 @@ class Racing {
     const c = this.ctx; const r = this.race!; r.done = true; const now = c.sim.time;
     const ahead = r.rivals.filter((R) => R.done && R.done < (r.finish || now)).length; const place = how === 'dnf' ? r.rivals.length + 1 : ahead + 1;
     const pot = r.wager * (r.rivals.length + 1); const win = place === 1 ? Math.round(pot * 0.8) : place === 2 && r.rivals.length > 1 ? r.wager : 0;
-    if (win) { c.sim.cash += win; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: win } as any); }
+    if (win) earn(c, win, 'race');
     if (place === 1) { this.cred++; c.hud.title('YOU WIN', `₦${win.toLocaleString()} · street cred ${this.cred}`, 3.5); sfx('win'); (c.systems.get('skills') as any)?.addXp?.('drive', 60 + Math.round(r.len / 40)); (lifeNeeds(c))?.(); }
     else c.hud.title(how === 'dnf' ? 'DID NOT FINISH' : `${place}${place === 2 ? 'ND' : place === 3 ? 'RD' : 'TH'} PLACE`, win ? `Money back: ₦${win.toLocaleString()}` : 'Better luck next time', 3);
     // tidy up: rivals become ordinary traffic and drive off into the night

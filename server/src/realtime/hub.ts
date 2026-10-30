@@ -17,6 +17,8 @@ import {
   ANIMS, CELL, EMOTES, F, PROTOCOL_VERSION, VEH_BIT, VF, beginSnapshot, cm, decodeState, endSnapshot, newPlayerEnt, newVehEnt, packDoors, packPitch, packQ, packSpin, packSteer, packYaw, writeEntity,
   Writer, type ClientMsg, type Ent, type PlayerEnt, type ServerMsg, type StateMsg, type VehEnt, type WhoInfo,
 } from '../../../v2/src/net/protocol.ts';
+import { randomInt } from 'node:crypto';
+import { BjTable, slotSpin, roulettePays, ROULETTE_KEYS, SLOT_BETS, inInteriorZone } from '../../../v2/src/net/rules.ts';
 import { cleanChat } from '../../../v2/src/net/rules.ts';
 import { Grid, cellCoord, keyOf, type GridNode } from './grid.ts';
 import { accept, judgeMove, newMoveState, strike, type MoveState } from './antiCheat.ts';
@@ -161,7 +163,7 @@ export class Hub implements OnlineApi {
     if (c.veh) this.removeVehicle(c.veh);
     for (const v of [...this.vehicles.values()]) if (v.owner === c) this.removeVehicle(v);
     this.freePids.push(c.id);
-    try { if (c.haveState) this.econ.savePosition(c.account.id, c.ms.x, c.ms.y, c.ms.z, (performance.now() - c.joinedAt) / 1000); } catch (e) { this.log.warn('save failed', e); }
+    try { if (c.haveState) { const p = this.outdoorPos(c); this.econ.savePosition(c.account.id, p.x, c.ms.y, p.z, (performance.now() - c.joinedAt) / 1000); } } catch (e) { this.log.warn('save failed', e); }
     this.log.info(`leave ${c.profile.name} (#${c.id}) online=${this.conns.size}`);
   }
 
@@ -318,6 +320,15 @@ export class Hub implements OnlineApi {
         case 'job.done': ok({ ...this.econ.finishJob(id, String(m.id), Number(m.factor) || 1) }); break;
         case 'shop.buy': { const r = this.econ.shopBuy(id, m.sku, Number(m.qty) || 1); ok({ ...r.wallet, sku: r.sku, price: r.price, qty: r.qty }); break; }
         case 'state.put': this.econ.putState(id, m.key, m.value); ok(); break;
+        case 'door': { // walking into or out of an interior (GTA Online style loaded interiors)
+          const now = performance.now(); if (now - c.ms.lastDoor < 1000) throw new HttpError(429, 'Slow down.'); c.ms.lastDoor = now;
+          const into = typeof m.into === 'string' && m.into ? String(m.into).slice(0, 24) : null;
+          if (into) { c.ms.doorFrom = { x: c.ms.x, z: c.ms.z }; c.ms.interior = into; c.ms.exitTo = null; }
+          else { if (!c.ms.interior) throw new HttpError(400, 'You are not inside anywhere.'); c.ms.exitTo = c.ms.doorFrom; c.ms.interior = null; }
+          c.ms.tpUntil = now + 3000; ok({ into }); break;
+        }
+        case 'race.enter': ok({ ...this.econ.raceEnter(id, m.wager, m.rivals) }); break;
+        case 'casino': ok(this.casino(c, m)); break;
         case 'tp': case 'respawn': {
           const now = performance.now();
           if (now - c.ms.lastTp < 10_000) { this.econ.flag(id, 'tp-spam', { a: m.a }); throw new HttpError(429, 'Too many teleports.'); }
@@ -327,6 +338,38 @@ export class Hub implements OnlineApi {
       }
     } catch (e) { fail(e); }
   }
+  // ------------------------------------------------------------------------------------------ casino: all randomness and money on the server
+  private bj = new Map<string, BjTable>();
+  private casino(c: Conn, m: Record<string, unknown>) {
+    const id = c.account.id; if (c.ms.interior !== 'casino') throw new HttpError(400, 'You are not in the casino.');
+    const rand = () => randomInt(0, 2 ** 32) / 2 ** 32; const cash = () => this.econ.wallet(id).cash;
+    const game = String(m.game ?? '');
+    if (game === 'slots') {
+      const bet = Math.floor(Number(m.bet)); if (!SLOT_BETS.includes(bet)) throw new HttpError(400, 'Bad bet.'); if (cash() < bet) throw new HttpError(400, 'Not enough cash.');
+      this.econ.casino(id, -bet, 'slots'); const r = slotSpin(rand, bet); const w = r.win ? this.econ.casino(id, r.win, 'slots') : this.econ.wallet(id);
+      return { reels: r.reels, win: r.win, cash: w.cash, bank: w.bank };
+    }
+    if (game === 'roulette') {
+      const bets = (m.bets ?? {}) as Record<string, number>; let staked = 0;
+      for (const [k, v] of Object.entries(bets)) { if (!ROULETTE_KEYS.test(k) || !Number.isInteger(v) || v < 500 || v > 500_000) throw new HttpError(400, 'Bad bet.'); staked += v; }
+      if (!staked || staked > 1_000_000) throw new HttpError(400, 'Bad stake.'); if (cash() < staked) throw new HttpError(400, 'Not enough cash.');
+      this.econ.casino(id, -staked, 'roulette'); const n = randomInt(0, 37); let back = 0; for (const [k, v] of Object.entries(bets)) back += v * roulettePays(k, n);
+      const w = back ? this.econ.casino(id, back, 'roulette') : this.econ.wallet(id); return { num: n, back, staked, cash: w.cash, bank: w.bank };
+    }
+    if (game === 'bj') {
+      let t = this.bj.get(id); if (!t) { t = new BjTable(rand); this.bj.set(id, t); }
+      const op = String(m.op ?? '');
+      if (op === 'deal') { if (t.phase === 'play') throw new HttpError(400, 'Finish this hand.'); const bet = Math.floor(Number(m.bet)); if (bet < 500 || bet > 500_000) throw new HttpError(400, 'Bad bet.'); if (cash() < bet) throw new HttpError(400, 'Not enough cash.'); this.econ.casino(id, -bet, 'blackjack'); (t as any)._paid = false; t.deal(bet); }
+      else if (op === 'hit') t.hit(); else if (op === 'stand') t.stand();
+      else if (op === 'double') { if (t.phase !== 'play' || t.ph.length !== 2) throw new HttpError(400, 'Cannot double now.'); if (cash() < t.bet) throw new HttpError(400, 'Not enough cash.'); this.econ.casino(id, -t.bet, 'blackjack'); t.double(); }
+      else throw new HttpError(400, 'Bad move.');
+      if (t.phase === 'done' && t.bet + t.net > 0 && !(t as any)._paid) { this.econ.casino(id, t.bet + t.net, 'blackjack'); (t as any)._paid = true; }
+      const w = this.econ.wallet(id); return { ...t.view(), cash: w.cash, bank: w.bank };
+    }
+    throw new HttpError(400, 'Unknown game.');
+  }
+  /** never store a position inside the interior zone: a player who logs out indoors comes back at the door */
+  private outdoorPos(c: Conn) { return c.ms.interior && c.ms.doorFrom ? c.ms.doorFrom : inInteriorZone(c.ms.x, c.ms.z) ? { x: 900, z: -330 } : { x: c.ms.x, z: c.ms.z }; }
   private walletOf(c: Conn) { const w = this.econ.wallet(c.account.id); return { cash: w.cash, bank: w.bank }; }
 
   // ------------------------------------------------------------------------------------------ snapshots
@@ -389,7 +432,7 @@ export class Hub implements OnlineApi {
     }
   }
   private saveAll() {
-    for (const c of this.conns.values()) if (c.haveState) { try { this.econ.savePosition(c.account.id, c.ms.x, c.ms.y, c.ms.z, 20); } catch (e) { this.log.warn('save failed', e); } }
+    for (const c of this.conns.values()) if (c.haveState) { try { const p = this.outdoorPos(c); this.econ.savePosition(c.account.id, p.x, c.ms.y, p.z, 20); } catch (e) { this.log.warn('save failed', e); } }
   }
 
   send(c: Conn, m: ServerMsg) { if (c.ws.readyState === 1) { const s = JSON.stringify(m); c.bytesOut += s.length; this.stats0.bytesOut += s.length; c.ws.send(s); } }

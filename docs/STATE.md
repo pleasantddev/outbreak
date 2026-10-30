@@ -15,3 +15,5 @@
 ## Milestone log
 - 29 Oct: merged perf2, net, admin, society, features, missions WIP; tsc clean; regress passes (player died in the
   car during the drive step, check society/nemesis ambush tuning). Next: roadmap A (life sim core).
+- 30 Oct: founder correction applied (see ROADMAP "Course correction"): GTA camera/controls, walk-in loaded
+  interiors, shared clock, real-time needs, server-authoritative casino/earnings/doors. Server tests 63/63.

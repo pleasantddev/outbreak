@@ -9,6 +9,7 @@ import { addMoodlet } from '../life/needs';
 import { halfWidth } from '../../world/roadspec';
 import { M, box, cyl } from '../leisure/build';
 import { sfx } from '../leisure/sfx';
+import { earn, spend } from '../money';
 
 interface Fault { id: string; label: string; symptoms: string[]; part: string; partCost: number; labour: number; bolts: number }
 const FAULTS: Fault[] = [
@@ -98,7 +99,7 @@ class Mechanic {
   private payout(res: boolean[]) {
     const c = this.ctx; const j = this.job!; const q = res.filter(Boolean).length / res.length + j.good * 0.3; const bill = j.f.partCost + j.f.labour; const cost = j.fake ? Math.round(j.f.partCost * 0.35 / 50) * 50 : j.f.partCost;
     const paid = q < 0.4 ? Math.round(bill * 0.5) : bill; const share = Math.round((paid - cost) * 0.6 / 50) * 50; // Oga takes his cut
-    c.sim.cash += share; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: share } as any); sfx(share > 0 ? 'cash' : 'lose'); j.jobs++; j.earned += share;
+    if (share > 0) earn(c, share, 'work'); else spend(c, -share); sfx(share > 0 ? 'cash' : 'lose'); j.jobs++; j.earned += share;
     (c.systems.get('skills') as any)?.addXp?.('mech', Math.round(12 + q * 25)); if (j.fake && Math.random() < 0.45) this.comeback.push({ owner: j.owner, t: 90 + Math.random() * 240 });
     this.life.needs.v.energy = Math.max(0, this.life.needs.v.energy - 6); this.life.needs.v.hygiene = Math.max(0, this.life.needs.v.hygiene - 8);
     this.el.innerHTML = `<h4>${q >= 0.99 ? 'NEAT JOB' : q >= 0.5 ? 'E GO DO' : 'OGA IS NOT HAPPY'}</h4><p>${j.owner} paid ₦${paid.toLocaleString()}. After the part and Oga's cut, you keep <b style="color:#facc15">₦${share.toLocaleString()}</b>.${j.fake ? ' You used a fake part. Pray it holds.' : ''}</p><div class="opts"><button data-i="0">Next customer<i>1</i></button><button data-i="1">Close for today<i>2 · ${j.jobs} jobs, ₦${j.earned.toLocaleString()}</i></button></div>`;

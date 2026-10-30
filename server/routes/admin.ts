@@ -18,7 +18,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 export function register(api: any) {
   const dataDir: string = api.dataDir ?? api.config?.dataDir ?? resolve(here, '../data');
   const seeds = [resolve(here, '../../v2/public/content'), resolve(here, '../../admin/seed/content')].filter((d) => existsSync(d));
-  const admin = buildAdmin({ db: api.db, dataDir, contentSeedDirs: seeds, live: () => api.live ?? null, log: (m) => (api.log ? api.log(m) : console.log(m)), version: api.version });
+  const admin = buildAdmin({ db: api.db, dataDir, contentSeedDirs: seeds, live: () => api.live ?? null, log: (m) => (typeof api.log === 'function' ? api.log(m) : typeof api.log?.info === 'function' ? api.log.info(m) : console.log(m)), version: api.version });
   for (const r of admin.routes) mount(api, r.method, r.path, r.handler);
   // The game reads the same content files. The net workstream's GET /api/content/:kind wins if it also registers one.
   mount(api, 'GET', '/api/admin-public/content/:kind', (req) => { try { return { status: 200, body: admin.content.read(req.params.kind).doc }; } catch { return { status: 404, body: { error: 'unknown content' } }; } });

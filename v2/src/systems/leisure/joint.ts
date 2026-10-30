@@ -8,6 +8,7 @@ import type { Thing } from '../life/index';
 import { addMoodlet } from '../life/needs';
 import { Builder, canvasTex, M, box, cyl } from './build';
 import { sfx } from './sfx';
+import { earn } from '../money';
 
 export const JOINT_ORIGIN = new THREE.Vector3(38000, 0, 36000);
 const css = `
@@ -96,7 +97,7 @@ export class Joint {
     };
     const over = () => { const done = me >= 25 || him >= 25 || !legal(b, true).length || !legal(b, false).length; if (!done) return false;
       if (!legal(b, true).length) him += b.reduce((a, x) => a + x, 0); else if (!legal(b, false).length) me += b.reduce((a, x) => a + x, 0);
-      const won = me > him; if (won) { c.sim.cash += stake * 2; sfx('win'); addMoodlet(this.life.needs, 'ayo', 'Beat Baba Sola at Ayo', 10, 6); (c.systems.get('skills') as any)?.addXp?.('street', 30); } else sfx('lose');
+      const won = me > him; if (won) { earn(c, stake * 2, 'bet'); sfx('win'); addMoodlet(this.life.needs, 'ayo', 'Beat Baba Sola at Ayo', 10, 6); (c.systems.get('skills') as any)?.addXp?.('street', 30); } else sfx('lose');
       this.life.needs.v.fun = Math.min(100, this.life.needs.v.fun + 25); this.life.needs.v.social = Math.min(100, this.life.needs.v.social + 20);
       msg = won ? 'Baba Sola: "Ehn! Who teach you? Take your money, come back tomorrow."' : 'Baba Sola: "Na so Ayo be. Come learn more, my son."'; draw(); return true; };
     const play = async (k: number) => {
@@ -121,6 +122,6 @@ export class Joint {
     const m = this.match; if (m) { if ((this.life as any).run && Math.random() < 0.02) { if (Math.random() < 0.5) m.h++; else m.a++; this.ctx.hud.say('Viewers', 'GOAAAAL!', 2); sfx('win'); } k.fillStyle = 'rgba(0,0,0,.6)'; k.fillRect(6, 6, 140, 16); k.fillStyle = '#fff'; k.font = '700 11px Inter'; k.fillText(`${m.home.split(' ')[0]} ${m.h} - ${m.a} ${m.away.split(' ')[0]}`, 10, 18); }
     ((this.tv!.material as THREE.MeshBasicMaterial).map as THREE.Texture).needsUpdate = true;
     // settle the bet when the watch finishes
-    const L: any = this.life; if (this.bet && m && !L.run) { const res = m.h > m.a ? 'h' : m.a > m.h ? 'a' : 'd'; if (res === this.bet.side) { const win = this.bet.amt * (res === 'd' ? 3 : 2); this.ctx.sim.cash += win; this.ctx.hud.toast('Full time', `${m.home} ${m.h} - ${m.a} ${m.away}. You won ₦${win.toLocaleString()}!`, 'linear-gradient(160deg,#22c55e,#16a34a)', 'cash', 5); sfx('win'); } else this.ctx.hud.toast('Full time', `${m.home} ${m.h} - ${m.a} ${m.away}. Your money don go.`, 'var(--red)', 'msg', 5); this.bet = null; this.match = null; }
+    const L: any = this.life; if (this.bet && m && !L.run) { const res = m.h > m.a ? 'h' : m.a > m.h ? 'a' : 'd'; if (res === this.bet.side) { const win = this.bet.amt * (res === 'd' ? 3 : 2); earn(this.ctx, win, 'bet'); this.ctx.hud.toast('Full time', `${m.home} ${m.h} - ${m.a} ${m.away}. You won ₦${win.toLocaleString()}!`, 'linear-gradient(160deg,#22c55e,#16a34a)', 'cash', 5); sfx('win'); } else this.ctx.hud.toast('Full time', `${m.home} ${m.h} - ${m.a} ${m.away}. Your money don go.`, 'var(--red)', 'msg', 5); this.bet = null; this.match = null; }
   }
 }

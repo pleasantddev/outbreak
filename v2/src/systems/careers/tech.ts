@@ -9,6 +9,7 @@ import { lifeSystem } from '../life';
 import { addMoodlet } from '../life/needs';
 import { Builder, canvasTex, M, box, cyl } from '../leisure/build';
 import { sfx } from '../leisure/sfx';
+import { earn } from '../money';
 
 export const HUB_ORIGIN = new THREE.Vector3(36000, 0, 36000);
 
@@ -96,7 +97,7 @@ class TechHub {
   private pay(usd: number, quality: number, what: string) {
     const c = this.ctx; const n = Math.round(usd * quality * this.rate / 50) * 50; const L = this.life;
     L.needs.v.energy = Math.max(0, L.needs.v.energy - 7); L.needs.v.fun = Math.min(100, L.needs.v.fun + (quality > 0.6 ? 8 : -4));
-    if (n > 0) { c.sim.cash += n; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: n } as any); sfx('cash'); }
+    if (n > 0) { earn(c, n, 'work'); sfx('cash'); }
     (c.systems.get('skills') as any)?.addXp?.('hack', Math.round(10 + quality * 30)); this.done++;
     if (quality >= 0.99) addMoodlet(L.needs, 'shipped', 'Shipped it', 8, 4); if (quality < 0.4) addMoodlet(L.needs, 'imposter', 'Imposter syndrome', -6, 3);
     if (this.done === 3) addMoodlet(L.needs, 'grind', 'Deep in the grind', 4, 3);

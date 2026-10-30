@@ -12,6 +12,7 @@ import type { Venue, Door } from './venue';
 import { Pie, type PieItem } from './pie';
 import { LifeUi } from './ui';
 import { RT } from '../societyRuntime';
+import { net } from '../../net/client';
 import { fullStory } from '../societyModel';
 import type { HumanView } from '../../render/humans';
 
@@ -167,27 +168,35 @@ class Life {
   enterVenue(v: Venue) {
     const c = this.ctx; const why = v.refuse?.(); if (why) { c.hud.toast(v.title, why, 'var(--red)', 'msg', 3.5); return; }
     if (v.fee) { if (c.sim.cash < v.fee) { c.hud.toast(v.title, `Gate fee na ₦${v.fee.toLocaleString()}. Your pocket no reach.`, 'var(--red)', 'cash', 3.5); return; } c.sim.cash -= v.fee; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: -v.fee }); }
-    this.ui.black(() => { const O = v.lot.group.position, s = v.lot.spawn; this.S.at = v.id; this.doorCool = 1.2; this.teleport(O.x + s.x, 0.02, O.z + s.z, s.yaw); c.view.cam.yaw = s.yaw; c.view.cam.pitch = -0.12; v.enter?.(); c.hud.title(v.title, v.sub, 2.5); });
+    this.ui.black(async () => { if (!(await this.door(v.id))) return; const O = v.lot.group.position, s = v.lot.spawn; this.S.at = v.id; this.doorCool = 1.2; this.teleport(O.x + s.x, 0.02, O.z + s.z, s.yaw); c.view.cam.yaw = s.yaw; c.view.cam.pitch = -0.12; v.enter?.(); c.hud.title(v.title, v.sub, 2.5); });
   }
   exitVenue() {
     const v = this.venue; if (!v) return; this.stop(true);
-    this.ui.black(async () => { v.exit?.(); this.S.at = null; this.doorCool = 1.2; const d = v.door!; this.teleport(d.x + Math.sin(d.yaw) * 1.4, 0.05, d.z + Math.cos(d.yaw) * 1.4, d.yaw); for (let i = 0; i < 12; i++) { this.ctx.view.world.update(d.x, d.z, true); await new Promise((r) => setTimeout(r, 0)); } this.ctx.view.cam.yaw = d.yaw; });
+    this.ui.black(async () => { if (!(await this.door(null))) return; v.exit?.(); this.S.at = null; this.doorCool = 1.2; const d = v.door!; this.teleport(d.x + Math.sin(d.yaw) * 1.4, 0.05, d.z + Math.cos(d.yaw) * 1.4, d.yaw); for (let i = 0; i < 12; i++) { this.ctx.view.world.update(d.x, d.z, true); await new Promise((r) => setTimeout(r, 0)); } this.ctx.view.cam.yaw = d.yaw; });
   }
   enter(fade = true) {
-    const go = () => {
+    const go = async () => {
+      if (!(await this.door('home'))) return;
       const s = this.lot.spawn; this.S.inside = true; this.doorCool = 1.2; this.ctx.view.cam.yaw = s.yaw; this.ctx.view.cam.pitch = -0.12;
       this.teleport(HOME_ORIGIN.x + s.x, 0.02, HOME_ORIGIN.z + s.z, s.yaw);
       this.ctx.hud.title('HOME', 'Room 4, Bello Compound', 2.5); this.persist();
     };
-    if (fade) this.ui.black(go); else go();
+    if (fade) this.ui.black(go); else void go();
   }
   exit() {
     this.ui.black(async () => {
+      if (!(await this.door(null))) return;
       const d = this.S.door!; this.S.inside = false; this.doorCool = 1.2;
       this.teleport(d.x + Math.sin(d.yaw) * 1.3, 0.05, d.z + Math.cos(d.yaw) * 1.3, d.yaw);
       for (let i = 0; i < 12; i++) { this.ctx.view.world.update(d.x, d.z, true); await new Promise((r) => setTimeout(r, 0)); }
       this.ctx.view.cam.yaw = d.yaw; this.persist();
     });
+  }
+  /** online, ask the server before moving between the street and an interior (it judges the jump) */
+  private async door(into: string | null) {
+    if (!net.active) return true;
+    const r = await net.act('door', { into }); if (!r.ok) { this.ctx.hud.toast('Door', r.err ?? 'Try again.', 'var(--red)', 'msg', 2.5); this.doorCool = 1.5; }
+    return r.ok;
   }
   private teleport(x: number, y: number, z: number, yaw: number) {
     const me = this.ctx.sim.local; me.pos = { x, y, z }; me.vy = 0; me.yaw = yaw; me.body.setTranslation({ x, y: y + CAP, z }, true);

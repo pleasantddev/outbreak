@@ -2,6 +2,7 @@
 // Lagos collision), so the server's job is to bound what is believable: speed over time, teleports, map bounds, vehicle
 // attached to the driver. A "credit" bucket in metres lets lag spikes through but caps the average speed.
 import { F, VKINDS, VKIND_TOP, type StateMsg } from '../../../v2/src/net/protocol.ts';
+import { inInteriorZone } from '../../../v2/src/net/rules.ts';
 
 export const FOOT_MAX = 10.5; // m/s: sprint is 6.8 with archetype and slope slack
 export const FALL_MAX = 75; // m/s vertical
@@ -12,8 +13,10 @@ export const MAX_TP = 9000; // metres: the longest hop a sanctioned teleport (re
 export interface MoveState {
   x: number; y: number; z: number; at: number; // last accepted position and server time (ms)
   credit: number; strikes: number; strikeAt: number; tpUntil: number; fixUntil: number; lastTp: number;
+  /** inside an interior (granted by a `door` act), where we came in, and where a pending exit must land */
+  interior: string | null; doorFrom: { x: number; z: number } | null; exitTo: { x: number; z: number } | null; lastDoor: number;
 }
-export const newMoveState = (x: number, y: number, z: number, now: number): MoveState => ({ x, y, z, at: now, credit: FOOT_MAX * CREDIT_SECONDS, strikes: 0, strikeAt: now, tpUntil: 0, fixUntil: 0, lastTp: -1e9 });
+export const newMoveState = (x: number, y: number, z: number, now: number): MoveState => ({ x, y, z, at: now, credit: FOOT_MAX * CREDIT_SECONDS, strikes: 0, strikeAt: now, tpUntil: 0, fixUntil: 0, lastTp: -1e9, interior: null, doorFrom: null, exitTo: null, lastDoor: -1e9 });
 
 export type Verdict = { ok: true } | { ok: false; reason: string; hard: boolean };
 
@@ -25,7 +28,9 @@ export function vmaxFor(m: StateMsg): number {
 /** Judge a report against the last accepted state. Mutates credit only when the report is believable. */
 export function judgeMove(s: MoveState, m: StateMsg, now: number, bounds: [number, number, number, number]): Verdict {
   if (![m.x, m.y, m.z].every(Number.isFinite)) return { ok: false, reason: 'nan', hard: true };
-  if (m.x < bounds[0] || m.x > bounds[2] || m.z < bounds[1] || m.z > bounds[3]) return { ok: false, reason: 'bounds', hard: true };
+  const inside = inInteriorZone(m.x, m.z);
+  if (inside && !s.interior) return { ok: false, reason: 'interior', hard: true };
+  if (!inside && (m.x < bounds[0] || m.x > bounds[2] || m.z < bounds[1] || m.z > bounds[3])) return { ok: false, reason: 'bounds', hard: true };
   if (m.y < -60 || m.y > 600) return { ok: false, reason: 'height', hard: true };
   if (m.veh) {
     const v = m.veh;
@@ -36,6 +41,11 @@ export function judgeMove(s: MoveState, m: StateMsg, now: number, bounds: [numbe
   const dist = Math.hypot(m.x - s.x, m.z - s.z);
   const vmax = vmaxFor(m);
   s.credit = Math.min(vmax * CREDIT_SECONDS, s.credit + vmax * dt);
+  // going through a door: one hop into the interior zone, or one hop back out to near where we came in
+  if (now < s.tpUntil && dist > s.credit + 1.5 && (inside !== inInteriorZone(s.x, s.z))) {
+    if (!inside && (!s.exitTo || Math.hypot(m.x - s.exitTo.x, m.z - s.exitTo.z) > 120)) return { ok: false, reason: 'door-exit', hard: true };
+    s.exitTo = null; s.tpUntil = 0; s.credit = 0; return { ok: true };
+  }
   if (now < s.tpUntil) { // a granted teleport or respawn: one jump, then the normal rules resume
     if (dist > s.credit + 1.5) { if (dist > MAX_TP) return { ok: false, reason: 'teleport', hard: true }; s.tpUntil = 0; s.credit = 0; return { ok: true }; }
   }

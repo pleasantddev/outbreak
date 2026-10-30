@@ -8,6 +8,7 @@ import type { Actor } from '../../sim/types';
 import { lifeSystem, type Thing } from '../life';
 import { addMoodlet } from '../life/needs';
 import { sfx } from '../leisure/sfx';
+import { earn } from '../money';
 
 const css = `
 #yb{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;transition:.2s;z-index:9;width:min(520px,94vw);border-radius:22px;padding:16px 18px;background:rgba(10,10,14,.92);border:1px solid rgba(212,175,55,.35);backdrop-filter:blur(16px);font-family:Inter,sans-serif;color:#f3f5f8}
@@ -76,8 +77,8 @@ class Boys {
   private ping() {
     const c = this.ctx; const S = this.S; const L = this.life; S.days++; const roll = Math.random(); S.heat = Math.min(1.05, S.heat + 0.06 + Math.random() * 0.06);
     if (roll < 0.45) { c.hud.toast('The boys', pick(['"Client don block us. Today no show."', '"Network no gree. Tomorrow."', '"Na scam the scammer scam us this time. Lol."']), 'linear-gradient(160deg,#3f3f46,#18181b)', 'msg', 4.5); addMoodlet(L.needs, 'paranoid', 'Paranoid about every knock', -6, 6); }
-    else if (roll < 0.9) { const n = Math.round((60000 + Math.random() * 240000) / 1000) * 1000; c.sim.cash += n; S.total += n; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: n } as any); sfx('cash'); c.hud.toast('Alert!', `₦${n.toLocaleString()} landed. Your share.`, 'linear-gradient(160deg,#d4af37,#8a6d1c)', 'cash', 4.5); addMoodlet(L.needs, 'flashy', 'Feeling like a big boy', 8, 4); }
-    else { const n = 1500000; c.sim.cash += n; S.total += n; S.heat += 0.25; sfx('win'); c.hud.title('BIG HIT', `₦${n.toLocaleString()}. Everybody will notice.`, 3); }
+    else if (roll < 0.9) { const n = Math.round((60000 + Math.random() * 240000) / 1000) * 1000; earn(c, n, 'hustle'); S.total += n; sfx('cash'); c.hud.toast('Alert!', `₦${n.toLocaleString()} landed. Your share.`, 'linear-gradient(160deg,#d4af37,#8a6d1c)', 'cash', 4.5); addMoodlet(L.needs, 'flashy', 'Feeling like a big boy', 8, 4); }
+    else { const n = 1500000; earn(c, n, 'hustle'); S.total += n; S.heat += 0.25; sfx('win'); c.hud.title('BIG HIT', `₦${n.toLocaleString()}. Everybody will notice.`, 3); }
     if (S.days % 2 === 0) { S.mumCalls++; setTimeout(() => { c.hud.toast('Mummy', pick(['"My son, I heard you bought a new phone. Where is this money coming from?"', '"Pastor said I should ask you what work you are doing now."', '"I am not sleeping well. Please, whatever it is, stop."']), 'linear-gradient(160deg,#f472b6,#9d174d)', 'msg', 6); addMoodlet(L.needs, 'mum', 'Mum is worried', -10, 12); }, 5000); }
     this.persist();
   }

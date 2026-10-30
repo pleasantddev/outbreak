@@ -44,3 +44,22 @@ Each milestone: tsc, regress.py, screenshots reviewed, publish to the artifact, 
 - E mostly done: leisure/casino (blackjack, roulette, slots), leisure/club (rhythm dance-off, VIP, DJ), careers/racing
   (sprint, circuit, drag with launch boost, AI rivals on the road graph). Still to do: beer parlour, viewing centre, gym.
 - Venues API: systems/life/venue.ts; life.addVenue(v) builds colliders, places a street door on a commercial plot.
+
+## Course correction (30 Oct, founder)
+"Build GTA, but take the elements and depth of the Sims, not its play style." And: "NA MULTIPLAYER ONLINE GAME, how
+should sleeping advance time... look how Lagos Life handles it, it just helps you rest a bit."
+Rules we now build by:
+- Third-person GTA camera and controls everywhere, indoors too. No top-down cutaway, no radial pie, no speed buttons,
+  no autopilot. Interactions are a GTA-style side list on E; single-action objects just act.
+- Interiors are loaded like GTA Online's: walk into the doorway, a short cut, you are inside (ceiling, solid walls).
+  Your room is a private instance per account; venues are shared instances. Venue doors are placed deterministically
+  on real map buildings (bank on a bank, casino on a hotel) and snapped to the real wall, so everyone sees the same door.
+- One shared world clock from the server (30x, a 48 minute day like GTA Online). Nothing a player does changes it.
+  Sleep is a real-time rest (about a point of energy a second). Needs drain per real minute: a full stomach lasts
+  about 90 minutes of play, energy about 3 hours (Lagos Life drains per real hour on a 1:1 clock; RP servers similar).
+- Server authority for money: earnings carry a source with per-minute and per-hour limits (net/rules.ts EARN_RULES);
+  casino randomness and payouts run on the server (net/rules.ts shared maths); races escrow the wager; interiors need
+  a server-granted `door` act (anti-cheat allows the interior zone only then, and the exit only near the door).
+Lagos Life notes (research): 6 needs, real-time clock, 23 careers x 5 levels with shift tasks, businesses paying at
+6pm, land with omo-onile risk, weekly rent on Saturday, power bills, phone apps (Jobs, Houses, Chowdeck, Bank, Invest,
+Cars, Courses, LagosBet), shared venues with opening hours, governor election, 3 starting backgrounds.
