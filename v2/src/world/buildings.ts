@@ -155,6 +155,8 @@ varying float vMat; varying vec3 vTint; varying vec4 vInfo; varying vec2 vEdge; 
 float bh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float bn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(bh(i), bh(i+vec2(1,0)), f.x), mix(bh(i+vec2(0,1)), bh(i+vec2(1,1)), f.x), f.y); }
 vec3 signCol(float r){ vec3 c = vec3(0.78, 0.12, 0.1); c = mix(c, vec3(0.1, 0.34, 0.62), step(0.17, r)); c = mix(c, vec3(0.95, 0.78, 0.15), step(0.34, r)); c = mix(c, vec3(0.1, 0.5, 0.28), step(0.5, r)); c = mix(c, vec3(0.93, 0.93, 0.9), step(0.64, r)); c = mix(c, vec3(0.9, 0.42, 0.12), step(0.78, r)); c = mix(c, vec3(0.45, 0.12, 0.38), step(0.9, r)); return c; }
+float pat(float x, float duty){ float f = fract(x); float w = max(fwidth(x), 1e-4); float m = smoothstep(duty - w, duty + w, f); return mix(m, 1.0 - duty, smoothstep(0.3, 0.8, w)); }
+float wav(float x){ return sin(x) * (1.0 - smoothstep(0.8, 2.4, fwidth(x))); }
 vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`)
       .replace('#include <map_fragment>', `
 {
@@ -169,7 +171,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
   float isWall = step(0.5, vInfo.w) * step(vInfo.w, 1.5);
   if (vInfo.w > 3.5 && vInfo.w < 4.5) { // metal gate: vertical bars over a plate, pointed tops
     float u = vUv2.x, v = vUv2.y, H = vEdge.y, L = vEdge.x;
-    float bar = step(0.75, fract(u * 6.0)); float plate = step(v, H * 0.55);
+    float bar = pat(u * 6.0, 0.75); float plate = step(v, H * 0.55);
     float mid = 1.0 - step(0.04, abs(u - L * 0.5));
     BC = vTint * mix(0.85, 1.0, bar) * (plate > 0.5 ? 1.0 : 0.9); BC *= 1.0 - mid * 0.5;
     BM = 0.3; BR = 0.5 + 0.2 * bn(vUv2 * 3.0); BN = vec3(0.0, 0.0, 1.0);
@@ -182,7 +184,8 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
   }
   BN = nt;
   if (isWall > 0.5) {
-    float levels = vInfo.x, seed = vInfo.y, kind = vInfo.z;
+    // varyings of a constant attribute can come out a few ULP off, which a sin-hash turns into per-pixel noise, so snap them
+    float levels = floor(vInfo.x + 0.5), seed = floor(vInfo.y * 16.0 + 0.5) / 16.0, kind = floor(vInfo.z + 0.5);
     float u = vUv2.x, v = vUv2.y, L = vEdge.x, H = vEdge.y;
     float rs = bh(vec2(seed, 1.0)), rs2 = bh(vec2(seed, 2.0));
     // plinth, ground splash, parapet cap
@@ -221,10 +224,10 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
       float awn = step(0.6, bh(vec2(ci, seed + 9.0)));
       vec3 shutC = mix(vec3(0.5, 0.52, 0.54), vec3(0.56, 0.2, 0.14), step(0.62, rnd)); shutC = mix(shutC, vec3(0.17, 0.35, 0.52), step(0.82, rnd)); shutC = mix(shutC, vec3(0.2, 0.42, 0.28), step(0.92, rnd));
       float open = step(0.5, bh(vec2(ci, seed + 4.0)));
-      float row = floor(ff * 2.2); float shelf = step(0.45, fract(ff * 2.2));
+      float row = floor(ff * 2.2); float shelf = pat(ff * 2.2, 0.45);
       vec3 goods = mix(vec3(0.45), vec3(bh(vec2(floor(bayX * 7.0), row + seed)), bh(vec2(floor(bayX * 7.0) + 3.0, row + seed)), bh(vec2(floor(bayX * 7.0) + 7.0, row + seed))), 0.45);
       vec3 inside = vec3(0.07, 0.06, 0.05) + goods * 0.16 * shelf + vec3(0.32, 0.24, 0.14) * (1.0 - ff / 2.6) * 0.12;
-      float rib = 0.88 + 0.12 * sin(v * 55.0);
+      float rib = 0.88 + 0.12 * wav(v * 55.0);
       vec3 shopC = open > 0.5 ? inside : shutC * rib * (0.92 + 0.08 * bn(vec2(u * 2.0, v * 3.0)));
       BC = mix(BC, shopC, zone);
       BR = mix(BR, open > 0.5 ? 0.7 : 0.6, zone); BM = mix(BM, open > 0.5 ? 0.0 : 0.15, zone);
@@ -235,7 +238,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
       // fabric awning over some bays
       float aw = awn * (1.0 - pil) * step(2.1, ff) * step(ff, 2.6);
       vec3 ac1 = mix(vec3(0.78, 0.14, 0.1), vec3(0.14, 0.4, 0.62), step(0.5, bh(vec2(ci, seed + 12.0)))); ac1 = mix(ac1, vec3(0.16, 0.5, 0.3), step(0.8, bh(vec2(ci, seed + 13.0))));
-      BC = mix(BC, mix(ac1, vec3(0.93, 0.92, 0.88), step(0.5, fract(u * 2.6))) * (0.78 + 0.22 * (ff - 2.1) * 2.0), aw);
+      BC = mix(BC, mix(ac1, vec3(0.93, 0.92, 0.88), pat(u * 2.6, 0.5)) * (0.78 + 0.22 * (ff - 2.1) * 2.0), aw);
       // painted signboard: flat colour, border line, blocky letters
       float sr = bh(vec2(ci, seed + 7.0));
       vec3 sc = signCol(sr);
@@ -269,9 +272,9 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
           float louv = step(0.4, ty) * step(ty, 0.62);
           float curt = step(0.62, ty) * step(ty, 0.85);
           float dark = step(0.85, ty);
-          glass = mix(glass, glass * (0.55 + 0.45 * step(0.5, fract(fyy * 10.0))) + 0.05, louv);
+          glass = mix(glass, glass * (0.55 + 0.45 * pat(fyy * 10.0, 0.5)) + 0.05, louv);
           vec3 cc = mix(vec3(0.86, 0.8, 0.68), vec3(0.62, 0.3, 0.26), step(0.5, bh(vec2(ci + 2.0, fi + seed)))); cc = mix(cc, vec3(0.45, 0.58, 0.5), step(0.8, bh(vec2(ci + 4.0, fi + seed))));
-          cc *= 0.7 + 0.3 * sin(fx * 26.0) * (1.0 - fyy * 0.4);
+          cc *= 0.7 + 0.3 * wav(fx * 26.0) * (1.0 - fyy * 0.4);
           glass = mix(glass, cc, curt);
           glass = mix(glass, vec3(0.03, 0.03, 0.035), dark);
           // recessed look: shadow along the top and left reveal
@@ -283,7 +286,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
           BE += lit * (1.0 - fm) * (1.0 - dark * 0.9) * (curt > 0.5 ? 1.3 : 1.0); BEC = mix(vec3(1.0, 0.72, 0.4), vec3(0.7, 0.85, 1.0), step(0.78, rnd * 0.0 + bh(vec2(ci, fi + seed + 9.0))));
           // burglar bars on the low floors: upright bars, two rails, white or black paint
           float barOn = step(rs2, 0.65) * (1.0 - step(1.5, fi)) * (1.0 - step(0.5, bal));
-          float bars = max(step(0.8, fract(fx * 8.0)), max(step(abs(fyy - 0.5), 0.022), step(abs(fyy - 0.18), 0.018))) * barOn;
+          float bars = max(pat(fx * 8.0, 0.8), max(step(abs(fyy - 0.5), 0.022), step(abs(fyy - 0.18), 0.018))) * barOn;
           vec3 barC = mix(vec3(0.05), vec3(0.9, 0.9, 0.87), step(0.55, bh(vec2(seed, 5.0))));
           BC = mix(BC, barC, bars * 0.95); BR = mix(BR, 0.55, bars); BM = mix(BM, 0.1, bars); BE *= 1.0 - bars;
         }
@@ -299,7 +302,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
         float rx = step(0.5 - 0.35, cf) * step(cf, 0.5 + 0.35);
         float slabE = rx * step(ff, 0.12);
         float rail = rx * step(0.12, ff) * step(ff, 1.06);
-        float bar = step(0.62, fract(u * 9.0)) * step(ff, 1.0) + step(1.0, ff) * step(ff, 1.06);
+        float bar = pat(u * 9.0, 0.62) * step(ff, 1.0) + step(1.0, ff) * step(ff, 1.06);
         BC = mix(BC, vec3(0.74, 0.72, 0.68), slabE);
         BC = mix(BC, vec3(0.12, 0.12, 0.13), rail * min(bar, 1.0) * 0.95);
         BC *= 1.0 - rx * step(1.06, ff) * 0.0;

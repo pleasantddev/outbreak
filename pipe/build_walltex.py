@@ -15,7 +15,7 @@ LAYERS = [
     ('plastered_wall_04', 'flat', 0.6),       # 2 plaster
     ('concrete_block_wall', 'flat', 1.0),     # 3 bare sandcrete block (block lines stay)
     ('brick_wall_10', 'raw', 0),              # 4 face brick
-    ('dirty_concrete', 'flat', 0.45),         # 5 concrete
+    ('dirty_concrete', 'flat', 0.3),          # 5 concrete
     ('corrugated_iron_02', 'lift', 0.66),     # 6 zinc / aluminium roofing
     ('roof_tiles_14', 'lift', 0.52),          # 7 clay tiles
     ('rusty_corrugated_iron', 'lift', 0.46),  # 8 rusted roofing
