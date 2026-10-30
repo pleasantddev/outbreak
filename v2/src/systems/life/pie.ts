@@ -14,6 +14,9 @@ const css = `
 #pie .it em{font-style:normal;font-size:12px;color:#ffc53d;font-weight:700}
 #pie .it.sel{background:#f3f5f8;color:#0b0d14} #pie .it.sel i{color:#4b5563} #pie .it.sel .k{color:#4b5563} #pie .it.sel em{color:#92400e}
 #pie .it.off{opacity:.42;cursor:default} #pie .it .why{font-size:11px;color:#ff8a94}
+#pie .hd{position:relative} #pie .hd .x{position:absolute;right:8px;top:8px;width:34px;height:34px;border-radius:10px;border:0;background:rgba(0,0,0,.25);color:#fff;font:700 20px Inter,sans-serif;line-height:1;cursor:pointer;display:none}
+#pie.touch .hd .x{display:block} #pie.touch .it{padding:12px 14px;min-height:24px} #pie.touch .it .k{display:none}
+@media (max-height:520px){#pie{top:max(10px,env(safe-area-inset-top))}#pie .ls{max-height:calc(100vh - 150px)}#pie .hd{padding:9px 14px 8px}#pie.touch .it{padding:10px 14px}}
 #pie .ft{display:flex;gap:12px;padding:7px 14px 2px;font-size:10.5px;color:#9ba3b4} #pie .ft kbd{font:700 10px Rajdhani,Inter;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.12);color:#e5e7eb;margin-right:3px}
 `;
 
@@ -25,9 +28,11 @@ export class Pie {
   }
   show(title: string, sub: string, items: PieItem[], _at: { x: number; y: number }, cb: (id: string) => void) {
     this.items = items; this.cb = cb; this.sel = items.findIndex((i) => !i.disabled); if (this.sel < 0) this.sel = 0;
-    this.el.innerHTML = `<div class="hd"><b>${title}</b><span>${sub}</span></div><div class="ls">` +
+    const touch = matchMedia('(pointer: coarse)').matches; this.el.classList.toggle('touch', touch);
+    this.el.innerHTML = `<div class="hd"><b>${title}</b><span>${sub}</span><button class="x" aria-label="Close">×</button></div><div class="ls">` +
       items.map((it, i) => `<div class="it${it.disabled ? ' off' : ''}${i === this.sel ? ' sel' : ''}" data-i="${i}"><span class="k">${i + 1}</span><b>${it.label}${it.disabled ? `<span class="why"> · ${it.disabled}</span>` : ''}</b>${it.hint ? `<i>${it.hint}</i>` : ''}${it.cost ? `<em>₦${it.cost.toLocaleString()}</em>` : ''}</div>`).join('') +
-      `<div class="ft"><span><kbd>E</kbd>Select</span><span><kbd>W/S</kbd>Move</span><span><kbd>Esc</kbd>Back</span></div></div>`;
+      (touch ? `<div class="ft"><span>Tap to choose</span></div></div>` : `<div class="ft"><span><kbd>E</kbd>Select</span><span><kbd>W/S</kbd>Move</span><span><kbd>Esc</kbd>Back</span></div></div>`);
+    this.el.querySelector('.x')?.addEventListener('pointerup', (e) => { e.stopPropagation(); this.close(); });
     this.el.querySelectorAll('.it').forEach((d) => {
       d.addEventListener('pointerup', (e) => { e.stopPropagation(); this.pick(+(d as HTMLElement).dataset.i!); });
       d.addEventListener('pointerenter', () => { const i = +(d as HTMLElement).dataset.i!; if (!this.items[i]?.disabled) { this.sel = i; this.mark(); } });

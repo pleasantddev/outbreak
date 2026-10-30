@@ -113,6 +113,7 @@ class Transport {
   }
   // ---------------------------------------------------------------- per frame
   frame(dt: number) {
+    { const v0 = this.veh(); this.ctx.hud.tcFlag?.('duty', !!(v0 && CAP[v0.kind])); this.ctx.hud.tcFlag?.('onduty', this.on); }
     if (!this.on) return; const c = this.ctx; const v = this.veh();
     if (!v || v.kind !== this.kind) { this.offDuty('You left the vehicle. Off duty.'); return; }
     const sp = Math.abs(v.ctrl.currentVehicleSpeed()); const t = v.body.translation();

@@ -69,3 +69,36 @@ describe('street races between real players', () => {
     a.c.close(); b.c.close(); far.c.close();
   }, 20000);
 });
+
+describe('people: spaces, greetings and room visits', () => {
+  it('players only see each other in the same space, and a room needs an invite from its owner', async () => {
+    const a = await mk('Host Tola'); const b = await mk('Guest Femi'); const c = await mk('Stranger Ike');
+    a.c.state(900, -330); b.c.state(902, -331); c.c.state(903, -329); await sleep(250);
+    expect(b.c.known.has(a.c.id)).toBe(true); expect(c.c.known.has(a.c.id)).toBe(true);
+    // a greeting reaches the other person
+    const g = await b.c.act('social.greet', { to: a.c.id }); expect(g.ok).toBe(true);
+    await sleep(60); expect(a.c.msgs.some((m) => m.t === 'social' && m.kind === 'greet' && m.from === 'Guest Femi')).toBe(true);
+    // the host goes home: nobody on the street sees them any more
+    const home = await a.c.act('door', { into: 'home' }); expect(home.ok).toBe(true); expect(home.into).toMatch(/^home:/);
+    a.c.state(31000, 31000); await sleep(350);
+    expect(b.c.known.has(a.c.id)).toBe(false);
+    // no invite, no entry
+    const sneak = await c.c.act('door', { into: home.into }); expect(sneak.ok).toBe(false);
+    // the host invites from inside... but must be near: invite only works face to face, so do it before going in
+    await sleep(1100); const out = await a.c.act('door', { into: null }); expect(out.ok).toBe(true); a.c.state(900, -330); await sleep(150);
+    const inv = await a.c.act('social.invite', { to: b.c.id, door: { x: 900, z: -330, yaw: 0 } }); expect(inv.ok).toBe(true);
+    await sleep(60); const got = b.c.msgs.find((m) => m.t === 'social' && m.kind === 'invite'); expect(got.owner).toBeTruthy(); expect(got.door.x).toBe(900);
+    // owner not home yet: the guest waits at the door
+    const early = await b.c.act('door', { into: `home:${got.owner}` }); expect(early.ok).toBe(false);
+    await sleep(1100); const back = await a.c.act('door', { into: 'home' }); expect(back.ok).toBe(true); a.c.state(31000, 31000); await sleep(100);
+    const visit = await b.c.act('door', { into: `home:${got.owner}` }); expect(visit.ok).toBe(true);
+    b.c.state(31001, 31000); await sleep(350);
+    expect(a.c.known.has(b.c.id)).toBe(true); expect(b.c.known.has(a.c.id)).toBe(true); expect(c.c.known.has(b.c.id)).toBe(false);
+    // the stranger still cannot get in, the invite was not theirs
+    const sneak2 = await c.c.act('door', { into: `home:${got.owner}` }); expect(sneak2.ok).toBe(false);
+    // the owner leaves: the guest is told to go
+    await sleep(1100); await a.c.act('door', { into: null }); await sleep(80);
+    expect(b.c.msgs.some((m) => m.t === 'social' && m.kind === 'evict')).toBe(true);
+    a.c.close(); b.c.close(); c.c.close();
+  }, 20000);
+});

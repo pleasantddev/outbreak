@@ -271,7 +271,9 @@ export type ServerMsg =
   | { t: 'content'; kind: string; etag: string }
   | { t: 'kick'; reason: string }
   | { t: 'toast'; title: string; body: string }
-  | { t: 'lobby'; key: string; state: string; [k: string]: unknown };
+  | { t: 'lobby'; key: string; state: string; [k: string]: unknown }
+  /** another player did something to you: greeted you, invited you to their room, or (as the owner) left it with you inside */
+  | { t: 'social'; kind: 'greet' | 'invite' | 'evict'; from: string; fromId: number; owner?: string; door?: { x: number; z: number; yaw: number } };
 
 /** Actions a client may send in `act`. The server owns the rules for each. */
 export const ACTS = ['plot.buy', 'bank.deposit', 'bank.withdraw', 'cash.transfer', 'cash.delta', 'job.start', 'job.done', 'shop.buy', 'state.put', 'tp', 'respawn'] as const;

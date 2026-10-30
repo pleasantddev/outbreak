@@ -66,7 +66,7 @@ class BillsSys {
     if (owed >= 1 && this.B.textedWeek !== this.week()) { this.B.textedWeek = this.week(); c.hud.toast('Landlord', owed >= 2 ? 'Two weeks now. If I no see my money, padlock go enter your door.' : `Rent don due. ₦${RENT.toLocaleString()}. Pay on your phone (Home app).`, 'linear-gradient(160deg,#fb923c,#c2410c)', 'msg', 6); this.persist(); }
     if (owed >= 3 && !this.B.locked) { this.B.locked = true; c.hud.toast('Landlord', 'I don lock your room. Pay everything plus ₦2,000 fine.', 'var(--red)', 'msg', 6); this.persist(); }
     // light: units drain while you are home in the evening or the fan is on
-    const home = L.S.inside && !L.venue; const night = hour >= 18.5 || hour < 6.5; const out = this.outage();
+    const home = L.S.inside && !L.venue && !L.guest; const night = hour >= 18.5 || hour < 6.5; const out = this.outage();
     if (home && (night || L.S.fan)) this.B.units = Math.max(0, this.B.units - dt * (0.02 + (L.S.fan ? 0.03 : 0)));
     const on = !(out || this.B.units <= 0);
     if (on !== this.lightsOn) { this.lightsOn = on; for (const l of L.lot.lights) l.visible = on; if (!on && L.S.fan) { L.S.fan = false; } if (home) c.hud.toast(on ? 'Light don come!' : 'NEPA!', on ? 'UP NEPA! The whole compound shout.' : out ? 'NEPA don take light for the whole area.' : 'Your prepaid units don finish. Buy more on the Home app.', on ? 'linear-gradient(160deg,#facc15,#ca8a04)' : 'var(--red)', 'msg', 4); }

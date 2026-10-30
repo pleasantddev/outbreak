@@ -153,6 +153,17 @@ function doEmote(ctx: GameCtx, name: (typeof EMOTES)[number]) {
   const def = EMOTE_CLIP[name]; (ctx.sim.local as any).emote = { clip: def.clip, until: performance.now() + def.secs * 1000 };
 }
 
+/** for the life system: real players around you (same space, the server only sends those), and your own emotes */
+export const people = {
+  near(x: number, z: number, r: number): { id: number; name: string; x: number; z: number; level: number }[] {
+    if (!remote || !net.active) return [];
+    const out: { id: number; name: string; x: number; z: number; level: number }[] = [];
+    for (const [id, p] of remote.players) { const s = p.buf[p.buf.length - 1]; if (!s || p.seat) continue; if (Math.hypot(s.x - x, s.z - z) <= r) out.push({ id, name: p.who?.name ?? 'Player', x: s.x, z: s.z, level: p.who?.level ?? 1 }); }
+    return out;
+  },
+  emote(ctx: GameCtx, name: (typeof EMOTES)[number]) { if (net.active) doEmote(ctx, name); },
+};
+
 // ------------------------------------------------------------------------------------------ the system
 export const netSystem: GameSystem = {
   id: 'net',
