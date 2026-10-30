@@ -32,3 +32,8 @@
   Teammate (hl-look): windows and street lamps follow the grid (powerShared.uGrid) with per-building gens.
 - 30 Oct evening: published Version 8 to the artifact (index + three chunk changed, tuning.json added; old JS nulled).
   Merged hl-look ce3ef10 (windows, shop fronts, awnings and street lamps follow the grid; gens; solar lamps; uHome).
+- Look pass notes (hl-look final report): declutter cut walk-stuck events 447 to 20 and lane events 302 to 1 at six
+  neighbourhoods; facade shader rewrite; night grade; indoor sky mode. Open: lamp pool strength re-shot, generator
+  windows a little bright (`genOn * 0.5`), warehouse stain pack not rebuilt, bank and hub interiors still white-heavy.
+  Tips: snap constant-attribute varyings before a sin-hash (per-pixel noise otherwise); each vite dev server needs its own
+  cache dir; headless frames are slow, so camera lerps need frames not seconds; tools: stuck.py, lookshot.py, intshot.py.
