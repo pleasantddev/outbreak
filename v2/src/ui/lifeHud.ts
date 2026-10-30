@@ -412,7 +412,9 @@ ${touch ? `<div id="tc">
     this.refreshApp(); this.el('appview').style.display = 'flex';
   }
   /** open a phone app by name (from a menu in the world, e.g. "Check the books") */
-  openAppByName(name: string) { const i = APPS.findIndex((a) => a[0] === name); if (i < 0) return; this.togglePhone(true); this.sel = i; this.renderApps(); this.openApp(); }
+  openAppByName(name: string) { const i = APPS.findIndex((a) => a[0] === name); if (i < 0) return; this.ctx = this.ctxProvider?.() ?? this.ctx; this.togglePhone(true); this.sel = i; this.renderApps(); this.openApp(); this.onPhone?.(true); }
+  /** the game hands the hud a way to build the phone's context (for apps opened from the world, not the phone key) */
+  ctxProvider?: () => PhoneCtx; onPhone?: (up: boolean) => void;
   refreshApp() {
     const name = this.appOpen; if (!name) return; const L = this.el('av-l'); const c = this.ctx; if (!c) return;
     const row = (b: string, s: string, btn?: [string, string, string]) => `<div class="row"><b>${b}</b>${s}${btn ? `<br><button class="btn" data-app="${btn[0]}" data-id="${btn[1]}">${btn[2]}</button>` : ''}</div>`;

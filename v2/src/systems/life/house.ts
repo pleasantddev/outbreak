@@ -10,7 +10,7 @@ import type { LifeAction } from './objects';
 import { addMoodlet } from './needs';
 import { HOME_ORIGIN } from './home';
 import { spend } from '../money';
-import { power } from '../power';
+import { power, powerShared } from '../power';
 import { net } from '../../net/client';
 import { worldHours } from '../../net/rules';
 import { loadContent } from '../../content/load';
@@ -25,6 +25,8 @@ interface HouseSave {
   pipes: number; wiring: number; roof: number; tank: number; drum: number; burst: boolean; fault: boolean;
   gen: { size: 0 | 1 | 2; fuel: number; cond: number; on: boolean; broken: boolean }; day: number; hour: number;
   jobs: { who: Artisan; at: number }[];
+  /** how dirty the clothes you are wearing are (0 clean, 100 you can smell it) */
+  dirt?: number;
 }
 const GENS = [null, { name: 'Small gen ("I better pass my neighbour")', price: 180_000, tank: 5, burn: 0.6 }, { name: 'Big 5 kVA gen', price: 650_000, tank: 20, burn: 1.4 }] as const;
 const ART: Record<Artisan, { name: string; who: string; cost: number; hrs: number; line: string }> = {
@@ -34,7 +36,7 @@ const ART: Record<Artisan, { name: string; who: string; cost: number; hrs: numbe
   genman: { name: 'Gen repairer', who: 'Gen repairer', cost: 10_000, hrs: 1, line: 'Plug and carburettor. E go start one time now.' },
   renovate: { name: 'Full renovation', who: 'Contractor', cost: 150_000, hrs: 4, line: 'Everything don new. Fresh paint, new pipes, new wire.' },
 };
-const WATER: Record<string, number> = { 'bucket.bath': 60, 'sink.brush': 4, 'sink.wash': 6, 'toilet.use': 10, 'stove.cook': 8, 'stove.noodles': 4 };
+const WATER: Record<string, number> = { 'bucket.bath': 60, 'bucket.clothes': 30, 'sink.brush': 4, 'sink.wash': 6, 'toilet.use': 10, 'stove.cook': 8, 'stove.noodles': 4 };
 const NEEDS_POWER = new Set(['tv.watch', 'tv.football', 'fan.toggle']);
 const fmt = (n: number) => '₦' + Math.round(n).toLocaleString();
 
@@ -70,6 +72,7 @@ class House {
     return null;
   }
   private use(a: LifeAction, t: Thing) {
+    if (a.effect === 'laundry') { this.H.dirt = 0; if (this.L) addMoodlet(this.L.needs, 'laundry', 'Clean clothes', 5, 30); }
     if (!this.atHome(t)) return; const w = (WATER[`${t.id}.${a.id}`] ?? WATER[a.id] ?? 0) * this.T.tankUse; if (!w) return;
     const fromDrum = Math.min(this.H.drum, w); this.H.drum -= fromDrum; this.H.tank = Math.max(0, this.H.tank - (w - fromDrum)); this.persist();
   }
@@ -98,12 +101,17 @@ class House {
     }
     // artisans finish their jobs
     for (const j of [...H.jobs]) if (h >= j.at) { H.jobs.splice(H.jobs.indexOf(j), 1); this.finish(j.who); }
+    // clothes get dirty with the day (faster when you are sweaty); dirty clothes put people off
+    H.dirt = Math.min(100, (H.dirt ?? 10) + dh * (L.S.needs.v.hygiene < 35 ? 3.2 : 1.6));
+    if ((H.dirt ?? 0) > 70) addMoodlet(L.S.needs, 'dirtyclothes', 'Wearing dirty clothes', -4, 2); 
     // rain through a bad roof
     const rain = (this.ctx.view.atmo as any).rain ?? 0; if (this.atHome() && rain > 0.3 && H.roof < 50) { L.S.needs.v.comfort = Math.max(0, L.S.needs.v.comfort - dh * 6); if (Math.random() < 0.05) this.say('Roof', 'Rain dey enter through the roof. Bucket dey catch am.'); }
     // the room goes dark (or lights up) when the power at home changes
     if (this.wasPowered !== null && pw !== this.wasPowered && this.atHome() && !this.genRunning() && H.fault) this.say('Room', 'Na your wiring. NEPA get light but your room no get.');
     this.wasPowered = pw;
     this.drawPuddle(); this.persist();
+    // your building's windows glow when your room has light (your gen, or NEPA with good wiring)
+    const d = L.S.door; if (d) powerShared.uHome.value.set(d.x, d.z, 9, pw ? 1 : 0);
   }
   private say(who: string, line: string) { this.ctx.hud.toast(who, line, 'linear-gradient(160deg,#38bdf8,#0369a1)', 'msg', 5); }
   private finish(who: Artisan) {
@@ -133,10 +141,11 @@ class House {
   selfItems(): PieItem[] {
     const out: PieItem[] = []; const g = this.H.gen;
     if (g.size) out.push({ id: 'house:gen', label: this.genRunning() ? 'Off the gen' : 'On the gen', hint: g.broken ? 'Broken' : `${g.fuel.toFixed(1)} L fuel`, disabled: g.broken ? 'Broken' : !g.on && g.fuel <= 0 ? 'No fuel' : undefined });
+    if ((this.H.dirt ?? 0) > 55) out.push({ id: 'house:clothes', label: 'Your clothes need washing', hint: 'Bucket in the bathroom' });
     out.push({ id: 'house:check', label: 'Check the house', hint: this.H.burst ? 'Pipe burst!' : this.H.fault ? 'Wiring fault' : `Water ${Math.round(this.water())} L` });
     return out;
   }
-  onSelf(id: string) { if (id === 'house:gen') this.toggleGen(); if (id === 'house:check') { this.ctx.input.releasePointer(); this.ctx.hud.openAppByName('House'); } }
+  onSelf(id: string) { if (id === 'house:clothes') this.say('Clothes', 'Take the bucket in the bathroom: Wash your clothes. It needs about 30 litres of water.'); if (id === 'house:gen') this.toggleGen(); if (id === 'house:check') { this.ctx.input.releasePointer(); this.ctx.hud.openAppByName('House'); } }
   private genMenu() {
     const L = this.L; if (!L) return; const g = this.H.gen; const fuel = GENS[g.size]!;
     const items: PieItem[] = [

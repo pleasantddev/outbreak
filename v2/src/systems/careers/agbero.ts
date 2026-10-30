@@ -10,7 +10,7 @@ import { AREA } from '../../world/region';
 import { lifeSystem, type Thing } from '../life';
 import type { PieItem } from '../life/pie';
 import { addMoodlet } from '../life/needs';
-import { earn } from '../money';
+import { earn, spend } from '../money';
 import { career } from './ranks';
 import { net } from '../../net/client';
 import { sfx } from '../leisure/sfx';
@@ -112,8 +112,19 @@ class Agbero {
     c.hud.call(`${m.from} (agbero)`, `Driver! Ticket, ₦${amt}`, async () => { const r = await net.act('cash.transfer', { to: m.from, amount: amt }); c.hud.toast('Ticket', r.ok ? `You paid ₦${amt}. He waved you through.` : (r.err ?? 'It did not go.'), r.ok ? 'var(--pur)' : 'var(--red)', 'cash', 3); },
       () => c.hud.toast('Ticket', 'You drove off. He is shouting your plate number.', 'var(--pur)', 'msg', 3), 10);
   }
-  frame(dt: number) { this.scanT -= dt; if (this.scanT <= 0) { this.scanT = 2; this.scan(); this.chairmen(); } this.traffic(dt); }
+  /** the other side of the levy: you drive on duty into a park, the agbero there wants his ticket */
+  private paidAt = new Map<string, number>();
+  private asDriver() {
+    const T = (window as any).__transport; if (!T?.on || this.shift) return; const me = this.ctx.sim.local; if (me.vehicle === null) return; const v = this.ctx.sim.vehicles[me.vehicle];
+    if (Math.abs(v.ctrl.currentVehicleSpeed()) > 6) return; const c = this.ctx;
+    for (const p of this.near(35)) { if ((this.paidAt.get(p.id) ?? -1e9) > performance.now() - 300_000) continue; this.paidAt.set(p.id, performance.now());
+      const fee = T.kind === 'danfo' ? 500 : T.kind === 'keke' ? 300 : 200;
+      c.hud.call('Agbero', `Driver! ${p.name} ticket, ₦${fee}. Drop am!`, () => { if (spend(c, fee)) c.hud.say('Agbero', 'Correct driver. Go well.', 2.5); else c.hud.say('Agbero', 'You no get ₦' + fee + '? Next time o.', 2.5); },
+        () => { c.hud.say('Agbero', pick(['You dey form? Oya park there!', 'See this one! I go collect double next time.']), 3); if (Math.random() < 0.5) { const W = (this.ctx.systems.get('wear') as any)?.api; const w = W?.of(v); if (w) { w.body = Math.max(0, w.body - 8); c.hud.toast('Agbero', 'He slapped your side mirror off. Body damage.', 'var(--red)', 'msg', 3.5); } } }, 9);
+      return; }
+  }
+  frame(dt: number) { this.scanT -= dt; if (this.scanT <= 0) { this.scanT = 2; this.scan(); this.chairmen(); this.asDriver(); } this.traffic(dt); }
   get onShift() { return !!this.shift; }
 }
 let A: Agbero | null = null;
-export const agberoSystem: GameSystem & { get api(): Agbero | null } = { id: 'agbero', get api() { return A; }, init(ctx) { A = new Agbero(ctx); A.init(); }, start() { A?.start(); }, frame(_c, dt) { A?.frame(dt); }, blips(_c, out) { if (A) for (const p of A.parks.values()) out.push({ x: p.x, z: p.z, c: '#16a34a', r: 6 }); } };
+export const agberoSystem: GameSystem & { get api(): Agbero | null } = { id: 'agbero', get api() { return A; }, init(ctx) { A = new Agbero(ctx); A.init(); }, start() { A?.start(); }, frame(_c, dt) { A?.frame(dt); }, blips(c, out) { if (!A) return; const me = c.sim.local; for (const p of A.parks.values()) if (Math.abs(p.x - me.pos.x) < 700 && Math.abs(p.z - me.pos.z) < 700) out.push({ x: p.x, z: p.z, c: '#16a34a', r: 6 }); } };

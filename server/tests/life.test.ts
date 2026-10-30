@@ -102,3 +102,24 @@ describe('people: spaces, greetings and room visits', () => {
     a.c.close(); b.c.close(); c.c.close();
   }, 20000);
 });
+
+describe('interior designers', () => {
+  it('a designer invited in can rearrange the room and the owner receives it; a plain guest cannot', async () => {
+    const a = await mk('Owner Kemi'); const b = await mk('Designer Lola'); const g = await mk('Guest Sam');
+    a.c.state(500, -300); b.c.state(501, -300); g.c.state(502, -300); await sleep(150);
+    const room = { v: 1, pos: { 'bed:0': [2, 6, 0] }, extra: [], wall: '#e8dcc4', floor: null };
+    expect((await a.c.act('social.invite', { to: b.c.id, door: { x: 500, z: -300, yaw: 0 }, room, designer: true })).ok).toBe(true);
+    expect((await a.c.act('social.invite', { to: g.c.id, door: { x: 500, z: -300, yaw: 0 }, room })).ok).toBe(true);
+    await sleep(60); expect(b.c.msgs.find((m) => m.t === 'social' && m.kind === 'invite').designer).toBe(true);
+    await a.c.act('door', { into: 'home' }); a.c.state(31000, 31000); await sleep(100);
+    const owner = b.c.msgs.find((m) => m.t === 'social' && m.kind === 'invite').owner;
+    expect((await b.c.act('door', { into: `home:${owner}` })).ok).toBe(true); b.c.state(31001, 31000);
+    expect((await g.c.act('door', { into: `home:${owner}` })).ok).toBe(true); g.c.state(31002, 31000); await sleep(100);
+    const moved = { ...room, pos: { 'bed:0': [3, 5, 1.57] } };
+    expect((await b.c.act('room.edit', { room: moved })).ok).toBe(true);
+    await sleep(80); const got = a.c.msgs.find((m) => m.t === 'room'); expect(got.mine).toBe(true); expect(got.room.pos['bed:0'][0]).toBe(3);
+    expect(g.c.msgs.find((m) => m.t === 'room').mine).toBe(false);
+    expect((await g.c.act('room.edit', { room: moved })).ok).toBe(false);
+    a.c.close(); b.c.close(); g.c.close();
+  }, 15000);
+});

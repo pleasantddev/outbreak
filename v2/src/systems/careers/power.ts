@@ -27,12 +27,12 @@ const css = `
 #pctl .gen .bar{flex:1;height:12px;border-radius:6px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
 #pctl .gen .bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#22c55e,#facc15);border-radius:6px} #pctl .gen .bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:#f43f5e}
 #pctl .map{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
-#pctl .f{min-height:44px;border-radius:7px;padding:4px 6px;font-size:10px;line-height:1.2;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);position:relative;user-select:none}
+#pctl .f{min-height:34px;border-radius:6px;padding:3px 6px;font-size:9.5px;line-height:1.2;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);position:relative;user-select:none}
 #pctl .f b{display:block;font-size:10.5px;color:#e2ecfa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} #pctl .f.on{background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.45)} #pctl .f.on b{color:#fde68a}
 #pctl .f.t{outline:2px solid #38bdf8;outline-offset:1px;animation:pt 1s infinite} @keyframes pt{50%{outline-color:transparent}}
 #pctl .f .bd2{position:absolute;right:4px;top:3px;font:800 9px Rajdhani;color:#64748b} #pctl .f.op:after{content:'';position:absolute;left:4px;bottom:4px;width:6px;height:6px;border-radius:50%;background:#38bdf8}
 #pctl .f.x{visibility:hidden}
-#pctl .task{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);font-size:13.5px;display:flex;gap:10px;align-items:center}
+#pctl .task{margin-top:4px;padding:10px 12px;border-radius:12px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);font-size:13.5px;display:flex;gap:10px;align-items:center}
 #pctl .task .tm{margin-left:auto;font:800 18px Rajdhani;color:#38bdf8} #pctl button.b{padding:8px 12px;border-radius:9px;border:0;background:#1d4ed8;color:#fff;font:700 12px Inter;cursor:pointer} #pctl button.g{background:rgba(255,255,255,.1)}
 #pctl .pick{margin-top:8px;padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.05);font-size:12.5px;display:none;gap:8px;align-items:center;flex-wrap:wrap} #pctl .pick.on{display:flex}
 #pctl .log{margin-top:8px;font-size:11.5px;color:#7c8aa5;min-height:16px}
@@ -114,10 +114,10 @@ class Power {
     const hh = Math.floor(this.hours() % 24); const sel = s.sel !== null ? FEEDERS.find((x) => x.i === s.sel) : null;
     this.el.innerHTML = `<div class="bd"><div class="top"><b>LAGOS POWER · SHIFT OPERATOR</b><span>${String(hh).padStart(2, '0')}:00 · tasks ${s.tasks} · earned ₦${s.pay.toLocaleString()}${st.collapse ? ' · <b style="color:#f43f5e">SYSTEM COLLAPSE</b>' : ''}</span><button class="x">✕</button></div>
       <div class="gen">LOAD ${st.load} MW<div class="bar"><i style="width:${lpc}%"></i><u style="left:${gpc}%"></u></div>GENERATION ${st.gen} MW</div>
-      <div class="map">${tiles.join('')}</div>
+      ${t ? `<div class="task"><span>${t.text}</span>${t.kind === 'envelope' ? '<button class="b" data-a="take">Collect it</button><button class="b g" data-a="refuse">Send him away</button>' : ''}<span class="tm">${Math.ceil(t.t)}s</span></div>` : '<div class="task"><span>Board is quiet. Watch the load.</span></div>'}
+      <div class="map" style="margin-top:8px">${tiles.join('')}</div>
       <div class="pick${sel ? ' on' : ''}">${sel ? `<b>${sel.name}</b> · Band ${sel.band} · ${sel.load} MW · ${st.on[sel.i] === '1' ? 'has light' : 'dark'}
         <button class="b" data-a="on">Switch ON</button><button class="b g" data-a="off">Switch OFF</button><button class="b g" data-a="eve">Light from 6pm</button><button class="b g" data-a="night">Off at midnight</button>` : ''}</div>
-      ${t ? `<div class="task"><span>${t.text}</span>${t.kind === 'envelope' ? '<button class="b" data-a="take">Collect it</button><button class="b g" data-a="refuse">Send him away</button>' : ''}<span class="tm">${Math.ceil(t.t)}s</span></div>` : '<div class="task"><span>Board is quiet. Watch the load.</span></div>'}
       <div class="log">${s.log}</div><div style="margin-top:8px;text-align:right"><button class="b g" data-a="end">End shift</button></div></div>`;
     this.el.classList.add('on');
     this.el.querySelector('.x')!.addEventListener('click', () => this.end());

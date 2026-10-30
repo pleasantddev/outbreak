@@ -45,6 +45,7 @@ console.info(`[hl] quality ${pref} -> rung ${startLevel} ${LEVELS[startLevel].na
 document.body.style.cssText = 'margin:0;background:#000;overflow:hidden;touch-action:none';
 const canvas = document.createElement('canvas'); canvas.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;display:block'; document.body.appendChild(canvas);
 const hud = new LifeHud(touchDev);
+hud.ctxProvider = () => phoneCtx(); hud.onPhone = (up) => { view.phoneUp = up; if (up) input.releasePointer(); };
 // multiplayer (?server=): the account on the server owns the save, so nothing is read from or written to this browser
 const save: Record<string, any> = net.serverMode ? {} : (() => { try { return JSON.parse(localStorage.getItem('hustlelife') ?? '{}'); } catch { return {}; } })();
 const persist = (o: any) => { try { Object.assign(save, o); if (!net.serverMode) localStorage.setItem('hustlelife', JSON.stringify(save)); } catch { /* private mode */ } };

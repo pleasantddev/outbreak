@@ -1,6 +1,7 @@
 // The power grid on the client. Online, the server's state is the truth (one Lagos, one blackout); offline, the same
 // plan runs locally from net/rules.ts. Everything that glows reads it: windows and shop fronts (buildings.ts through
 // powerShared.uGrid), street lamps, your room's bulbs and fan (bills.ts), and the "UP NEPA!" moment when light returns.
+import * as THREE from 'three';
 import type { GameCtx, GameSystem } from './registry';
 import { net } from '../net/client';
 import { GRID, BAND_HOURS, gridState, scheduledOn, worldHours, type FeederDef, type GridState } from '../net/rules';
@@ -9,14 +10,17 @@ import { registerApp } from '../ui/lifeHud';
 
 export const FEEDERS = FEEDER_DATA as FeederDef[];
 /** for shaders: one float per feeder, 1 when it has light. GLSL side: feeder index from world xz with the same GRID. */
-export const powerShared = { uGrid: { value: new Float32Array(GRID.w * GRID.h).fill(1) } };
+/** uHome: your own house (x, z, radius, on): its windows glow when you have light even if the feeder is dark (your gen) */
+export const powerShared = { uGrid: { value: new Float32Array(GRID.w * GRID.h).fill(1) }, uHome: { value: new THREE.Vector4(0, 0, 0, 0) } };
 export const POWER_GLSL = /* glsl */ `
 uniform float uGrid[${GRID.w * GRID.h}];
 float gridAt(vec2 p) { float i = clamp(floor((p.x - (${GRID.x0}.0)) / ${GRID.cell}.0), 0.0, ${GRID.w - 1}.0); float j = clamp(floor((p.y - (${GRID.z0}.0)) / ${GRID.cell}.0), 0.0, ${GRID.h - 1}.0); return uGrid[int(i + j * ${GRID.w}.0)]; }
 `;
 
 class Power {
-  st: GridState = { on: '1'.repeat(GRID.w * GRID.h), gen: 0, load: 0, collapse: false }; private t = 0; private mine = -1; private mineOn: boolean | null = null; private el!: HTMLElement;
+  st: GridState = { on: '1'.repeat(GRID.w * GRID.h), gen: 0, load: 0, collapse: false };
+  /** testing and screenshots: pin the grid to this string (72 chars of 0/1) until cleared */
+  force: string | null = null; private t = 0; private mine = -1; private mineOn: boolean | null = null; private el!: HTMLElement;
   constructor(private ctx: GameCtx) {}
   init() {
     registerApp('Light', 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z', 'linear-gradient(160deg,#facc15,#ca8a04)', () => this.html());
@@ -50,7 +54,7 @@ class Power {
   }
   frame(dt: number) {
     this.t -= dt; if (this.t > 0) return; this.t = 2;
-    if (!net.active) this.set(gridState(FEEDERS, this.hours())); else this.check();
+    if (this.force) this.set({ on: this.force, gen: 0, load: 0, collapse: !this.force.includes('1') }); else if (!net.active) this.set(gridState(FEEDERS, this.hours())); else this.check();
   }
   private html() {
     const me = this.ctx.sim.local; const f = this.feeder(me.pos.x, me.pos.z); const h = this.hours();

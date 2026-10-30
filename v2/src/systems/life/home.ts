@@ -8,7 +8,7 @@ import { plaster, tiles, lino, terrazzo } from './tex';
 export const HOME_ORIGIN = new THREE.Vector3(30000, 0, 30000);
 export interface Placed { def: string; x: number; z: number; yaw: number; obj: THREE.Object3D; label?: string }
 export interface Wall { mesh: THREE.Mesh; nx: number; nz: number; cx: number; cz: number; full: number }
-export interface Lot { group: THREE.Group; walls: Wall[]; boxes: { x: number; z: number; w: number; d: number; h: number; yaw: number }[]; placed: Placed[]; spawn: { x: number; z: number; yaw: number }; exit: { x: number; z: number }; lights: THREE.PointLight[]; ceil?: { x0: number; z0: number; x1: number; z1: number; y: number }; rooms: { name: string; x0: number; z0: number; x1: number; z1: number }[] }
+export interface Lot { group: THREE.Group; walls: Wall[]; boxes: { x: number; z: number; w: number; d: number; h: number; yaw: number; p?: Placed }[]; mats?: { room: THREE.MeshStandardMaterial; floor: THREE.MeshStandardMaterial }; placed: Placed[]; spawn: { x: number; z: number; yaw: number }; exit: { x: number; z: number }; lights: THREE.PointLight[]; ceil?: { x0: number; z0: number; x1: number; z1: number; y: number }; rooms: { name: string; x0: number; z0: number; x1: number; z1: number }[] }
 
 const WALL_H = 2.85, T = 0.12;
 
@@ -69,7 +69,7 @@ export function buildHome(): Lot {
     const d = DEFS[def]; const o = d.build(); o.position.set(x, 0, z); o.rotation.y = yaw; g.add(o);
     o.traverse((m) => { if ((m as THREE.Mesh).isMesh) { m.castShadow = true; m.receiveShadow = true; } });
     placed.push({ def, x, z, yaw, obj: o, label });
-    if (d.solid) boxes.push({ x, z, w: d.size[0], d: d.size[2], h: d.size[1], yaw });
+    const pl = placed[placed.length - 1]; if (d.solid) boxes.push({ x, z, w: d.size[0], d: d.size[2], h: d.size[1], yaw, p: pl });
     return o;
   };
   for (const z of doorZ) { place('door', -1, z, Math.PI / 2); if (z !== 5.25) place('door', 1, z, -Math.PI / 2); }
@@ -114,7 +114,7 @@ export function buildHome(): Lot {
   const bulb = (x: number, y: number, z: number, col: number, I: number, r: number) => { const l = new THREE.PointLight(col, I, r, 1.6); l.position.set(x, y, z); g.add(l); lights.push(l); const m = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: col })); m.position.copy(l.position); g.add(m); };
   bulb(2.8, 2.6, 5.2, 0xffd6a0, 9, 7); bulb(0, 2.7, 7, 0xdff4ff, 7, 11); bulb(0, 2.6, 15.2, 0xfff0d0, 4, 4.5);
   return {
-    group: g, walls, boxes, placed, lights,
+    group: g, walls, boxes, placed, lights, mats: { room: mat.room, floor: floorM.room },
     spawn: { x: 0, z: 1.1, yaw: 0 }, exit: { x: 0, z: -0.9 }, ceil: { x0: -4.6, z0: 0, x1: 4.6, z1: 16.4, y: 2.85 },
     rooms: [{ name: 'Your room', x0: 1, z0: 3.5, x1: 4.6, z1: 7 }, { name: 'Corridor', x0: -1, z0: 0, x1: 1, z1: 14 }, { name: 'Bathroom', x0: -2.2, z0: 14, x1: 0, z1: 16.4 }, { name: 'Toilet', x0: 0, z0: 14, x1: 2.2, z1: 16.4 }],
   };

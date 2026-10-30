@@ -7,11 +7,12 @@
 import * as THREE from 'three';
 import type { GameCtx, GameSystem } from './registry';
 import { net } from '../net/client';
-import { BIZ_TYPES, BIZ_MAX, bizType, siteId, siteTraffic, worldHours, type BizType } from '../net/rules';
+import { BIZ_TYPES, BIZ_MAX, bizStep, bizType, siteId, siteTraffic, worldHours, type BizState, type BizType } from '../net/rules';
 import { registerApp } from '../ui/lifeHud';
 import { lifeSystem, type Thing } from './life';
 import type { PieItem } from './life/pie';
 import { addMoodlet } from './life/needs';
+import { spend, earn } from './money';
 import { G, groups } from '../sim/physics';
 
 interface Site { id: string; x: number; z: number; yaw: number; snapped?: boolean; mesh?: THREE.Group; drawn?: string }
@@ -38,10 +39,26 @@ class Business {
     net.on('welcome', () => void this.refresh());
     void this.refresh();
   }
+  /** online: the server; offline: the same rules run on your own save (rules.ts bizStep), so the single-player build has shops too */
+  async act(a: string, args: Record<string, unknown> = {}): Promise<{ ok: boolean; err?: string; [k: string]: any }> {
+    if (net.active) return net.act(a, args);
+    const S = ((this.ctx.save as any).biz ??= { list: [] }) as { list: (BizState & { site: string; type: string })[] }; const c = this.ctx;
+    const h = this.ctx.view.atmo.day * 24 + this.ctx.view.atmo.hour; const site = String(args.site ?? '');
+    const view = (r: (typeof S.list)[number]): Biz => { const t = bizType(r.type)!; bizStep(r, t, r.site, h, Math.random); const hod = h % 24; return { site: r.site, type: r.type, owner: 'me', ownerName: 'You', stock: Math.round(r.stock), till: Math.round(r.till), debt: Math.round(r.debt), log: r.log, open: hod >= t.open[0] && hod < t.open[1] && r.debt < t.upkeep * 3 && r.stock > 0 }; };
+    const row = S.list.find((r) => r.site === site);
+    if (a === 'biz.all') return { ok: true, list: S.list.map((r) => ({ site: r.site, type: r.type, ownerName: 'You' })) };
+    if (a === 'biz.mine') return { ok: true, list: S.list.map(view) };
+    if (a === 'biz.get') return { ok: true, biz: row ? view(row) : null };
+    if (a === 'biz.buy') { const t = bizType(String(args.type)); if (!t) return { ok: false, err: 'No such business.' }; if (row) return { ok: false, err: 'Already yours.' }; if (S.list.length >= BIZ_MAX) return { ok: false, err: `You can run ${BIZ_MAX} businesses at most.` }; if (!spend(c, t.price)) return { ok: false, err: 'Not enough money.' };
+      const r = { site, type: t.id, stock: 100, till: 0, debt: 0, hour: Math.floor(h), log: [] }; S.list.push(r); c.persist(); return { ok: true, biz: view(r) }; }
+    if (!row) return { ok: false, err: 'That shop is not yours.' };
+    if (a === 'biz.collect') { view(row); const n = Math.floor(row.till); if (n <= 0) return { ok: false, err: 'The till is empty.' }; row.till -= n; earn(c, n, 'reward'); c.persist(); return { ok: true, amount: n, biz: view(row) }; }
+    if (a === 'biz.restock') { view(row); const t = bizType(row.type)!; const cost = Math.round(t.restock * (100 - row.stock) / 100) + Math.round(row.debt); if (cost <= 0) return { ok: false, err: 'Shelves are full and staff are paid.' }; if (!spend(c, cost)) return { ok: false, err: 'Not enough money.' }; row.stock = 100; row.debt = 0; c.persist(); return { ok: true, cost, biz: view(row) }; }
+    return { ok: false, err: 'Not available offline.' };
+  }
   async refresh() {
-    if (!net.active) return;
-    const a = await net.act('biz.all'); if (a.ok) { this.owners.clear(); for (const b of (a as any).list) this.owners.set(b.site, { type: b.type, ownerName: b.ownerName }); for (const s of this.sites.values()) s.drawn = ''; }
-    const m = await net.act('biz.mine'); if (m.ok) this.mine = (m as any).list;
+    const a = await this.act('biz.all'); if (a.ok) { this.owners.clear(); for (const b of (a as any).list) this.owners.set(b.site, { type: b.type, ownerName: b.ownerName }); for (const s of this.sites.values()) s.drawn = ''; }
+    const m = await this.act('biz.mine'); if (m.ok) this.mine = (m as any).list;
   }
 
   // ---------------------------------------------------------------- sites from the map, one per region at most
@@ -86,7 +103,7 @@ class Business {
     } else {
       const [bg, fg] = COL[t.id] ?? ['#111', '#fff']; k.fillStyle = bg; k.fillRect(0, 0, 512, 128);
       k.fillStyle = 'rgba(255,255,255,.12)'; k.fillRect(0, 0, 512, 8); k.fillStyle = fg; k.textAlign = 'center'; k.textBaseline = 'middle';
-      const who = `${o.ownerName.toUpperCase()}'S`; k.font = '800 30px Inter, sans-serif'; k.fillText(who.length > 22 ? who.slice(0, 21) + '…' : who, 256, 34);
+      const nm = o.ownerName === 'You' ? (this.ctx.profile?.name || 'MY') : o.ownerName; const who = nm === 'MY' ? 'MY' : `${nm.toUpperCase()}'S`; k.font = '800 30px Inter, sans-serif'; k.fillText(who.length > 22 ? who.slice(0, 21) + '…' : who, 256, 34);
       k.font = '900 50px Oswald, Rajdhani, Impact, sans-serif'; k.fillText(t.sign, 256, 86, 490);
     }
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; return tex;
@@ -125,16 +142,15 @@ class Business {
   }
   private async menu(s: Site) {
     const L = this.life; if (!L || this.busy) return; const c = this.ctx;
-    if (!net.active) { c.hud.toast('Business', 'Shops are run on the server. Play online to own one.', 'var(--pur)', 'msg', 4); return; }
     const o = this.owners.get(s.id);
     if (!o) {
       const items: PieItem[] = BIZ_TYPES.map((t) => ({ id: t.id, label: t.name, hint: `${fmt(t.gross * siteTraffic(s.id))}/day before wages`, cost: t.price, disabled: this.mine.length >= BIZ_MAX ? `Max ${BIZ_MAX}` : c.sim.cash < t.price ? 'No money' : undefined }));
       L.pie.show('Shop to let', `Foot traffic ${Math.round(siteTraffic(s.id) * 100)}% · pick a trade`, items, { x: innerWidth / 2, y: innerHeight / 2 }, (id) => void this.buy(s, id));
       return;
     }
-    this.busy = true; const g = await net.act('biz.get', { site: s.id }); this.busy = false; const b = (g as any).biz as Biz | null; const t = bizType(o.type)!;
+    this.busy = true; const g = await this.act('biz.get', { site: s.id }); this.busy = false; const b = (g as any).biz as Biz | null; const t = bizType(o.type)!;
     if (!g.ok || !b) { c.hud.toast('Business', g.err ?? 'Try again.', 'var(--red)', 'msg', 3); return; }
-    if (b.owner === net.account?.id) {
+    if (b.owner === net.account?.id || b.owner === 'me') {
       const goods = Math.round(t.restock * (100 - b.stock) / 100) + b.debt;
       const items: PieItem[] = [
         { id: 'collect', label: `Collect the till`, hint: `${fmt(b.till)} of ${fmt(t.till)}`, disabled: b.till <= 0 ? 'Empty' : undefined },
@@ -149,16 +165,16 @@ class Business {
     L.pie.show(`${o.ownerName}'s ${t.name}`, b.open ? 'Open' : 'Closed right now', items, { x: innerWidth / 2, y: innerHeight / 2 }, () => void this.serve(s, t));
   }
   private async buy(s: Site, type: string) {
-    const c = this.ctx; const t = bizType(type)!; const r = await net.act('biz.buy', { site: s.id, type });
+    const c = this.ctx; const t = bizType(type)!; const r = await this.act('biz.buy', { site: s.id, type });
     if (!r.ok) { c.hud.toast('Business', r.err ?? 'It did not go through.', 'var(--red)', 'msg', 4); return; }
-    this.owners.set(s.id, { type, ownerName: net.name || 'You' }); this.mine.push((r as any).biz); s.drawn = '';
+    this.owners.set(s.id, { type, ownerName: net.active ? net.name || 'You' : 'You' }); this.mine.push((r as any).biz); s.drawn = '';
     c.hud.title('BUSINESS OWNER', `${t.name}. Keep it stocked, wages go out at 6pm.`, 4);
     const L = this.life; if (L) addMoodlet(L.needs, 'biz', 'Became a business owner', 12, 18);
   }
   private async ownerAct(s: Site, id: string) {
     const c = this.ctx;
     if (id === 'books') { c.input.releasePointer(); c.hud.openAppByName('Business'); return; }
-    const r = await net.act(id === 'collect' ? 'biz.collect' : 'biz.restock', { site: s.id });
+    const r = await this.act(id === 'collect' ? 'biz.collect' : 'biz.restock', { site: s.id });
     if (!r.ok) { c.hud.toast('Business', r.err ?? 'Try again.', 'var(--red)', 'msg', 3.5); return; }
     const b = (r as any).biz as Biz; this.mine = this.mine.map((x) => (x.site === b.site ? b : x)); s.drawn = '';
     if (id === 'collect') c.hud.toast('Till', `${fmt((r as any).amount)} collected.`, 'linear-gradient(160deg,#59d98e,#14a05a)', 'cash', 4);
@@ -175,9 +191,8 @@ class Business {
 
   // ---------------------------------------------------------------- phone app
   private html() {
-    if (!net.active) return `<div class="row"><b>Offline</b>Businesses live on the server. Play online to buy a shop.</div>`;
     void this.refresh();
-    const day = Math.floor(worldHours(net.epochNow) / 24);
+    const day = Math.floor((net.active ? worldHours(net.epochNow) : this.ctx.view.atmo.day * 24 + this.ctx.view.atmo.hour) / 24);
     const rows = this.mine.map((b) => {
       const t = bizType(b.type)!; const log = b.log.slice(-3).reverse().map((l) => `<div style="font-size:11.5px;opacity:.8;margin-top:3px">${l.d === day ? 'Today' : l.d === day - 1 ? 'Yesterday' : `Day ${l.d}`} · ${l.t}${l.n ? ` <b style="color:${l.n > 0 ? '#59d98e' : '#ff8a94'}">${l.n > 0 ? '+' : ''}${fmt(l.n)}</b>` : ''}</div>`).join('');
       const bar = `<div style="height:5px;border-radius:3px;background:rgba(255,255,255,.1);margin-top:6px;overflow:hidden"><i style="display:block;height:100%;width:${b.stock}%;background:${b.stock < 25 ? '#ff4d5e' : 'linear-gradient(90deg,#f59e0b,#2de0c8)'}"></i></div>`;
@@ -192,7 +207,7 @@ class Business {
     if (app !== 'Business') return false; const c = this.ctx;
     const [op, site] = [id.split(':')[0], id.slice(id.indexOf(':') + 1)];
     if (op === 'gps') { const s = this.sites.get(site); if (s) { this.gps = s; c.hud.toast('GPS', 'Route set to the shop.', 'linear-gradient(160deg,#f59e0b,#b45309)', 'pin', 3); } return true; }
-    if (op === 'restock') void net.act('biz.restock', { site }).then((r) => { if (r.ok) { const b = (r as any).biz as Biz; this.mine = this.mine.map((x) => (x.site === b.site ? b : x)); c.hud.toast('Restocked', `Delivered for ${fmt((r as any).cost)}.`, 'linear-gradient(160deg,#f59e0b,#b45309)', 'cash', 3.5); c.hud.refreshApp(); } else c.hud.toast('Business', r.err ?? 'Try again.', 'var(--red)', 'msg', 3); });
+    if (op === 'restock') void this.act('biz.restock', { site }).then((r) => { if (r.ok) { const b = (r as any).biz as Biz; this.mine = this.mine.map((x) => (x.site === b.site ? b : x)); c.hud.toast('Restocked', `Delivered for ${fmt((r as any).cost)}.`, 'linear-gradient(160deg,#f59e0b,#b45309)', 'cash', 3.5); c.hud.refreshApp(); } else c.hud.toast('Business', r.err ?? 'Try again.', 'var(--red)', 'msg', 3); });
     return true;
   }
   goal() { const s = this.gps; if (!s) return null; const me = this.ctx.sim.local; if (Math.hypot(s.x - me.pos.x, s.z - me.pos.z) < 8) { this.gps = null; return null; } return { x: s.x, z: s.z, label: 'Shop' }; }

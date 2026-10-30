@@ -87,7 +87,8 @@ export const DEFS: Record<string, SmartDef> = {
       const b = cyl(g, 0.2, 0.16, 0.38, 0, 0.19, 0, p); void b; cyl(g, 0.19, 0.19, 0.02, 0, 0.36, 0, M(0x6fa8c8, 0.05, 0.1));
       cyl(g, 0.09, 0.06, 0.08, 0.28, 0.04, 0.1, M(0xd84315, 0.5)); return g;
     },
-    actions: [{ id: 'bath', label: 'Bucket bath', hint: '+Hygiene', gain: { hygiene: 140, comfort: 20 }, minutes: 12, fill: 'hygiene', clip: 'Farm_Watering', spot: [0, 0.55, Math.PI], moodlet: ['clean', 'Fresh and clean', 10, 6] }],
+    actions: [{ id: 'bath', label: 'Bucket bath', hint: '+Hygiene', gain: { hygiene: 140, comfort: 20 }, minutes: 12, fill: 'hygiene', clip: 'Farm_Watering', spot: [0, 0.55, Math.PI], moodlet: ['clean', 'Fresh and clean', 10, 6] },
+      { id: 'clothes', label: 'Wash your clothes', hint: 'Clean clothes', gain: {}, minutes: 0, secs: 35, give: { fun: -4 }, clip: 'Farm_Watering', spot: [0, 0.55, Math.PI], effect: 'laundry' }],
   },
   stove: {
     id: 'stove', name: 'Gas cooker', size: [0.6, 0.85, 0.5], solid: true,
