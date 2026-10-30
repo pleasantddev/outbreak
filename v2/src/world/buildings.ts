@@ -161,6 +161,7 @@ float pat(float x, float duty){ float f = fract(x); float w = max(fwidth(x), 1e-
 float wav(float x){ return sin(x) * (1.0 - smoothstep(0.8, 2.4, fwidth(x))); }
 ${LAMP_GLSL}
 ${POWER_GLSL}
+uniform vec4 uHome;
 vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`)
       .replace('#include <map_fragment>', `
 {
@@ -197,7 +198,7 @@ vec3 BC; vec3 BN; float BR; float BAO; float BM; float BE; vec3 BEC; float BGL;`
     float genThr = (kind > 2.5 && kind < 4.5) || (kind > 12.5 && kind < 13.5) ? 0.45 : 0.2;
     float genOn = step(1.0 - genThr, bh(vec2(seed, 31.0)));
     float flick = 0.75 + 0.25 * bn(vec2(uBT * 2.5, seed));
-    float pw = max(gridOn, genOn * 0.5 * flick);
+    float pw = max(max(gridOn, genOn * 0.5 * flick), uHome.w * step(distance(vWP.xz, uHome.xy), uHome.z));
     float genOnly = (1.0 - gridOn) * genOn;
     // plinth, ground splash, parapet cap
     BC = mix(BC, BC * vec3(0.62, 0.58, 0.55), 1.0 - smoothstep(0.34, 0.46, v));
