@@ -6,6 +6,7 @@ import { Boundary, Btn, ConfirmHost, Field, Icon, Loading, Toasts, errMsg, fmt, 
 import { adopt, go, logout, restore, useRoute, useSession } from './session';
 import { can, ROLE_LABEL, type OpsStatus, type Perm } from '@srv/types';
 import { LiveOps } from './pages/LiveOps';
+import { World } from './pages/World';
 import { MapPage } from './pages/MapPage';
 import { Players, PlayerPage } from './pages/Players';
 import { Reports } from './pages/Reports';
@@ -15,13 +16,13 @@ import { ContentPage } from './pages/Content';
 import { Audit, Staff, Settings } from './pages/System';
 
 const NAV: { grp: string; items: { to: string; label: string; icon: string; perm: Perm; badge?: 'reports' }[] }[] = [
-  { grp: 'Operate', items: [{ to: 'ops', label: 'Live ops', icon: 'pulse', perm: 'liveops.view' }, { to: 'map', label: '3D map', icon: 'map', perm: 'map.view' }] },
+  { grp: 'Operate', items: [{ to: 'ops', label: 'Live ops', icon: 'pulse', perm: 'liveops.view' }, { to: 'map', label: '3D map', icon: 'map', perm: 'map.view' }, { to: 'world', label: 'Power and shops', icon: 'bell', perm: 'liveops.view' }] },
   { grp: 'Players', items: [{ to: 'players', label: 'Players', icon: 'users', perm: 'players.view' }, { to: 'reports', label: 'Chat reports', icon: 'flag', perm: 'reports.view', badge: 'reports' }] },
   { grp: 'Money', items: [{ to: 'economy', label: 'Economy', icon: 'coin', perm: 'economy.view' }, { to: 'store', label: 'Store and IAP', icon: 'bag', perm: 'store.view' }] },
-  { grp: 'Game script', items: [{ to: 'content/missions', label: 'Missions', icon: 'graph', perm: 'content.view' }, { to: 'content/events', label: 'Events', icon: 'cal', perm: 'content.view' }, { to: 'content/routes', label: 'Routes', icon: 'route', perm: 'content.view' }, { to: 'content/skills', label: 'Skills', icon: 'tree', perm: 'content.view' }, { to: 'content/npcs', label: 'NPCs and factions', icon: 'users', perm: 'content.view' }, { to: 'content/shops', label: 'Shops', icon: 'bag', perm: 'content.view' }] },
+  { grp: 'Game script', items: [{ to: 'content/missions', label: 'Missions', icon: 'graph', perm: 'content.view' }, { to: 'content/events', label: 'Events', icon: 'cal', perm: 'content.view' }, { to: 'content/routes', label: 'Routes', icon: 'route', perm: 'content.view' }, { to: 'content/skills', label: 'Skills', icon: 'tree', perm: 'content.view' }, { to: 'content/npcs', label: 'NPCs and factions', icon: 'users', perm: 'content.view' }, { to: 'content/tuning', label: 'Wear tuning', icon: 'tool', perm: 'content.view' }, { to: 'content/shops', label: 'Shops', icon: 'bag', perm: 'content.view' }] },
   { grp: 'System', items: [{ to: 'audit', label: 'Audit log', icon: 'log', perm: 'audit.view' }, { to: 'staff', label: 'Staff', icon: 'shield', perm: 'staff.manage' }, { to: 'settings', label: 'Settings', icon: 'tool', perm: 'map.view' }] },
 ];
-const TITLES: Record<string, string> = { ops: 'Live ops', map: 'Lagos map', players: 'Players', reports: 'Chat reports', economy: 'Economy', store: 'Store and IAP', content: 'Game script', audit: 'Audit log', staff: 'Staff', settings: 'Settings' };
+const TITLES: Record<string, string> = { world: 'Power grid and businesses', ops: 'Live ops', map: 'Lagos map', players: 'Players', reports: 'Chat reports', economy: 'Economy', store: 'Store and IAP', content: 'Game script', audit: 'Audit log', staff: 'Staff', settings: 'Settings' };
 
 function Shell() {
   const { user } = useSession(); const r = useRoute(); const page = r.parts[0] ?? 'ops';
@@ -34,6 +35,7 @@ function Shell() {
   switch (page) {
     case 'ops': view = <LiveOps />; break;
     case 'map': view = <MapPage focus={r.query} />; break;
+    case 'world': view = <World />; break;
     case 'players': view = r.parts[1] ? <PlayerPage id={r.parts[1]} /> : <Players />; break;
     case 'reports': view = <Reports />; break;
     case 'economy': view = <Economy />; break;

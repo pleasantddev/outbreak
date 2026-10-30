@@ -16,6 +16,7 @@ import { net } from '../../net/client';
 import { inInteriorZone } from '../../net/rules';
 import { fullStory } from '../societyModel';
 import { people } from '../net';
+import { decorSystem, type RoomSave } from './decor';
 import type { HumanView } from '../../render/humans';
 
 export interface Thing { id: string; name: string; x: number; z: number; yaw: number; y?: number; actions: LifeAction[]; kind: 'object' | 'door' | 'npc' | 'self' | 'player'; actor?: Actor; placed?: Placed; open?: () => void; reach?: number; verb?: string }
@@ -46,7 +47,7 @@ class Life {
   selfItems: (() => PieItem[])[] = []; selfPick: ((id: string) => void)[] = [];
   gate(a: LifeAction, t: Thing) { for (const g of this.gates) { const r = g(a, t); if (r) return r; } return null; }
   /** a friend's room you were invited to (their street door) and whether you are in it right now */
-  invite: { owner: string; name: string; door: Door; until: number } | null = null; guest = false;
+  invite: { owner: string; name: string; door: Door; until: number; room?: RoomSave | null; designer?: boolean } | null = null; guest = false;
   constructor(public ctx: GameCtx) {}
 
   init() {
@@ -76,7 +77,7 @@ class Life {
    *  so in multiplayer nobody else's room sits on top of yours. Shared venues (casino, club...) are one instance. */
   /** where an account's room sits in the interior zone (the server keeps rooms apart by account, so a shared slot is harmless) */
   static slotOf(id: string) { let h = 2166136261; for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); } const slot = (h >>> 0) % 400; return new THREE.Vector3(30000 + (slot % 20) * 150, 0, 30000 + Math.floor(slot / 20) * 150); }
-  private ownOrigin = new THREE.Vector3(); private homeBody: any = null;
+  private ownOrigin = new THREE.Vector3(); homeBody: any = null; furn = new Map<Placed, any>();
   /** move the room (mesh, colliders, everything placed in it) to another slot: yours, or the friend's you are visiting */
   private placeLot(o: THREE.Vector3) { HOME_ORIGIN.copy(o); this.lot.group.position.copy(o); this.homeBody?.setTranslation({ x: o.x, y: 0, z: o.z }, true); }
   private buildLot() {
@@ -86,7 +87,8 @@ class Life {
     const W = c.sim.phys.world; const body = W.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(HOME_ORIGIN.x, 0, HOME_ORIGIN.z));
     for (const b of this.lot.boxes) {
       const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -b.yaw);
-      W.createCollider(RAPIER.ColliderDesc.cuboid(b.w / 2, b.h / 2, b.d / 2).setTranslation(b.x, b.h / 2, b.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setCollisionGroups(groups(G.WORLD, 0xffff)), body);
+      const col = W.createCollider(RAPIER.ColliderDesc.cuboid(b.w / 2, b.h / 2, b.d / 2).setTranslation(b.x, b.h / 2, b.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setCollisionGroups(groups(G.WORLD, 0xffff)), body);
+      if (b.p) this.furn.set(b.p, col); // furniture can be moved (decor.ts)
     }
     this.addCeil(body, this.lot); this.bodies.push(body); this.homeBody = body;
   }
@@ -209,7 +211,7 @@ class Life {
     this.ui.black(async () => {
       if (!(await this.door(null))) return;
       const d = this.guest && this.invite ? this.invite.door : this.S.door!; this.S.inside = false; this.doorCool = 1.2;
-      if (this.guest) { this.guest = false; this.placeLot(this.ownOrigin); }
+      if (this.guest) { this.guest = false; this.placeLot(this.ownOrigin); decorSystem.api?.showOwner(null, false); }
       this.teleport(d.x + Math.sin(d.yaw) * 1.3, 0.05, d.z + Math.cos(d.yaw) * 1.3, d.yaw);
       for (let i = 0; i < 12; i++) { this.ctx.view.world.update(d.x, d.z, true); await new Promise((r) => setTimeout(r, 0)); }
       this.ctx.view.cam.yaw = d.yaw; this.persist();
@@ -315,7 +317,7 @@ class Life {
       { id: 'pay1', label: 'Send ₦1,000', cost: 1000, disabled: cash < 1000 ? 'No money' : undefined },
       { id: 'pay5', label: 'Send ₦5,000', cost: 5000, disabled: cash < 5000 ? 'No money' : undefined },
     ];
-    if (this.S.door && !this.guest && !this.venue) items.push({ id: 'invite', label: 'Invite to my room', hint: this.S.inside ? 'They walk in your door' : 'Then walk them home' });
+    if (this.S.door && !this.guest && !this.venue) items.push({ id: 'invite', label: 'Invite to my room', hint: this.S.inside ? 'They walk in your door' : 'Then walk them home' }, { id: 'designer', label: 'Hire them to design my room', hint: 'They can rearrange it' });
     const pick = (l: string[]) => l[(Math.random() * l.length) | 0];
     const self = (): Thing => ({ id: 'self', name: 'You', x: me.pos.x, z: me.pos.z, yaw: me.yaw, actions: [], kind: 'self' });
     this.pie.show(p.name, `Level ${p.level} · a real person`, items, { x: innerWidth / 2, y: innerHeight / 2 }, async (id) => {
@@ -331,18 +333,18 @@ class Life {
         else c.hud.toast('Transfer', r.err ?? 'It did not go.', 'var(--red)', 'msg', 3.5);
         return;
       }
-      if (id === 'invite') {
-        const r = await net.act('social.invite', { to: p.id, door: this.S.door });
+      if (id === 'invite' || id === 'designer') {
+        const r = await net.act('social.invite', { to: p.id, door: this.S.door, room: decorSystem.api?.layout() ?? null, designer: id === 'designer' });
         c.hud.toast('Invite', r.ok ? `${p.name} has your address. ${this.S.inside ? 'They can walk in.' : 'Go home and they can follow you in.'}` : (r.err ?? 'It did not go.'), r.ok ? 'linear-gradient(160deg,#2de0c8,#139a8a)' : 'var(--red)', 'pin', 4.5);
       }
     });
   }
-  private onSocial(m: { kind: string; from: string; fromId: number; owner?: string; door?: Door }) {
+  private onSocial(m: { kind: string; from: string; fromId: number; owner?: string; door?: Door; room?: RoomSave | null; designer?: boolean }) {
     const c = this.ctx;
     if (m.kind === 'greet') { c.hud.toast(m.from, 'hailed you. Hail them back!', 'linear-gradient(160deg,#2de0c8,#139a8a)', 'msg', 4); this.S.needs.v.social = Math.min(100, this.S.needs.v.social + 4); return; }
     if (m.kind === 'invite' && m.owner && m.door) {
-      const inv = { owner: m.owner, name: m.from, door: m.door, until: Date.now() + 15 * 60_000 };
-      c.hud.call(m.from, 'Come chill for my room', () => { this.invite = inv; c.hud.toast('Invite', `${m.from}'s door is the yellow pin on your map. Walk in when they are home.`, 'linear-gradient(160deg,#f59e0b,#b45309)', 'pin', 6); }, undefined, 20);
+      const inv = { owner: m.owner, name: m.from, door: m.door, until: Date.now() + 15 * 60_000, room: (m as any).room ?? null, designer: !!(m as any).designer };
+      c.hud.call(m.from, inv.designer ? 'Come and design my room. I go pay you.' : 'Come chill for my room', () => { this.invite = inv; c.hud.toast('Invite', `${m.from}'s door is the yellow pin on your map. Walk in when they are home.`, 'linear-gradient(160deg,#f59e0b,#b45309)', 'pin', 6); }, undefined, 20);
       return;
     }
     if (m.kind === 'evict' && this.guest) { c.hud.toast(m.from, 'left the room, so you follow them out.', 'var(--pur)', 'msg', 4); this.exit(); }
@@ -352,7 +354,7 @@ class Life {
     const iv = this.invite; if (!iv || this.run) return;
     this.ui.black(async () => {
       if (!(await this.door('home:' + iv.owner))) return;
-      this.guest = true; this.placeLot(Life.slotOf(iv.owner));
+      this.guest = true; this.placeLot(Life.slotOf(iv.owner)); decorSystem.api?.showOwner(iv.room ?? null, !!iv.designer);
       const s = this.lot.spawn; this.S.inside = true; this.doorCool = 1.2; this.ctx.view.cam.yaw = s.yaw; this.ctx.view.cam.pitch = -0.12;
       this.teleport(HOME_ORIGIN.x + s.x, 0.02, HOME_ORIGIN.z + s.z, s.yaw);
       this.ctx.hud.title(`${iv.name}'s room`.toUpperCase(), 'You are a guest. Behave yourself.', 2.5);

@@ -345,7 +345,8 @@ export class Hub implements OnlineApi {
           let into = typeof m.into === 'string' && m.into ? String(m.into).slice(0, 64) : null;
           // every account has its own room: "home" is yours, "home:<account>" is somebody else's and needs their invite
           if (into === 'home') into = `home:${id}`;
-          else if (into?.startsWith('home:') && into !== `home:${id}`) this.checkVisit(c, into.slice(5));
+          else if (into?.startsWith('home:') && into !== `home:${id}`) { this.checkVisit(c, into.slice(5)); if (this.invites.get(id)?.designer) this.designing.set(id, into.slice(5)); }
+          if (!into) this.designing.delete(id);
           if (into) { c.ms.doorFrom = { x: c.ms.x, z: c.ms.z }; c.ms.interior = into; c.ms.exitTo = null; }
           else {
             if (!c.ms.interior) throw new HttpError(400, 'You are not inside anywhere.');
@@ -362,6 +363,14 @@ export class Hub implements OnlineApi {
         case 'casino': ok(this.casino(c, m)); break;
         case 'social.greet': { const o = this.nearConn(c, m.to, 12); this.send(o, { t: 'social', kind: 'greet', from: c.profile.name, fromId: c.id }); ok(); break; }
         case 'social.invite': ok(this.invite(c, m)); break;
+        case 'room.edit': { // a room layout changed: the owner's own edits, or their designer's; everybody in the room sees it
+          const room = this.cleanRoom(m.room); if (!room) throw new HttpError(400, 'Bad layout.');
+          const space = c.ms.interior ?? ''; if (!space.startsWith('home:')) throw new HttpError(400, 'You are not in a room.');
+          const owner = space.slice(5); if (owner !== id && this.designing.get(id) !== owner) throw new HttpError(403, 'Only the owner or their designer can arrange this room.');
+          for (const o of this.conns.values()) if (o !== c && o.ms.interior === space) this.send(o, { t: 'room', room, by: c.profile.name, mine: o.account.id === owner });
+          if (owner !== id) { const oc = this.byAccount.get(owner); if (oc && oc.ms.interior !== space) this.send(oc, { t: 'room', room, by: c.profile.name, mine: true }); }
+          ok(); break;
+        }
         case 'social.ticket': { // an agbero asks a driver for the park ticket; the driver decides on their phone
           const o = this.nearConn(c, m.to, 12); if (!o.veh) throw new HttpError(400, 'They are not driving.');
           const k = `${id}>${o.account.id}`; const last = this.lastSwitch.get(k) ?? 0; if (Date.now() - last < 60_000) throw new HttpError(429, 'You just asked them.'); this.lastSwitch.set(k, Date.now());
@@ -398,7 +407,9 @@ export class Hub implements OnlineApi {
   }
   // ------------------------------------------------------------------------------------------ people: greetings and room invites
   /** account -> who invited them into their room, until when, and the room door (so the guest can find it) */
-  private invites = new Map<string, { owner: string; name: string; until: number }>();
+  private invites = new Map<string, { owner: string; name: string; until: number; designer: boolean }>();
+  /** who is currently designing whose room (set when a designer walks in) */
+  private designing = new Map<string, string>();
   /** players see each other only in the same space: the street, one venue, or one person's room */
   private spaceOf(c: Conn) { return c.ms.interior ?? ''; }
   private at(c: Conn) { return { x: c.ms.x, z: c.ms.z, interior: c.ms.interior }; }
@@ -413,8 +424,9 @@ export class Hub implements OnlineApi {
     const d = m.door as { x?: unknown; z?: unknown; yaw?: unknown } | undefined;
     const door = d && [d.x, d.z, d.yaw].every((v) => typeof v === 'number' && Number.isFinite(v)) ? { x: d.x as number, z: d.z as number, yaw: d.yaw as number } : null;
     if (!door) throw new HttpError(400, 'You have no room to invite them to.');
-    this.invites.set(o.account.id, { owner: id, name: c.profile.name, until: Date.now() + 15 * 60_000 });
-    this.send(o, { t: 'social', kind: 'invite', from: c.profile.name, fromId: c.id, owner: id, door });
+    const designer = !!m.designer; const room = this.cleanRoom(m.room);
+    this.invites.set(o.account.id, { owner: id, name: c.profile.name, until: Date.now() + 15 * 60_000, designer });
+    this.send(o, { t: 'social', kind: 'invite', from: c.profile.name, fromId: c.id, owner: id, door, room, designer });
     return { to: o.profile.name };
   }
   /** a guest may walk into someone's room only with a live invite, while the owner is home, from near the owner's door */
@@ -425,6 +437,8 @@ export class Hub implements OnlineApi {
     if (!oc || oc.ms.interior !== `home:${owner}`) throw new HttpError(400, `${inv.name} is not home right now.`);
     const at = oc.ms.doorFrom; if (!at || Math.hypot(c.ms.x - at.x, c.ms.z - at.z) > 30) throw new HttpError(400, 'Go to their door first.');
   }
+  /** a room layout from a client: small, plain JSON, or nothing */
+  private cleanRoom(r: unknown) { if (!r || typeof r !== 'object') return null; let j = ''; try { j = JSON.stringify(r); } catch { return null; } if (j.length > 12_000) return null; const o = JSON.parse(j); return o && o.v === 1 && Array.isArray(o.extra) && o.extra.length <= 40 && typeof o.pos === 'object' ? o : null; }
   private evictGuests(owner: Conn) {
     const room = `home:${owner.account.id}`;
     for (const o of this.conns.values()) if (o !== owner && o.ms.interior === room) this.send(o, { t: 'social', kind: 'evict', from: owner.profile.name, fromId: owner.id });

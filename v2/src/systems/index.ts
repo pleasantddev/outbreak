@@ -6,7 +6,7 @@ import { nemesisSystem } from './nemesis';
 import { garage } from './garage';
 import { identity } from './identity';
 import { skills } from './skills';
-import { missions } from './missions'; import { lifeSystem } from './life'; import { vendorSystem } from './life/vendors'; import { billsSystem } from './life/bills'; import { leisureSystem } from './leisure'; import { transportSystem } from './careers/transport'; import { racingSystem } from './careers/racing'; import { thiefSystem } from './careers/thief'; import { techSystem } from './careers/tech'; import { mechanicSystem } from './careers/mechanic'; import { ranksSystem } from './careers/ranks'; import { boysSystem } from './careers/yahoo'; import { bankSystem } from './careers/bank'; import { businessSystem } from './business'; import { powerSystem } from './power'; import { powerJobSystem } from './careers/power'; import { wearSystem } from './wear'; import { houseSystem } from './life/house'; import { agberoSystem } from './careers/agbero';
+import { missions } from './missions'; import { lifeSystem } from './life'; import { vendorSystem } from './life/vendors'; import { billsSystem } from './life/bills'; import { leisureSystem } from './leisure'; import { transportSystem } from './careers/transport'; import { racingSystem } from './careers/racing'; import { thiefSystem } from './careers/thief'; import { techSystem } from './careers/tech'; import { mechanicSystem } from './careers/mechanic'; import { ranksSystem } from './careers/ranks'; import { boysSystem } from './careers/yahoo'; import { bankSystem } from './careers/bank'; import { businessSystem } from './business'; import { powerSystem } from './power'; import { powerJobSystem } from './careers/power'; import { wearSystem } from './wear'; import { houseSystem } from './life/house'; import { agberoSystem } from './careers/agbero'; import { decorSystem } from './life/decor';
 // net goes first: it signs the player in during init, before the lobby and before other systems read their saved state
 export const SYSTEMS: GameSystem[] = [
   netSystem,
@@ -18,6 +18,7 @@ export const SYSTEMS: GameSystem[] = [
   lifeSystem, // needs, smart objects, the pie, your room
   vendorSystem, // market women, mama put, suya, pay toilets: haggle for everything
   powerSystem, // the grid: which feeders have light (server-run online), windows, lamps, your bulbs
+  decorSystem, // arrange and decorate your room; designers; guests see your layout
   houseSystem, // pipes, wiring, roof, water tank, generator, artisans and renovation
   billsSystem, // weekly rent, prepaid light and NEPA, ChopNow delivery
   businessSystem, // shops on real shop fronts: buy, stock, collect the till; other players buy from yours

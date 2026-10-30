@@ -273,7 +273,9 @@ export type ServerMsg =
   | { t: 'toast'; title: string; body: string }
   | { t: 'lobby'; key: string; state: string; [k: string]: unknown }
   /** another player did something to you: greeted you, invited you to their room, or (as the owner) left it with you inside */
-  | { t: 'social'; kind: 'greet' | 'invite' | 'evict' | 'ticket'; from: string; fromId: number; owner?: string; door?: { x: number; z: number; yaw: number }; amount?: number }
+  | { t: 'social'; kind: 'greet' | 'invite' | 'evict' | 'ticket'; from: string; fromId: number; owner?: string; door?: { x: number; z: number; yaw: number }; amount?: number; room?: unknown; designer?: boolean }
+  /** a room layout changed (owner or their designer): everybody in that room redraws it; the owner keeps it */
+  | { t: 'room'; room: unknown; by: string; mine: boolean }
   /** somebody bought a shop: the signboard on that site changes for everyone */
   | { t: 'biz'; site: string; type: string; ownerName: string }
   /** the power grid changed: one character per feeder, generation, load, collapse (rules.ts GridState) */
