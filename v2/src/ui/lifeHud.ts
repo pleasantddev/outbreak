@@ -345,13 +345,19 @@ ${touch ? `<div id="tc">
     setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 450); }, secs * 1000);
   }
   /** Incoming call card. Answer with the button, Y / Enter, or gamepad A; decline with N or B. */
+  private callQueue: [string, string, () => void, (() => void) | undefined, number][] = [];
+  /** an incoming call card; a second call while one rings waits its turn (a player's invite must not be lost to Mama Put) */
   call(name: string, line: string, yes: () => void, no?: () => void, ringSecs = 12) {
-    ringSecs = Math.min(ringSecs, 12); this.callUntil = performance.now() + ringSecs * 1000;
+    if (this.callCb) { if (this.callQueue.length < 4) this.callQueue.push([name, line, yes, no, ringSecs]); return; }
+    ringSecs = Math.min(ringSecs, 20); this.callUntil = performance.now() + ringSecs * 1000;
     this.el('call-av').textContent = initials(name); this.el('call-n').textContent = name; this.el('call-l').textContent = line;
     this.el('call').classList.add('on'); this.callCb = { yes, no }; this.callT = ringSecs;
   }
   get ringing() { return !!this.callCb; }
-  answer(yes: boolean) { const c = this.callCb; if (!c) return; this.callCb = null; this.el('call').classList.remove('on'); if (yes) c.yes(); else c.no?.(); }
+  answer(yes: boolean) {
+    const c = this.callCb; if (!c) return; this.callCb = null; this.el('call').classList.remove('on'); if (yes) c.yes(); else c.no?.();
+    const n = this.callQueue.shift(); if (n) setTimeout(() => this.call(...n), 600);
+  }
   event(e: SimEvent) {
     if (e.t === 'announce') this.title(e.title, e.sub, 4.5, e.tone === 'danger');
     if (e.t === 'cash') this.money(e.amount);
@@ -405,6 +411,8 @@ ${touch ? `<div id="tc">
     this.el('appview').style.setProperty('--ac', color.replace(/linear-gradient\(160deg,([^,]+),.*/, '$1')); this.el('av-h').textContent = name;
     this.refreshApp(); this.el('appview').style.display = 'flex';
   }
+  /** open a phone app by name (from a menu in the world, e.g. "Check the books") */
+  openAppByName(name: string) { const i = APPS.findIndex((a) => a[0] === name); if (i < 0) return; this.togglePhone(true); this.sel = i; this.renderApps(); this.openApp(); }
   refreshApp() {
     const name = this.appOpen; if (!name) return; const L = this.el('av-l'); const c = this.ctx; if (!c) return;
     const row = (b: string, s: string, btn?: [string, string, string]) => `<div class="row"><b>${b}</b>${s}${btn ? `<br><button class="btn" data-app="${btn[0]}" data-id="${btn[1]}">${btn[2]}</button>` : ''}</div>`;

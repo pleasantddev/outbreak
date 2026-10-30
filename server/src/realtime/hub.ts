@@ -10,6 +10,7 @@ import { banState, publicProfile } from '../accounts.ts';
 import type { Economy } from '../economy.ts';
 import type { ContentStore } from '../content.ts';
 import type { OnlineApi } from '../api.ts';
+import { Businesses } from '../business.ts';
 import { HttpError } from '../auth.ts';
 import { run } from '../db.ts';
 import type { DB } from '../db.ts';
@@ -62,7 +63,9 @@ export class Hub implements OnlineApi {
   private saveTimer: NodeJS.Timeout | null = null;
 
   races: RaceLobbies;
+  private biz: Businesses;
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
+    this.biz = new Businesses(db, econ);
     this.races = new RaceLobbies({
       debit: (id, n, kind) => { this.econ.adjust(id, -n, 0, kind); }, credit: (id, n, kind) => { this.econ.adjust(id, n, 0, kind); },
       broadcast: (l, msg) => { for (const id of l.members.keys()) { const c = this.byAccount.get(id); if (c) this.send(c, { ...msg, startIn: l.startAt ? l.startAt - performance.now() : 0 } as any); } },
@@ -351,6 +354,19 @@ export class Hub implements OnlineApi {
         case 'casino': ok(this.casino(c, m)); break;
         case 'social.greet': { const o = this.nearConn(c, m.to, 12); this.send(o, { t: 'social', kind: 'greet', from: c.profile.name, fromId: c.id }); ok(); break; }
         case 'social.invite': ok(this.invite(c, m)); break;
+        case 'biz.all': ok({ list: this.biz.all() }); break;
+        case 'biz.mine': ok({ list: this.biz.mine(id) }); break;
+        case 'biz.get': ok({ biz: this.biz.get(String(m.site ?? '')) }); break;
+        case 'biz.buy': {
+          const r = this.biz.buy(id, m.site, m.type, this.at(c)); ok({ ...r.wallet, biz: r.biz });
+          this.broadcastJson({ t: 'biz', site: r.biz.site, type: r.biz.type, ownerName: c.profile.name }); break;
+        }
+        case 'biz.collect': { const r = this.biz.collect(id, m.site, this.at(c)); ok({ ...r.wallet, amount: r.amount, biz: r.biz }); break; }
+        case 'biz.restock': { const r = this.biz.restock(id, m.site, this.at(c)); ok({ ...r.wallet, cost: r.cost, biz: r.biz }); break; }
+        case 'biz.serve': {
+          const r = this.biz.serve(id, m.site, this.at(c)); ok({ ...r.wallet, item: r.item });
+          const oc = this.byAccount.get(r.owner); if (oc) this.send(oc, { t: 'toast', title: 'Customer', body: `${c.profile.name} bought from your shop. ₦${r.item.price.toLocaleString('en-NG')} in the till.` }); break;
+        }
         case 'tp': case 'respawn': {
           const now = performance.now();
           if (now - c.ms.lastTp < 10_000) { this.econ.flag(id, 'tp-spam', { a: m.a }); throw new HttpError(429, 'Too many teleports.'); }
@@ -365,6 +381,7 @@ export class Hub implements OnlineApi {
   private invites = new Map<string, { owner: string; name: string; until: number }>();
   /** players see each other only in the same space: the street, one venue, or one person's room */
   private spaceOf(c: Conn) { return c.ms.interior ?? ''; }
+  private at(c: Conn) { return { x: c.ms.x, z: c.ms.z, interior: c.ms.interior }; }
   private nearConn(c: Conn, to: unknown, r: number): Conn {
     const o = this.conns.get(Number(to)); if (!o || o === c || o.dead || !o.haveState) throw new HttpError(404, 'They are not around.');
     if (this.spaceOf(o) !== this.spaceOf(c) || Math.hypot(o.ms.x - c.ms.x, o.ms.z - c.ms.z) > r) throw new HttpError(400, 'Get closer to them first.');

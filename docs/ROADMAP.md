@@ -63,3 +63,17 @@ Rules we now build by:
 Lagos Life notes (research): 6 needs, real-time clock, 23 careers x 5 levels with shift tasks, businesses paying at
 6pm, land with omo-onile risk, weekly rent on Saturday, power bills, phone apps (Jobs, Houses, Chowdeck, Bank, Invest,
 Cars, Courses, LagosBet), shared venues with opening hours, governor election, 3 starting backgrounds.
+
+## Online depth (30 Oct, afternoon)
+- Spaces: the server only shows players to each other in the same space (street, one venue, one person's room); near
+  chat and emotes follow the same rule. Cars live on the street.
+- Real people: walk up to a player, E: hail, gist, send ₦1,000 / ₦5,000, invite to your room. The guest gets a call
+  card, a yellow pin on the owner's door, and walks in while the owner is home (server checks invite, owner home, guest
+  at the door). The owner leaving sends guests out.
+- Businesses (Lagos Life style, server-run): SHOP TO LET signs on real shop fronts (one site per map region at most,
+  hashed, the same for everyone). Kiosk, POS stand, barbing salon, buka, car wash. Trade by the hour while open and
+  stocked; wages and light at 6pm from the till (unpaid wages become debt; three days unpaid and staff strike); street
+  luck at close (area boys settlement, levy, big customer). Owners collect the till in person, restock at the shop or
+  from the phone (+15% delivery). Other players buy from your shop and the money lands in your till. Phone: Business.
+- Mobile: touch layout for short landscape phones, Me and Duty buttons, tappable prompt, list close button.
+Next: shared casino tables, player market stalls, Jobs/Bank/Invest phone apps, shift tasks, onboarding pass.

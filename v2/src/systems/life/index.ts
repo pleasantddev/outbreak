@@ -128,8 +128,16 @@ class Life {
   private addCeil(body: any, lot: Lot) { const c = lot.ceil; if (!c) return; this.ctx.sim.phys.world.createCollider(RAPIER.ColliderDesc.cuboid((c.x1 - c.x0) / 2, 0.1, (c.z1 - c.z0) / 2).setTranslation((c.x0 + c.x1) / 2, c.y + 0.1, (c.z0 + c.z1) / 2).setCollisionGroups(groups(G.WORLD, 0xffff)), body); }
   /** Every venue has a fixed anchor in the world. Its door goes on the best building face near the anchor, computed
    *  only from map data, so every player in the session finds the casino in the same place. */
+  /** every map region within r of (x, z) is loaded (and asks for the missing ones). Doors must be placed from the full
+   *  set, or a player who spawned far away would pick a different building than everybody else. */
+  private regionsReady(x: number, z: number, r: number) {
+    const st = this.ctx.store; let ok = true;
+    const [i0, j0] = st.regionOf(x - r, z - r), [i1, j1] = st.regionOf(x + r, z + r);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) if (st.has(i, j) && !st.get(i, j)) { ok = false; void st.load(i, j); }
+    return ok;
+  }
   private placeVenueDoor(v: Venue) {
-    const c = this.ctx; const A = VENUE_ANCHOR[v.id]; if (!A) return;
+    const c = this.ctx; const A = VENUE_ANCHOR[v.id]; if (!A || !this.regionsReady(A.x, A.z, 600)) return;
     const taken = [...this.venues.values()].filter((o) => o !== v && o.door).map((o) => o.door!);
     let best: Door | null = null, bs = -1e9;
     for (const r of c.store.regions.values()) for (const b of r.buildings) {
