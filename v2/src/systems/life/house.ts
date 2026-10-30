@@ -10,7 +10,7 @@ import type { LifeAction } from './objects';
 import { addMoodlet } from './needs';
 import { HOME_ORIGIN } from './home';
 import { spend } from '../money';
-import { power } from '../power';
+import { power, powerShared } from '../power';
 import { net } from '../../net/client';
 import { worldHours } from '../../net/rules';
 import { loadContent } from '../../content/load';
@@ -104,6 +104,8 @@ class House {
     if (this.wasPowered !== null && pw !== this.wasPowered && this.atHome() && !this.genRunning() && H.fault) this.say('Room', 'Na your wiring. NEPA get light but your room no get.');
     this.wasPowered = pw;
     this.drawPuddle(); this.persist();
+    // your building's windows glow when your room has light (your gen, or NEPA with good wiring)
+    const d = L.S.door; if (d) powerShared.uHome.value.set(d.x, d.z, 9, pw ? 1 : 0);
   }
   private say(who: string, line: string) { this.ctx.hud.toast(who, line, 'linear-gradient(160deg,#38bdf8,#0369a1)', 'msg', 5); }
   private finish(who: Artisan) {

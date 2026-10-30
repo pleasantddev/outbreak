@@ -1,6 +1,7 @@
 // The power grid on the client. Online, the server's state is the truth (one Lagos, one blackout); offline, the same
 // plan runs locally from net/rules.ts. Everything that glows reads it: windows and shop fronts (buildings.ts through
 // powerShared.uGrid), street lamps, your room's bulbs and fan (bills.ts), and the "UP NEPA!" moment when light returns.
+import * as THREE from 'three';
 import type { GameCtx, GameSystem } from './registry';
 import { net } from '../net/client';
 import { GRID, BAND_HOURS, gridState, scheduledOn, worldHours, type FeederDef, type GridState } from '../net/rules';
@@ -9,7 +10,8 @@ import { registerApp } from '../ui/lifeHud';
 
 export const FEEDERS = FEEDER_DATA as FeederDef[];
 /** for shaders: one float per feeder, 1 when it has light. GLSL side: feeder index from world xz with the same GRID. */
-export const powerShared = { uGrid: { value: new Float32Array(GRID.w * GRID.h).fill(1) } };
+/** uHome: your own house (x, z, radius, on): its windows glow when you have light even if the feeder is dark (your gen) */
+export const powerShared = { uGrid: { value: new Float32Array(GRID.w * GRID.h).fill(1) }, uHome: { value: new THREE.Vector4(0, 0, 0, 0) } };
 export const POWER_GLSL = /* glsl */ `
 uniform float uGrid[${GRID.w * GRID.h}];
 float gridAt(vec2 p) { float i = clamp(floor((p.x - (${GRID.x0}.0)) / ${GRID.cell}.0), 0.0, ${GRID.w - 1}.0); float j = clamp(floor((p.y - (${GRID.z0}.0)) / ${GRID.cell}.0), 0.0, ${GRID.h - 1}.0); return uGrid[int(i + j * ${GRID.w}.0)]; }
