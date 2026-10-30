@@ -18,6 +18,7 @@ import {
   Writer, type ClientMsg, type Ent, type PlayerEnt, type ServerMsg, type StateMsg, type VehEnt, type WhoInfo,
 } from '../../../v2/src/net/protocol.ts';
 import { randomInt } from 'node:crypto';
+import { RaceLobbies } from './races.ts';
 import { BjTable, slotSpin, roulettePays, ROULETTE_KEYS, SLOT_BETS, inInteriorZone } from '../../../v2/src/net/rules.ts';
 import { cleanChat } from '../../../v2/src/net/rules.ts';
 import { Grid, cellCoord, keyOf, type GridNode } from './grid.ts';
@@ -60,7 +61,13 @@ export class Hub implements OnlineApi {
   private pingTimer: NodeJS.Timeout | null = null;
   private saveTimer: NodeJS.Timeout | null = null;
 
+  races: RaceLobbies;
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
+    this.races = new RaceLobbies({
+      debit: (id, n, kind) => { this.econ.adjust(id, -n, 0, kind); }, credit: (id, n, kind) => { this.econ.adjust(id, n, 0, kind); },
+      broadcast: (l, msg) => { for (const id of l.members.keys()) { const c = this.byAccount.get(id); if (c) this.send(c, { ...msg, startIn: l.startAt ? l.startAt - performance.now() : 0 } as any); } },
+      flag: (id, what, info) => this.econ.flag(id, what, info), now: () => performance.now(),
+    });
     this.wss = new WebSocketServer({ noServer: true, maxPayload: MAX_WS_PAYLOAD, perMessageDeflate: false });
     econ.on('wallet', (w: { accountId: string; cash: number; bank: number; why: string }) => { const c = this.byAccount.get(w.accountId); if (c) this.send(c, { t: 'wallet', cash: w.cash, bank: w.bank, why: w.why }); });
     econ.on('plot', (p: { id: string; ownerId: string | null; ownerName: string | null }) => this.broadcastJson({ t: 'plot', id: p.id, owner: p.ownerId, ownerName: p.ownerName }));
@@ -158,6 +165,7 @@ export class Hub implements OnlineApi {
 
   private drop(c: Conn) {
     if (c.dead) return; c.dead = true;
+    try { this.races.leave(c.account.id); } catch { /* not racing */ }
     this.conns.delete(c.id); if (this.byAccount.get(c.account.id) === c) this.byAccount.delete(c.account.id);
     this.grid.remove(c);
     if (c.veh) this.removeVehicle(c.veh);
@@ -328,6 +336,10 @@ export class Hub implements OnlineApi {
           c.ms.tpUntil = now + 3000; ok({ into }); break;
         }
         case 'race.enter': ok({ ...this.econ.raceEnter(id, m.wager, m.rivals) }); break;
+        case 'race.join': ok({ lobby: this.races.join(id, c.profile.name, { x: c.ms.x, z: c.ms.z }, m), ...this.walletOf(c) }); break;
+        case 'race.leave': this.races.leave(id); ok({ ...this.walletOf(c) }); break;
+        case 'race.start': ok({ lobby: this.races.start(id, m.len) }); break;
+        case 'race.finish': ok({ lobby: this.races.finish(id, m.ms, m.len) }); break;
         case 'casino': ok(this.casino(c, m)); break;
         case 'tp': case 'respawn': {
           const now = performance.now();
@@ -375,6 +387,7 @@ export class Hub implements OnlineApi {
   // ------------------------------------------------------------------------------------------ snapshots
   private tick() {
     this.tickN++; this.stats0.ticks++;
+    if (this.tickN % this.cfg.tickHz === 0) this.races.tick();
     const R = this.cfg.interestRings; const now = performance.now();
     // parked cars time out
     if (this.tickN % (this.cfg.tickHz * 10) === 0) { const t = Date.now(); for (const v of [...this.vehicles.values()]) if (v.parkedAt && t - v.parkedAt > PARKED_TTL) this.removeVehicle(v); }

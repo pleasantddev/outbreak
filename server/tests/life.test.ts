@@ -43,3 +43,26 @@ describe('interiors (GTA Online style loaded rooms)', () => {
     b.c.close();
   });
 });
+
+describe('street races between real players', () => {
+  it('two players join a meet, the host starts, finish times decide who takes the pot', async () => {
+    const a = await mk('Racer Ade'); const b = await mk('Racer Bisi');
+    a.c.state(5, 5); b.c.state(8, 6); await sleep(80);
+    await a.c.act('cash.delta', { d: 10000, why: 'reward' }); await b.c.act('cash.delta', { d: 10000, why: 'reward' });
+    const ja = await a.c.act('race.join', { key: 'meet-1', x: 6, z: 6, type: 'drag', wager: 5000 }); expect(ja.err ?? 'ok').toBe('ok');
+    const far = await mk('Racer Far'); far.c.state(0, 60); await sleep(50);
+    const jf = await far.c.act('race.join', { key: 'meet-1', x: 6, z: 6, type: 'drag', wager: 5000 }); expect(jf.ok).toBe(false);
+    const jb = await b.c.act('race.join', { key: 'meet-1', x: 6, z: 6, type: 'drag', wager: 5000 }); expect(jb.ok).toBe(true); expect(jb.lobby.members.length).toBe(2);
+    const notHost = await b.c.act('race.start', { len: 300 }); expect(notHost.ok).toBe(false);
+    const st = await a.c.act('race.start', { len: 300 }); expect(st.ok).toBe(true); expect(st.lobby.state).toBe('countdown');
+    const early = await a.c.act('race.finish', { ms: 5600, len: 300 }); expect(early.ok).toBe(false);
+    await sleep(9000);
+    const cashA = (await a.c.act('cash.delta', { d: 0, why: 'loot' })).cash;
+    const fa = await a.c.act('race.finish', { ms: 5600, len: 300 }); expect(fa.ok).toBe(true);
+    const fb = await b.c.act('race.finish', { ms: 5900, len: 300 }); expect(fb.ok).toBe(true);
+    await a.c.until(() => a.c.msgs.some((m) => m.t === 'lobby' && m.results), 3000);
+    const res = a.c.msgs.find((m) => m.t === 'lobby' && m.results); expect(res.results[0].name).toBe('Racer Ade');
+    const after = (await a.c.act('cash.delta', { d: 0, why: 'loot' })).cash; expect(after).toBe(cashA + 8000);
+    a.c.close(); b.c.close(); far.c.close();
+  }, 20000);
+});
