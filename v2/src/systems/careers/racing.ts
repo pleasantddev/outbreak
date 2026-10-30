@@ -13,7 +13,7 @@ import { sfx } from '../leisure/sfx';
 
 type RaceType = 'sprint' | 'circuit' | 'drag';
 interface Meet { x: number; z: number; yaw: number; name: string; ax: number; az: number }
-interface Rival { name: string; v: Vehicle; drv: Actor; skill: number; aggr: number; s: number; lap: number; done: number; idx: number }
+interface Rival { name: string; v: Vehicle; drv: Actor; skill: number; aggr: number; s: number; lap: number; done: number; idx: number; stuck?: number; rev?: number; lost?: number }
 interface Race { type: RaceType; pts: number[]; cum: number[]; len: number; laps: number; checks: number[]; next: number; lap: number; rivals: Rival[]; wager: number; t0: number; go: number; meet: Meet; finish: number; playerS: number; launch: number; done: boolean; rings: THREE.Mesh[]; arch: THREE.Group | null; police: boolean }
 
 const RIVALS = [{ name: 'Tunde "Tokunbo King"', skill: 0.92, aggr: 0.7 }, { name: 'Ada Speed', skill: 0.97, aggr: 0.4 }, { name: 'Small Doctor Wheels', skill: 0.86, aggr: 0.9 }, { name: 'Baba Nitro', skill: 1.0, aggr: 0.6 }, { name: 'Kemi Drift', skill: 0.95, aggr: 0.5 }];
@@ -132,14 +132,14 @@ class Racing {
     const rings: THREE.Mesh[] = []; for (const ci of checks) { const ring = new THREE.Mesh(new THREE.TorusGeometry(5.5, 0.22, 8, 40), new THREE.MeshBasicMaterial({ color: 0xff7043, toneMapped: false, transparent: true, opacity: 0.85 })); const j = ci * 2; const a = Math.atan2(pts[j] - pts[j - 2 >= 0 ? j - 2 : 0], pts[j + 1] - pts[j - 1 >= 0 ? j - 1 : 1]); ring.position.set(pts[j], 4.2, pts[j + 1]); ring.rotation.y = a; ring.visible = false; c.view.scene.add(ring); rings.push(ring); }
     const arch = new THREE.Group(); const fin = (course.laps > 1 ? 0 : pts.length - 2); const archM = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }); for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 0.4), archM); p.position.set(s * 7, 3, 0); arch.add(p); } const top = new THREE.Mesh(new THREE.BoxGeometry(14.4, 1.0, 0.4), new THREE.MeshBasicMaterial({ map: (() => { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 40; const k = cv.getContext('2d')!; for (let i = 0; i < 26; i++) for (let j = 0; j < 2; j++) { k.fillStyle = (i + j) % 2 ? '#000' : '#fff'; k.fillRect(i * 20, j * 20, 20, 20); } const t = new THREE.CanvasTexture(cv); return t; })(), toneMapped: false })); top.position.y = 6; arch.add(top);
     arch.position.set(pts[fin], 0, pts[fin + 1]); arch.rotation.y = Math.atan2(pts[fin + 2 < pts.length ? fin + 2 : fin] - pts[fin - 2 >= 0 ? fin - 2 : fin], pts[fin + 3 < pts.length ? fin + 3 : fin + 1] - pts[fin - 1 >= 0 ? fin - 1 : fin + 1]) + Math.PI / 2; c.view.scene.add(arch);
-    this.race = { type: this.choice.type, pts, cum, len, laps: course.laps, checks, next: 0, lap: 0, rivals, wager: this.choice.wager, t0: 0, go: c.view.time + 4, meet: m, finish: 0, playerS: 0, launch: 0, done: false, rings, arch, police: Math.random() < 0.18 };
+    this.race = { type: this.choice.type, pts, cum, len, laps: course.laps, checks, next: 0, lap: 0, rivals, wager: this.choice.wager, t0: 0, go: c.sim.time + 4, meet: m, finish: 0, playerS: 0, launch: 0, done: false, rings, arch, police: Math.random() < 0.18 };
     this.el.classList.add('on'); this.countdown();
   }
-  private countdown() { const c = this.ctx; const r = this.race!; [3, 2, 1].forEach((n, i) => setTimeout(() => { if (this.race === r) { c.hud.title(String(n), '', 0.8); sfx('tick'); } }, i * 1000 + 1000)); setTimeout(() => { if (this.race === r) { c.hud.title('GO!', '', 1.2); sfx('win'); r.t0 = c.view.time; } }, 4000); }
+  private countdown() { const c = this.ctx; const r = this.race!; [3, 2, 1].forEach((n, i) => setTimeout(() => { if (this.race === r) { c.hud.title(String(n), '', 0.8); sfx('tick'); } }, i * 1000 + 1000)); setTimeout(() => { if (this.race === r) { c.hud.title('GO!', '', 1.2); sfx('win'); r.t0 = c.sim.time; } }, 4000); }
 
   // ---------------------------------------------------------------- AI drivers: pure pursuit along the course, braking for the bends ahead
   private aiDrive(R: Rival, v: Vehicle, _dt: number): Command {
-    const c = emptyCommand(); const r = this.race; if (!r) return c; const now = this.ctx.view.time;
+    const c = emptyCommand(); const r = this.race; if (!r) return c; const now = this.ctx.sim.time;
     if (now < r.go || R.done) { c.jump = true; return c; }
     const p = v.body.translation(); const pts = r.pts; const n = pts.length / 2;
     // progress: search forward from last index
@@ -153,16 +153,24 @@ class Racing {
     const rubber = Math.max(-0.08, Math.min(0.12, (r.playerS - R.s) / 600)); const vmax = 34 * R.skill * (1 + rubber);
     const target = Math.min(vmax, sharp > 1.0 ? 9 : sharp > 0.6 ? 13 : sharp > 0.3 ? 19 + R.aggr * 3 : vmax);
     c.mx = -Math.max(-1, Math.min(1, err * 2.0));
+    // dodge cars in front (the player, other racers, traffic)
+    for (const o of this.ctx.sim.liveVehicles()) { if (o === v) continue; const q = o.body.translation(); const dx = q.x - p.x, dz = q.z - p.z; const along = dx * fw.x + dz * fw.z, side = dx * fw.z - dz * fw.x; if (along > 0 && along < 9 + sp * 0.5 && Math.abs(side) < 2.6) { c.mx = Math.max(-1, Math.min(1, c.mx + (side > 0 ? 0.9 : -0.9))); if (along < 5 && sp > 8) c.jump = true; break; } }
+    // wedged against a kerb or another car: back out, then try again
+    if ((R.rev ?? 0) > 0) { R.rev! -= _dt; c.mz = -1; c.mx = -c.mx; return c; }
+    if (sp < 1) { R.stuck = (R.stuck ?? 0) + _dt; if (R.stuck > 2) { R.stuck = 0; R.rev = 1.3; } } else R.stuck = 0;
+    // still nowhere after a while and nobody watching: put them back on the road, GTA style
+    if (sp < 2) R.lost = (R.lost ?? 0) + _dt; else R.lost = 0;
+    if ((R.lost ?? 0) > 7) { const me = this.ctx.sim.local.pos; const j = Math.min(n - 2, R.idx + 3); const x = pts[j * 2], z = pts[j * 2 + 1]; if (Math.hypot(x - me.x, z - me.z) > 35) { const yaw = Math.atan2(pts[j * 2 + 2] - x, pts[j * 2 + 3] - z); const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw); v.body.setTranslation({ x, y: 0.8, z }, true); v.body.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true); v.body.setLinvel({ x: 0, y: 0, z: 0 }, true); v.body.setAngvel({ x: 0, y: 0, z: 0 }, true); } R.lost = 0; }
     if (sp < target) c.mz = 1; else if (sp > target + 2.5) c.jump = true;
     if (bd > 18) c.mz = Math.min(c.mz, 0.6);
     return c;
   }
 
   // ---------------------------------------------------------------- the player and the race flow
-  filterCommand(cmd: Command) { const r = this.race; if (!r) return; const now = this.ctx.view.time; if (now < r.go) { if (cmd.mz > 0.5 && now > r.go - 0.25) this.wantGo = true; else if (cmd.mz > 0.5) r.launch = -1; cmd.mz = 0; cmd.jump = true; } }
+  filterCommand(cmd: Command) { const r = this.race; if (!r) return; const now = this.ctx.sim.time; if (now < r.go) { if (cmd.mz > 0.5 && now > r.go - 0.25) this.wantGo = true; else if (cmd.mz > 0.5) r.launch = -1; cmd.mz = 0; cmd.jump = true; } }
   frame(dt: number) {
     const c = this.ctx; this.placeT -= dt; if (this.placeT <= 0) { this.placeT = 6; this.placeMeets(); this.dressMeets(); }
-    const r = this.race; if (!r) return; const me = c.sim.local; const now = c.view.time;
+    const r = this.race; if (!r) return; const me = c.sim.local; const now = c.sim.time;
     if (me.vehicle === null || !me.alive) { this.end('dnf'); return; }
     const v = c.sim.vehicles[me.vehicle]; const p = v.body.translation();
     // the launch: hold throttle in the last quarter second before GO for a boost, early means a stall
@@ -182,7 +190,7 @@ class Racing {
   }
   goal() { const r = this.race; if (!r) { const m = this.night() && this.ctx.sim.local.vehicle !== null ? null : null; return m; } const ci = r.checks[r.next] ?? r.checks[r.checks.length - 1]; return { x: r.pts[ci * 2], z: r.pts[ci * 2 + 1], label: 'Checkpoint' }; }
   private end(how: 'finish' | 'dnf') {
-    const c = this.ctx; const r = this.race!; r.done = true; const now = c.view.time;
+    const c = this.ctx; const r = this.race!; r.done = true; const now = c.sim.time;
     const ahead = r.rivals.filter((R) => R.done && R.done < (r.finish || now)).length; const place = how === 'dnf' ? r.rivals.length + 1 : ahead + 1;
     const pot = r.wager * (r.rivals.length + 1); const win = place === 1 ? Math.round(pot * 0.8) : place === 2 && r.rivals.length > 1 ? r.wager : 0;
     if (win) { c.sim.cash += win; c.sim.events.push({ t: 'cash', actor: c.sim.local.id, amount: win } as any); }
