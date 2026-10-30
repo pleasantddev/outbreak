@@ -17,7 +17,7 @@ import { career } from './ranks';
 type RaceType = 'sprint' | 'circuit' | 'drag';
 interface Meet { x: number; z: number; yaw: number; name: string; ax: number; az: number }
 interface Rival { name: string; v: Vehicle; drv: Actor; skill: number; aggr: number; s: number; lap: number; done: number; idx: number; stuck?: number; rev?: number; lost?: number }
-interface Race { mp?: boolean; type: RaceType; pts: number[]; cum: number[]; len: number; laps: number; checks: number[]; next: number; lap: number; rivals: Rival[]; wager: number; t0: number; go: number; meet: Meet; finish: number; playerS: number; launch: number; done: boolean; rings: THREE.Mesh[]; arch: THREE.Group | null; police: boolean }
+interface Race { mp?: boolean; goReal?: number; type: RaceType; pts: number[]; cum: number[]; len: number; laps: number; checks: number[]; next: number; lap: number; rivals: Rival[]; wager: number; t0: number; go: number; meet: Meet; finish: number; playerS: number; launch: number; done: boolean; rings: THREE.Mesh[]; arch: THREE.Group | null; police: boolean }
 
 const RIVALS = [{ name: 'Tunde "Tokunbo King"', skill: 0.92, aggr: 0.7 }, { name: 'Ada Speed', skill: 0.97, aggr: 0.4 }, { name: 'Small Doctor Wheels', skill: 0.86, aggr: 0.9 }, { name: 'Baba Nitro', skill: 1.0, aggr: 0.6 }, { name: 'Kemi Drift', skill: 0.95, aggr: 0.5 }];
 const KINDS: VehicleKind[] = ['sedan', 'hatch', 'jeep'];
@@ -177,7 +177,7 @@ class Racing {
     const rings: THREE.Mesh[] = []; for (const ci of checks) { const ring = new THREE.Mesh(new THREE.TorusGeometry(5.5, 0.22, 8, 40), new THREE.MeshBasicMaterial({ color: 0xff7043, toneMapped: false, transparent: true, opacity: 0.85 })); const j = ci * 2; const a = Math.atan2(pts[j] - pts[j - 2 >= 0 ? j - 2 : 0], pts[j + 1] - pts[j - 1 >= 0 ? j - 1 : 1]); ring.position.set(pts[j], 4.2, pts[j + 1]); ring.rotation.y = a; ring.visible = false; c.view.scene.add(ring); rings.push(ring); }
     const arch = new THREE.Group(); const fin = (course.laps > 1 ? 0 : pts.length - 2); const archM = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }); for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 0.4), archM); p.position.set(s * 7, 3, 0); arch.add(p); } const top = new THREE.Mesh(new THREE.BoxGeometry(14.4, 1.0, 0.4), new THREE.MeshBasicMaterial({ map: (() => { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 40; const k = cv.getContext('2d')!; for (let i = 0; i < 26; i++) for (let j = 0; j < 2; j++) { k.fillStyle = (i + j) % 2 ? '#000' : '#fff'; k.fillRect(i * 20, j * 20, 20, 20); } const t = new THREE.CanvasTexture(cv); return t; })(), toneMapped: false })); top.position.y = 6; arch.add(top);
     arch.position.set(pts[fin], 0, pts[fin + 1]); arch.rotation.y = Math.atan2(pts[fin + 2 < pts.length ? fin + 2 : fin] - pts[fin - 2 >= 0 ? fin - 2 : fin], pts[fin + 3 < pts.length ? fin + 3 : fin + 1] - pts[fin - 1 >= 0 ? fin - 1 : fin + 1]) + Math.PI / 2; c.view.scene.add(arch);
-    this.race = { type: this.choice.type, pts, cum, len, laps: course.laps, checks, next: 0, lap: 0, rivals, wager: this.choice.wager, t0: 0, go: c.sim.time + (mp ? mp.startIn : 4), meet: m, finish: 0, playerS: 0, launch: 0, done: false, rings, arch, police: !mp && Math.random() < 0.18, mp: !!mp } as Race;
+    this.race = { type: this.choice.type, pts, cum, len, laps: course.laps, checks, next: 0, lap: 0, rivals, wager: this.choice.wager, t0: 0, go: c.sim.time + (mp ? mp.startIn : 4), meet: m, finish: 0, playerS: 0, launch: 0, done: false, rings, arch, police: !mp && Math.random() < 0.18, mp: !!mp, goReal: mp ? performance.now() + mp.startIn * 1000 : undefined } as Race;
     this.el.classList.add('on'); this.countdown(mp ? mp.startIn : 4);
   }
   /** 3, 2, 1, GO on the sim clock, so it lines up with the start time the server gave every racer */
@@ -213,7 +213,7 @@ class Racing {
   }
 
   // ---------------------------------------------------------------- the player and the race flow
-  filterCommand(cmd: Command) { const r = this.race; if (!r) return; const now = this.ctx.sim.time; if (now < r.go) { if (cmd.mz > 0.5 && now > r.go - 0.25) this.wantGo = true; else if (cmd.mz > 0.5) r.launch = -1; cmd.mz = 0; cmd.jump = true; } }
+  filterCommand(cmd: Command) { const r = this.race; if (!r) return; const now = this.ctx.sim.time; const waiting = r.goReal ? performance.now() < r.goReal : now < r.go; if (waiting) { if (cmd.mz > 0.5 && (r.goReal ? performance.now() > r.goReal - 250 : now > r.go - 0.25)) this.wantGo = true; else if (cmd.mz > 0.5) r.launch = -1; cmd.mz = 0; cmd.jump = true; } }
   frame(dt: number) {
     const c = this.ctx; this.placeT -= dt; if (this.placeT <= 0) { this.placeT = 6; this.placeMeets(); this.dressMeets(); }
     const r = this.race; if (!r) return; const me = c.sim.local; const now = c.sim.time;
@@ -237,7 +237,7 @@ class Racing {
   goal() { const r = this.race; if (!r) { const m = this.night() && this.ctx.sim.local.vehicle !== null ? null : null; return m; } const ci = r.checks[r.next] ?? r.checks[r.checks.length - 1]; return { x: r.pts[ci * 2], z: r.pts[ci * 2 + 1], label: 'Checkpoint' }; }
   private end(how: 'finish' | 'dnf') {
     const c = this.ctx; const r = this.race!; r.done = true; const now = c.sim.time;
-    if (r.mp) { const ms = Math.round((r.finish || now) - r.go) * 1000; if (how === 'finish') void net.act('race.finish', { ms, len: r.len * r.laps }); else void net.act('race.leave'); c.hud.title(how === 'finish' ? 'FINISHED' : 'DID NOT FINISH', how === 'finish' ? `${(ms / 1000).toFixed(2)}s · waiting for the others` : '', 3); setTimeout(() => { for (const g of r.rings) g.removeFromParent(); r.arch?.removeFromParent(); }, 4000); this.race = null; this.el.classList.remove('on'); return; }
+    if (r.mp) { const ms = Math.round(performance.now() - (r.goReal ?? performance.now())); if (how === 'finish') void net.act('race.finish', { ms, len: r.len * r.laps }); else void net.act('race.leave'); c.hud.title(how === 'finish' ? 'FINISHED' : 'DID NOT FINISH', how === 'finish' ? `${(ms / 1000).toFixed(2)}s · waiting for the others` : '', 3); setTimeout(() => { for (const g of r.rings) g.removeFromParent(); r.arch?.removeFromParent(); }, 4000); this.race = null; this.el.classList.remove('on'); return; }
     const ahead = r.rivals.filter((R) => R.done && R.done < (r.finish || now)).length; const place = how === 'dnf' ? r.rivals.length + 1 : ahead + 1;
     const pot = r.wager * (r.rivals.length + 1); const win = place === 1 ? Math.round(pot * 0.8) : place === 2 && r.rivals.length > 1 ? r.wager : 0;
     if (win) earn(c, win, 'race');
