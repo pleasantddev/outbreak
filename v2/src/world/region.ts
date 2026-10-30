@@ -17,7 +17,7 @@ export const RAIL = { standard: 1, narrow: 2, light: 3, disused: 5, platform: 6,
 export const RLF = { bridge: 1, service: 4, closed: 8, electric: 16 } as const;
 
 export interface Road { cls: number; lanes: number; flags: number; layer: number; name: string | null; id: number; pts: Float32Array /* x,z pairs, world metres */; width: number /* full width in metres if tagged, else 0 */; elev: Float32Array | null /* deck height per point for bridges */ }
-export interface Building { kind: number; levels: number; name: string | null; id: number; pts: Float32Array; cx: number; cz: number; area: number; height: number /* metres from OSM height tag, 0 when unknown */; roof: number; wallRGB: number | null; roofRGB: number | null }
+export interface Building { kind: number; levels: number; name: string | null; id: number; pts: Float32Array; cx: number; cz: number; area: number; height: number /* metres from OSM height tag, 0 when unknown */; roof: number; wallRGB: number | null; roofRGB: number | null; /** set by declutter.ts: the footprint was moved off the road corridor / is dropped */ fit?: boolean; dead?: boolean }
 export interface ParcelRec { id: string; zone: number; rich: number; name: string | null; bids: number[]; pts: Float32Array }
 export interface Block { pts: Float32Array }
 export interface Area { kind: number; sub: number; name: string | null; pts: Float32Array }

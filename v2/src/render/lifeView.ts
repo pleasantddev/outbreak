@@ -18,6 +18,7 @@ import type { Actor, Loot, SimEvent } from '../sim/types';
 import { WEAPONS, VEHICLES, type WeaponId } from '../data/balance';
 import { audio } from '../audio/audio';
 import { RoadNet } from '../world/roadnet';
+import { lampShared } from '../world/lamps';
 const RoadNetAt = RoadNet.at;
 function pointInPolyArr(x: number, z: number, p: ArrayLike<number>) { let c = false; for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) { const xi = p[i], zi = p[i + 1], xj = p[j], zj = p[j + 1]; if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c; } return c; }
 
@@ -26,10 +27,12 @@ uniform float uExposure; uniform float uWarm; uniform float uSat; uniform float 
 float hh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
   vec3 c = inputColor.rgb * uExposure;
-  c = 0.18 * pow(max(c, vec3(0.0)) / 0.18, vec3(1.12)); // filmic contrast around mid grey
-  c *= mix(vec3(1.0), vec3(1.06, 1.0, 0.92), uWarm);
+  c = 0.18 * pow(max(c, vec3(0.0)) / 0.18, vec3(1.10)); // filmic contrast around mid grey
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  c = mix(vec3(l), c, uSat);
+  // split toning: cool shaded air, warm sunlit surfaces (the Lagos warmth); strength follows the time of day
+  c *= mix(vec3(1.0), mix(vec3(0.94, 0.98, 1.05), vec3(1.07, 1.0, 0.90), smoothstep(0.02, 0.5, l)), 0.5 + uWarm * 0.5);
+  float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)); float cs = (mx - mn) / (mx + 1e-4);
+  c = mix(vec3(l), c, uSat * (1.0 + (1.0 - cs) * 0.2)); // vibrance: muted colours come up more than strong ones
   vec2 q = uv - 0.5; float edge = length(q * vec2(1.2, 1.0));
   c = mix(c, vec3(0.35, 0.0, 0.0) * (0.6 + 0.4 * l), smoothstep(0.8 - uHurt * 0.45, 1.1, edge) * uHurt);
   outputColor = vec4(c, inputColor.a);
@@ -79,7 +82,7 @@ export class LifeView {
     this.camera = new THREE.PerspectiveCamera(65, 1, 0.1, 2600);
     this.composer = new EffectComposer(this.renderer, { frameBufferType: THREE.HalfFloatType });
     this.renderPass = new RenderPass(this.scene, this.camera); this.composer.addPass(this.renderPass);
-    this.composer.autoRenderToScreen = false; this.renderPass.renderToScreen = false;
+    this.composer.autoRenderToScreen = false; this.renderPass.renderToScreen = false; // addPass flagged the first pass as the one that draws to the canvas; only the final effect pass may
     this.atmo = new Atmosphere(this.scene, this.renderer, this.level, opts);
     this.world = new WorldStreamer(this.renderer, store, tg, tw, quality);
     this.world.radius = L.radius;
@@ -97,7 +100,7 @@ export class LifeView {
     const C = this.composer;
     if (L.ao > 0 && !this.ao) {
       const ao = new N8AOPostPass(this.scene, this.camera, window.innerWidth, window.innerHeight);
-      Object.assign(ao.configuration, { aoRadius: 2.6, distanceFalloff: 1.2, intensity: 3.2, halfRes: true, color: new THREE.Color(0x06070b), autoDetectTransparency: false, transparencyAware: false });
+      Object.assign(ao.configuration, { aoRadius: 2.6, distanceFalloff: 1.2, intensity: 3.2, halfRes: true, color: new THREE.Color(0x0b0908), autoDetectTransparency: false, transparencyAware: false });
       (ao as any).autoDetectTransparency = false; ao.configuration.transparencyAware = false;
       C.addPass(ao, 1); this.ao = ao;
     }
@@ -290,13 +293,16 @@ export class LifeView {
     if (!hl) this.headlight.intensity = 0;
     for (const [id, c] of this.cars) if (!live.has(id)) { c.m?.root.removeFromParent(); audio.engine(id, null, 0, 'suv'); this.cars.delete(id); }
 
-    // street lights near the player at night
-    if (night > 0.2) {
-      const L = this.world.lamps; const spots: { x: number; z: number; r: number; d: number }[] = [];
-      for (let i = 0; i < L.length; i += 3) { const d = (L[i] - focus.x) ** 2 + (L[i + 1] - focus.z) ** 2; if (d < 120 * 120) spots.push({ x: L[i], z: L[i + 1], r: L[i + 2], d }); }
-      spots.sort((a, b) => a.d - b.d);
-      this.lightPool.forEach((l, i) => { const s = spots[i]; if (!s) { l.intensity = 0; return; } l.position.set(s.x + Math.sin(s.r) * 1.9, 8.6, s.z + Math.cos(s.r) * 1.9); l.intensity = 220 * night; });
-    } else this.lightPool.forEach((l) => (l.intensity = 0));
+    // street lights near the player at night: the nearest few throw real point light onto cars and people, the nearest dozen pool light onto roads and walls through the shaders
+    { const U = lampShared.uLamps.value;
+      if (night > 0.12) {
+        const L = this.world.lamps; const spots: { x: number; z: number; r: number; d: number }[] = [];
+        for (let i = 0; i < L.length; i += 3) { const d = (L[i] - focus.x) ** 2 + (L[i + 1] - focus.z) ** 2; if (d < 110 * 110) spots.push({ x: L[i], z: L[i + 1], r: L[i + 2], d }); }
+        spots.sort((a, b) => a.d - b.d);
+        for (let i = 0; i < U.length; i++) { const s = spots[i]; if (s) U[i].set(s.x + Math.sin(s.r) * 1.9, 0, s.z + Math.cos(s.r) * 1.9, 1.5 * night); else U[i].set(0, 0, 0, 0); }
+        this.lightPool.forEach((l, i) => { const s = spots[i]; if (!s || i >= 2) { l.intensity = 0; return; } l.position.set(s.x + Math.sin(s.r) * 1.9, 8.6, s.z + Math.cos(s.r) * 1.9); l.intensity = 160 * night; });
+      } else { for (const u of U) u.w = 0; this.lightPool.forEach((l) => (l.intensity = 0)); }
+    }
 
     // cash and guns on the ground
     const seenL = new Set<number>();

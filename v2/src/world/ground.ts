@@ -2,6 +2,7 @@
 // laterite, grass, compounds and potholes that fill with water when it rains. PBR through MeshStandardMaterial.
 import * as THREE from 'three';
 import type { TexSet } from './texsets';
+import { lampShared, LAMP_GLSL } from './lamps';
 
 export const groundShared = {
   uWet: { value: 0 },      // surface wetness 0..1 (rain)
@@ -162,17 +163,18 @@ Surf ground(vec3 wp, out float waterOut){
 
 export function makeGroundMaterial(tex: TexSet) {
   const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0 });
-  const uniforms = { uField: { value: null as THREE.Texture | null }, uDetail: { value: null as THREE.Texture | null }, uTile: { value: new THREE.Vector3() }, uGD: { value: tex.diff }, uGN: { value: tex.nor }, uGA: { value: tex.arm }, ...groundShared };
+  const uniforms = { uField: { value: null as THREE.Texture | null }, uDetail: { value: null as THREE.Texture | null }, uTile: { value: new THREE.Vector3() }, uGD: { value: tex.diff }, uGN: { value: tex.nor }, uGA: { value: tex.arm }, ...groundShared, ...lampShared };
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;').replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + common + '\nSurf GS; float GW;')
+      .replace('#include <common>', '#include <common>\n' + common + LAMP_GLSL + '\nSurf GS; float GW;')
       .replace('#include <map_fragment>', 'GS = ground(vWP, GW); diffuseColor.rgb = GS.col;')
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = clamp(GS.rough, 0.03, 1.0);')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = 0.0;')
       .replace('#include <normal_fragment_maps>', 'normal = normalize((viewMatrix * vec4(GS.nrm, 0.0)).xyz);')
-      .replace('#include <aomap_fragment>', '#include <aomap_fragment>\nreflectedLight.indirectDiffuse *= GS.ao; reflectedLight.indirectSpecular *= mix(GS.ao, 1.0, GW);');
+      .replace('#include <aomap_fragment>', '#include <aomap_fragment>\nreflectedLight.indirectDiffuse *= GS.ao; reflectedLight.indirectSpecular *= mix(GS.ao, 1.0, GW);')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += lampLight(vWP, GS.nrm) * diffuseColor.rgb * (1.0 - GW * 0.7);');
   };
   m.customProgramCacheKey = () => 'hl-ground';
   (m as any).hlUniforms = uniforms;

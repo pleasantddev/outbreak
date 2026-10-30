@@ -1,12 +1,13 @@
 // Streams the corridor around the camera in 250 m tiles: road field, ground, buildings, compounds, props, bridges.
 import * as THREE from 'three';
-import { RegionStore, type Region, type Road, type Building, type Pothole, type Area, type Rail, type Poi, type Water, RF, RAIL } from './region';
+import { RegionStore, type Region, type Road, type Building, type Pothole, type Area, type Rail, type Poi, type Water, RF, RAIL, BK } from './region';
 import { buildTileField, areaSurfaces, waterSurfaces, mechanicSurfaces, SURF, type TileField } from './roadField';
 import { buildFeatures, warmFeatures } from './features';
 import { makeGroundMaterial } from './ground';
 import { buildBuildingsG, makeBuildingMaterial } from './buildings';
 import { plotsForRegion, type Plot } from './plots';
 import { buildCompoundsG } from './compounds';
+import { RoadClear, fitBuilding, dropNested, shoreWallOk } from './declutter';
 import { buildProps, warmProps } from './props';
 import { buildBridges, deckCollision, deckProfile } from './bridges';
 import type { TileCol } from '../sim/life';
@@ -86,6 +87,11 @@ export class WorldStreamer {
     this.stage = 'gather';
     const { roads, blds, ph, areas, plots, rails, pois, waters } = this.gather(x0, z0, TILE, 40);
     const inTile = (x: number, z: number) => x >= x0 && x < x0 + TILE && z >= z0 && z < z0 + TILE;
+    // one road corridor model for the whole tile: buildings are pushed off pavements and roads, nested duplicates dropped
+    const rc = new RoadClear(roads);
+    for (const b of blds) { if (b.fit) continue; if (slice.due()) yield; fitBuilding(b, rc); }
+    dropNested(blds);
+    for (let i = blds.length - 1; i >= 0; i--) if (blds[i].dead) blds.splice(i, 1);
     this.stage = 'field'; yield;
     // ground surfaces: landuse plus compounds (paved for the rich, swept sand for the rest) and bush on vacant plots
     const surfaces = areaSurfaces(areas);
@@ -105,31 +111,10 @@ export class WorldStreamer {
     this.stage = 'compounds'; yield;
     // compounds for the plots whose centre is in this tile
     const near = (x: number, z: number) => blds.filter((b) => Math.abs(b.cx - x) < 60 && Math.abs(b.cz - z) < 60);
-    // nearest road segment lookup: segments are bucketed by their box grown 16 m (the only range the gate placement cares about)
-    const CELL = 24, GROW = 20; const grid = new Map<number, number[]>(); const segs: number[] = []; const segHw: number[] = [];
-    for (const r of roads) {
-      if (r.flags & RF.bridge) continue;
-      const hwR = halfWidth(r) + verge(r);
-      for (let k = 0; k < r.pts.length / 2 - 1; k++) {
-        const ax = r.pts[k * 2], az = r.pts[k * 2 + 1], bx = r.pts[k * 2 + 2], bz = r.pts[k * 2 + 3]; const si = segs.length; segs.push(ax, az, bx, bz); segHw.push(hwR);
-        const i0 = Math.floor((Math.min(ax, bx) - GROW) / CELL), i1 = Math.floor((Math.max(ax, bx) + GROW) / CELL), j0 = Math.floor((Math.min(az, bz) - GROW) / CELL), j1 = Math.floor((Math.max(az, bz) + GROW) / CELL);
-        for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const key = i * 65536 + j; let l = grid.get(key); if (!l) grid.set(key, l = []); l.push(si); }
-      }
-    }
-    const roadDist = (x: number, z: number) => {
-      const l = grid.get(Math.floor(x / CELL) * 65536 + Math.floor(z / CELL)); if (!l) return 99;
-      let best = 99;
-      for (let q = 0; q < l.length; q++) { const k = l[q]; const ax = segs[k], az = segs[k + 1], bx = segs[k + 2], bz = segs[k + 3]; const dx = bx - ax, dz = bz - az; const L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); const d = Math.hypot(ax + dx * t - x, az + dz * t - z); if (d < best) best = d; }
-      return best;
-    };
-    /** true for points on the carriageway or its verge (same rule as before, now through the bucket grid) */
-    const onRoad = (x: number, z: number) => {
-      const l = grid.get(Math.floor(x / CELL) * 65536 + Math.floor(z / CELL)); if (!l) return false;
-      for (let q = 0; q < l.length; q++) { const k = l[q]; const ax = segs[k], az = segs[k + 1], bx = segs[k + 2], bz = segs[k + 3]; const dx = bx - ax, dz = bz - az; const L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); if (Math.hypot(ax + dx * t - x, az + dz * t - z) < segHw[k >> 2]) return true; }
-      return false;
-    };
+    /** true for points on the carriageway or its verge */
+    const onRoad = (x: number, z: number) => rc.room(x, z, 'wall') < 0;
     const ownPlots = plots.filter((p) => inTile(p.cx, p.cz));
-    const cp = yield* buildCompoundsG(ownPlots, near, roadDist, x0, z0);
+    const cp = yield* buildCompoundsG(ownPlots, near, rc, x0, z0);
     if (cp.geo) { const cm = new THREE.Mesh(cp.geo, this.buildMat); cm.castShadow = true; cm.receiveShadow = true; group.add(cm); }
     this.stage = 'props'; yield;
     // trees: a few per plot, more on vacant land, never inside a building
@@ -141,7 +126,8 @@ export class WorldStreamer {
         for (let tries = 0; tries < 6; tries++) {
           const i = Math.floor(hash(seed + tries, t + 3) * (pl.pts.length / 2)); const fx = hash(seed + tries, t + 9);
           const x = pl.cx + (pl.pts[i * 2] - pl.cx) * fx * 0.85, z = pl.cz + (pl.pts[i * 2 + 1] - pl.cz) * fx * 0.85;
-          if (pl.buildings.some((b) => pointInPoly(x, z, b.pts))) continue;
+          if (pl.buildings.some((b) => !b.dead && pointInPoly(x, z, b.pts))) continue;
+          if (rc.room(x, z, 'tree') < 0) continue;
           trees.push({ x, z, palm: hash(seed, t + 40) < 0.3, s: hash(seed, t + 50) }); break;
         }
       }
@@ -171,7 +157,7 @@ export class WorldStreamer {
     this.group.add(group);
     // collision for the sim: building prisms, compound walls, poles and trunks, bridge decks
     const convex = (p: Float32Array) => { const n = p.length / 2; let sgn = 0; for (let i = 0; i < n; i++) { const a = i, b = (i + 1) % n, c = (i + 2) % n; const cr = (p[b * 2] - p[a * 2]) * (p[c * 2 + 1] - p[b * 2 + 1]) - (p[b * 2 + 1] - p[a * 2 + 1]) * (p[c * 2] - p[b * 2]); if (Math.abs(cr) < 1e-6) continue; const s2 = Math.sign(cr); if (sgn && s2 !== sgn) return false; sgn = s2; } return true; };
-    const col: TileCol = { hulls: own.filter((b) => b.kind !== 14).map((b) => ({ pts: Array.from(b.pts), h: buildingHeight(b) + 0.9, convex: convex(b.pts) })), walls: cp.segs, poles: [], decks: [] };
+    const col: TileCol = { hulls: own.filter((b) => b.kind !== 14 && b.kind !== BK.canopy).map((b) => ({ pts: Array.from(b.pts), h: buildingHeight(b) + 0.9, convex: convex(b.pts) })), walls: cp.segs, poles: [], decks: [] };
     for (let i = 0; i < props.lamps.length; i += 3) col.poles.push(props.lamps[i], props.lamps[i + 1], 0.12);
     for (const t of trees) if (inTile(t.x, t.z)) col.poles.push(t.x, t.z, t.palm ? 0.2 : 0.25);
     const railDecks: { pts: Float32Array; ys: Float32Array; hw: number }[] = [];
@@ -196,7 +182,7 @@ export class WorldStreamer {
           const j = (k + 1) % n; const ax = ring[k * 2], az = ring[k * 2 + 1], bx = ring[j * 2], bz = ring[j * 2 + 1];
           const mx = (ax + bx) / 2, mz = (az + bz) / 2; if (!inTile(mx, mz)) continue;
           const onClip = (Math.abs(ax - w.bx0) < 0.3 && Math.abs(bx - w.bx0) < 0.3) || (Math.abs(ax - w.bx1) < 0.3 && Math.abs(bx - w.bx1) < 0.3) || (Math.abs(az - w.bz0) < 0.3 && Math.abs(bz - w.bz0) < 0.3) || (Math.abs(az - w.bz1) < 0.3 && Math.abs(bz - w.bz1) < 0.3);
-          if (onClip) { skip++; continue; }
+          if (onClip || !shoreWallOk(mx, mz, rc)) { skip++; continue; }
           col.walls.push({ ax, az, bx, bz, h: 1.2 });
         }
       }

@@ -285,8 +285,17 @@ function parcelInfo(p: Plot): ParcelInfo {
   return { id: p.id, title: `${zone} · ${Math.round(p.area)} m²`, area: areaName(p.cx, p.cz) || 'Lagos', owner: owned ? 'You' : sold?.name ?? OWNERS[hs % OWNERS.length], size: p.area, zone, price, owned, taken: !!sold, traits,
     stats: [['Size', `${Math.round(p.area)} m²`], ['Buildings', String(p.buildings.length)], ['From Oshodi', `${(Math.hypot(p.cx, p.cz) / 1000).toFixed(1)} km`], ['Rent / yr', `₦${Math.round(price * 0.055 / 1000).toLocaleString()}k`]] };
 }
+/** The land card only shows while you stand on open land that is for sale (or yours), never on a street or inside a building footprint. */
 function parcelAt(x: number, z: number): ParcelInfo | null {
-  for (const list of view.world.plots.values()) for (const p of list) { if (Math.abs(p.cx - x) > 50 || Math.abs(p.cz - z) > 50) continue; if (inPoly(x, z, p.pts)) return parcelInfo(p); }
+  for (const list of view.world.plots.values()) for (const p of list) {
+    if (Math.abs(p.cx - x) > 50 || Math.abs(p.cz - z) > 50) continue;
+    if (!inPoly(x, z, p.pts)) continue;
+    const mine = state.owned.includes(p.id);
+    if (!mine && p.zone !== 'vacant' && p.zone !== 'unfinished') return null;
+    if (p.buildings.some((b) => inPoly(x, z, b.pts))) return null;
+    if (sim.net.near(x, z, 6).some((id) => { const l = sim.net.lanes[id]; return RoadNet.project(l.pts, x, z).d < 4; })) return null;
+    return parcelInfo(p);
+  }
   return null;
 }
 function inPoly(x: number, z: number, p: ArrayLike<number>) { let c = false; for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) { const xi = p[i], zi = p[i + 1], xj = p[j], zj = p[j + 1]; if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c; } return c; }
@@ -477,7 +486,7 @@ function loop(t: number) {
 const plateV = new THREE.Vector3();
 function plateUpdate() {
   const me = sim.local; const v = view.actors.get(me.id);
-  if (!v || me.vehicle !== null || view.firstPerson || !me.alive) { hud.plate(null); return; }
+  if (!v || me.vehicle !== null || view.firstPerson || !me.alive || !view.phoneUp) { hud.plate(null); return; } // your own tag only shows while the phone is open
   plateV.set(v.view.root.position.x, v.view.root.position.y + 2.12, v.view.root.position.z).project(view.camera);
   if (plateV.z > 1 || Math.abs(plateV.x) > 1.1 || Math.abs(plateV.y) > 1.1) { hud.plate(null); return; }
   hud.plate({ x: (plateV.x * 0.5 + 0.5) * innerWidth, y: (-plateV.y * 0.5 + 0.5) * innerHeight });
