@@ -116,4 +116,4 @@ class Agbero {
   get onShift() { return !!this.shift; }
 }
 let A: Agbero | null = null;
-export const agberoSystem: GameSystem & { get api(): Agbero | null } = { id: 'agbero', get api() { return A; }, init(ctx) { A = new Agbero(ctx); A.init(); }, start() { A?.start(); }, frame(_c, dt) { A?.frame(dt); }, blips(_c, out) { if (A) for (const p of A.parks.values()) out.push({ x: p.x, z: p.z, c: '#16a34a', r: 6 }); } };
+export const agberoSystem: GameSystem & { get api(): Agbero | null } = { id: 'agbero', get api() { return A; }, init(ctx) { A = new Agbero(ctx); A.init(); }, start() { A?.start(); }, frame(_c, dt) { A?.frame(dt); }, blips(c, out) { if (!A) return; const me = c.sim.local; for (const p of A.parks.values()) if (Math.abs(p.x - me.pos.x) < 700 && Math.abs(p.z - me.pos.z) < 700) out.push({ x: p.x, z: p.z, c: '#16a34a', r: 6 }); } };
