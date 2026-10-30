@@ -30,3 +30,5 @@
   control room job, admin board), wear (cars + house + gen + artisans), agbero, decor + designers, admin World page,
   businesses, social layer (meet, send money, invites, visits), mobile touch layout. Server tests 74/74.
   Teammate (hl-look): windows and street lamps follow the grid (powerShared.uGrid) with per-building gens.
+- 30 Oct evening: published Version 8 to the artifact (index + three chunk changed, tuning.json added; old JS nulled).
+  Merged hl-look ce3ef10 (windows, shop fronts, awnings and street lamps follow the grid; gens; solar lamps; uHome).
