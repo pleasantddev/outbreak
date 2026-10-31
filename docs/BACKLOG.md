@@ -5,6 +5,41 @@ unchecked item in their lane, builds it, tests it, ticks it here with the commit
 checkout), SPORTS (worktree hl-sports), IDEAS (worktree hl-look, the Sonnet teammate), SHIFT (scheduled cloud run: any
 unowned item, or finishing touches on a lead item).
 
+## Founder brief 4 (31 Oct 2026, 05:35 and 05:38)
+Verbatim keys: "Hospitals, clinics and sickness, transmittable one ... players can be sick and pass it on", "a hidden
+luck meter that a lot of the Shii in the game will run by ... fluctuates based on karma ... determines casino wins ...
+whether a player actually carries an illness and simply pass to another player without them falling sick or knowing
+(only for transmitable diseases) ... if it's non transmitting then ... let them suffer it", "negative traits ... walk
+slightly slower ... slight camera blur around the edges maybe myopia", "when a player is killed ... they appear in the
+hospital and pay a bill, if they can't pay, they are sent out ... stripped of everything including clothes and have a
+negative on their balance to be paid", "Avoid hyper inflation", "players can rent apartments, no one gets a home
+immediately ... Except nepos or ... IJGB", "phones ... different types from small phone to tabs, cracks can appear ...
+repair or get new ones at a shop or computer village in Ikeja ... if a player has hacking skills they can hack and
+maintain access later to your device and do everything your device can do from their clone phone, let players be able
+to switch between phones".
+Rules: stripped means down to underwear (the 16+ floor); hacking is a game mechanic, never real technique.
+
+### LIFE (LEAD builds these; the shift may take one if LEAD has not started it)
+- [ ] Luck and karma: hidden server-side luck per player, moved by karma (good and bad deeds), read by casino odds,
+      carrier chance, accidents, finds; admin can see and tune it.
+- [ ] Sickness: a set of illnesses (malaria, typhoid, cholera, flu, a cough that spreads, ulcer, hypertension...),
+      symptoms that change play, transmissible ones spread between nearby players (server), silent carriers decided by
+      luck, non-transmissible ones just hurt; pharmacies, clinics and hospitals treat them for a fee.
+- [ ] Hospital respawn: death sends you to the nearest hospital with a bill; can't pay means discharged in underwear
+      with everything you carried gone and a debt that comes out of what you earn next.
+- [ ] Negative traits rolled at character creation (slower walk, myopia edge blur, weak stomach, light sleeper...),
+      some can be treated (glasses at an optician).
+### SPORTS lane adds
+- [ ] Renting: new players start with no home; rent rooms and flats (face-me-I-face-you to a Lekki flat) from NPC
+      landlords and from player owners through Property Manager; rent due, caution fee, eviction. IJGB (rich returnee)
+      starting background gets a flat from day one.
+### LEAD adds
+- [ ] Phones as items: models from a small phone to a tablet (screen size, apps, battery), switch between them, cracks
+      over time and from falls, repair or buy at Computer Village Ikeja and phone shops, a shady repairer with the
+      hacking skill can clone your phone and keep reading it until you change phones or get it cleaned.
+- [ ] Economy guard against inflation: money sinks (rent, bills, repairs, wear, fees, hospital), earnings scaled to
+      the money supply, admin money supply chart.
+
 ## Founder brief 3 (31 Oct 2026, 04:54)
 Verbatim keys: "roads street lights can be spoilt too", "add the police force, with a walk-in talkie, zone them apart,
 add lastma too.. for traffic control… make all these viable career paths", "for the phone, add a back button to all
@@ -31,17 +66,17 @@ founder clears the real name, music only where we have the right to play it (Aud
 players upload and attest they own).
 
 ### LEAD
-- [ ] Phone v2: real-looking apps (proper icon set, app bars, list cells), a back button in every app, consistent
+- [x] Phone v2 (b82fe6d): real-looking apps (proper icon set, app bars, list cells), a back button in every app, consistent
       navigation (swipe/back/Backspace), touch friendly.
-- [ ] Contacts + Messages + Calls: public player ID and in-game phone number per account; add contacts; texting
+- [x] Contacts + Messages + Calls (b82fe6d): public player ID and in-game phone number per account; add contacts; texting
       (server-stored, offline delivery); voice calls player to player.
-- [ ] Proximity voice chat (WebRTC, server signalling): hear players near you, volume by distance, same-space only,
+- [x] Proximity voice chat (b82fe6d) (WebRTC, server signalling): hear players near you, volume by distance, same-space only,
       push-to-talk and open mic, mute per player. Police walkie-talkie: radio channel per zone while on duty.
-- [ ] Payments: Paystack (server initialize + verify + webhook, env PAYSTACK_SECRET_KEY / PAYSTACK_PUBLIC_KEY), test
+- [x] Payments: Paystack (53d2323) (server initialize + verify + webhook, env PAYSTACK_SECRET_KEY / PAYSTACK_PUBLIC_KEY), test
       mode without keys; every real-money purchase goes through it; admin ledger.
-- [ ] MyAds: billboard inventory (Oshodi bridges, expressways, rooftops), price from ₦4,500/day by location, size and
+- [x] MyAds (ba96eb3): billboard inventory (Oshodi bridges, expressways, rooftops), price from ₦4,500/day by location, size and
       days; image upload with size spec per board; moderation queue in admin; real-player impression tracking per day.
-- [ ] MyAds extras: drone shows (your text in the night sky for a set time), ad blimps that cross the map. Pricey.
+- [x] MyAds extras (ba96eb3): drone shows (your text in the night sky for a set time), ad blimps that cross the map. Pricey.
 - [ ] Clubs: DJ booth (players DJ from a big Nigerian set list streamed from Audius plus CC tracks), song upload to
       your phone library and paid promotion into club rotation, pole dancer job (athletic, clothed, paid), club
       shutdown (book the club, spray money, the whole room knows), parody big clubs.

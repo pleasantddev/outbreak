@@ -27,6 +27,12 @@ export interface Config {
   antiCheat: 'enforce' | 'log' | 'off';
   /** multiplies every rate limit (tests and load tests raise it; leave at 1 in production) */
   rateScale: number;
+  /** Paystack keys (env PAYSTACK_SECRET_KEY / PAYSTACK_PUBLIC_KEY). No secret key: payments run in test mode or are off. */
+  paystackSecret: string; paystackPublic: string;
+  /** test mode fakes the card step (dev and staging only). Default: on when there is no secret key and NODE_ENV is not production */
+  payTest: boolean;
+  /** where Paystack sends the player back after paying (the game URL); it adds ?reference=... */
+  payCallbackUrl: string;
 }
 
 function secret(dataDir: string): string {
@@ -54,6 +60,8 @@ export function loadConfig(over: Partial<Config> = {}): Config {
     guestAccounts: bool('GUEST_ACCOUNTS', true), trustClientPlotPrice: bool('TRUST_CLIENT_PLOT_PRICE', true),
     mapBounds: [-22000, -20500, 12000, 12500], motd: env.MOTD ?? 'Welcome to Lagos. Shine your eye.', trustProxy: bool('TRUST_PROXY', false),
     antiCheat: (env.ANTI_CHEAT as Config['antiCheat']) ?? 'enforce', rateScale: num('RATE_SCALE', 1),
+    paystackSecret: env.PAYSTACK_SECRET_KEY ?? '', paystackPublic: env.PAYSTACK_PUBLIC_KEY ?? '',
+    payTest: bool('PAY_TEST', !env.PAYSTACK_SECRET_KEY && env.NODE_ENV !== 'production'), payCallbackUrl: env.PAY_CALLBACK_URL ?? '',
     ...over,
   };
   c.jwtSecret = over.jwtSecret ?? secret(dataDir);

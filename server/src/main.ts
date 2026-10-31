@@ -12,6 +12,8 @@ import { RateLimiter } from './auth.ts';
 import { Router, type Api } from './api.ts';
 import { createHttp, loadRoutes } from './http.ts';
 import { Hub } from './realtime/hub.ts';
+import { Payments } from './payments.ts';
+import { Ads } from './ads.ts';
 
 export interface Running { api: Api; http: Server; hub: Hub; cfg: Config; db: DB; port: number; routes: string[]; close(): Promise<void> }
 
@@ -24,10 +26,14 @@ export async function startServer(over: Partial<Config> = {}): Promise<Running> 
   const hub = new Hub(cfg, db, accounts, economy, content, log);
   const router = new Router();
   const events = new EventEmitter();
+  const payments = new Payments(db, cfg, economy, content, log);
+  payments.on('purchase', (p: { accountId: string; label: string }) => { events.emit('purchase', p); hub.toast(p.accountId, 'Payment received', `${p.label} is yours. Thank you!`); });
+  payments.on('flag', (f: unknown) => economy.emit('flag', f));
+  const ads = new Ads(db, payments, cfg.dataDir); hub.ads = ads;
   for (const [from, to] of [[accounts, ['signup', 'login', 'ban', 'unban', 'profile', 'mute']], [economy, ['wallet', 'plot', 'flag']]] as const) for (const ev of to) from.on(ev, (...a: unknown[]) => events.emit(ev, ...a));
   const add = (m: string) => (path: string, h: Parameters<Router['add']>[2], o?: Parameters<Router['add']>[3]) => router.add(m, path, h, o);
   const api: Api = {
-    cfg, db, log, accounts, economy, content, online: hub, events,
+    cfg, db, log, accounts, economy, content, online: hub, events, payments, ads,
     limiters: { loginById: new RateLimiter(8 * cfg.rateScale, 10 * 60_000), guestCreate: new RateLimiter(8 * cfg.rateScale, 60 * 60_000) },
     route: (m, p, h, o) => router.add(m, p, h, o), get: add('GET'), post: add('POST'), put: add('PUT'), patch: add('PATCH'), del: add('DELETE'),
   };

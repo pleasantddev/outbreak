@@ -159,6 +159,36 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX biz_owner ON businesses(owner_id);
   `,
+  // v4: phone numbers, public ids, contacts and text messages between players
+  `
+  CREATE TABLE phones (account_id TEXT PRIMARY KEY REFERENCES accounts(id), number TEXT NOT NULL UNIQUE, public_id TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL);
+  CREATE TABLE contacts (owner_id TEXT NOT NULL REFERENCES accounts(id), contact_id TEXT NOT NULL REFERENCES accounts(id), name TEXT NOT NULL, added_at INTEGER NOT NULL, PRIMARY KEY (owner_id, contact_id));
+  CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, from_id TEXT NOT NULL, to_id TEXT NOT NULL, body TEXT NOT NULL, at INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0);
+  CREATE INDEX msg_to ON messages(to_id, at); CREATE INDEX msg_from ON messages(from_id, at);
+  `,
+  // v5: real-money checkouts (src/payments.ts). The admin store page reads item_id, amount (naira), ref, promo and
+  // refunded_at from this same table, so the payments code fills both column sets.
+  `
+  ALTER TABLE purchases ADD COLUMN item_id TEXT;
+  ALTER TABLE purchases ADD COLUMN amount REAL NOT NULL DEFAULT 0;
+  ALTER TABLE purchases ADD COLUMN ref TEXT;
+  ALTER TABLE purchases ADD COLUMN promo TEXT;
+  ALTER TABLE purchases ADD COLUMN label TEXT;
+  ALTER TABLE purchases ADD COLUMN meta TEXT NOT NULL DEFAULT '{}';
+  ALTER TABLE purchases ADD COLUMN paid_at INTEGER;
+  ALTER TABLE purchases ADD COLUMN refunded_at INTEGER;
+  ALTER TABLE purchases ADD COLUMN refund_reason TEXT;
+  CREATE UNIQUE INDEX purchases_ourref ON purchases(ref) WHERE ref IS NOT NULL;
+  `,
+  // v6: MyAds. Player uploads, ads (billboards, drone shows, blimps; paid through purchases) and who saw them
+  `
+  CREATE TABLE uploads (id TEXT PRIMARY KEY, account_id TEXT NOT NULL, kind TEXT NOT NULL, mime TEXT NOT NULL, bytes INTEGER NOT NULL, name TEXT, created_at INTEGER NOT NULL);
+  CREATE TABLE ads (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id TEXT NOT NULL, kind TEXT NOT NULL, board_id TEXT, upload_id TEXT, text TEXT, color TEXT, place TEXT,
+    start_at INTEGER NOT NULL, end_at INTEGER NOT NULL, price_kobo INTEGER NOT NULL, status TEXT NOT NULL, payment_ref TEXT, note TEXT, created_at INTEGER NOT NULL);
+  CREATE INDEX ads_live ON ads(status, end_at); CREATE INDEX ads_board ON ads(board_id, start_at);
+  CREATE TABLE ad_views (ad_id INTEGER NOT NULL, account_id TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY (ad_id, account_id, day));
+  CREATE TABLE ad_daily (ad_id INTEGER NOT NULL, day TEXT NOT NULL, sightings INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (ad_id, day));
+  `,
 ];
 
 export function openDb(file: string): DB {

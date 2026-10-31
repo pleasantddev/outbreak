@@ -259,7 +259,7 @@ export type ClientMsg =
 export interface WhoInfo { id: number; name: string; model: string; skin: number; outfit: string; level: number; role?: string }
 
 export type ServerMsg =
-  | { t: 'welcome'; id: number; v: number; tickHz: number; serverTime: number; epoch: number; cell: number; wallet: { cash: number; bank: number }; plots: string[]; online: number; profile: unknown; role: string; state: Record<string, unknown>; motd?: string; grid?: import('./rules').GridState }
+  | { t: 'welcome'; id: number; v: number; tickHz: number; serverTime: number; epoch: number; cell: number; wallet: { cash: number; bank: number }; plots: string[]; online: number; profile: unknown; role: string; state: Record<string, unknown>; motd?: string; grid?: import('./rules').GridState; phone?: { number: string; publicId: string; unread: number }; ice?: { urls: string; username?: string; credential?: string }[]; ads?: LiveAd[] }
   | { t: 'pong'; c: number; s: number }
   | { t: 'who'; list: WhoInfo[] }
   | { t: 'chat'; ch: 'near' | 'global' | 'whisper' | 'system'; from: string; fromId: number; text: string; ts: number }
@@ -279,10 +279,20 @@ export type ServerMsg =
   /** somebody bought a shop: the signboard on that site changes for everyone */
   | { t: 'biz'; site: string; type: string; ownerName: string }
   /** the power grid changed: one character per feeder, generation, load, collapse (rules.ts GridState) */
-  | ({ t: 'grid' } & import('./rules').GridState);
+  | ({ t: 'grid' } & import('./rules').GridState)
+  /** a text message reached you */
+  | { t: 'msg'; id: number; from: string; fromName: string; body: string; at: number }
+  /** a phone call: someone is ringing you, or your call was answered, declined or ended */
+  | { t: 'call'; kind: 'ring' | 'accepted' | 'declined' | 'ended'; callId: string; from: string; fromAccount: string; peer: number }
+  /** WebRTC signalling from another player (voice) */
+  | { t: 'rtc'; from: number; data: unknown; radio: boolean; call: boolean }
+  | { t: 'ads'; list: LiveAd[] };
 
 /** Actions a client may send in `act`. The server owns the rules for each. */
 export const ACTS = ['plot.buy', 'bank.deposit', 'bank.withdraw', 'cash.transfer', 'cash.delta', 'job.start', 'job.done', 'shop.buy', 'state.put', 'tp', 'respawn'] as const;
 
 export function cellOf(x: number, z: number): [number, number] { return [Math.floor(x / CELL), Math.floor(z / CELL)]; }
 export const cellKey = (cx: number, cz: number) => ((cx + 4096) << 13) | (cz + 4096); // cells span +-1000 km, 13 bits each
+
+/** an approved ad that is up right now (server/src/ads.ts live()) */
+export interface LiveAd { id: number; kind: 'board' | 'drone' | 'blimp'; board: string | null; img: string | null; text: string | null; color: string | null; place: string | null; until: number }

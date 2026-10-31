@@ -211,3 +211,102 @@ export function gridState(feeders: FeederDef[], h: number, o: { forced?: Map<num
   for (const w of want) if (w.v) on[w.f.i] = '1';
   return { on: on.join(''), gen, load, collapse: false, by };
 }
+
+// ------------------------------------------------------------------------------------------ real money (Paystack)
+// Everything bought with real naira goes through one checkout: the server prices it, Paystack takes the money, the
+// server verifies (webhook or verify call) and only then hands over what was bought. Amounts on the wire are kobo.
+export const PAY_CURRENCY = 'NGN';
+/** ₦100 floor, ₦5m ceiling per checkout */
+export const PAY_MIN_KOBO = 10_000, PAY_MAX_KOBO = 500_000_000;
+export const koboOf = (naira: number) => Math.round(naira * 100);
+export const nairaOf = (kobo: number) => Math.round(kobo) / 100;
+/** our own references: hl_ plus 20 lowercase letters/digits */
+export const payRefOk = (r: unknown): r is string => typeof r === 'string' && /^hl_[a-z0-9]{20}$/.test(r);
+/** a product id is "<kind>:<id>", e.g. "iap:pack.cash.small" or later "ad:board-oshodi-1" */
+export function parseSku(sku: unknown): { kind: string; id: string } | null {
+  if (typeof sku !== 'string' || sku.length > 100) return null; const m = /^([a-z]{2,12}):([A-Za-z0-9._-]{1,80})$/.exec(sku); return m ? { kind: m[1], id: m[2] } : null;
+}
+export interface IapItem { id: string; type?: string; name?: string; desc?: string; priceNGN?: number; grants?: Record<string, unknown>; enabled?: boolean; sort?: number; tag?: string; code?: string; percentOff?: number; amountOffNGN?: number; itemIds?: string[]; appliesTo?: string[]; maxUses?: number; perAccount?: number; limitPerAccount?: number; from?: string; to?: string; availableFrom?: string; availableTo?: string }
+const dayMs = (d: unknown, end: boolean) => { if (typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(d)) return NaN; const t = Date.parse(d.length === 10 ? d + 'T00:00:00+01:00' : d); return end && d.length === 10 ? t + 86400_000 : t; };
+/** enabled and inside its from/to window (dates are Lagos days; "to" includes that whole day) */
+export function iapLive(it: IapItem, now: number) {
+  if (it.enabled === false) return false;
+  const f = dayMs(it.from ?? it.availableFrom, false), t = dayMs(it.to ?? it.availableTo, true);
+  return !(f > now) && !(t <= now);
+}
+/** the game can hand these over today: cash and bank only (items, cosmetics, boosts and passes come with their systems) */
+const deliverable = (g: Record<string, unknown> | undefined) => !!g && Object.keys(g).length > 0 && Object.keys(g).every((k) => k === 'cash' || k === 'bank') && (Number(g.cash) > 0 || Number(g.bank) > 0);
+/** what the store sells right now, with any running sale applied */
+export function iapCatalog(items: IapItem[], now: number) {
+  const sales = items.filter((s) => s.type === 'sale' && iapLive(s, now));
+  return items.filter((it) => it.type !== 'promo' && it.type !== 'sale' && iapLive(it, now) && Number.isInteger(it.priceNGN) && (it.priceNGN ?? 0) > 0 && deliverable(it.grants))
+    .map((it) => {
+      const off = Math.max(0, ...sales.filter((s) => (s.itemIds ?? []).includes(it.id)).map((s) => Math.min(90, s.percentOff ?? 0)));
+      const price = Math.max(100, Math.round((it.priceNGN! * (100 - off)) / 100));
+      return { id: it.id, name: it.name ?? it.id, desc: it.desc ?? '', tag: it.tag ?? '', priceNGN: price, wasNGN: off ? it.priceNGN! : 0, grants: { cash: Math.max(0, Math.floor(Number(it.grants?.cash) || 0)), bank: Math.max(0, Math.floor(Number(it.grants?.bank) || 0)) }, limit: it.limitPerAccount ?? 0, sort: it.sort ?? 99 };
+    }).sort((a, b) => a.sort - b.sort);
+}
+/** find a live promo code for an item (the server also checks maxUses and perAccount against the ledger) */
+export function findPromo(items: IapItem[], code: unknown, itemId: string, now: number): IapItem | null {
+  if (typeof code !== 'string' || !code.trim()) return null; const c = code.trim().toUpperCase();
+  return items.find((x) => x.type === 'promo' && x.code === c && iapLive(x, now) && (!x.appliesTo || x.appliesTo.includes('*') || x.appliesTo.includes(itemId))) ?? null;
+}
+/** a promo takes a percentage or a fixed naira amount off, never below the ₦100 floor */
+export function promoPrice(p: IapItem, priceNGN: number) {
+  let n = priceNGN; if (p.percentOff) n = Math.round((n * (100 - Math.min(100, p.percentOff))) / 100); if (p.amountOffNGN) n -= p.amountOffNGN;
+  return Math.max(100, Math.round(n));
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// MyAds: real-money advertising. Prices are in naira and are the same on the client (quotes) and the server (orders).
+export interface AdBoard { id: string; x: number; y: number; z: number; yaw: number; w: number; h: number; place: string; tier: string; slots?: number }
+/** the cheapest board, one day: the founder's base price */
+export const AD_BASE = 4500;
+export const AD_TIER: Record<string, number> = { street: 1, standard: 1.8, prime: 3.2 };
+/** image size we ask for: 64 px per metre of board, long side capped at 2048 */
+export function adPixels(b: { w: number; h: number }) { const k = Math.min(64, 2048 / Math.max(b.w, b.h)); return { w: Math.round(b.w * k), h: Math.round(b.h * k) }; }
+export const AD_DAYS = [1, 3, 7, 14, 30] as const;
+export function adDiscount(days: number) { return days >= 30 ? 0.25 : days >= 14 ? 0.15 : days >= 7 ? 0.1 : 0; }
+const round100 = (n: number) => Math.max(100, Math.round(n / 100) * 100);
+/** naira per day for one slot on a board: base x tier x size, and a shared LED slot costs half */
+export function boardDayRate(b: AdBoard) {
+  const size = Math.min(2.5, Math.max(0.8, Math.sqrt((b.w * b.h) / 40)));
+  return round100(AD_BASE * (AD_TIER[b.tier] ?? 1) * size * ((b.slots ?? 1) > 1 ? 0.5 : 1));
+}
+/** the night sky: drone shows are booked per day at a show spot; blimps per day per airship */
+export const DRONE_SPOTS: { id: string; name: string; x: number; z: number; k: number }[] = [
+  { id: 'oshodi', name: 'Oshodi Interchange', x: 900, z: -280, k: 1 },
+  { id: 'ikeja', name: 'Ikeja, by the mall', x: 1640, z: -6800, k: 1.1 },
+  { id: 'surulere', name: 'Surulere', x: 1560, z: 5770, k: 1 },
+  { id: 'yaba', name: 'Yaba', x: 3060, z: 4660, k: 1.1 },
+  { id: 'lagoon', name: 'Over the lagoon, Third Mainland Bridge', x: 5770, z: 7380, k: 1.5 },
+  { id: 'ikoyi', name: 'Ikoyi, by Falomo', x: 9200, z: 11300, k: 1.4 },
+];
+export const DRONE_DAY = 350_000;
+export const BLIMP_DAY = 180_000;
+export const BLIMPS = 3;
+export const DRONE_TEXT_MAX = 28;
+export type AdKind = 'board' | 'drone' | 'blimp';
+export function adQuote(kind: AdKind, days: number, opt: { board?: AdBoard; spot?: string } = {}) {
+  const d = Math.max(1, Math.min(60, Math.round(days)));
+  const day = kind === 'board' ? (opt.board ? boardDayRate(opt.board) : 0) : kind === 'drone' ? round100(DRONE_DAY * (DRONE_SPOTS.find((s) => s.id === opt.spot)?.k ?? 1)) : BLIMP_DAY;
+  const gross = day * d; const off = adDiscount(d);
+  return { day, days: d, gross, discount: off, total: round100(gross * (1 - off)) };
+}
+/** Lagos calendar day (WAT, UTC+1) for impressions and bookings */
+export function lagosDay(ms: number) { return new Date(ms + 3600_000).toISOString().slice(0, 10); }
+/** start of a Lagos day as epoch ms */
+export function lagosDayStart(day: string) { return Date.parse(day + 'T00:00:00Z') - 3600_000; }
+/** the three airships each loop one part of the city: Oshodi to Ikeja, the mainland to Yaba and Surulere, and the lagoon to Ikoyi */
+export const BLIMP_LOOPS = [
+  { cx: 1200, cz: -3400, rx: 1500, rz: 3600, lap: 30, y: 150, name: 'Oshodi to Ikeja' },
+  { cx: 2300, cz: 3000, rx: 1700, rz: 3300, lap: 32, y: 165, name: 'Mainland, Yaba and Surulere' },
+  { cx: 6800, cz: 9200, rx: 3000, rz: 2600, lap: 36, y: 180, name: 'The lagoon to Ikoyi' },
+];
+/** where blimp i is right now; the same for every player because it runs off the shared clock */
+export function blimpPos(i: number, ms: number) {
+  const L = BLIMP_LOOPS[i % BLIMP_LOOPS.length]; const t = (ms / (L.lap * 60_000) + i * 0.37) % 1; const a = t * Math.PI * 2;
+  const x = L.cx + Math.cos(a) * L.rx, z = L.cz + Math.sin(a) * L.rz;
+  const yaw = Math.atan2(-Math.sin(a) * L.rx, Math.cos(a) * L.rz); // heading along the loop
+  return { x, y: L.y + Math.sin(a * 3) * 6, z, yaw };
+}
