@@ -166,6 +166,20 @@ const MIGRATIONS: string[] = [
   CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, from_id TEXT NOT NULL, to_id TEXT NOT NULL, body TEXT NOT NULL, at INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0);
   CREATE INDEX msg_to ON messages(to_id, at); CREATE INDEX msg_from ON messages(from_id, at);
   `,
+  // v5: real-money checkouts (src/payments.ts). The admin store page reads item_id, amount (naira), ref, promo and
+  // refunded_at from this same table, so the payments code fills both column sets.
+  `
+  ALTER TABLE purchases ADD COLUMN item_id TEXT;
+  ALTER TABLE purchases ADD COLUMN amount REAL NOT NULL DEFAULT 0;
+  ALTER TABLE purchases ADD COLUMN ref TEXT;
+  ALTER TABLE purchases ADD COLUMN promo TEXT;
+  ALTER TABLE purchases ADD COLUMN label TEXT;
+  ALTER TABLE purchases ADD COLUMN meta TEXT NOT NULL DEFAULT '{}';
+  ALTER TABLE purchases ADD COLUMN paid_at INTEGER;
+  ALTER TABLE purchases ADD COLUMN refunded_at INTEGER;
+  ALTER TABLE purchases ADD COLUMN refund_reason TEXT;
+  CREATE UNIQUE INDEX purchases_ourref ON purchases(ref) WHERE ref IS NOT NULL;
+  `,
 ];
 
 export function openDb(file: string): DB {
