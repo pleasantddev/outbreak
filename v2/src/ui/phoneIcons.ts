@@ -40,6 +40,7 @@ const GLYPHS: Record<string, [string, string, string, string?]> = {
   LASTMA: ['#ffd34d', '#c2410c', `<path d="M30 12l11 32H19z" fill="${W}"/><path d="M23.6 31h12.8M21.6 37h16.8" stroke="#c2410c" stroke-width="3"/><rect x="15" y="43" width="30" height="4" rx="2" fill="${W}"/>`],
   Wardrobe: ['#c4a7ff', '#6d28d9', `<path d="M30 17a3.5 3.5 0 1 1 3.5 3.5c-1.4 0-3.5 1-3.5 3v1.5" stroke="${W}" stroke-width="2.8" fill="none" stroke-linecap="round"/><path d="M30 25L12 38a2 2 0 0 0 1.2 3.6h33.6A2 2 0 0 0 48 38z" fill="${W}"/>`],
   Clubs: ['#ff4fd8', '#3b0764', `<circle cx="30" cy="31" r="13" fill="${W}"/><path d="M17.5 27h25M17.5 35h25M30 18v26M22 20.5c3 6.5 3 14.5 0 21M38 20.5c-3 6.5-3 14.5 0 21" stroke="#3b0764" stroke-width="1.4" opacity=".55" fill="none"/><path d="M30 12v6" stroke="${W}" stroke-width="2"/>`],
+  'Top Up': ['#38d0ff', '#0b5bd3', `<rect x="11" y="17" width="38" height="26" rx="5" fill="${W}"/><rect x="11" y="23" width="38" height="5" fill="#0b5bd3" opacity=".85"/><text x="21" y="40" font-family="Inter,Arial" font-size="12" font-weight="800" fill="#0b5bd3" text-anchor="middle">₦</text><rect x="30" y="34" width="13" height="3.4" rx="1.7" fill="#0b5bd3" opacity=".5"/>`],
   Calls: ['#6fe28a', '#18a34a', `<path d="M22 14c1.5 0 2.4.6 3 2l2.4 5.6c.6 1.5.2 2.6-.9 3.6l-2.2 1.8c1.6 3.6 4.4 6.4 8 8l1.8-2.2c1-1.1 2.1-1.5 3.6-.9l5.6 2.4c1.4.6 2 1.5 2 3v3.2c0 2.6-2.2 4.6-4.8 4.4C25.8 43.3 16.7 34.2 15.6 19.4 15.4 16.8 17.4 14 20 14z" fill="${W}"/>`],
 };
 let n = 0;

@@ -16,7 +16,6 @@ export interface WorldHooks {
   grid: { board(): any; force(f: number | 'all', on: boolean | null, hours?: number): any; collapse(hours: number): any; genScale: number; tick(): any };
   /** MyAds moderation and the real-money ledger (server/src/ads.ts, payments.ts) */
   ads?: { queue(status?: string): any[]; review(id: number, decision: 'approve' | 'reject', note?: string): Promise<any>; upload(id: string): any; uploadFile(u: any): string | null; boards: any[] } | null;
-  payments?: { ledger(limit?: number): any[]; live: boolean } | null;
 }
 export interface AdminDeps { db: SqlDb; dataDir: string; contentSeedDirs: string[]; live?: () => LiveHooks | null; world?: () => WorldHooks | null; version?: string; log?: (m: string) => void; setupCode?: string }
 export interface RouteDef { method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; path: string; auth: boolean; handler: (req: HostReq) => Promise<HostRes> | HostRes }
@@ -300,11 +299,7 @@ export function buildAdmin(deps: AdminDeps) {
     audit(c, d === 'approve' ? 'ads.approve' : 'ads.reject', 'ad', String(id), `${d === 'approve' ? 'Approved' : 'Rejected'} ad ${id}${note ? `: ${note}` : ''}`);
     return row;
   });
-  route('GET', '/world/payments', 'store.view', () => {
-    const p = world().payments; if (!p) throw bad('Payments are not attached to this server.');
-    const list = p.ledger(300); const paid = list.filter((r: any) => r.status === 'paid');
-    return { live: p.live, list, paidNaira: paid.reduce((n: number, r: any) => n + r.amount_kobo / 100, 0), count: list.length };
-  });
+
 
   // ---------- live ops
   route('GET', '/ops/status', 'liveops.view', () => {

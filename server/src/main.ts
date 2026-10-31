@@ -24,10 +24,12 @@ export async function startServer(over: Partial<Config> = {}): Promise<Running> 
   const accounts = new Accounts(db, cfg);
   const economy = new Economy(db, cfg, content, log);
   const hub = new Hub(cfg, db, accounts, economy, content, log);
-  const payments = new Payments(db, log); const ads = new Ads(db, payments, cfg.dataDir); hub.ads = ads; hub.payRef = payments;
-  log.info(payments.live ? 'payments: Paystack live keys loaded' : 'payments: test mode (no PAYSTACK_SECRET_KEY), no real money moves');
   const router = new Router();
   const events = new EventEmitter();
+  const payments = new Payments(db, cfg, economy, content, log);
+  payments.on('purchase', (p: { accountId: string; label: string }) => { events.emit('purchase', p); hub.toast(p.accountId, 'Payment received', `${p.label} is yours. Thank you!`); });
+  payments.on('flag', (f: unknown) => economy.emit('flag', f));
+  const ads = new Ads(db, payments, cfg.dataDir); hub.ads = ads;
   for (const [from, to] of [[accounts, ['signup', 'login', 'ban', 'unban', 'profile', 'mute']], [economy, ['wallet', 'plot', 'flag']]] as const) for (const ev of to) from.on(ev, (...a: unknown[]) => events.emit(ev, ...a));
   const add = (m: string) => (path: string, h: Parameters<Router['add']>[2], o?: Parameters<Router['add']>[3]) => router.add(m, path, h, o);
   const api: Api = {

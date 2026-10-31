@@ -7,11 +7,12 @@ import { randomBytes } from 'node:crypto';
 import type { DB } from './db.ts';
 import { all, one, run } from './db.ts';
 import { HttpError } from './auth.ts';
-import type { Payments, PaymentRow } from './payments.ts';
+import type { Payments, PurchaseRec } from './payments.ts';
+import type { AccountRow } from './accounts.ts';
 import { AD_DAYS, BLIMPS, DRONE_SPOTS, DRONE_TEXT_MAX, adPixels, adQuote, lagosDay, lagosDayStart, type AdBoard, type AdKind } from '../../v2/src/net/rules.ts';
 
 export interface AdRow { id: number; account_id: string; kind: AdKind; board_id: string | null; upload_id: string | null; text: string | null; color: string | null; place: string | null; start_at: number; end_at: number; price_kobo: number; status: string; payment_ref: string | null; note: string | null; created_at: number }
-const HOLD_MS = 20 * 60_000; // an unpaid order keeps its slot this long
+const HOLD_MS = 45 * 60_000; // an unpaid order keeps its slot this long (Paystack's page can take a while)
 const DAY = 86_400_000;
 const COLORS = ['#ffffff', '#ffd23f', '#3ddc84', '#4fc3f7', '#ff5d8f', '#b388ff', '#ff8a3d'];
 
@@ -47,7 +48,8 @@ export class Ads extends EventEmitter {
     super();
     this.dir = join(dataDir, 'uploads'); mkdirSync(this.dir, { recursive: true });
     try { this.setBoards(JSON.parse(readFileSync(boardsFile, 'utf8'))); } catch { this.setBoards([]); }
-    pay.on('ad', (p: PaymentRow, meta: any) => this.paid(p, meta));
+    // sold through the one checkout: sku 'ad:new' with the order in meta; the server prices it and holds the slot
+    pay.register('ad', { quote: (a, id, meta) => this.quoteOrder(a, id, meta), fulfil: (p) => this.paid(p) });
   }
   setBoards(list: AdBoard[]) { this.boards = list.filter((b) => b && b.id && b.w > 0 && b.h > 0); this.byId = new Map(this.boards.map((b) => [b.id, b])); }
   board(id: string) { return this.byId.get(id); }
@@ -94,45 +96,46 @@ export class Ads extends EventEmitter {
   /** may this picture be shown to anyone? only once an ad using it was approved */
   isPublic(uploadId: string) { return !!one(this.db, "SELECT 1 FROM ads WHERE upload_id=? AND status='approved'", uploadId); }
 
-  /** place an order: checks the slot and the picture, holds the slot, and starts the payment */
-  async order(acct: { id: string; email: string | null }, b: any, callbackUrl?: string) {
+  /** price an order and hold its slot (called by payments.start for sku 'ad:new'); the ad row waits as 'unpaid' */
+  quoteOrder(acct: AccountRow, id: string, b: Record<string, unknown>) {
+    if (id !== 'new') throw new HttpError(404, 'Unknown ad order.');
     const kind = String(b?.kind ?? '') as AdKind; const days = Math.round(Number(b?.days)); const start = String(b?.start ?? lagosDay(Date.now()));
     if (!(AD_DAYS as readonly number[]).includes(days)) throw new HttpError(400, `Pick ${AD_DAYS.join(', ')} days.`);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || lagosDayStart(start) < lagosDayStart(lagosDay(Date.now())) || lagosDayStart(start) > Date.now() + 90 * DAY) throw new HttpError(400, 'Pick a start date from today up to three months ahead.');
     const from = lagosDayStart(start), to = from + days * DAY;
-    let key: string | null = null, upload: string | null = null, text: string | null = null, color: string | null = null;
+    let key: string | null = null, upload: string | null = null, text: string | null = null, color: string | null = null, label = '';
     if (kind === 'board' || kind === 'blimp') {
       const u = this.upload(String(b?.upload ?? '')); if (!u || u.account_id !== acct.id) throw new HttpError(400, 'Upload your picture first.');
-      upload = u.id;
+      upload = u.id; const [w, h] = u.name.split('x').map(Number);
       if (kind === 'board') {
         const bd = this.byId.get(String(b?.board ?? '')); if (!bd) throw new HttpError(404, 'That billboard is not on the list.');
-        const [w, h] = u.name.split('x').map(Number); const want = bd.w / bd.h;
+        const want = bd.w / bd.h;
         if (Math.abs(w / h - want) / want > 0.04) throw new HttpError(400, `This board needs a ${adPixels(bd).w} x ${adPixels(bd).h} picture. Yours is ${w} x ${h}.`);
-        key = bd.id;
-      } else { const [w, h] = u.name.split('x').map(Number); if (Math.abs(w / h - 4) / 4 > 0.05) throw new HttpError(400, 'Blimp banners are 4 to 1, for example 1600 x 400.'); }
+        key = bd.id; label = `Billboard: ${bd.place}`;
+      } else { if (Math.abs(w / h - 4) / 4 > 0.05) throw new HttpError(400, 'Blimp banners are 4 to 1, for example 1600 x 400.'); label = 'Blimp banner'; }
     } else if (kind === 'drone') {
-      key = String(b?.place ?? ''); if (!DRONE_SPOTS.some((s) => s.id === key)) throw new HttpError(400, 'Pick a place for the show.');
+      key = String(b?.place ?? ''); const spot = DRONE_SPOTS.find((s) => s.id === key); if (!spot) throw new HttpError(400, 'Pick a place for the show.');
       text = String(b?.text ?? '').replace(/\s+/g, ' ').trim().toUpperCase();
       if (!text || text.length > DRONE_TEXT_MAX) throw new HttpError(400, `Write 1 to ${DRONE_TEXT_MAX} letters for the sky.`);
       if (!/^[A-Z0-9 !?.,'&@#:+\-₦]+$/.test(text)) throw new HttpError(400, 'Drones can draw letters, numbers and simple marks only.');
-      color = COLORS.includes(String(b?.color)) ? String(b.color) : COLORS[0];
+      color = COLORS.includes(String(b?.color)) ? String(b.color) : COLORS[0]; label = `Drone show over ${spot.name}`;
     } else throw new HttpError(400, 'Unknown ad type.');
     if (!this.free(kind, kind === 'blimp' ? null : key, from, to)) throw new HttpError(409, kind === 'board' ? 'Someone has that board for some of those days. Try another start date.' : kind === 'drone' ? 'That sky is booked for some of those days.' : 'All the blimps are booked for some of those days.');
     const q = this.quote(kind, days, key ?? undefined);
-    const email = String(b?.email ?? acct.email ?? '').trim();
     const ad = run(this.db, 'INSERT INTO ads(account_id, kind, board_id, upload_id, text, color, place, start_at, end_at, price_kobo, status, created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
       acct.id, kind, kind === 'board' ? key : null, upload, text, color, kind === 'drone' ? key : null, from, to, q.total * 100, 'unpaid', Date.now());
-    const adId = Number(ad.lastInsertRowid);
-    try {
-      const p = await this.pay.initialize(acct.id, email, q.total, 'ad', { adId }, callbackUrl);
-      run(this.db, 'UPDATE ads SET payment_ref=? WHERE id=?', p.reference, adId);
-      return { ad: this.get(adId), quote: q, pay: p };
-    } catch (e) { run(this.db, "UPDATE ads SET status='cancelled' WHERE id=?", adId); throw e; }
+    return { amountKobo: q.total * 100, label: `${label}, ${days} ${kind === 'drone' ? 'night' : 'day'}${days > 1 ? 's' : ''} from ${start}`, meta: { adId: Number(ad.lastInsertRowid) } };
   }
-  private paid(p: PaymentRow, meta: any) {
-    const ad = this.get(Number(meta?.adId)); if (!ad || ad.status !== 'unpaid') return;
-    run(this.db, "UPDATE ads SET status='review' WHERE id=?", ad.id);
+  /** the money landed (inside the payments transaction): the ad goes to review */
+  private paid(p: PurchaseRec) {
+    const ad = this.get(Number(p.meta.adId)); if (!ad) return { note: 'ad row missing; refund by hand' };
+    if (ad.status !== 'unpaid') return { adId: ad.id, status: ad.status };
+    // a slow payer can lose the hold; keep the ad but tell the reviewer
+    const others = this.holding(ad.kind, ad.kind === 'board' ? ad.board_id : ad.kind === 'drone' ? ad.place : null, ad.start_at, ad.end_at).filter((x) => x.id !== ad.id && x.status !== 'unpaid');
+    const clash = others.length >= this.slots(ad.kind, ad.board_id);
+    run(this.db, "UPDATE ads SET status='review', payment_ref=?, note=? WHERE id=?", p.ref, clash ? 'Paid after the hold ran out and the slot is now taken: move the dates or refund' : null, ad.id);
     this.emit('note', ad.account_id, 'MyAds', 'Payment received. Your ad is with the review team and goes up once it is approved.');
+    return { adId: ad.id };
   }
   get(id: number) { return one<AdRow>(this.db, 'SELECT * FROM ads WHERE id=?', id) ?? null; }
   /** moderation: approve puts it up on its dates; reject refunds the money */
@@ -185,6 +188,4 @@ export class Ads extends EventEmitter {
         reach: total, days: days.map((d) => ({ day: d.day, people: d.people, sightings: sight.get(d.day) ?? 0 })) };
     });
   }
-  /** let the person who started a payment finish it (test mode) or re-check it (live) */
-  async verify(accountId: string, reference: string, test = false) { const r = await this.pay.verify(reference, { accountId, testComplete: test }); return { status: r.status, ad: one<AdRow>(this.db, 'SELECT * FROM ads WHERE payment_ref=?', reference) }; }
 }

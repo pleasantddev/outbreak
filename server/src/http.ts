@@ -31,7 +31,7 @@ function cors(api: Api, req: IncomingMessage, res: ServerResponse) {
   res.setHeader('Access-Control-Max-Age', '600');
 }
 
-async function readBody(req: IncomingMessage, limit: number): Promise<any> {
+async function readBody(req: IncomingMessage, limit: number, keepRaw = false): Promise<any> {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'DELETE') {
     // DELETE may carry a body, but most clients do not send one
     if (!req.headers['content-length'] || req.headers['content-length'] === '0') return {};
@@ -39,7 +39,8 @@ async function readBody(req: IncomingMessage, limit: number): Promise<any> {
   const chunks: Buffer[] = []; let n = 0;
   for await (const c of req) { n += (c as Buffer).length; if (n > limit) throw new HttpError(413, 'Request body is too large.'); chunks.push(c as Buffer); }
   if (!n) return {};
-  const text = Buffer.concat(chunks).toString('utf8'); (req as any).rawBody = text; // webhooks sign the raw bytes
+  const text = Buffer.concat(chunks).toString('utf8');
+  if (keepRaw) (req as IncomingMessage & { rawBody?: string }).rawBody = text;
   try { return JSON.parse(text); } catch { throw new HttpError(400, 'Body must be valid JSON.'); }
 }
 
@@ -79,7 +80,8 @@ export function createHttp(api: Api, router: Router): Server {
           const b = banState(r.account); if (b.banned) throw new HttpError(403, b.reason, { code: 'banned', until: b.until });
           if (roleLevel(r.account.role) < need) throw new HttpError(403, 'Not allowed.', { code: 'forbidden' });
         }
-        r.body = await readBody(req, route.opts.bodyLimit ?? 256 * 1024);
+        r.body = await readBody(req, route.opts.bodyLimit ?? 256 * 1024, !!route.opts.rawBody);
+        if (route.opts.rawBody) r.rawBody = (req as IncomingMessage & { rawBody?: string }).rawBody ?? '';
         const out = await route.handler(r);
         if (out === HANDLED || res.writableEnded) return;
         if (out instanceof Reply) send(res, out.status, out.body, out.headers); else send(res, out === undefined ? 204 : 200, out);

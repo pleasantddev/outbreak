@@ -9,6 +9,7 @@ import type { GameCtx, GameSystem, GoalPoint } from './registry';
 import { net } from '../net/client';
 import { registerApp } from '../ui/lifeHud';
 import type { LiveAd } from '../net/protocol';
+import { payApi } from './pay';
 import BOARDS from '../data/billboards.json';
 import { AD_DAYS, BLIMPS, DRONE_SPOTS, DRONE_TEXT_MAX, adPixels, adQuote, blimpPos, lagosDay, worldHours, type AdBoard } from '../net/rules';
 
@@ -22,8 +23,8 @@ const BLIMP_PX = { w: 1600, h: 400 };
 const NIGHT = (h: number) => h >= 19.5 || h < 5;
 
 interface Mine { id: number; kind: string; board: string | null; place: string | null; text: string | null; color: string | null; img: string | null; start: string; end: string; naira: number; status: string; note: string | null; payment: string | null; reach: number; days: { day: string; people: number; sightings: number }[] }
-interface Inventory { test: boolean; today: string; boards: (AdBoard & { px: { w: number; h: number }; day: number; nextFree: string | null })[]; drone: { spots: (typeof DRONE_SPOTS[number] & { day: number; nextFree: string | null })[]; textMax: number }; blimp: { day: number; fleet: number; nextFree: string | null; size: { w: number; h: number } } }
-type Screen = { s: 'home' } | { s: 'boards' } | { s: 'board'; id: string } | { s: 'drone' } | { s: 'blimp' } | { s: 'mine'; id: number } | { s: 'pay' };
+interface Inventory { test: boolean; mode: string; today: string; boards: (AdBoard & { px: { w: number; h: number }; day: number; nextFree: string | null })[]; drone: { spots: (typeof DRONE_SPOTS[number] & { day: number; nextFree: string | null })[]; textMax: number }; blimp: { day: number; fleet: number; nextFree: string | null; size: { w: number; h: number } } }
+type Screen = { s: 'home' } | { s: 'boards' } | { s: 'board'; id: string } | { s: 'drone' } | { s: 'blimp' } | { s: 'mine'; id: number };
 
 const css = `
 #appview .ad-hero{border-radius:20px;padding:16px;color:#fff;background:linear-gradient(140deg,#ff7a18 0%,#e2336b 55%,#6d28d9 100%);position:relative;overflow:hidden}
@@ -96,8 +97,7 @@ class AdsApp {
   private reported = new Set<number>(); private reportDay = ''; private pending = new Set<number>();
   private v3!: THREE_NS.Vector3; private acc = 0; private flushT = 0; private frustum: THREE_NS.Frustum | null = null; private mtx: THREE_NS.Matrix4 | null = null;
   private screen: Screen = { s: 'home' }; private inv: Inventory | null = null; private mine: Mine[] = [];
-  private form = { days: 3, start: '', upload: null as null | { id: string; preview: string }, text: '', color: COLORS[1], place: 'lagoon', email: '', busy: false };
-  private pay: { reference: string; test: boolean; amount: number; url?: string; adId: number; until: number } | null = null;
+  private form = { days: 3, start: '', upload: null as null | { id: string; preview: string }, text: '', color: COLORS[1], place: 'lagoon', busy: false };
   target: GoalPoint | null = null;
   constructor(private ctx: GameCtx) {}
   get hud() { return this.ctx.hud; }
@@ -243,7 +243,6 @@ class AdsApp {
   // ------------------------------------------------------------------------------------------ the app
   private back() {
     const s = this.screen.s; if (s === 'home') return false;
-    if (s === 'pay') { this.pay = null; this.screen = { s: 'home' }; void this.loadMine(); return true; }
     this.screen = s === 'board' ? { s: 'boards' } : { s: 'home' }; return true;
   }
   private redraw() { if (this.hud.appOpen === 'MyAds') this.hud.refreshApp(); }
@@ -258,10 +257,9 @@ class AdsApp {
     if (sc.s === 'drone') return this.droneHtml();
     if (sc.s === 'blimp') return this.blimpHtml();
     if (sc.s === 'mine') return this.mineHtml(sc.id);
-    if (sc.s === 'pay') return this.payHtml();
     return this.homeHtml();
   }
-  private testNote() { return this.inv?.test ? `<div class="testnote">Test mode: no real money moves yet. Payments go live when the Paystack keys are added.</div>` : ''; }
+  private testNote() { return this.inv?.mode === 'test' ? `<div class="testnote">Test server: no real money moves. Payments go live when the Paystack keys are added.</div>` : this.inv?.mode === 'off' ? `<div class="testnote">Payments are switched off on this server.</div>` : ''; }
   private homeHtml() {
     const inv = this.inv!; const cheapest = Math.min(...inv.boards.map((b) => b.day));
     const camp = this.mine.length ? this.mine.map((m) => this.mineCell(m)).join('') : `<div class="row">Nothing running yet. Your first board can be up today.</div>`;
@@ -295,8 +293,7 @@ class AdsApp {
     return `<div class="price"><span>${naira(q.day)} × ${q.days} ${unit}${q.days > 1 ? 's' : ''}</span><span>${naira(q.gross)}</span></div>${q.discount ? `<div class="price"><span>${Math.round(q.discount * 100)}% off for ${q.days} ${unit}s</span><span>−${naira(q.gross - q.total)}</span></div>` : ''}<div class="price tot"><span>Total</span><span>${naira(q.total)}</span></div>`;
   }
   private payBlock(label: string) {
-    const em = this.form.email || net.account?.email || '';
-    return `<div class="row"><b>Receipt</b>Paystack sends the receipt to this email.<input id="ad-email" type="email" value="${esc(em)}" placeholder="you@example.com" autocomplete="email"><button class="btn" data-ad="order" ${this.form.busy ? 'disabled' : ''}>${this.form.busy ? 'Starting payment…' : label}</button>${this.testNote()}</div>`;
+    return `<div class="row"><b>Pay</b>Card, bank transfer or USSD through Paystack. A person on our team checks every ad before it goes up; if we turn it down, you get your money back.<button class="btn" data-ad="order" ${this.form.busy ? 'disabled' : ''}>${this.form.busy ? 'Opening checkout…' : label}</button>${this.testNote()}</div>`;
   }
   private uploadBlock(px: { w: number; h: number }) {
     const u = this.form.upload;
@@ -336,12 +333,6 @@ class AdsApp {
       <div class="row"><b>Real players who saw it</b><div class="big">${m.reach.toLocaleString()}</div>Each player counts once a day, and only when the ad was on their screen long enough to read. Your own views do not count.${bars}</div>
       <div class="row"><b>Sightings</b>${m.days.reduce((n, d) => n + d.sightings, 0).toLocaleString()} times on screen in total. A player who passes again after five minutes counts as a new sighting.</div>`;
   }
-  private payHtml() {
-    const p = this.pay; if (!p) return '';
-    if (p.test) return `<div class="row"><b>Test payment</b>${naira(p.amount)}. The Paystack keys are not set on this server yet, so this is a practice run and no money moves.<br><button class="btn" data-ad="testpay">Complete test payment</button></div>`;
-    return `<div class="row"><b>Pay with Paystack</b>${naira(p.amount)}. Paystack opened in a new tab: card, bank transfer or USSD. Come back here when you are done and we confirm it.<br><button class="btn" data-ad="reopen">Open Paystack again</button><button class="btn" data-ad="check" style="background:#11131a">I have paid</button></div>`;
-  }
-
   private wire() {
     const L = document.getElementById('av-l'); if (!L || this.hud.appOpen !== 'MyAds') return;
     L.querySelectorAll<HTMLElement>('[data-ad]').forEach((el) => { if ((el as any)._ad) return; (el as any)._ad = 1; el.addEventListener('click', (e) => { e.stopPropagation(); void this.act(el.dataset.ad!); }); });
@@ -350,7 +341,6 @@ class AdsApp {
   }
   async act(op: string) {
     const i = op.indexOf(':'); const k = i < 0 ? op : op.slice(0, i); const v = i < 0 ? '' : op.slice(i + 1);
-    const em = document.getElementById('ad-email') as HTMLInputElement | null; if (em) this.form.email = em.value.trim();
     if (k === 'go') { this.screen = { s: v as 'boards' }; this.form.upload = null; this.form.days = v === 'drone' ? 1 : 3; }
     else if (k === 'board') { this.screen = { s: 'board', id: v }; this.form.upload = null; }
     else if (k === 'mine') { this.screen = { s: 'mine', id: Number(v) }; void this.loadMine(); }
@@ -360,9 +350,7 @@ class AdsApp {
     else if (k === 'place') this.form.place = v;
     else if (k === 'show') { const b = boardById.get(v); if (b) { this.target = { x: b.x, z: b.z, label: b.place }; this.hud.toast('MyAds', `GPS set: ${b.place}.`, 'linear-gradient(140deg,#ff7a18,#e2336b)', 'msg', 3); } return; }
     else if (k === 'preview') { this.previewSky(); return; }
-    else if (k === 'order') { await this.order(); }
-    else if (k === 'testpay' || k === 'check') { await this.verify(k === 'testpay'); }
-    else if (k === 'reopen') { if (this.pay?.url) window.open(this.pay.url, '_blank', 'noopener'); return; }
+    else if (k === 'order') { await this.order(); return; }
     this.redraw();
   }
   /** crop the picture to the board's shape and size, then upload it */
@@ -381,38 +369,23 @@ class AdsApp {
     } catch (e: any) { this.hud.toast('MyAds', e?.message === 'bad' ? 'We could not open that picture.' : (e?.message ?? 'Upload failed.'), 'var(--red)', 'msg', 3.5); }
     finally { URL.revokeObjectURL(url); }
   }
+  /** the one checkout (systems/pay.ts): the server prices the order, holds the slot and opens Paystack */
   private async order() {
     const sc = this.screen; const f = this.form; if (f.busy) return;
-    const body: Record<string, unknown> = { days: f.days, start: f.start, email: f.email };
-    if (sc.s === 'board') Object.assign(body, { kind: 'board', board: sc.id, upload: f.upload?.id });
-    else if (sc.s === 'blimp') Object.assign(body, { kind: 'blimp', upload: f.upload?.id });
-    else if (sc.s === 'drone') { const t = (document.getElementById('ad-text') as HTMLInputElement | null)?.value ?? f.text; f.text = t; Object.assign(body, { kind: 'drone', place: f.place, text: t, color: f.color }); }
+    const meta: Record<string, unknown> = { days: f.days, start: f.start };
+    if (sc.s === 'board') Object.assign(meta, { kind: 'board', board: sc.id, upload: f.upload?.id });
+    else if (sc.s === 'blimp') Object.assign(meta, { kind: 'blimp', upload: f.upload?.id });
+    else if (sc.s === 'drone') { const t = (document.getElementById('ad-text') as HTMLInputElement | null)?.value ?? f.text; f.text = t; Object.assign(meta, { kind: 'drone', place: f.place, text: t, color: f.color }); }
     else return;
-    if (body.kind !== 'drone' && !f.upload) { this.hud.toast('MyAds', 'Choose your picture first.', 'var(--red)', 'msg', 3); return; }
-    f.busy = true; this.redraw();
-    try {
-      const r = await net.api<any>('POST', '/api/ads/order', { ...body, callback: location.origin + location.pathname });
-      this.pay = { reference: r.pay.reference, test: !!r.pay.test, amount: r.pay.amount, url: r.pay.authorizationUrl, adId: r.ad.id, until: Date.now() + 15 * 60_000 };
-      if (!r.pay.test && r.pay.authorizationUrl) { window.open(r.pay.authorizationUrl, '_blank', 'noopener'); void this.poll(r.pay.reference); }
-      this.screen = { s: 'pay' };
-    } catch (e: any) { this.hud.toast('MyAds', e?.message ?? 'Could not start the payment.', 'var(--red)', 'msg', 4); }
-    finally { f.busy = false; }
-  }
-  private async poll(ref: string) {
-    while (this.pay?.reference === ref && Date.now() < this.pay.until) {
-      await new Promise((r) => setTimeout(r, 5000)); if (this.pay?.reference !== ref) return;
-      try { const v = await net.api<any>('POST', '/api/pay/verify', { reference: ref }); if (v.status === 'paid') { this.done(); return; } if (v.status === 'failed' || v.status === 'abandoned') { this.hud.toast('MyAds', 'The payment did not go through. Nothing was charged.', 'var(--red)', 'msg', 4); this.pay = null; this.screen = { s: 'home' }; this.redraw(); return; } } catch { /* try again */ }
-    }
-  }
-  private async verify(test: boolean) {
-    if (!this.pay) return;
-    try { const v = await net.api<any>('POST', '/api/pay/verify', { reference: this.pay.reference, test }); if (v.status === 'paid') this.done(); else this.hud.toast('MyAds', 'Paystack has not confirmed it yet. Give it a minute.', 'var(--pur)', 'msg', 3.5); }
-    catch (e: any) { this.hud.toast('MyAds', e?.message ?? 'Could not check the payment.', 'var(--red)', 'msg', 3.5); }
-  }
-  private done() {
-    const id = this.pay?.adId; this.pay = null; this.form.upload = null;
+    if (meta.kind !== 'drone' && !f.upload) { this.hud.toast('MyAds', 'Choose your picture first.', 'var(--red)', 'msg', 3); return; }
+    f.busy = true;
+    const r = await payApi.checkout('ad:new', meta); f.busy = false;
+    if (!r) { this.redraw(); return; }
+    f.upload = null; const id = Number((r.granted as any)?.adId) || 0;
     this.hud.toast('MyAds', 'Paid. Your ad is with the review team now.', 'linear-gradient(140deg,#22c55e,#15803d)', 'msg', 4.5);
-    void this.loadMine().then(() => { if (id) { this.screen = { s: 'mine', id }; this.redraw(); } }); void this.loadInv();
+    await this.loadMine(); void this.loadInv();
+    if (id) this.screen = { s: 'mine', id }; else this.screen = { s: 'home' };
+    this.hud.openAppByName('MyAds');
   }
   /** show a drone message in the sky for twenty seconds, only for you */
   previewSky() {

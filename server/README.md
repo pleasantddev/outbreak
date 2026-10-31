@@ -20,6 +20,9 @@ The game turns multiplayer on with `?server=ws://host:8787` (remembered in local
 | `DATA_DIR` | `server/data` | database, secret, content files |
 | `JWT_SECRET` | generated into `DATA_DIR/secret.key` | token signing key |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | none | creates or promotes this account to admin at boot |
+| `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY` | none | real payments through Paystack (set the dashboard webhook URL to `https://<host>/api/pay/paystack/webhook`) |
+| `PAY_TEST` | on without a secret key, off when `NODE_ENV=production` | fake checkouts for dev; never turn on in production |
+| `PAY_CALLBACK_URL` | none | the game URL Paystack returns players to (it adds `?reference=`) |
 | `TICK_HZ` | 15 | snapshot rate (5 to 30) |
 | `MAX_PLAYERS` | 500 | socket cap |
 | `INTEREST_RINGS` | 3 | area of interest radius in 250 m cells |
@@ -62,6 +65,12 @@ What `api` gives you:
 
 The purchases ledger table (`purchases`) is yours to fill from IAP webhooks. Fulfil with `api.economy.grant(accountId, cash, 'iap', providerRef)`; a unique
 index on `(provider, provider_ref)` makes webhooks idempotent.
+
+## Payments (src/payments.ts, routes/pay.ts)
+Every real-money purchase: `POST /api/pay/start {sku, meta}` (server prices it, returns Paystack's checkout URL),
+`GET /api/pay/status/:ref` (verifies with Paystack while pending), the signed webhook settles it, goods are handed over
+once. Products: `iap:<id>` from content/iap.json (cash and bank packs today). Other systems call
+`api.payments.register(kind, { quote, fulfil })`. Ledger: `GET /api/pay/ledger` (admin) and the admin Store page.
 
 ## Core endpoints
 

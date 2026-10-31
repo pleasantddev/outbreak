@@ -27,6 +27,8 @@ export interface ApiRequest {
   /** the signed in account for routes with auth 'user' | 'mod' | 'admin'; may also be set on 'none' routes when a valid token was sent */
   account: AccountRow | null;
   sid: string | null;
+  /** the body exactly as sent, only for routes with opts.rawBody (webhook signatures) */
+  rawBody?: string;
   raw: IncomingMessage;
   res: ServerResponse;
 }
@@ -43,6 +45,8 @@ export interface RouteOpts {
   rate?: { limit: number; windowMs: number };
   /** bytes, default 256 KiB */
   bodyLimit?: number;
+  /** keep the unparsed body on req.rawBody */
+  rawBody?: boolean;
 }
 
 /** What the realtime hub exposes to routes (admin tools need to see and act on live players). */
@@ -69,11 +73,12 @@ export interface Api {
   economy: Economy;
   content: ContentStore;
   online: OnlineApi;
+  /** real-money checkouts (Paystack); other routes register products on it */
+  payments: Payments;
   /** domain events: 'login' | 'signup' | 'ban' | 'unban' | 'wallet' | 'plot' | 'content' | 'flag' | 'purchase' | 'chat' */
   events: EventEmitter;
   limiters: Record<string, RateLimiter>;
-  /** real money (Paystack) and MyAds */
-  payments: Payments;
+  /** MyAds: billboards, drone shows, blimps (sold through payments) */
   ads: Ads;
   route(method: string, path: string, handler: Handler, opts?: RouteOpts): void;
   get(path: string, handler: Handler, opts?: RouteOpts): void;

@@ -72,8 +72,7 @@ export class Hub implements OnlineApi {
   /** live voice calls between two connections */
   private calls = new Map<string, { a: Conn; b: Conn; live: boolean; at: number }>(); private lastSwitch = new Map<string, number>();
   /** what the admin panel can steer in the game world */
-  get world() { return { grid: this.power, biz: this.biz, ads: this.adsRef, payments: this.payRef }; }
-  payRef: import('../payments.ts').Payments | null = null;
+  get world() { return { grid: this.power, biz: this.biz, ads: this.adsRef }; }
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
     this.biz = new Businesses(db, econ); this.phone = new PhoneNet(db);
     // light changes reach everybody at once; the shout goes to the feeders that just got light

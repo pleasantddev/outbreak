@@ -1,12 +1,11 @@
-// MyAds moderation and the real-money ledger. Every paid ad waits here until a person approves it; turning one down
-// refunds the advertiser through Paystack. The ledger lists every payment the game has taken (or test runs, before keys).
+// MyAds moderation. Every paid ad waits here until a person approves it; turning one down refunds the advertiser
+// through Paystack. The money itself is in the Store page's ledger (purchases, sku ad:new).
 import { useState } from 'preact/hooks';
 import { api, qs } from '../api';
 import { useCan } from '../session';
-import { Badge, Btn, Loading, Panel, Seg, Stat, fmt, toast, toastErr, useFetch } from '../ui';
+import { Badge, Btn, Loading, Panel, Seg, Stat, toast, toastErr, useFetch } from '../ui';
 
 interface AdRow { id: number; account_id: string; owner: string | null; kind: 'board' | 'drone' | 'blimp'; board_id: string | null; upload_id: string | null; text: string | null; color: string | null; place: string | null; start_at: number; end_at: number; price_kobo: number; status: string; payment_ref: string | null; note: string | null; created_at: number }
-interface PayRow { reference: string; account_id: string; owner_name: string | null; amount_kobo: number; purpose: string; status: string; created_at: number; paid_at: number | null; provider_data: string | null }
 const day = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 const naira = (k: number) => '₦' + Math.round(k / 100).toLocaleString('en-NG');
 
@@ -46,29 +45,20 @@ function AdCard({ a, onDone }: { a: AdRow; onDone: () => void }) {
 }
 
 export function Ads() {
-  const can = useCan(); const [st, setSt] = useState('review');
+  const [st, setSt] = useState('review');
   const q = useFetch<{ list: AdRow[]; boards: number }>(() => api.get('/world/ads' + qs({ status: st })), [st]);
-  const pays = useFetch<{ live: boolean; list: PayRow[]; paidNaira: number; count: number }>(() => (can('store.view') ? api.get('/world/payments') : Promise.resolve({ live: false, list: [], paidNaira: 0, count: 0 })));
-  const p = pays.data;
+  const live = q.data && st === 'approved' ? q.data.list.filter((a) => a.start_at <= Date.now() && a.end_at > Date.now()).length : null;
   return (
     <div class="col gap-lg">
       <div class="grid g4">
         <Stat k="Waiting for review" v={st === 'review' && q.data ? q.data.list.length : '·'} s="paid ads that are not up yet" tone="teal" />
         <Stat k="Billboards for sale" v={q.data?.boards ?? '·'} s="from v2/src/data/billboards.json" />
-        <Stat k="Paid in" v={p ? '₦' + fmt.n(p.paidNaira) : '·'} s={p ? `${p.count} payments listed` : ''} />
-        <Stat k="Payments" v={p ? (p.live ? 'Live' : 'Test mode') : '·'} s={p?.live ? 'Paystack keys loaded' : 'set PAYSTACK_SECRET_KEY to take real money'} tone={p?.live ? 'teal' : 'amber'} />
+        <Stat k="Up right now" v={live ?? '·'} s="open the Approved tab to count" />
+        <Stat k="Money" v="Store page" s="every payment is in the Store ledger (sku ad:new)" />
       </div>
       <Panel title="MyAds" actions={<Seg opts={[['review', 'To review'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['unpaid', 'Unpaid']]} cur={st} on={setSt} />}>
-        {!q.data ? <Loading /> : q.data.list.length ? <div class="col gap">{q.data.list.map((a) => <AdCard key={a.id} a={a} onDone={() => { q.reload(); pays.reload(); }} />)}</div> : <div class="empty">Nothing here.</div>}
+        {!q.data ? <Loading /> : q.data.list.length ? <div class="col gap">{q.data.list.map((a) => <AdCard key={a.id} a={a} onDone={() => q.reload()} />)}</div> : <div class="empty">Nothing here.</div>}
       </Panel>
-      {can('store.view') && (
-        <Panel title="Real-money ledger" flush>
-          {!p ? <Loading /> : (
-            <table class="tbl"><thead><tr><th>When</th><th>Player</th><th>For</th><th>Amount</th><th>Status</th><th>Reference</th></tr></thead>
-              <tbody>{p.list.map((r) => <tr key={r.reference}><td>{fmt.ago(r.created_at)}</td><td>{r.owner_name ?? r.account_id.slice(0, 8)}</td><td>{r.purpose}</td><td>{naira(r.amount_kobo)}</td><td><Badge kind={r.status === 'paid' ? 'good' : r.status === 'refunded' ? 'warn' : ''}>{r.status}</Badge></td><td class="mono" style="font-size:11px">{r.reference}</td></tr>)}</tbody></table>
-          )}
-        </Panel>
-      )}
     </div>
   );
 }

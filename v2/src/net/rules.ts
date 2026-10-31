@@ -212,6 +212,51 @@ export function gridState(feeders: FeederDef[], h: number, o: { forced?: Map<num
   return { on: on.join(''), gen, load, collapse: false, by };
 }
 
+// ------------------------------------------------------------------------------------------ real money (Paystack)
+// Everything bought with real naira goes through one checkout: the server prices it, Paystack takes the money, the
+// server verifies (webhook or verify call) and only then hands over what was bought. Amounts on the wire are kobo.
+export const PAY_CURRENCY = 'NGN';
+/** ₦100 floor, ₦5m ceiling per checkout */
+export const PAY_MIN_KOBO = 10_000, PAY_MAX_KOBO = 500_000_000;
+export const koboOf = (naira: number) => Math.round(naira * 100);
+export const nairaOf = (kobo: number) => Math.round(kobo) / 100;
+/** our own references: hl_ plus 20 lowercase letters/digits */
+export const payRefOk = (r: unknown): r is string => typeof r === 'string' && /^hl_[a-z0-9]{20}$/.test(r);
+/** a product id is "<kind>:<id>", e.g. "iap:pack.cash.small" or later "ad:board-oshodi-1" */
+export function parseSku(sku: unknown): { kind: string; id: string } | null {
+  if (typeof sku !== 'string' || sku.length > 100) return null; const m = /^([a-z]{2,12}):([A-Za-z0-9._-]{1,80})$/.exec(sku); return m ? { kind: m[1], id: m[2] } : null;
+}
+export interface IapItem { id: string; type?: string; name?: string; desc?: string; priceNGN?: number; grants?: Record<string, unknown>; enabled?: boolean; sort?: number; tag?: string; code?: string; percentOff?: number; amountOffNGN?: number; itemIds?: string[]; appliesTo?: string[]; maxUses?: number; perAccount?: number; limitPerAccount?: number; from?: string; to?: string; availableFrom?: string; availableTo?: string }
+const dayMs = (d: unknown, end: boolean) => { if (typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(d)) return NaN; const t = Date.parse(d.length === 10 ? d + 'T00:00:00+01:00' : d); return end && d.length === 10 ? t + 86400_000 : t; };
+/** enabled and inside its from/to window (dates are Lagos days; "to" includes that whole day) */
+export function iapLive(it: IapItem, now: number) {
+  if (it.enabled === false) return false;
+  const f = dayMs(it.from ?? it.availableFrom, false), t = dayMs(it.to ?? it.availableTo, true);
+  return !(f > now) && !(t <= now);
+}
+/** the game can hand these over today: cash and bank only (items, cosmetics, boosts and passes come with their systems) */
+const deliverable = (g: Record<string, unknown> | undefined) => !!g && Object.keys(g).length > 0 && Object.keys(g).every((k) => k === 'cash' || k === 'bank') && (Number(g.cash) > 0 || Number(g.bank) > 0);
+/** what the store sells right now, with any running sale applied */
+export function iapCatalog(items: IapItem[], now: number) {
+  const sales = items.filter((s) => s.type === 'sale' && iapLive(s, now));
+  return items.filter((it) => it.type !== 'promo' && it.type !== 'sale' && iapLive(it, now) && Number.isInteger(it.priceNGN) && (it.priceNGN ?? 0) > 0 && deliverable(it.grants))
+    .map((it) => {
+      const off = Math.max(0, ...sales.filter((s) => (s.itemIds ?? []).includes(it.id)).map((s) => Math.min(90, s.percentOff ?? 0)));
+      const price = Math.max(100, Math.round((it.priceNGN! * (100 - off)) / 100));
+      return { id: it.id, name: it.name ?? it.id, desc: it.desc ?? '', tag: it.tag ?? '', priceNGN: price, wasNGN: off ? it.priceNGN! : 0, grants: { cash: Math.max(0, Math.floor(Number(it.grants?.cash) || 0)), bank: Math.max(0, Math.floor(Number(it.grants?.bank) || 0)) }, limit: it.limitPerAccount ?? 0, sort: it.sort ?? 99 };
+    }).sort((a, b) => a.sort - b.sort);
+}
+/** find a live promo code for an item (the server also checks maxUses and perAccount against the ledger) */
+export function findPromo(items: IapItem[], code: unknown, itemId: string, now: number): IapItem | null {
+  if (typeof code !== 'string' || !code.trim()) return null; const c = code.trim().toUpperCase();
+  return items.find((x) => x.type === 'promo' && x.code === c && iapLive(x, now) && (!x.appliesTo || x.appliesTo.includes('*') || x.appliesTo.includes(itemId))) ?? null;
+}
+/** a promo takes a percentage or a fixed naira amount off, never below the ₦100 floor */
+export function promoPrice(p: IapItem, priceNGN: number) {
+  let n = priceNGN; if (p.percentOff) n = Math.round((n * (100 - Math.min(100, p.percentOff))) / 100); if (p.amountOffNGN) n -= p.amountOffNGN;
+  return Math.max(100, Math.round(n));
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // MyAds: real-money advertising. Prices are in naira and are the same on the client (quotes) and the server (orders).
 export interface AdBoard { id: string; x: number; y: number; z: number; yaw: number; w: number; h: number; place: string; tier: string; slots?: number }
