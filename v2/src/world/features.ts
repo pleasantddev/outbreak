@@ -7,6 +7,8 @@ import { addBox, addCyl, addQuad, vcGeo, hex, mul, type RGB, type V3 } from './g
 import { RAIL, RLF, AREA, SPORT, BK, ROAD, RF, type Rail, type Area, type Poi, type Building, type Road } from './region';
 import { buildingHeight } from './buildings';
 import { signUV, signMaterial, SIGN_ASPECT } from './signs';
+import { buildTerminal, footbridgeCovers, buildBillboards } from './oshodi';
+import { buildClubs, clubMaterial } from './clubs';
 
 // ------------------------------------------------------------------------------------------------ shared assets
 let vcMat: THREE.MeshStandardMaterial | null = null, fenceMat: THREE.MeshStandardMaterial | null = null, glassMat: THREE.MeshStandardMaterial | null = null;
@@ -356,34 +358,16 @@ export function buildFeatures(inp: FeatureInput): FeatureOut {
     if (AG.count) { const m = new THREE.Mesh(AG.build(), vertexMat()); m.castShadow = true; m.receiveShadow = true; g.add(m); }
   }
 
-  // ---------------------------------------------------------------- bus terminals (Oshodi Transport Interchange): columns, painted bays, terminal name boards
-  const TG = vcGeo(); const termPoles: number[] = [];
+  // ---------------------------------------------------------------- bus terminals (Oshodi Transport Interchange): six-level terminals, covered footbridges and billboard faces, see oshodi.ts
+  const TG = vcGeo(); const NG = vcGeo(); const termPoles: number[] = [];
   for (const b of inp.buildings) {
     if (b.kind !== BK.terminal || !inTile(b.cx, b.cz)) continue;
-    const o = obb(b.pts); const ca = Math.cos(o.ang), sa = Math.sin(o.ang); const H = buildingHeight(b);
-    const W = (lx: number, lz: number): [number, number] => [b.cx * 0 + o.cx + lx * ca - lz * sa - x0, o.cz + lx * sa + lz * ca - z0];
-    const inside = (lx: number, lz: number) => { const [x, z] = W(lx, lz); return pointInPoly(x + x0, z + z0, b.pts); };
-    // columns on a 10 x 9 m grid, steel box section on a concrete foot
-    for (let lx = -o.hl + 2; lx <= o.hl - 1.5; lx += 10) for (let lz = -o.hw + 2; lz <= o.hw - 1.5; lz += 9) {
-      if (!inside(lx, lz)) continue; const [x, z] = W(lx, lz);
-      addBox(TG, x, 0, z, 0.9, 0.5, 0.9, o.ang, [0.62, 0.61, 0.58]); addBox(TG, x, 0.5, z, 0.45, H - 0.5, 0.45, o.ang, [0.34, 0.36, 0.4]);
-      termPoles.push(x + x0, z + z0, 0.45);
-    }
-    // painted bays: yellow dividers across the long axis, 3.8 m apart, 12 m deep, along both long sides and a median
-    for (const lane of [-1, 0, 1]) {
-      const lz0 = lane * o.hw * 0.62; for (let lx = -o.hl + 4; lx <= o.hl - 4; lx += 3.8) {
-        if (!inside(lx, lz0) || !inside(lx, lz0 + (lane === 0 ? 0 : 5))) continue;
-        const dz = 5.5; const a = W(lx, lz0 - dz), c = W(lx, lz0 + dz);
-        addQuad(TG, [a[0] - sa * 0.07, 0.04, a[1] + ca * 0.07 * 0 - ca * 0.0], [c[0] - sa * 0.07, 0.04, c[1]], [c[0] + sa * 0.07, 0.04, c[1]], [a[0] + sa * 0.07, 0.04, a[1]], [0.93, 0.78, 0.12], undefined, {}, true);
-      }
-    }
-    // name boards on the roof edge facing both long sides
-    if (b.name) { const uv = signUV(b.name.replace('Oshodi Transport Interchange - ', 'OSHODI ').replace('Oshodi Transport Interchange', 'OSHODI INTERCHANGE'), 1); const w = Math.min(14, o.hl * 1.2);
-      for (const sd of [-1, 1]) { const [x, z] = W(0, sd * (o.hw - 0.1)); signs.push({ cx: x, cy: H - 0.9, cz: z, ang: o.ang, w, h: w / SIGN_ASPECT, uv }); } }
-    // fascia: dark steel band round the roof edge
-    const n = b.pts.length / 2;
-    for (let i = 0; i < n; i++) { const j = (i + 1) % n; addQuad(TG, [b.pts[i * 2] - x0, H - 0.5, b.pts[i * 2 + 1] - z0], [b.pts[j * 2] - x0, H - 0.5, b.pts[j * 2 + 1] - z0], [b.pts[j * 2] - x0, H + 0.3, b.pts[j * 2 + 1] - z0], [b.pts[i * 2] - x0, H + 0.3, b.pts[i * 2 + 1] - z0], [0.3, 0.33, 0.38], undefined, {}, true); }
+    buildTerminal(b, { G: TG, N: NG, x0, z0, sign: (s) => signs.push(s), poles: termPoles, walls: out.fenceWalls });
   }
+  footbridgeCovers(TG, inp.roads, x0, z0, size);
+  buildBillboards(TG, g, x0, z0, size);
+  buildClubs({ L: TG, N: NG, x0, z0, size, sign: (s) => signs.push(s), walls: out.fenceWalls, poles: termPoles });
+  if (NG.count) { const m = new THREE.Mesh(NG.build(), clubMaterial()); g.add(m); }
   if (TG.count) { const m = new THREE.Mesh(TG.build(), vertexMat()); m.castShadow = true; m.receiveShadow = true; g.add(m); }
   out.poles = termPoles;
 

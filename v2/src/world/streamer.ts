@@ -9,6 +9,7 @@ import { plotsForRegion, type Plot } from './plots';
 import { buildCompoundsG } from './compounds';
 import { RoadClear, fitBuilding, dropNested, shoreWallOk } from './declutter';
 import { buildProps, warmProps } from './props';
+import { inClub } from './clubs';
 import { buildBridges, deckCollision, deckProfile } from './bridges';
 import type { TileCol } from '../sim/life';
 import { buildingHeight } from './buildings';
@@ -127,12 +128,12 @@ export class WorldStreamer {
           const i = Math.floor(hash(seed + tries, t + 3) * (pl.pts.length / 2)); const fx = hash(seed + tries, t + 9);
           const x = pl.cx + (pl.pts[i * 2] - pl.cx) * fx * 0.85, z = pl.cz + (pl.pts[i * 2 + 1] - pl.cz) * fx * 0.85;
           if (pl.buildings.some((b) => !b.dead && pointInPoly(x, z, b.pts))) continue;
-          if (rc.room(x, z, 'tree') < 0) continue;
+          if (rc.room(x, z, 'tree') < 0 || inClub(x, z, 3)) continue;
           trees.push({ x, z, palm: hash(seed, t + 40) < 0.3, s: hash(seed, t + 50) }); break;
         }
       }
     }
-    const blocked = (x: number, z: number) => own.some((b) => Math.abs(b.cx - x) < 30 && Math.abs(b.cz - z) < 30 && pointInPoly(x, z, b.pts));
+    const blocked = (x: number, z: number) => inClub(x, z, 2) || own.some((b) => Math.abs(b.cx - x) < 30 && Math.abs(b.cz - z) < 30 && pointInPoly(x, z, b.pts));
     const props = buildProps({ x0, z0, size: TILE, roads: roads.filter((r) => r.pts.length), trees, tanks: bb.tanks, bars: bb.bars, dishes: bb.dishes, blocked, poleBad: (x, z) => rc.poleBad(x, z) });
     props.group.position.set(-x0, 0, -z0); group.add(props.group);
     this.stage = 'finish'; yield;

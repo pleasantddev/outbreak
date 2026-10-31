@@ -66,8 +66,48 @@ Rules every idea has to respect: 16+, no nudity, no real brand logos, parody nam
 
 26. **Generator fumes and noise complaints.** A loud generator in a tight compound angers neighbours, who can call the landlord or settle it with a bottle of something. Why: a small system that makes the blackout feel social. Size S. Status: idea.
 
+## Sickness, luck and the body (from the founder's brief 4)
+
+27. **Silent carrier.** Luck decides who carries a spreading illness without feeling it, so a player can pass a cough on at the market and never know it was them. Why: the founder wants sickness that travels between real players, and the quiet carrier is the fun, scary version of it. Size L. Status: idea.
+
+28. **Clinic and pharmacy you own.** Open a clinic or a chemist, hire real players as nurse and pharmacist, set your own fees, and keep the drugs stocked from Mile 12 side suppliers. Why: hospitals are a money sink for players, so owning one is the other side of the same coin. Size M. Status: idea.
+
+29. **Ambulance runs.** A player with a van and a siren races a collapsed player to the nearest hospital and takes a cut of the bill for getting there alive. Why: it turns the hospital respawn into a job another player can do for you. Size M. Status: idea.
+
+30. **Babalawo and prayer mountain.** Pay for a reading or a night of prayer and get a vague hint about your luck, which may or may not be true. Why: the luck meter stays hidden, and Lagos has a whole trade in guessing at it, played here as satire. Size M. Status: idea.
+
+31. **Optician and fashion frames.** Glasses cure the edge blur of myopia, and players who sell frames make a name for the style. Why: it gives the negative traits a fix that is also a shop worth owning. Size S. Status: idea.
+
+32. **Debt follows you out of the hospital.** If you cannot pay the bill you leave in underwear with a debt, and a recovery agent can chase it for a fee. Why: it makes the stripped discharge a story with a second act, never a dead end. Size M. Status: idea.
+
+33. **Fake drug scare.** Now and then a batch of fake malaria tablets hits the pharmacies, and a regulator character shuts shops down until the owners prove they are clean. Why: it makes pharmacy owners care about their suppliers, in the same spirit as the bad sachet water batch. Size S. Status: idea.
+
+## Rooms, phones and what breaks
+
+34. **Face-me-I-face-you.** A shared compound with a landlord, one bathroom, a queue for the tap and a levy for the generator, where your neighbours are real players. Why: renting is where every Lagos person starts, and sharing a corridor is the best place for trouble and friendship. Size M. Status: idea.
+
+35. **Sublet and roommates.** Split a flat with other players, divide the rent, and find out who left the light on. Why: it spreads the rent sink across friends and gives the contacts app something to do. Size M. Status: idea.
+
+36. **Computer Village repair stalls.** Players run screen repair and battery swap stalls in Ikeja, buy parts from other players, and compete on price and speed. Why: cracked phones need a place to go, and Computer Village is the place. Size M. Status: idea.
+
+37. **Tokunbo phones.** Used phones are graded by battery, cracks and history, and a bad grade can hide a bad history. Why: second hand is how most people buy a phone here, and it gives the repair stalls stock. Size S. Status: idea.
+
+38. **The cloned phone cat and mouse.** A hacker character clones a phone as a game mechanic and the owner can spot the signs, clean the phone at a shop or switch phones. Why: it is satire about phone fraud with a clear fix for the victim, and never a how-to. Size M. Status: idea.
+
+## Already in the game or on its way
+
+39. **The power grid and generators.** Feeders go down, windows and street lamps go dark, and homes with a generator glow warm. Why: NEPA is the daily joke, so the whole map feels it. Size L. Status: shipped.
+
+40. **Motor parks with unions and touts.** Corrugated canopies, painted kerbs, a union shed with a hand-painted sign, passengers waiting and touts working the queue. Why: the motor park is where Lagos moves. Size M. Status: shipped.
+
+41. **Billboards you can book.** Every sellable face on the map has a stable id, size and tier, and MyAds sells them for real money. Why: players want to show off, and a brand on a bridge is the loudest way to do it. Size L. Status: shipped.
+
+42. **Oshodi Transport Interchange.** Three six-level terminals with open bays, a ticketing hall, four parking floors, a union chairman's office on the ground floor and covered footbridges over the expressway. Why: it is the home district and the founder asked for it by name. Size L. Status: building.
+
+43. **ZILOX, GELE and ORUN.** Three parody clubs with a DJ booth and pole stages each: a big Ikoyi superclub, a lounge, and a rooftop deck on a 21 level tower. Why: players can DJ and dance for pay, and the clubs need real places to stand. Size L. Status: building.
+
 ## What I am building next
 
-- The Oshodi Transport Interchange, with bridges and billboard faces for MyAds.
-- Parody club buildings with DJ booths and pole stages.
-- A map completeness audit.
+- Finish and check the Oshodi interchange, the club interiors and the billboard faces in the game.
+- Map audit: the playable map stops at Falomo, so Victoria Island and Lekki are missing. Writing up the fix.
+- Turn the brief 4 seeds above into sketches the lead can pick from.

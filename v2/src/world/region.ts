@@ -59,7 +59,7 @@ export function parseRegion(buf: ArrayBuffer, size: number): Region {
     const pts = new Float32Array(np * 2);
     for (let p = 0; p < np; p++) { pts[p * 2] = ox + i32() / 10; pts[p * 2 + 1] = oz + i32() / 10; }
     let elev: Float32Array | null = null;
-    if (flags & 2) { elev = new Float32Array(np); for (let p = 0; p < np; p++) elev[p] = i16() / 10; }
+    if (flags & 2) { elev = new Float32Array(np); for (let p = 0; p < np; p++) elev[p] = i16() / 10; if (cls === ROAD.foot || cls === ROAD.steps) footbridgeProfile(pts, elev, layer); }
     r.roads.push({ cls, lanes, flags, layer, name, id, pts, width: wd / 2, elev });
   }
   n = u32();
@@ -157,4 +157,14 @@ export class RegionStore {
     const o = this.manifest.origin; const kx = Math.cos((o.lat * Math.PI) / 180) * 111320, kz = 110574;
     return { x: (lon - o.lon) * kx, z: -(lat - o.lat) * kz };
   }
+}
+
+/** Pedestrian bridges climb on ramps of about 10 degrees to a deck with real clearance (6 m for a layer-1 bridge, up to 12.8 m for the high skywalks),
+ *  instead of the 3 percent grade the pack gives every bridge. Keep the constants in step with pipe/billboards_gen.py (foot_profile). */
+export const FOOT_SLOPE = 0.18;
+export function footbridgeProfile(pts: Float32Array, elev: Float32Array, layer: number) {
+  const n = elev.length; if (n < 2) return; const s = new Float32Array(n);
+  for (let k = 1; k < n; k++) s[k] = s[k - 1] + Math.hypot(pts[k * 2] - pts[k * 2 - 2], pts[k * 2 + 1] - pts[k * 2 - 1]);
+  const L = s[n - 1]; const cap = layer >= 3 ? 12.8 : 6.0;
+  for (let k = 0; k < n; k++) elev[k] = Math.max(elev[k], Math.min(cap, FOOT_SLOPE * Math.min(s[k], L - s[k]) + 0.15));
 }
