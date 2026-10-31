@@ -9,7 +9,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 1 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t1-roof-a2",
@@ -21,7 +23,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 1 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t1-wall-a1",
@@ -33,7 +37,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 1 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t1-wall-a2",
@@ -45,7 +51,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 1 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t1-roof-b1",
@@ -57,7 +65,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 1 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t1-roof-b2",
@@ -69,7 +79,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 1 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t1-wall-b1",
@@ -81,7 +93,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 1 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t1-wall-b2",
@@ -93,7 +107,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 1 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t1-end-w",
@@ -105,7 +121,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 1 end wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t1-end-e",
@@ -117,7 +135,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 1 end wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t2-roof-a1",
@@ -129,7 +149,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 2 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t2-roof-a2",
@@ -141,7 +163,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 2 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t2-wall-a1",
@@ -153,7 +177,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 2 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t2-wall-a2",
@@ -165,7 +191,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 2 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t2-roof-b1",
@@ -177,7 +205,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 2 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t2-roof-b2",
@@ -189,7 +219,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 2 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t2-wall-b1",
@@ -201,7 +233,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 2 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t2-wall-b2",
@@ -213,7 +247,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 2 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t2-end-w",
@@ -225,7 +261,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 2 end wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t2-end-e",
@@ -237,7 +275,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 2 end wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t3-roof-a1",
@@ -249,7 +289,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 3 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t3-roof-a2",
@@ -261,7 +303,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 3 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t3-wall-a1",
@@ -273,7 +317,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 3 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t3-wall-a2",
@@ -285,7 +331,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 3 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t3-roof-b1",
@@ -297,7 +345,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 3 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t3-roof-b2",
@@ -309,7 +359,9 @@
   "h": 7,
   "place": "Oshodi Interchange, Terminal 3 roof",
   "slots": 3,
-  "tier": "prime"
+  "tier": "prime",
+  "mount": "roof",
+  "base": 19.2
  },
  {
   "id": "osh-t3-wall-b1",
@@ -321,7 +373,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 3 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t3-wall-b2",
@@ -333,7 +387,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 3 wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t3-end-w",
@@ -345,7 +401,9 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 3 end wall",
   "slots": 1,
-  "tier": "standard"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-t3-end-e",
@@ -357,198 +415,820 @@
   "h": 6.4,
   "place": "Oshodi Interchange, Terminal 3 end wall",
   "slots": 1,
-  "tier": "standard"
- },
- {
-  "id": "osh-br560546961-1l",
-  "x": 971.0,
-  "y": 9.0,
-  "z": -338.6,
-  "yaw": 0.426,
-  "w": 10,
-  "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 1",
-  "slots": 1,
-  "tier": "street"
- },
- {
-  "id": "osh-br560546961-1r",
-  "x": 969.8,
-  "y": 9.0,
-  "z": -341.3,
-  "yaw": -2.715,
-  "w": 10,
-  "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 1",
-  "slots": 1,
-  "tier": "street"
- },
- {
-  "id": "osh-br560546961-2l",
-  "x": 984.4,
-  "y": 9.0,
-  "z": -344.5,
-  "yaw": 0.407,
-  "w": 10,
-  "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 1",
-  "slots": 1,
-  "tier": "street"
- },
- {
-  "id": "osh-br560546961-2r",
-  "x": 983.3,
-  "y": 9.0,
-  "z": -347.1,
-  "yaw": -2.734,
-  "w": 10,
-  "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 1",
-  "slots": 1,
-  "tier": "street"
+  "tier": "standard",
+  "mount": "wall",
+  "base": 6.4
  },
  {
   "id": "osh-br560546965-1l",
-  "x": 963.9,
-  "y": 9.0,
-  "z": -241.6,
-  "yaw": 1.985,
+  "x": 964.0,
+  "y": 8.6,
+  "z": -257.3,
+  "yaw": 0.462,
   "w": 10,
   "h": 3,
   "place": "Oshodi Interchange footbridge, layer 1",
   "slots": 1,
-  "tier": "street"
+  "tier": "street",
+  "mount": "bridge",
+  "base": 6.2
  },
  {
   "id": "osh-br560546965-1r",
-  "x": 961.2,
-  "y": 9.0,
-  "z": -240.4,
-  "yaw": -1.156,
+  "x": 962.7,
+  "y": 8.6,
+  "z": -259.9,
+  "yaw": -2.68,
   "w": 10,
   "h": 3,
   "place": "Oshodi Interchange footbridge, layer 1",
   "slots": 1,
-  "tier": "street"
+  "tier": "street",
+  "mount": "bridge",
+  "base": 6.2
  },
  {
   "id": "osh-br560546965-2l",
-  "x": 957.7,
-  "y": 9.0,
-  "z": -255.6,
-  "yaw": 1.985,
-  "w": 10,
-  "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 1",
-  "slots": 1,
-  "tier": "street"
- },
- {
-  "id": "osh-br560546965-2r",
-  "x": 955.1,
-  "y": 9.0,
-  "z": -254.4,
-  "yaw": -1.156,
-  "w": 10,
-  "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 1",
-  "slots": 1,
-  "tier": "street"
- },
- {
-  "id": "osh-br560546965-3l",
-  "x": 970.6,
-  "y": 9.0,
-  "z": -259.9,
+  "x": 978.4,
+  "y": 8.3,
+  "z": -262.9,
   "yaw": 0.363,
   "w": 10,
   "h": 3,
   "place": "Oshodi Interchange footbridge, layer 1",
   "slots": 1,
-  "tier": "street"
+  "tier": "street",
+  "mount": "bridge",
+  "base": 5.9
  },
  {
-  "id": "osh-br560546965-3r",
-  "x": 969.6,
-  "y": 9.0,
-  "z": -262.6,
+  "id": "osh-br560546965-2r",
+  "x": 977.3,
+  "y": 8.3,
+  "z": -265.6,
   "yaw": -2.778,
   "w": 10,
   "h": 3,
   "place": "Oshodi Interchange footbridge, layer 1",
   "slots": 1,
-  "tier": "street"
+  "tier": "street",
+  "mount": "bridge",
+  "base": 5.9
  },
  {
-  "id": "osh-br936728640-1l",
-  "x": 979.6,
-  "y": 21.8,
-  "z": -347.1,
-  "yaw": -2.728,
+  "id": "osh-br560546965-3l",
+  "x": 992.9,
+  "y": 8.1,
+  "z": -268.4,
+  "yaw": 0.363,
   "w": 10,
   "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 3",
+  "place": "Oshodi Interchange footbridge, layer 1",
   "slots": 1,
-  "tier": "street"
+  "tier": "street",
+  "mount": "bridge",
+  "base": 5.7
  },
  {
-  "id": "osh-br936728640-1r",
-  "x": 980.8,
-  "y": 21.8,
-  "z": -344.4,
-  "yaw": 0.413,
+  "id": "osh-br560546965-3r",
+  "x": 991.9,
+  "y": 8.1,
+  "z": -271.1,
+  "yaw": -2.778,
   "w": 10,
   "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 3",
+  "place": "Oshodi Interchange footbridge, layer 1",
   "slots": 1,
-  "tier": "street"
+  "tier": "street",
+  "mount": "bridge",
+  "base": 5.7
  },
  {
-  "id": "osh-br936728640-2l",
-  "x": 962.1,
-  "y": 21.8,
-  "z": -339.4,
-  "yaw": -2.728,
-  "w": 10,
-  "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 3",
-  "slots": 1,
-  "tier": "street"
+  "id": "tmb-01",
+  "x": 5497.9,
+  "y": 25.6,
+  "z": 9718.8,
+  "yaw": 0.212,
+  "w": 14,
+  "h": 5,
+  "place": "Third Mainland Bridge",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 14.2
  },
  {
-  "id": "osh-br936728640-2r",
-  "x": 963.3,
-  "y": 21.8,
-  "z": -336.7,
-  "yaw": 0.413,
-  "w": 10,
-  "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 3",
-  "slots": 1,
-  "tier": "street"
+  "id": "tmb-02",
+  "x": 6104.2,
+  "y": 25.6,
+  "z": 6811.5,
+  "yaw": -0.82,
+  "w": 14,
+  "h": 5,
+  "place": "Third Mainland Bridge",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 14.2
  },
  {
-  "id": "osh-br936728641-1l",
-  "x": 915.8,
-  "y": 21.8,
-  "z": -269.4,
-  "yaw": -1.163,
-  "w": 10,
-  "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 3",
-  "slots": 1,
-  "tier": "street"
+  "id": "tmb-03",
+  "x": 6908.8,
+  "y": 25.6,
+  "z": 3784.6,
+  "yaw": -0.215,
+  "w": 14,
+  "h": 5,
+  "place": "Third Mainland Bridge",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 14.2
  },
  {
-  "id": "osh-br936728641-1r",
-  "x": 918.5,
-  "y": 21.8,
-  "z": -270.5,
-  "yaw": 1.978,
-  "w": 10,
-  "h": 3,
-  "place": "Oshodi Interchange footbridge, layer 3",
+  "id": "tmb-04",
+  "x": 6233.4,
+  "y": 24.9,
+  "z": 1243.9,
+  "yaw": 3.083,
+  "w": 14,
+  "h": 5,
+  "place": "Third Mainland Bridge",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 13.4
+ },
+ {
+  "id": "tmb-05",
+  "x": 6890.3,
+  "y": 25.6,
+  "z": 4321.0,
+  "yaw": 2.763,
+  "w": 14,
+  "h": 5,
+  "place": "Third Mainland Bridge",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 14.2
+ },
+ {
+  "id": "tmb-06",
+  "x": 5802.3,
+  "y": 25.6,
+  "z": 7268.6,
+  "yaw": 2.31,
+  "w": 14,
+  "h": 5,
+  "place": "Third Mainland Bridge",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 14.2
+ },
+ {
+  "id": "eko-01",
+  "x": 4346.1,
+  "y": 19.0,
+  "z": 10140.5,
+  "yaw": 0.137,
+  "w": 14,
+  "h": 5,
+  "place": "Eko Bridge",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 7.5
+ },
+ {
+  "id": "eko-02",
+  "x": 3717.1,
+  "y": 25.6,
+  "z": 8812.7,
+  "yaw": 0.003,
+  "w": 14,
+  "h": 5,
+  "place": "Eko Bridge",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 14.2
+ },
+ {
+  "id": "eko-03",
+  "x": 2665.2,
+  "y": 25.6,
+  "z": 7794.6,
+  "yaw": 0.388,
+  "w": 14,
+  "h": 5,
+  "place": "Eko Bridge",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 14.2
+ },
+ {
+  "id": "eko-04",
+  "x": 3687.0,
+  "y": 25.6,
+  "z": 8791.7,
+  "yaw": -3.081,
+  "w": 14,
+  "h": 5,
+  "place": "Eko Bridge",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 14.2
+ },
+ {
+  "id": "ikr-01",
+  "x": 3159.0,
+  "y": 9.0,
+  "z": -2706.5,
+  "yaw": -0.947,
+  "w": 12,
+  "h": 4,
+  "place": "Ikorodu Road",
   "slots": 1,
-  "tier": "street"
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "ikr-02",
+  "x": 2672.0,
+  "y": 9.0,
+  "z": 382.7,
+  "yaw": -0.281,
+  "w": 12,
+  "h": 4,
+  "place": "Ikorodu Road",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "ikr-03",
+  "x": 2619.2,
+  "y": 9.0,
+  "z": -793.6,
+  "yaw": 2.843,
+  "w": 12,
+  "h": 4,
+  "place": "Ikorodu Road",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "ikr-04",
+  "x": 2618.3,
+  "y": 9.0,
+  "z": -203.1,
+  "yaw": 2.803,
+  "w": 12,
+  "h": 4,
+  "place": "Ikorodu Road",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "ikr-05",
+  "x": 3692.0,
+  "y": 9.0,
+  "z": -3487.5,
+  "yaw": 2.202,
+  "w": 12,
+  "h": 4,
+  "place": "Ikorodu Road",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "ikr-06",
+  "x": 9865.6,
+  "y": 9.0,
+  "z": -6266.6,
+  "yaw": 1.106,
+  "w": 12,
+  "h": 4,
+  "place": "Ikorodu Road",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "ikr-07",
+  "x": 2727.1,
+  "y": 9.0,
+  "z": 2483.6,
+  "yaw": -0.292,
+  "w": 12,
+  "h": 4,
+  "place": "Ikorodu Road",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "ikr-08",
+  "x": 11236.4,
+  "y": 9.0,
+  "z": -6866.6,
+  "yaw": -1.555,
+  "w": 12,
+  "h": 4,
+  "place": "Ikorodu Road",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "aow-01",
+  "x": 2170.7,
+  "y": 11.5,
+  "z": -577.6,
+  "yaw": -1.875,
+  "w": 14,
+  "h": 5,
+  "place": "Apapa-Oworonshoki Expressway",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "aow-02",
+  "x": 706.0,
+  "y": 11.5,
+  "z": -236.2,
+  "yaw": 1.738,
+  "w": 14,
+  "h": 5,
+  "place": "Apapa-Oworonshoki Expressway",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "aow-03",
+  "x": -679.7,
+  "y": 11.5,
+  "z": 1552.1,
+  "yaw": 2.723,
+  "w": 14,
+  "h": 5,
+  "place": "Apapa-Oworonshoki Expressway",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "aow-04",
+  "x": -786.3,
+  "y": 11.5,
+  "z": 2982.8,
+  "yaw": -0.4,
+  "w": 14,
+  "h": 5,
+  "place": "Apapa-Oworonshoki Expressway",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "aow-05",
+  "x": -2919.7,
+  "y": 11.5,
+  "z": 9958.5,
+  "yaw": 2.279,
+  "w": 14,
+  "h": 5,
+  "place": "Apapa-Oworonshoki Expressway",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "aow-06",
+  "x": -2345.8,
+  "y": 11.5,
+  "z": 5917.7,
+  "yaw": -0.578,
+  "w": 14,
+  "h": 5,
+  "place": "Apapa-Oworonshoki Expressway",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "aln-01",
+  "x": 697.6,
+  "y": 8.8,
+  "z": -5920.9,
+  "yaw": -2.969,
+  "w": 10,
+  "h": 3.5,
+  "place": "Allen Avenue, Ikeja",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "aln-02",
+  "x": 972.8,
+  "y": 8.8,
+  "z": -5403.5,
+  "yaw": -2.985,
+  "w": 10,
+  "h": 3.5,
+  "place": "Allen Avenue, Ikeja",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "aln-03",
+  "x": 1257.8,
+  "y": 8.8,
+  "z": -4896.4,
+  "yaw": 0.275,
+  "w": 10,
+  "h": 3.5,
+  "place": "Allen Avenue, Ikeja",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "aln-04",
+  "x": 989.8,
+  "y": 8.8,
+  "z": -5416.0,
+  "yaw": 0.164,
+  "w": 10,
+  "h": 3.5,
+  "place": "Allen Avenue, Ikeja",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "ikj-01",
+  "x": 532.5,
+  "y": 6.3,
+  "z": -5880.8,
+  "yaw": 2.01,
+  "w": 8,
+  "h": 3,
+  "place": "Obafemi Awolowo Way, Ikeja",
+  "slots": 1,
+  "tier": "street",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "ikj-02",
+  "x": 237.9,
+  "y": 6.3,
+  "z": -5542.6,
+  "yaw": -1.081,
+  "w": 8,
+  "h": 3,
+  "place": "Obafemi Awolowo Way, Ikeja",
+  "slots": 1,
+  "tier": "street",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "ikj-03",
+  "x": 937.1,
+  "y": 6.3,
+  "z": -6168.3,
+  "yaw": 1.925,
+  "w": 8,
+  "h": 3,
+  "place": "Obafemi Awolowo Way, Ikeja",
+  "slots": 1,
+  "tier": "street",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "via-01",
+  "x": 9489.8,
+  "y": 9.0,
+  "z": 11602.4,
+  "yaw": -0.666,
+  "w": 12,
+  "h": 4,
+  "place": "Marina to Ikoyi (Marina, Ikoyi Road, Bourdillon)",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "via-02",
+  "x": 10763.4,
+  "y": 9.0,
+  "z": 11704.4,
+  "yaw": -1.551,
+  "w": 12,
+  "h": 4,
+  "place": "Marina to Ikoyi (Marina, Ikoyi Road, Bourdillon)",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "via-03",
+  "x": 5002.5,
+  "y": 9.0,
+  "z": 11329.4,
+  "yaw": -2.38,
+  "w": 12,
+  "h": 4,
+  "place": "Marina to Ikoyi (Marina, Ikoyi Road, Bourdillon)",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "via-04",
+  "x": 7672.6,
+  "y": 9.0,
+  "z": 11190.6,
+  "yaw": -1.458,
+  "w": 12,
+  "h": 4,
+  "place": "Marina to Ikoyi (Marina, Ikoyi Road, Bourdillon)",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "via-05",
+  "x": 10738.0,
+  "y": 9.0,
+  "z": 11688.3,
+  "yaw": 1.603,
+  "w": 12,
+  "h": 4,
+  "place": "Marina to Ikoyi (Marina, Ikoyi Road, Bourdillon)",
+  "slots": 1,
+  "tier": "standard",
+  "mount": "pole",
+  "base": 0.0
+ },
+ {
+  "id": "isl-01a",
+  "x": 6033.4,
+  "y": 166.2,
+  "z": 11811.8,
+  "yaw": -0.58,
+  "w": 16,
+  "h": 6,
+  "place": "Lagos Island rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 160.0
+ },
+ {
+  "id": "isl-01b",
+  "x": 6041.6,
+  "y": 166.2,
+  "z": 11799.4,
+  "yaw": 2.561,
+  "w": 16,
+  "h": 6,
+  "place": "Lagos Island rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 160.0
+ },
+ {
+  "id": "isl-02a",
+  "x": 4978.0,
+  "y": 130.2,
+  "z": 11137.9,
+  "yaw": 0.852,
+  "w": 16,
+  "h": 6,
+  "place": "Lagos Island rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 124.0
+ },
+ {
+  "id": "isl-02b",
+  "x": 4959.6,
+  "y": 130.2,
+  "z": 11121.8,
+  "yaw": -2.289,
+  "w": 16,
+  "h": 6,
+  "place": "Lagos Island rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 124.0
+ },
+ {
+  "id": "isl-03a",
+  "x": 4423.5,
+  "y": 86.2,
+  "z": 10759.2,
+  "yaw": -2.081,
+  "w": 16,
+  "h": 6,
+  "place": "Lagos Island rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 80.0
+ },
+ {
+  "id": "isl-03b",
+  "x": 4466.1,
+  "y": 86.2,
+  "z": 10783.1,
+  "yaw": 1.061,
+  "w": 16,
+  "h": 6,
+  "place": "Lagos Island rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 80.0
+ },
+ {
+  "id": "isl-04a",
+  "x": 5619.6,
+  "y": 72.2,
+  "z": 11503.4,
+  "yaw": 2.614,
+  "w": 16,
+  "h": 6,
+  "place": "Lagos Island rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 66.0
+ },
+ {
+  "id": "isl-04b",
+  "x": 5611.2,
+  "y": 72.2,
+  "z": 11517.8,
+  "yaw": -0.527,
+  "w": 16,
+  "h": 6,
+  "place": "Lagos Island rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 66.0
+ },
+ {
+  "id": "isl-05a",
+  "x": 6149.0,
+  "y": 68.7,
+  "z": 11531.4,
+  "yaw": 0.935,
+  "w": 16,
+  "h": 6,
+  "place": "Lagos Island rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 62.5
+ },
+ {
+  "id": "isl-05b",
+  "x": 6134.2,
+  "y": 68.7,
+  "z": 11520.5,
+  "yaw": -2.206,
+  "w": 16,
+  "h": 6,
+  "place": "Lagos Island rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 62.5
+ },
+ {
+  "id": "lek-01a",
+  "x": 11272.0,
+  "y": 127.6,
+  "z": 11824.4,
+  "yaw": 2.5,
+  "w": 16,
+  "h": 6,
+  "place": "Ikoyi and Lekki-side rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 121.4
+ },
+ {
+  "id": "lek-01b",
+  "x": 11251.6,
+  "y": 127.6,
+  "z": 11851.7,
+  "yaw": -0.641,
+  "w": 16,
+  "h": 6,
+  "place": "Ikoyi and Lekki-side rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 121.4
+ },
+ {
+  "id": "lek-02a",
+  "x": 10021.9,
+  "y": 116.2,
+  "z": 11913.3,
+  "yaw": 0.32,
+  "w": 16,
+  "h": 6,
+  "place": "Ikoyi and Lekki-side rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 110.0
+ },
+ {
+  "id": "lek-02b",
+  "x": 10010.7,
+  "y": 116.2,
+  "z": 11879.7,
+  "yaw": -2.822,
+  "w": 16,
+  "h": 6,
+  "place": "Ikoyi and Lekki-side rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 110.0
+ },
+ {
+  "id": "lek-03a",
+  "x": 9810.5,
+  "y": 53.2,
+  "z": 10864.5,
+  "yaw": -0.354,
+  "w": 16,
+  "h": 6,
+  "place": "Ikoyi and Lekki-side rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 47.0
+ },
+ {
+  "id": "lek-03b",
+  "x": 9826.0,
+  "y": 53.2,
+  "z": 10822.6,
+  "yaw": 2.788,
+  "w": 16,
+  "h": 6,
+  "place": "Ikoyi and Lekki-side rooftop",
+  "slots": 3,
+  "tier": "prime",
+  "mount": "roof",
+  "base": 47.0
  }
 ]
