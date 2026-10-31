@@ -37,3 +37,18 @@
   windows a little bright (`genOn * 0.5`), warehouse stain pack not rebuilt, bank and hub interiors still white-heavy.
   Tips: snap constant-attribute varyings before a sin-hash (per-pixel noise otherwise); each vite dev server needs its own
   cache dir; headless frames are slow, so camera lerps need frames not seconds; tools: stuck.py, lookshot.py, intshot.py.
+- 31 Oct 05:xx: founder brief 3 (see BACKLOG). Ideas board artifact: https://claude.ai/artifact/Htonjfcz9EWGJthTLB9VNz
+  (regenerate with `python3 tools/ideas_page.py`, publish docs/ideas.html to that URL). Self-wake without the laptop: a cloud
+  scheduled task "HustleLife build shift" (trig_01PQQg7HsZoz2eKSyNE6dRMk, every 4 h at :58) runs a fresh session from
+  this repo's docs. Agents: SPORTS (Opus low, worktree /home/claude/wt/sports, branch hl-sports), IDEAS (Sonnet,
+  /home/claude/wt/look, branch hl-look). Built: phone v2 (icons, dock, Back), phone network (numbers, IDs, contacts,
+  texts, calls), voice (proximity, calls, radio), server tests 75.
+- 31 Oct 09:00 shift: Paystack payments (53d2323). server/src/payments.ts + routes/pay.ts: server prices every product
+  (sku "kind:id"), initialize -> hosted checkout, verify on return, HMAC-signed webhook, settle exactly once (pending ->
+  paid, goods in the same transaction), amount/currency mismatch flagged not granted. Test mode when no
+  PAYSTACK_SECRET_KEY and not NODE_ENV=production. purchases table got the admin Store page's columns (migration v5),
+  so the admin ledger shows real rows; GET /api/pay/ledger for game admins. Client: systems/pay.ts (Top Up app: cash
+  packs from content/iap.json, promo codes, receipts) and payApi.checkout(sku, meta) for MyAds and clubs to reuse:
+  register a server product with api.payments.register(kind, { quote, fulfil }). Only cash/bank packs are sold until
+  items, cosmetics, boosts and passes have fulfilment. Admin refunds mark the row but do not claw back cash yet.
+  Server tests 86/86. Checked in the browser against a local test server: bought Market Day, wallet +₦1.5m.

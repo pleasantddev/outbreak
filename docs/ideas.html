@@ -1,0 +1,127 @@
+<title>HustleLife Ideas Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a danfo-yellow masthead band, the build checklist as three lanes, then idea cards in section groups. */
+:root {
+  --bg: #f6f4ee; --ink: #16180f; --mut: #5f6253; --line: #dedbcd; --card: #fffdf7;
+  --danfo: #f2b705; --danfo-ink: #1b1600; --leaf: #1f7a4d; --brick: #b4441c; --night: #1d2a24;
+  --display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif; --body: "Public Sans", system-ui, -apple-system, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121410; --ink: #eceadf; --mut: #a5a796; --line: #2c2f26; --card: #1a1d17; --danfo: #f2b705; --danfo-ink: #1b1600; --leaf: #4fbf86; --brick: #e2774e; --night: #0d120f; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #121410; --ink: #eceadf; --mut: #a5a796; --line: #2c2f26; --card: #1a1d17; --danfo: #f2b705; --danfo-ink: #1b1600; --leaf: #4fbf86; --brick: #e2774e; --night: #0d120f; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 400 15px/1.55 var(--body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px }
+.wrap { max-width: 1120px; margin: 0 auto }
+.mast { margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding: 34px max(16px, env(safe-area-inset-left, 0px)) 26px; background: var(--danfo); color: var(--danfo-ink); background-image: repeating-linear-gradient(90deg, transparent 0 46px, rgba(0,0,0,.07) 46px 50px) }
+.mast .wrap { display: grid; gap: 10px }
+.kicker { font: 500 12px var(--mono); letter-spacing: .12em; text-transform: uppercase }
+h1 { font: 800 clamp(34px, 6vw, 62px)/0.95 var(--display); margin: 0; letter-spacing: -.01em; text-wrap: balance }
+.mast p { margin: 0; max-width: 62ch; font-weight: 500 }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 18px; font: 500 12.5px var(--mono); margin-top: 6px }
+h2 { font: 800 24px/1.1 var(--display); margin: 34px 0 12px; text-wrap: balance }
+.lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px }
+.lane { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0 }
+.lane h3 { margin: 0 0 8px; font: 700 13px var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--mut) }
+.lane ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px }
+.lane li { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: start; font-size: 14px }
+.tick { width: 14px; height: 14px; margin-top: 4px; border-radius: 4px; border: 2px solid var(--line) }
+.lane li.done .tick { background: var(--leaf); border-color: var(--leaf) } .lane li.done span:last-child { color: var(--mut); text-decoration: line-through; text-decoration-color: var(--line) }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px }
+.filters button { font: 600 13px var(--body); padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer }
+.filters button[aria-pressed="true"] { background: var(--night); color: #fff; border-color: var(--night) }
+.filters button:focus-visible, .idea:focus-visible { outline: 3px solid var(--danfo); outline-offset: 2px }
+.group h2 { display: flex; align-items: baseline; gap: 10px } .group h2 small { font: 500 12px var(--mono); color: var(--mut) }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px }
+.idea { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0 }
+.idea header { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: baseline }
+.idea .no { font: 500 12px var(--mono); color: var(--brick) }
+.idea h3 { margin: 0; font: 700 17px/1.25 var(--display); text-wrap: balance }
+.idea p { margin: 0 } .pitch { font-size: 14.5px } .why { font-size: 13.5px; color: var(--mut) } .why b { color: var(--ink); font-weight: 600 }
+.idea footer { display: flex; gap: 8px; align-items: center; margin-top: 2px }
+.pill { font: 600 11.5px var(--body); text-transform: uppercase; letter-spacing: .06em; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--mut) }
+.pill.st-building { border-color: var(--danfo); color: var(--ink); background: color-mix(in srgb, var(--danfo) 22%, transparent) }
+.pill.st-shipped { border-color: var(--leaf); color: var(--leaf) }
+.size { font: 500 12px var(--mono); color: var(--mut) }
+.next { background: var(--night); color: #eef0e6; border-radius: 12px; padding: 16px 18px; display: grid; gap: 6px } .next h3 { margin: 0; font: 700 15px var(--display); color: var(--danfo) } .next ul { margin: 0; padding-left: 18px }
+.foot { margin-top: 34px; color: var(--mut); font-size: 12.5px }
+@media (prefers-reduced-motion: no-preference) { .idea { transition: transform .15s } .idea:hover { transform: translateY(-2px) } }
+</style>
+<div class="mast"><div class="wrap">
+<span class="kicker">HustleLife · Lagos · founder's board</span>
+<h1>HustleLife Ideas Board</h1>
+<p>New ideas from the team in the spirit of your briefs, and what is being built right now. The ideas teammate keeps adding to it; ideas move to building and shipped as they land.</p>
+<div class="stats"><span>26 ideas</span><span>0 building</span><span>0 shipped</span><span>Brief 3: 4 of 21 done</span><span>Updated 31 Oct 2026, 09:37 UTC</span></div>
+</div></div>
+<div class="wrap">
+<h2>Being built from your 31 October brief</h2>
+<div class="lanes"><section class="lane"><h3>Lead engineer</h3><ul><li class="done"><span class="tick" aria-hidden="true"></span><span>Phone v2 (b82fe6d)</span></li><li class="done"><span class="tick" aria-hidden="true"></span><span>Contacts + Messages + Calls (b82fe6d)</span></li><li class="done"><span class="tick" aria-hidden="true"></span><span>Proximity voice chat (b82fe6d) (WebRTC, server signalling)</span></li><li class="done"><span class="tick" aria-hidden="true"></span><span>Payments</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>MyAds</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>MyAds extras</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Clubs</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Wardrobe</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Police career</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>LASTMA career</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Street lights can be knocked down or broken (cars, fights), go dark, and Lagos Power linemen repair them</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Copy pass over every player-facing string with the humanizer guide</span></li></ul></section><section class="lane"><h3>Sports and property</h3><ul><li class=""><span class="tick" aria-hidden="true"></span><span>Property Manager app</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Pitches, courts and stadiums on the map are ownable property (server ownership, listing rules above)</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Book and fix matches</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Football match</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Basketball match</span></li></ul></section><section class="lane"><h3>Ideas and Oshodi</h3><ul><li class=""><span class="tick" aria-hidden="true"></span><span>Ideas artifact</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Oshodi Transport Interchange rebuilt like the real one</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Club buildings and interiors for the big parody clubs; pole stages, DJ booths</span></li><li class=""><span class="tick" aria-hidden="true"></span><span>Map completeness audit</span></li></ul></section></div>
+<h2>The ideas teammate is on</h2><div class="next"><ul><li>The Oshodi Transport Interchange, with bridges and billboard faces for MyAds.</li><li>Parody club buildings with DJ booths and pole stages.</li><li>A map completeness audit.</li></ul></div>
+<h2>Ideas</h2>
+<div class="filters" role="group" aria-label="Filter ideas by status">
+<button type="button" data-f="all" aria-pressed="true">All</button><button type="button" data-f="idea" aria-pressed="false">Ideas</button><button type="button" data-f="building" aria-pressed="false">Building</button><button type="button" data-f="shipped" aria-pressed="false">Shipped</button>
+</div>
+<section class="group"><h2>Money that moves between players <small>7</small></h2><div class="grid"><article class="idea" data-status="idea"><header><span class="no">1</span><h3>Danfo fleet owner</h3></header>
+<p class="pitch">Buy a danfo, hire real players to drive it, and collect a daily remit while they decide whether to remit complete.</p><p class="why"><b>Why it fits</b> it is the most Lagos side hustle there is, and it puts salary, trust and cheating between two real people.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">2</span><h3>Ajo and esusu circles</h3></header>
+<p class="pitch">Six players pay in every day, one takes the whole pot each round, and the order is fixed by the group head. Defaulters get named in the contacts app.</p><p class="why"><b>Why it fits</b> this is how people actually save here, and it only works if players keep their word.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">3</span><h3>Aso-ebi tailor</h3></header>
+<p class="pitch">Players with the tailor skill take fabric orders from other players and sew the outfit, then the buyer pays and wears it at the next owambe.</p><p class="why"><b>Why it fits</b> gives a real reason for the wardrobe system to have a maker and a buyer.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">4</span><h3>Market stalls and bale trading</h3></header>
+<p class="pitch">Rent a stall at a market, buy a bale of okrika at the wholesale price, sort it, and sell piece by piece to other players and NPCs. Prices move with how many stalls sell the same thing.</p><p class="why"><b>Why it fits</b> Balogun and Yaba market are the heart of the hustle.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Large build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">5</span><h3>Mile 12 to Oshodi supply run</h3></header>
+<p class="pitch">Real players haul tomatoes, peppers and yam from the farm market to the sellers, and the delivery price rises when the road is flooded or the checkpoint is hot.</p><p class="why"><b>Why it fits</b> logistics with other players on the road is the best use of the open map.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Large build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">6</span><h3>Prepaid token reseller</h3></header>
+<p class="pitch">Buy units in bulk from the Lagos Power app and resell to neighbours who just ran out at night, with a small markup.</p><p class="why"><b>Why it fits</b> it hooks into the grid we already have and turns every blackout into a business.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Small build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">7</span><h3>Sachet water factory</h3></header>
+<p class="pitch">Own the machine, buy the roll and the water, and supply every hawker on the map. A bad batch gets people sick and the area remembers your brand name.</p><p class="why"><b>Why it fits</b> pure water is a Lagos staple, and it is a clean small business to grow into a big one.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article></div></section><section class="group"><h2>Things you can own and run <small>7</small></h2><div class="grid"><article class="idea" data-status="idea"><header><span class="no">8</span><h3>Your own pepper soup joint</h3></header>
+<p class="pitch">Set the menu and the prices, hire real players as cook and waiter, and put a screen on for the match.</p><p class="why"><b>Why it fits</b> Lagos nights happen in joints, and we already have the room.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">9</span><h3>Owambe host</h3></header>
+<p class="pitch">Book a hall, send invites through the contacts app, set the dress code, hire a DJ and a MC, and let guests spray naira. The host keeps a cut of the spray.</p><p class="why"><b>Why it fits</b> a party you throw yourself is the best show off there is.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">10</span><h3>Ministry and branch church or mosque</h3></header>
+<p class="pitch">Found a small branch, set the service times, preach or lead prayers, and collect offerings from real players who attend.</p><p class="why"><b>Why it fits</b> faith is part of daily life here, so it should be a place players gather, not just a building.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Large build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">11</span><h3>Radio station</h3></header>
+<p class="pitch">Own a frequency, hire presenters, play licensed music, and sell ad slots through MyAds. Every car on the road can tune in.</p><p class="why"><b>Why it fits</b> it makes the soundscape a player economy.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">12</span><h3>Car showroom and plate auction</h3></header>
+<p class="pitch">Park your best cars in a glass showroom that others can walk through, and auction clean plate numbers to the highest bidder.</p><p class="why"><b>Why it fits</b> flexing a car is a sport, and a plate is a status symbol.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">13</span><h3>Estate security crew</h3></header>
+<p class="pitch">Residents of a compound pay a monthly levy to a crew of players who patrol at night. Do the job well and the estate renews, do it badly and the thieves know the gate is open.</p><p class="why"><b>Why it fits</b> it is a real Lagos business and it is a gentle way into the police career.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">14</span><h3>Ferry and boat owner</h3></header>
+<p class="pitch">Own a boat on the Ikorodu to Mile 12 or Victoria Island lines, set the fare, and carry real players over the lagoon when the road is jammed.</p><p class="why"><b>Why it fits</b> the water is half of Lagos and is mostly empty on our map.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article></div></section><section class="group"><h2>Run it and show it off <small>5</small></h2><div class="grid"><article class="idea" data-status="idea"><header><span class="no">15</span><h3>Detty December calendar</h3></header>
+<p class="pitch">A server wide event calendar with concerts, beach parties and carnival closures that change traffic, prices and what is open.</p><p class="why"><b>Why it fits</b> one shared Lagos with one shared calendar makes the world feel alive.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Large build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">16</span><h3>Lagos Gist feed</h3></header>
+<p class="pitch">Players post screenshots and short clips of their day, others vote, and the most talked about posts earn fame that unlocks club entry and brand deals.</p><p class="why"><b>Why it fits</b> show off is the point, and fame becomes a currency.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">17</span><h3>Night drag strip and car meet</h3></header>
+<p class="pitch">A weekly meet at a long road in Lekki where players race, spectators place bets with each other, and the police may or may not show up.</p><p class="why"><b>Why it fits</b> car culture, betting and chaos in one night.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">18</span><h3>Best amala in Lagos rankings</h3></header>
+<p class="pitch">Players rate every food spot they eat at and the city publishes a weekly top ten. Owners can pay to run a promotion, and a bad score costs real customers.</p><p class="why"><b>Why it fits</b> Lagos argues about food all day, so let it argue in game.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Small build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">19</span><h3>Wedding planner career</h3></header>
+<p class="pitch">Players plan a couple&#x27;s wedding from the venue to the cake to the guest list, and the couple, both real players, rate the day.</p><p class="why"><b>Why it fits</b> it builds on the owambe system and gives a social career that pays well.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article></div></section><section class="group"><h2>Pressure from the city <small>7</small></h2><div class="grid"><article class="idea" data-status="idea"><header><span class="no">20</span><h3>LASTMA raid days</h3></header>
+<p class="pitch">Some days the town is hot with LASTMA, okada riders reroute, and towing trucks are out. Players on the job get a cut, players on the road feel the fear.</p><p class="why"><b>Why it fits</b> it shows both sides of one law.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Small build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">21</span><h3>Fuel scarcity weeks</h3></header>
+<p class="pitch">Petrol stations run dry, queues stretch for blocks, and the black market sells jerrycans at three times the price.</p><p class="why"><b>Why it fits</b> it forces hard choices about driving, generators and who you trust.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Small build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">22</span><h3>Flood season</h3></header>
+<p class="pitch">Heavy rain floods low areas such as Lekki and Ikoyi roads, cars stall, wading players earn from pushing, and boats appear. Insurance exists and is a headache.</p><p class="why"><b>Why it fits</b> Lagos in July is a real thing and we already have rain.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">23</span><h3>Neighbourhood reputation</h3></header>
+<p class="pitch">Each area keeps a score for you based on what you did there, and good standing opens doors such as a discount, a loan or a quiet word before trouble.</p><p class="why"><b>Why it fits</b> deep Lagos life means the street remembers you.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">24</span><h3>Ride hail with real riders</h3></header>
+<p class="pitch">Players call each other for rides, set a fare, rate each other, and surge pricing kicks in when it rains.</p><p class="why"><b>Why it fits</b> it is the most natural way for two strangers to meet and trade.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">25</span><h3>Landlord and tenant chaos</h3></header>
+<p class="pitch">Rent due dates, caution fees, a leak nobody wants to fix, and an agent who disappears with the deposit. Players can be any side of it.</p><p class="why"><b>Why it fits</b> every Lagos person has a landlord story.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Medium build</span></footer></article><article class="idea" data-status="idea"><header><span class="no">26</span><h3>Generator fumes and noise complaints</h3></header>
+<p class="pitch">A loud generator in a tight compound angers neighbours, who can call the landlord or settle it with a bottle of something.</p><p class="why"><b>Why it fits</b> a small system that makes the blackout feel social.</p>
+<footer><span class="pill st-idea">idea</span><span class="size">Small build</span></footer></article></div></section>
+<p class="foot">Rules every idea respects: 16+, no nudity, no real brand logos, parody names for real places and clubs, crime is satire and never a how-to, and music only where we have the right to play it.</p>
+</div>
+<script>
+const bs = document.querySelectorAll('.filters button');
+bs.forEach((b) => b.addEventListener('click', () => {
+  bs.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  const f = b.dataset.f; document.querySelectorAll('.idea').forEach((c) => { c.hidden = f !== 'all' && c.dataset.status !== f; });
+  document.querySelectorAll('.group').forEach((g) => { g.hidden = ![...g.querySelectorAll('.idea')].some((c) => !c.hidden); });
+}));
+</script>

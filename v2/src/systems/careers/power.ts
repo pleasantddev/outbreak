@@ -49,16 +49,19 @@ class Power {
     B.sign('LAGOS POWER DISTRIBUTION · CONTROL ROOM', 0, 3.05, 0.12, 0, 9, '#7dd3fc', 'rgba(0,0,0,0)', '800 40px Rajdhani, Inter, sans-serif');
     // the wall map: every feeder, live
     this.wallCv = document.createElement('canvas'); this.wallCv.width = 900; this.wallCv.height = 800; this.wall = new THREE.CanvasTexture(this.wallCv); this.wall.colorSpace = THREE.SRGBColorSpace;
-    const map = new THREE.Mesh(new THREE.PlaneGeometry(9, 8 * 9 / 9), new THREE.MeshBasicMaterial({ map: this.wall, toneMapped: false })); map.position.set(0, 2.2, D - 0.08); map.rotation.y = Math.PI; map.scale.set(1, 0.36, 1); map.position.y = 2.0; B.add(map);
+    const map = new THREE.Mesh(new THREE.PlaneGeometry(9, 8 * 9 / 9), new THREE.MeshBasicMaterial({ map: this.wall, toneMapped: false, color: new THREE.Color(1.8, 1.8, 1.8) })); map.position.set(0, 2.2, D - 0.08); map.rotation.y = Math.PI; map.scale.set(1, 0.36, 1); map.position.y = 2.0; B.add(map);
     B.add(box(9.4, 3.2, 0.1, M(0x0b0f14, 0.4), 0, 2.0, D - 0.04));
     // consoles: two rows of desks with screens
     for (const z of [6.5, 9.5]) for (let i = 0; i < 4; i++) {
       const x = -6 + i * 4; B.solid(box(3.2, 0.8, 1.0, M(0x2b3440, 0.5), x, 0.4, z), 3.2, 1.0, 0.8);
-      for (const dx of [-0.9, 0, 0.9]) { const s = box(0.8, 0.5, 0.04, new THREE.MeshBasicMaterial({ color: [0x0e3a5c, 0x123d2a, 0x3a2a0e][(i + Math.round(dx)) % 3 + (dx < 0 ? 0 : 0)] ?? 0x0e3a5c, toneMapped: false }), x + dx, 1.15, z + 0.35); s.rotation.y = Math.PI; B.add(s); }
+      for (const dx of [-0.9, 0, 0.9]) { const s = box(0.8, 0.5, 0.04, new THREE.MeshBasicMaterial({ color: [0x2394e0, 0x2fc48a, 0xd9a03a][(i + Math.round(dx)) % 3 + (dx < 0 ? 0 : 0)] ?? 0x0e3a5c, toneMapped: false }), x + dx, 1.15, z + 0.35); s.rotation.y = Math.PI; B.add(s); }
     }
     // the shift operator's desk at the front
     B.solid(box(4, 0.8, 1.2, M(0x334155, 0.45), 0, 0.4, 3.2), 4, 1.2, 0.8);
-    for (const [x, z] of [[-6, 4], [6, 4], [-6, 11], [6, 11], [0, 8]]) { B.light(x, 3.0, z, 0x9cc8ff, 3.2, 10); B.add(box(1.6, 0.04, 0.25, new THREE.MeshBasicMaterial({ color: 0xdbeafe, toneMapped: false }), x, 3.3, z)); }
+    for (const [x, z] of [[-6, 4], [6, 4], [-6, 11], [6, 11], [0, 8]]) { B.light(x, 3.0, z, 0x6f9fe8, 1.1, 9); B.add(box(1.6, 0.04, 0.25, new THREE.MeshBasicMaterial({ color: 0x8fb0d8, toneMapped: false }), x, 3.3, z)); }
+    // the wall map is the brightest thing in the room and lights it from the far end; screens throw a cool glow on the desks and the operators' faces
+    B.light(0, 2.4, D - 2.4, 0x7cc8ff, 7, 16);
+    for (const [x, z] of [[-6, 5.6], [6, 5.6], [-6, 8.6], [6, 8.6]]) B.light(x, 1.5, z, 0x3aa0ff, 0.9, 4.5);
     const lot = B.lot({ x: 0, z: 1.6, yaw: 0 }, [{ name: 'Control room', x0: -W, z0: 0, x1: W, z1: D }], 0x11161d);
     this.venue = { id: 'power', title: 'LAGOS POWER', sub: 'Control room · shift operators wanted', lot, door: null, blip: '#facc15', label: 'Enter the control room', cam: { d: 10, pitch: 0.95 }, things: () => this.things(), enter: () => this.drawWall(), exit: () => this.end() };
   }

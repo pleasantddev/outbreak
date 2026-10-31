@@ -11,6 +11,7 @@ import type { Economy } from '../economy.ts';
 import type { ContentStore } from '../content.ts';
 import type { OnlineApi } from '../api.ts';
 import { Businesses } from '../business.ts';
+import { PhoneNet } from '../phone.ts';
 import { Grid as PowerGrid, FEEDERS } from '../grid.ts';
 import { HttpError } from '../auth.ts';
 import { run } from '../db.ts';
@@ -41,6 +42,8 @@ export interface Conn extends Node {
   known: Map<number, Ent>; knownWho: Set<number>;
   veh: VNode | null; lastSnapAt: number; saveAt: number; dead: boolean; alive: boolean; joinedAt: number; pong: boolean;
   skippedSnaps: number; bytesOut: number; bytesIn: number;
+  /** walkie-talkie channel (police and LASTMA on duty), or null */
+  radio?: string | null;
 }
 interface VNode extends Node { kind: 'v'; ent: VEnt; owner: Conn | null; ownerId: string; parkedAt: number; spawnedAt: number }
 
@@ -66,11 +69,13 @@ export class Hub implements OnlineApi {
   private saveTimer: NodeJS.Timeout | null = null;
 
   races: RaceLobbies; fixtures: Fixtures; props: Properties;
-  biz: Businesses; power = new PowerGrid(); private lastSwitch = new Map<string, number>();
+  biz: Businesses; phone: PhoneNet; power = new PowerGrid();
+  /** live voice calls between two connections */
+  private calls = new Map<string, { a: Conn; b: Conn; live: boolean; at: number }>(); private lastSwitch = new Map<string, number>();
   /** what the admin panel can steer in the game world */
   get world() { return { grid: this.power, biz: this.biz }; }
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
-    this.biz = new Businesses(db, econ);
+    this.biz = new Businesses(db, econ); this.phone = new PhoneNet(db);
     this.props = new Properties(db, econ);
     this.props.onChange = (kind, id, owner, ownerName) => this.broadcastJson({ t: 'prop', kind, id, owner, ownerName } as any);
     this.fixtures = new Fixtures({
@@ -176,6 +181,8 @@ export class Hub implements OnlineApi {
     this.send(c, {
       t: 'welcome', id, v: PROTOCOL_VERSION, tickHz: this.cfg.tickHz, serverTime: this.now(), epoch: Date.now(), cell: CELL, wallet: w, plots: this.econ.plotsOf(auth.account.id).map((p) => p.id),
       online: this.conns.size, profile: publicProfile(profile), role: auth.account.role, motd: this.cfg.motd, grid: this.power.state(),
+      phone: (() => { const p = this.phone.ensure(auth.account.id); return { number: p.number, publicId: p.public_id, unread: this.phone.unread(auth.account.id) }; })(),
+      ice: this.iceServers(),
       state: { ...st.blobs, vehicles: st.vehicles, skills: st.skills, missions: st.missions, pos: last },
     });
     this.log.info(`join ${profile.name} (#${id}) online=${this.conns.size}`);
@@ -187,6 +194,7 @@ export class Hub implements OnlineApi {
     if (c.dead) return; c.dead = true;
     try { this.races.leave(c.account.id); } catch { /* not racing */ }
     try { const fk = this.fixtures.byAccount.get(c.account.id); if (fk && this.fixtures.list.get(fk)?.state === 'open') this.fixtures.leave(c.account.id); } catch { /* not in a match */ }
+    for (const [cid, k] of this.calls) if (k.a === c || k.b === c) { this.calls.delete(cid); const o = k.a === c ? k.b : k.a; this.send(o, { t: 'call', kind: 'ended', callId: cid, from: c.profile.name, fromAccount: c.account.id, peer: c.id }); }
     this.conns.delete(c.id); if (this.byAccount.get(c.account.id) === c) this.byAccount.delete(c.account.id);
     this.grid.remove(c);
     if (c.veh) this.removeVehicle(c.veh);
@@ -388,6 +396,40 @@ export class Hub implements OnlineApi {
           this.send(o, { t: 'social', kind: 'ticket', from: c.profile.name, fromId: c.id, amount: 300 }); ok(); break;
         }
         case 'grid.get': ok({ board: this.power.board() }); break;
+        // ---- the phone network
+        case 'phone.me': { const p = this.phone.ensure(id); ok({ number: p.number, publicId: p.public_id }); break; }
+        case 'phone.lookup': { const r = this.phone.lookup(m.q); if (!r) throw new HttpError(404, 'No player with that number or ID.'); ok({ who: { ...r, online: this.byAccount.has(r.id) } }); break; }
+        case 'contacts.list': ok({ list: this.phone.contacts(id).map((x) => ({ ...x, online: this.byAccount.has(x.id) })) }); break;
+        case 'contacts.add': ok({ who: this.phone.addContact(id, m.q, m.name) }); break;
+        case 'contacts.remove': this.phone.removeContact(id, m.id); ok(); break;
+        case 'msg.send': {
+          const r = this.phone.send(id, m.to, m.body); const to = this.byAccount.get(r.to);
+          if (to) this.send(to, { t: 'msg', id: r.id, from: id, fromName: c.profile.name, body: r.body, at: r.at });
+          ok({ msg: r }); break;
+        }
+        case 'msg.threads': ok({ list: this.phone.threads(id) }); break;
+        case 'msg.thread': ok({ list: this.phone.thread(id, m.with) }); break;
+        case 'call.start': {
+          const to = this.byAccount.get(String(m.to ?? '')); if (!to || to === c) throw new HttpError(404, 'The number you are calling is not reachable at the moment.');
+          for (const k of this.calls.values()) if (k.a === to || k.b === to) throw new HttpError(409, 'The line is busy.');
+          const callId = `c${Date.now().toString(36)}${randomInt(0, 1e6).toString(36)}`; this.calls.set(callId, { a: c, b: to, live: false, at: Date.now() });
+          this.send(to, { t: 'call', kind: 'ring', callId, from: c.profile.name, fromAccount: id, peer: c.id }); ok({ callId, peer: to.id }); break;
+        }
+        case 'call.answer': {
+          const k = this.calls.get(String(m.callId ?? '')); if (!k || k.b !== c) throw new HttpError(404, 'That call is gone.');
+          if (m.accept) { k.live = true; this.send(k.a, { t: 'call', kind: 'accepted', callId: String(m.callId), from: c.profile.name, fromAccount: id, peer: c.id }); }
+          else { this.calls.delete(String(m.callId)); this.send(k.a, { t: 'call', kind: 'declined', callId: String(m.callId), from: c.profile.name, fromAccount: id, peer: c.id }); }
+          ok(); break;
+        }
+        case 'call.end': { const cid = String(m.callId ?? ''); const k = this.calls.get(cid); if (k && (k.a === c || k.b === c)) { this.calls.delete(cid); const o = k.a === c ? k.b : k.a; this.send(o, { t: 'call', kind: 'ended', callId: cid, from: c.profile.name, fromAccount: id, peer: c.id }); } ok(); break; }
+        // ---- voice: WebRTC offers, answers and candidates between two players who may talk (near each other, on a call, same radio channel)
+        case 'rtc': {
+          const o = this.conns.get(Number(m.to)); if (!o || o === c || o.dead) throw new HttpError(404, 'Gone.');
+          let j = ''; try { j = JSON.stringify(m.data ?? null); } catch { /* */ } if (!j || j.length > 24_000) throw new HttpError(400, 'Bad signal.');
+          if (!this.mayTalk(c, o)) throw new HttpError(403, 'Too far to talk.');
+          this.send(o, { t: 'rtc', from: c.id, data: JSON.parse(j), radio: !!(c.radio && c.radio === o.radio), call: this.onCall(c, o) }); ok(); break;
+        }
+        case 'radio.join': { const ch = typeof m.channel === 'string' && /^[a-z0-9:_-]{1,40}$/.test(m.channel) ? m.channel : null; c.radio = ch; ok({ channel: ch, members: ch ? [...this.conns.values()].filter((o) => o !== c && o.radio === ch).map((o) => ({ id: o.id, name: o.profile.name })) : [] }); break; }
         case 'grid.switch': { // only from the control room, and not faster than a real hand on a real switch
           if (c.ms.interior !== 'power') throw new HttpError(400, 'You are not in the control room.');
           const last = this.lastSwitch.get(id) ?? 0; if (Date.now() - last < 1500) throw new HttpError(429, 'Easy on the switches.'); this.lastSwitch.set(id, Date.now());
@@ -447,6 +489,15 @@ export class Hub implements OnlineApi {
   private designing = new Map<string, string>();
   /** players see each other only in the same space: the street, one venue, or one person's room */
   private spaceOf(c: Conn) { return c.ms.interior ?? ''; }
+  private onCall(a: Conn, b: Conn) { for (const k of this.calls.values()) if (k.live && ((k.a === a && k.b === b) || (k.a === b && k.b === a))) return true; return false; }
+  /** two players may open a voice link: near each other in the same space, on a call, or on the same radio channel */
+  private mayTalk(a: Conn, b: Conn) {
+    if (this.onCall(a, b)) return true; if (a.radio && a.radio === b.radio) return true;
+    for (const k of this.calls.values()) if (!k.live && ((k.a === a && k.b === b) || (k.a === b && k.b === a))) return true; // ringing: let the link warm up
+    return this.spaceOf(a) === this.spaceOf(b) && Math.hypot(a.ms.x - b.ms.x, a.ms.z - b.ms.z) < 45;
+  }
+  /** STUN for everyone, TURN when the operator configured one (voice through strict NATs) */
+  private iceServers() { const l: { urls: string; username?: string; credential?: string }[] = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }]; const t = process.env.TURN_URL; if (t) l.push({ urls: t, username: process.env.TURN_USER, credential: process.env.TURN_PASS }); return l; }
   private at(c: Conn) { return { x: c.ms.x, z: c.ms.z, interior: c.ms.interior }; }
   private nearConn(c: Conn, to: unknown, r: number): Conn {
     const o = this.conns.get(Number(to)); if (!o || o === c || o.dead || !o.haveState) throw new HttpError(404, 'They are not around.');

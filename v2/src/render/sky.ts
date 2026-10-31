@@ -156,7 +156,7 @@ export class Atmosphere {
   cloudRT: THREE.WebGLRenderTarget; cloudMat: THREE.ShaderMaterial; cloudScene = new THREE.Scene(); cloudCam = new THREE.Camera();
   envScene = new THREE.Scene(); envDome: THREE.Mesh; pmrem: THREE.PMREMGenerator; envT = 99; env: THREE.Texture | null = null; envRT: THREE.WebGLRenderTarget | null = null; envSize = 0;
   rain: THREE.LineSegments; lightning = 0; thunderQueue: number[] = [];
-  water = 0.3; wet = 0; indoor = false;
+  water = 0.3; wet = 0; indoor = false; roomDark = false;
   frame = 0; cloudScale: number; steps: number;
   wind = new THREE.Vector2(0, 0);
   L: Level; shadowsBuilt: boolean; private cloudEvery = 1; private cloudAge = 99; private cloudDirLast = new THREE.Vector3(0, 0, 0); private cloudPosLast = new THREE.Vector3(1e9, 0, 0);
@@ -323,6 +323,8 @@ export class Atmosphere {
       // venue interiors are built far from the city under their own lights: no sun, a warm room fill that does not follow the clock, no street haze
       this.sun.intensity = 0; this.hemi.color.setRGB(1.0, 0.9, 0.78); this.hemi.groundColor.setRGB(0.38, 0.27, 0.19); this.hemi.intensity = 0.4;
       this.renderer.toneMappingExposure = 0.68; (this.scene.fog as THREE.FogExp2).density = 0;
+      // your own room with the bulbs off: nearly black, a faint cool bounce from the night outside
+      if (this.roomDark) { this.hemi.color.setRGB(0.45, 0.55, 0.95); this.hemi.groundColor.setRGB(0.12, 0.12, 0.2); this.hemi.intensity = 0.035; this.renderer.toneMappingExposure = 0.95; }
     }
     // rain, puddles and drying
     this.wet = THREE.MathUtils.clamp(this.wet + (W.rain > 0.1 ? dt * 0.08 * W.rain : -dt * (0.004 + W.dry * 0.2 * day)), 0, 1);

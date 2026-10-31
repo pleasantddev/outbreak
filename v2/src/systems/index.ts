@@ -6,10 +6,13 @@ import { nemesisSystem } from './nemesis';
 import { garage } from './garage';
 import { identity } from './identity';
 import { skills } from './skills';
-import { missions } from './missions'; import { lifeSystem } from './life'; import { vendorSystem } from './life/vendors'; import { billsSystem } from './life/bills'; import { leisureSystem } from './leisure'; import { transportSystem } from './careers/transport'; import { racingSystem } from './careers/racing'; import { thiefSystem } from './careers/thief'; import { techSystem } from './careers/tech'; import { mechanicSystem } from './careers/mechanic'; import { ranksSystem } from './careers/ranks'; import { boysSystem } from './careers/yahoo'; import { bankSystem } from './careers/bank'; import { businessSystem } from './business'; import { powerSystem } from './power'; import { powerJobSystem } from './careers/power'; import { wearSystem } from './wear'; import { houseSystem } from './life/house'; import { agberoSystem } from './careers/agbero'; import { decorSystem } from './life/decor'; import { sportsSystem } from './sports';
+import { missions } from './missions'; import { lifeSystem } from './life'; import { vendorSystem } from './life/vendors'; import { billsSystem } from './life/bills'; import { leisureSystem } from './leisure'; import { transportSystem } from './careers/transport'; import { racingSystem } from './careers/racing'; import { thiefSystem } from './careers/thief'; import { techSystem } from './careers/tech'; import { mechanicSystem } from './careers/mechanic'; import { ranksSystem } from './careers/ranks'; import { boysSystem } from './careers/yahoo'; import { bankSystem } from './careers/bank'; import { businessSystem } from './business'; import { powerSystem } from './power'; import { powerJobSystem } from './careers/power'; import { wearSystem } from './wear'; import { houseSystem } from './life/house'; import { agberoSystem } from './careers/agbero'; import { decorSystem } from './life/decor'; import { phoneNetSystem } from './phonenet'; import { voiceSystem } from './voice'; import { paySystem } from './pay'; import { sportsSystem } from './sports';
 // net goes first: it signs the player in during init, before the lobby and before other systems read their saved state
 export const SYSTEMS: GameSystem[] = [
   netSystem,
+  voiceSystem, // proximity voice, calls, walkie-talkie radio (WebRTC, server-relayed handshakes)
+  phoneNetSystem, // Contacts, Messages, Phone: numbers, player IDs, texts and calls between players
+  paySystem, // Top Up app and the one real-money checkout (Paystack, verified on the server)
   skills, // perks and skill levels: other systems read ctx.systems.get('skills').stat('...')
   societySystem, nemesisSystem,
   garage, identity,

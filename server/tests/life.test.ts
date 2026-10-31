@@ -123,3 +123,30 @@ describe('interior designers', () => {
     a.c.close(); b.c.close(); g.c.close();
   }, 15000);
 });
+
+describe('the phone network', () => {
+  it('numbers and ids, contacts, texts delivered live and stored, calls ring and connect, voice signals only when allowed', async () => {
+    const a = await mk('Caller Chika'); const b = await mk('Callee Musa'); const far = await mk('Far Femi');
+    expect(a.c.welcome.phone.number).toMatch(/^0\d{10}$/); expect(a.c.welcome.phone.publicId).toMatch(/^HL-[A-Z2-9]{6}$/);
+    a.c.state(900, -330); b.c.state(903, -330); far.c.state(2000, 2000); await sleep(120);
+    const add = await a.c.act('contacts.add', { q: b.c.welcome.phone.publicId, name: 'Musa from the park' }); expect(add.ok).toBe(true); expect(add.who.name).toBe('Callee Musa');
+    const byNum = await a.c.act('phone.lookup', { q: far.c.welcome.phone.number }); expect(byNum.who.name).toBe('Far Femi');
+    const list = await a.c.act('contacts.list'); expect(list.list[0].name).toBe('Musa from the park'); expect(list.list[0].online).toBe(true);
+    const sent = await a.c.act('msg.send', { to: add.who.id, body: 'How far? You dey Oshodi?' }); expect(sent.ok).toBe(true);
+    await sleep(60); const got = b.c.msgs.find((m) => m.t === 'msg'); expect(got.body).toBe('How far? You dey Oshodi?'); expect(got.fromName).toBe('Caller Chika');
+    const th = await b.c.act('msg.threads'); expect(th.list[0].unread).toBe(1);
+    const t1 = await b.c.act('msg.thread', { with: got.from }); expect(t1.list.length).toBe(1);
+    expect((await b.c.act('msg.threads')).list[0].unread).toBe(0);
+    // voice: near players may signal, far ones may not until they are on a call
+    expect((await a.c.act('rtc', { to: b.c.id, data: { sdp: 'x' } })).ok).toBe(true);
+    expect((await a.c.act('rtc', { to: far.c.id, data: { sdp: 'x' } })).ok).toBe(false);
+    const farId = byNum.who.id; const call = await a.c.act('call.start', { to: farId }); expect(call.ok).toBe(true);
+    await sleep(60); const ring = far.c.msgs.find((m) => m.t === 'call' && m.kind === 'ring'); expect(ring.from).toBe('Caller Chika');
+    expect((await far.c.act('call.answer', { callId: ring.callId, accept: true })).ok).toBe(true);
+    await sleep(60); expect(a.c.msgs.some((m) => m.t === 'call' && m.kind === 'accepted')).toBe(true);
+    expect((await a.c.act('rtc', { to: far.c.id, data: { sdp: 'x' } })).ok).toBe(true);
+    await a.c.act('call.end', { callId: call.callId }); await sleep(60); expect(far.c.msgs.some((m) => m.t === 'call' && m.kind === 'ended')).toBe(true);
+    expect((await a.c.act('rtc', { to: far.c.id, data: { sdp: 'x' } })).ok).toBe(false);
+    a.c.close(); b.c.close(); far.c.close();
+  }, 15000);
+});

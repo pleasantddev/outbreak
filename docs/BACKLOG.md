@@ -31,13 +31,13 @@ founder clears the real name, music only where we have the right to play it (Aud
 players upload and attest they own).
 
 ### LEAD
-- [ ] Phone v2: real-looking apps (proper icon set, app bars, list cells), a back button in every app, consistent
+- [x] Phone v2 (b82fe6d): real-looking apps (proper icon set, app bars, list cells), a back button in every app, consistent
       navigation (swipe/back/Backspace), touch friendly.
-- [ ] Contacts + Messages + Calls: public player ID and in-game phone number per account; add contacts; texting
+- [x] Contacts + Messages + Calls (b82fe6d): public player ID and in-game phone number per account; add contacts; texting
       (server-stored, offline delivery); voice calls player to player.
-- [ ] Proximity voice chat (WebRTC, server signalling): hear players near you, volume by distance, same-space only,
+- [x] Proximity voice chat (b82fe6d) (WebRTC, server signalling): hear players near you, volume by distance, same-space only,
       push-to-talk and open mic, mute per player. Police walkie-talkie: radio channel per zone while on duty.
-- [ ] Payments: Paystack (server initialize + verify + webhook, env PAYSTACK_SECRET_KEY / PAYSTACK_PUBLIC_KEY), test
+- [x] Payments: Paystack (53d2323) (server initialize + verify + webhook, env PAYSTACK_SECRET_KEY / PAYSTACK_PUBLIC_KEY), test
       mode without keys; every real-money purchase goes through it; admin ledger.
 - [ ] MyAds: billboard inventory (Oshodi bridges, expressways, rooftops), price from ₦4,500/day by location, size and
       days; image upload with size spec per board; moderation queue in admin; real-player impression tracking per day.

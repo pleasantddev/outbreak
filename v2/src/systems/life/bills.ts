@@ -72,6 +72,7 @@ class BillsSys {
     const home = L.S.inside && !L.venue && !L.guest; const night = hour >= 18.5 || hour < 6.5; const H = houseSystem.api; const gen = !!H?.genRunning(); const out = H ? !H.powered() : this.outage();
     if (home && (night || L.S.fan) && !gen) this.B.units = Math.max(0, this.B.units - dt * (0.02 + (L.S.fan ? 0.03 : 0)));
     const on = !out && (gen || this.B.units > 0);
+    (c.view.atmo as any).roomDark = home && !on && night; { const mo = L.lot.group.getObjectByName('moon'); if (mo) mo.visible = home && !on && night; }
     if (on !== this.lightsOn) { this.lightsOn = on; for (const l of L.lot.lights) l.visible = on; if (!on && L.S.fan) { L.S.fan = false; } if (home && !on && !out) c.hud.toast('Units finish', 'Your prepaid units don finish. Buy more on the Home app.', 'var(--red)', 'msg', 4); } // the grid's own shout comes from systems/power.ts
     this.outageT += dt; if (this.outageT > 20) { this.outageT = 0; this.persist(); }
     // the ChopNow rider
