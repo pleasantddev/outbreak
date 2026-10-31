@@ -37,3 +37,9 @@
   windows a little bright (`genOn * 0.5`), warehouse stain pack not rebuilt, bank and hub interiors still white-heavy.
   Tips: snap constant-attribute varyings before a sin-hash (per-pixel noise otherwise); each vite dev server needs its own
   cache dir; headless frames are slow, so camera lerps need frames not seconds; tools: stuck.py, lookshot.py, intshot.py.
+- 31 Oct 05:xx: founder brief 3 (see BACKLOG). Ideas board artifact: https://claude.ai/artifact/Htonjfcz9EWGJthTLB9VNz
+  (regenerate with `python3 tools/ideas_page.py`, publish docs/ideas.html to that URL). Self-wake without the laptop: a cloud
+  scheduled task "HustleLife build shift" (trig_01PQQg7HsZoz2eKSyNE6dRMk, every 4 h at :58) runs a fresh session from
+  this repo's docs. Agents: SPORTS (Opus low, worktree /home/claude/wt/sports, branch hl-sports), IDEAS (Sonnet,
+  /home/claude/wt/look, branch hl-look). Built: phone v2 (icons, dock, Back), phone network (numbers, IDs, contacts,
+  texts, calls), voice (proximity, calls, radio), server tests 75.
