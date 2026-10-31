@@ -41,7 +41,7 @@ export class MatchScreen {
   private views: HumanView[] = []; private ballMesh: THREE.Mesh; private ring: THREE.Mesh; private shadowBlob: THREE.Mesh;
   private ui: HTMLDivElement; private keys = new Set<string>(); private prevHold: Partial<Record<Btn, boolean>> = {}; private touchHold: Partial<Record<Btn, boolean>> = {};
   private joy = { x: 0, z: 0, id: -1, ox: 0, oy: 0 }; private acc = 0; private sendT = 0; private remote = new Map<string, PadIn>(); private lastPad: PadIn = emptyPad();
-  private evText = ''; private evT = 0; private ended = false; private camX = 0; private tags: HTMLDivElement[] = []; private handlers: [EventTarget, string, EventListener][] = [];
+  private evText = ''; private evT = 0; private ended = false; private camX = 0; private camZ = 0; private tags: HTMLDivElement[] = []; private handlers: [EventTarget, string, EventListener][] = [];
   private isHost: boolean;
   constructor(private ctx: GameCtx, public o: MatchOpts) {
     this.isHost = !o.online || o.host === o.me;
@@ -86,6 +86,14 @@ export class MatchScreen {
     const sun = new THREE.DirectionalLight(night ? 0xfff2d8 : 0xfff1d6, night ? 1.6 : 2.4); sun.position.set(-20, 40, 18); sun.castShadow = true;
     const sc = sun.shadow.camera as THREE.OrthographicCamera; sc.left = -35; sc.right = 35; sc.top = 25; sc.bottom = -25; sc.far = 120; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; s.add(sun);
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x6d6a5f, roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.receiveShadow = true; s.add(ground);
+    { // a ring of compound walls, bungalows and flats around the place, so it reads as a street pitch in Lagos
+      const cols = [0xd9c9a8, 0xc7b08a, 0xe8dcc4, 0xb7c4c9, 0xd4a373, 0xa9b18f]; let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const R = o.sport === 'football' ? o.L / 2 + 22 : 22;
+      for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2 + rnd() * 0.1; const w = 8 + rnd() * 10, h = 4 + rnd() * (rnd() < 0.3 ? 14 : 5), d = 7 + rnd() * 6;
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color: cols[i % cols.length], roughness: 0.95 })); const rr = R + rnd() * 10;
+        m.position.set(Math.cos(a) * rr * 1.3, h / 2, (o.sport === 'football' ? 0 : 7) + Math.sin(a) * rr); m.rotation.y = -a; m.castShadow = true; m.receiveShadow = true; if (Math.sin(a) > 0.55) continue; s.add(m);
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(w + 0.6, 0.3, d + 0.6), new THREE.MeshStandardMaterial({ color: 0x7a3b22, roughness: 0.8 })); roof.position.set(m.position.x, h + 0.15, m.position.z); roof.rotation.y = -a; s.add(roof); }
+    }
     const white = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.4, metalness: 0.2 });
     const fence = new THREE.MeshStandardMaterial({ color: 0x9aa3ad, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
     const box = (w: number, h: number, d: number, m: THREE.Material, x: number, y: number, z: number) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; b.receiveShadow = true; s.add(b); return b; };
@@ -211,7 +219,7 @@ export class MatchScreen {
     const cam = this.cam; cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix();
     if (this.o.sport === 'football') {
       const lim = Math.max(0, this.o.L / 2 - 9); this.camX += (THREE.MathUtils.clamp(b.x, -lim, lim) - this.camX) * Math.min(1, dt * 3);
-      const far = innerWidth < innerHeight ? 1.5 : 1; cam.position.set(this.camX, 13 * far, this.o.W / 2 + 15 * far); cam.lookAt(this.camX, 0, 1.5);
+      const far = innerWidth < innerHeight ? 1.6 : 1; this.camZ += (THREE.MathUtils.clamp(b.z, -4, 4) * 0.4 - this.camZ) * Math.min(1, dt * 2); cam.position.set(this.camX, 9.5 * far, this.o.W / 2 + 10.5 * far + this.camZ); cam.lookAt(this.camX, 0, this.camZ + 0.5);
     } else { this.camX += (b.x * 0.35 - this.camX) * Math.min(1, dt * 3); const far = innerWidth < innerHeight ? 1.35 : 1; cam.position.set(this.camX, 7.5 * far, 18.5 * far); cam.lookAt(this.camX * 0.5, 1.2, 5.2); }
     const r = this.ctx.view.renderer; const au = r.shadowMap.autoUpdate; r.shadowMap.autoUpdate = true; r.render(this.scene, cam); r.shadowMap.autoUpdate = au;
     // HUD

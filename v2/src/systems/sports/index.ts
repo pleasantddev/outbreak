@@ -178,13 +178,14 @@ class Sports {
   }
 
   // ---------------------------------------------------------------- matches
-  private dims(v: { kind: VenueKind; L: number; W: number } | null): [number, number] {
-    if (!v || v.kind === 'court') return [15, 14];
+  private dims(v: { kind: VenueKind; L: number; W: number } | null, sport: string): [number, number] {
+    if (sport === 'basketball') return [15, 14];
+    if (!v || v.kind === 'court') return [36, 22];
     if (v.kind === 'stadium') return [46, 28];
     const L = Math.max(30, Math.min(44, v.L)); return [L, Math.max(18, Math.min(26, Math.min(v.W, L * 0.62)))];
   }
   practice(v: Venue | null, sport0?: 'football' | 'basketball') {
-    if (this.match) return; const sport = sport0 ?? (v ? VENUES[v.kind].sport : 'football'); const [L, W] = this.dims(v);
+    if (this.match) return; const sport = sport0 ?? (v ? VENUES[v.kind].sport : 'football'); const [L, W] = this.dims(v, sport);
     const me = this.ctx.profile?.name || 'You';
     this.match = new MatchScreen(this.ctx, { sport, title: v?.name ?? 'Practice', L, W, stadium: v?.kind === 'stadium', humans: [], me: 'me', host: 'me', online: false, teams: [`${me.split(' ')[0].slice(0, 10)} FC`, sport === 'football' ? 'Area Boys' : 'Ajegunle Ballers'],
       onEnd: (s, quit) => { if (!quit && s[0] > s[1]) { this.ctx.hud.toast('Match', 'You won. Small respect for your name on the street.', 'linear-gradient(160deg,#f97316,#9a3412)', 'cash', 4); (this.ctx as any).grantXp?.(25); } } });
@@ -203,7 +204,7 @@ class Sports {
     this.ctx.hud.refreshApp?.();
   }
   private startOnline(f: Fixture) {
-    const me = net.account!.id; const v = this.venues.get(f.venue) ?? null; const [L, W] = this.dims(v);
+    const me = net.account!.id; const v = this.venues.get(f.venue) ?? null; const [L, W] = this.dims(v, f.sport);
     const cap = (side: number) => { const h = f.members.find((x) => x.side === side); return h ? `${h.name.split(' ')[0].slice(0, 10)}'s side` : 'Side ' + (side + 1); };
     this.match = new MatchScreen(this.ctx, { sport: f.sport, title: v?.name ?? 'Fixture', L, W, stadium: v?.kind === 'stadium', humans: f.members, me, host: f.host, online: true, teams: [cap(0), cap(1)], wager: f.wager,
       send: (d) => net.send({ t: 'mx', d }),
