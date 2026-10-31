@@ -69,7 +69,8 @@ export class Input {
           continue;
         }
         // any other element that takes pointer events is real UI (a sheet, a card, a list): let it have the tap
-        if (target !== el && target !== el.parentElement && getComputedStyle(target).pointerEvents !== 'none' && target.closest?.('#hlhud .gl, [data-ui]')) continue;
+        if (target.closest?.('[data-ui]')) continue;
+        if (target !== el && target !== el.parentElement && getComputedStyle(target).pointerEvents !== 'none' && target.closest?.('#hlhud .gl')) continue;
         if (t.clientX < window.innerWidth * 0.42 && this.joy.id < 0) { this.joy = { x: 0, y: 0, active: true, id: t.identifier, ox: t.clientX, oy: t.clientY }; this.showJoy(t.clientX, t.clientY, 0, 0); }
         else if (this.lookTouch.id < 0) this.lookTouch = { id: t.identifier, x: t.clientX, y: t.clientY };
         e.preventDefault();

@@ -159,6 +159,13 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX biz_owner ON businesses(owner_id);
   `,
+  // v4: phone numbers, public ids, contacts and text messages between players
+  `
+  CREATE TABLE phones (account_id TEXT PRIMARY KEY REFERENCES accounts(id), number TEXT NOT NULL UNIQUE, public_id TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL);
+  CREATE TABLE contacts (owner_id TEXT NOT NULL REFERENCES accounts(id), contact_id TEXT NOT NULL REFERENCES accounts(id), name TEXT NOT NULL, added_at INTEGER NOT NULL, PRIMARY KEY (owner_id, contact_id));
+  CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, from_id TEXT NOT NULL, to_id TEXT NOT NULL, body TEXT NOT NULL, at INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0);
+  CREATE INDEX msg_to ON messages(to_id, at); CREATE INDEX msg_from ON messages(from_id, at);
+  `,
 ];
 
 export function openDb(file: string): DB {

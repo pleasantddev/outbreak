@@ -1,6 +1,7 @@
 // HustleLife HUD, modern RP style: glass panels, money pills, toasts, an incoming-call card, a dark minimap with
 // a teal GPS route, a speed arc with the gear, a parcel card for the land under your feet, the LANDMAP overlay,
 // and the phone in the hand.
+import { appIcon, appAccent } from './phoneIcons';
 import type { SimEvent } from '../sim/types';
 import type { LifeSim } from '../sim/life';
 import type { RoadNet, Lane } from '../world/roadnet';
@@ -94,27 +95,46 @@ const css = `
 #xhair:before,#xhair:after{content:'';position:absolute;background:#fff;box-shadow:0 0 2px #000}
 #xhair:before{left:10px;top:0;width:2px;height:22px;clip-path:polygon(0 0,100% 0,100% 30%,0 30%,0 70%,100% 70%,100% 100%,0 100%)}
 #xhair:after{top:10px;left:0;height:2px;width:22px;clip-path:polygon(0 0,30% 0,30% 100%,0 100%,0 0,70% 0,100% 0,100% 100%,70% 100%)}
-#phone{position:absolute;right:max(34px,env(safe-area-inset-right));bottom:-560px;width:min(232px,34vh);aspect-ratio:9/19;border-radius:34px;background:linear-gradient(145deg,#4a4a52,#16161a 35%,#0b0b0d);padding:7px;box-shadow:0 22px 50px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.14);transform:rotate(-4deg);transform-origin:100% 100%;transition:bottom .35s cubic-bezier(.2,.8,.2,1);pointer-events:auto}
-#phone.up{bottom:max(18px,env(safe-area-inset-bottom))}
-#scr{position:relative;width:100%;height:100%;border-radius:28px;overflow:hidden;color:#fff;background:radial-gradient(90% 55% at 80% 0%,rgba(139,92,246,.55),transparent 70%),radial-gradient(80% 50% at 0% 100%,rgba(45,224,200,.35),transparent 70%),#0d0f1a}
-#scr .isl{position:absolute;top:8px;left:50%;width:70px;height:19px;margin-left:-35px;background:#000;border-radius:10px;z-index:3}
-#scr .st{position:relative;display:flex;justify-content:space-between;padding:8px 18px 0;font-size:12px;font-weight:700}
-#scr .big{position:relative;padding:22px 0 0;text-align:center;font-family:Rajdhani,sans-serif;font-size:56px;font-weight:600;line-height:1}
-#scr .small{position:relative;text-align:center;font-size:11px;font-weight:600;opacity:.75;letter-spacing:1px;text-transform:uppercase}
-#apps{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:14px 4px;padding:22px 12px 0}
-#apps button{background:none;border:none;color:#fff;font-family:inherit;font-size:10.5px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:5px;padding:0;cursor:pointer}
-#apps button span{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.28);transition:transform .12s}
-#apps button span svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-#apps button.sel span{transform:scale(1.12);box-shadow:0 0 0 2px #fff,0 4px 12px rgba(0,0,0,.4)}
-#appview{position:absolute;inset:0;background:#0f111b;color:#eef1f6;display:none;flex-direction:column;z-index:4}
-#appview h3{margin:0;padding:34px 16px 10px;font-size:22px;font-weight:800;background:linear-gradient(180deg,var(--ac,#222),transparent);color:#fff}
-#appview .list{padding:8px 9px;display:flex;flex-direction:column;gap:7px;overflow:auto;flex:1}
-#appview .row{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:9px 11px;font-size:12px;font-weight:500;line-height:1.3;color:#c9cfdb;pointer-events:auto}
-#appview .row b{display:block;font-size:13.5px;font-weight:700;margin-bottom:2px;color:#fff}
-#appview .row.sel{outline:2px solid var(--teal)}
-#appview .row button{margin-top:7px}
-#appview canvas{width:100%;border-radius:12px;background:#151826}
-#appview .back{margin:6px auto 10px;width:100px;height:5px;background:#fff;opacity:.7;border:none;border-radius:3px;padding:0;pointer-events:auto;cursor:pointer}
+#phone{position:absolute;right:max(28px,env(safe-area-inset-right));bottom:-120%;width:min(318px,44vh);aspect-ratio:9/19.3;border-radius:44px;background:linear-gradient(150deg,#5b5d66,#1b1c21 30%,#0b0b0e 70%,#2a2b31);padding:8px;box-shadow:0 30px 70px rgba(0,0,0,.65),inset 0 0 0 1.5px rgba(255,255,255,.16),inset 0 0 0 4px #0b0b0e;transform:rotate(-3deg);transform-origin:100% 100%;transition:bottom .38s cubic-bezier(.2,.8,.2,1);pointer-events:auto;z-index:8}
+#phone.up{bottom:max(16px,env(safe-area-inset-bottom))}
+#scr{position:relative;width:100%;height:100%;border-radius:37px;overflow:hidden;color:#fff;background:#0b0d16;font-family:Inter,system-ui,sans-serif}
+#scr .wall{position:absolute;inset:0;background:radial-gradient(120% 60% at 85% -5%,rgba(255,140,60,.55),transparent 60%),radial-gradient(90% 55% at -10% 30%,rgba(139,92,246,.5),transparent 65%),radial-gradient(90% 50% at 50% 115%,rgba(45,224,200,.45),transparent 70%),linear-gradient(180deg,#1a1430,#0b0d16 70%)}
+#scr .wall:after{content:'';position:absolute;left:0;right:0;bottom:23%;height:16%;opacity:.35;background:linear-gradient(0deg,#05060b,transparent);-webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 60' preserveAspectRatio='none'><path d='M0 60V40h14V28h10v12h8V18h12v22h6V30h16v-8h6v8h10v10h12V12h14v28h8V26h10v14h16V20h8v-6h6v6h8v20h12V30h14v10h10V24h16v16h12v20z'/></svg>") bottom/100% 100% no-repeat;mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 60' preserveAspectRatio='none'><path d='M0 60V40h14V28h10v12h8V18h12v22h6V30h16v-8h6v8h10v10h12V12h14v28h8V26h10v14h16V20h8v-6h6v6h8v20h12V30h14v10h10V24h16v16h12v20z'/></svg>") bottom/100% 100% no-repeat}
+#scr .isl{position:absolute;top:9px;left:50%;width:84px;height:24px;margin-left:-42px;background:#000;border-radius:14px;z-index:6}
+#scr .st{position:relative;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:12px 22px 0 26px;font-size:12.5px;font-weight:700;letter-spacing:.2px;height:24px}
+#scr .st i{font-style:normal;display:inline-flex;gap:5px;align-items:center;font-size:11px}
+#scr .st i b{display:inline-block;width:22px;height:11px;border-radius:3px;border:1.4px solid rgba(255,255,255,.75);position:relative} #scr .st i b:after{content:'';position:absolute;inset:1.5px;right:35%;background:#fff;border-radius:1.5px}
+#scr .big{position:relative;padding:20px 0 0;text-align:center;font-family:Inter,system-ui,sans-serif;font-size:58px;font-weight:300;letter-spacing:-1px;line-height:1}
+#scr .small{position:relative;text-align:center;font-size:12px;font-weight:600;opacity:.85;margin-top:4px}
+#apps{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:14px 2px;padding:20px 12px 96px;max-height:calc(100% - 210px);overflow-y:auto;scrollbar-width:none}
+#apps::-webkit-scrollbar{display:none}
+#apps button,#dock button{background:none;border:none;color:#fff;font-family:inherit;font-size:10.5px;font-weight:500;letter-spacing:.1px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:0;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.55);-webkit-tap-highlight-color:transparent;min-width:0}
+#apps button em,#dock button em{font-style:normal;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#apps .ico,#dock .ico{width:50px;height:50px;display:block;transition:transform .12s;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))}
+#apps button:active .ico,#dock button:active .ico{transform:scale(.9)}
+#apps button.sel .ico,#dock button.sel .ico{transform:scale(1.1);filter:drop-shadow(0 0 0 #fff) drop-shadow(0 0 6px rgba(255,255,255,.9))}
+#apps .iw,#dock .iw{position:relative;display:block} #apps .iw u,#dock .iw u{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#ff3b30;color:#fff;font:700 11px/18px Inter,sans-serif;text-decoration:none;text-align:center;box-shadow:0 0 0 2px rgba(0,0,0,.15)}
+#dock{position:absolute;left:10px;right:10px;bottom:16px;height:72px;border-radius:26px;background:rgba(255,255,255,.16);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:grid;grid-template-columns:repeat(4,1fr);align-items:center;padding:0 6px;z-index:2}
+#dock button em{display:none}
+#appview{position:absolute;inset:0;background:#f2f3f7;color:#11131a;display:none;flex-direction:column;z-index:4;animation:avin .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes avin{from{transform:translateX(18%);opacity:.4}}
+#appview .nav{display:flex;align-items:center;gap:6px;padding:38px 10px 10px;background:var(--ac,#333);color:#fff;box-shadow:0 1px 0 rgba(0,0,0,.08)}
+#appview .nav .bk{display:flex;align-items:center;gap:2px;border:none;background:rgba(255,255,255,.18);color:#fff;font:600 13px Inter,sans-serif;padding:6px 10px 6px 6px;border-radius:999px;cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent}
+#appview .nav .bk svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+#appview .nav .ai{width:26px;height:26px;margin-left:4px} #appview .nav .ai .ico{width:26px;height:26px;display:block}
+#appview h3{margin:0;flex:1;font-size:17px;font-weight:800;letter-spacing:.1px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#appview .list{padding:10px 10px 8px;display:flex;flex-direction:column;gap:8px;overflow:auto;flex:1;scrollbar-width:thin}
+#appview .row{background:#fff;border:none;border-radius:16px;padding:12px 13px;font-size:12.5px;font-weight:500;line-height:1.4;color:#4b5263;pointer-events:auto;box-shadow:0 1px 2px rgba(16,24,40,.06),0 1px 1px rgba(16,24,40,.04)}
+#appview .row b{display:block;font-size:14px;font-weight:700;margin-bottom:3px;color:#11131a;letter-spacing:-.1px}
+#appview .row.sel{box-shadow:0 0 0 2px var(--ac,#6d3ef0)}
+#appview .row br+.btn,#appview .row .btn{margin-top:9px}
+#appview .row .btn{background:var(--ac,#6d3ef0);box-shadow:none;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:700;margin-right:4px}
+#appview .row .btn[disabled]{opacity:.45}
+#appview .row input,#appview .row textarea,#appview .row select{width:100%;box-sizing:border-box;margin-top:8px;padding:10px 12px;border-radius:12px;border:1px solid #d7dae3;background:#f7f8fb;font:500 13px Inter,sans-serif;color:#11131a;pointer-events:auto}
+#appview canvas{width:100%;border-radius:14px;background:#151826}
+#appview .back{margin:8px auto 10px;width:118px;height:5px;background:#11131a;opacity:.35;border:none;border-radius:3px;padding:0;pointer-events:auto;cursor:pointer;flex:none}
+#scr .home{position:absolute;left:50%;bottom:6px;width:118px;height:5px;margin-left:-59px;border-radius:3px;background:#fff;opacity:.6;z-index:3}
+@media (max-height:560px){#phone{transform:none;width:min(360px,58vw);aspect-ratio:auto;height:calc(100vh - 24px);border-radius:30px}#phone.up{bottom:12px}#scr{border-radius:24px}#scr .big{font-size:40px;padding-top:8px}#apps{grid-template-columns:repeat(5,1fr);max-height:calc(100% - 150px);padding-top:10px}#appview .nav{padding-top:14px}#scr .isl{display:none}}
 #landmap{position:fixed;inset:0;z-index:6;display:none;pointer-events:none;font-family:Inter,sans-serif;color:var(--txt)}
 #landmap.on{display:block}
 #lm-top{position:absolute;left:max(18px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;pointer-events:auto}
@@ -204,7 +224,6 @@ const I = {
 export const APPS: [string, string, string][] = [
   ['Map', svg(I.map), 'linear-gradient(160deg,#2de0c8,#139a8a)'],
   ['Hustles', svg('M4 8h16v11H4zM9 8V5h6v3M4 13h16'), 'linear-gradient(160deg,#f6c453,#d98a12)'],
-  ['Texts', svg(I.msg), 'linear-gradient(160deg,#59a8ff,#1f62d6)'],
   ['Land', svg(I.land), 'linear-gradient(160deg,#a78bfa,#6d3ef0)'],
   ['Bank', svg('M3.5 7.5h17v12h-17zM3.5 7.5 15 4.5v3M15.5 13.5h3'), 'linear-gradient(160deg,#3a3f52,#151824)'],
   ['Weather', svg('M7 18h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 6.8 11 3.5 3.5 0 0 0 7 18z'), 'linear-gradient(160deg,#7cc4ff,#3a86e0)'],
@@ -214,6 +233,8 @@ export const APPS: [string, string, string][] = [
   ['Settings', svg('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-1-3-2 .2-1.3-1.3.2-2-3-1-1 2h-1.8l-1-2-3 1 .2 2L6 7.2 4 7l-1 3 2 1v1.8l-2 1 1 3 2-.2 1.3 1.3-.2 2 3 1 1-2h1.8l1 2 3-1-.2-2 1.3-1.3 2 .2 1-3-2-1z'), 'linear-gradient(160deg,#70757c,#3a3d42)'],
 ];
 
+/** the four apps that sit in the dock (they are left out of the grid) */
+const DOCK = ['Phone', 'Messages', 'Wallet', 'Map'];
 /** Phone apps that systems add (society: Market, Street). They render rows into the app view; actions go to GameSystem.onAction. */
 const EXT_APPS = new Map<string, { render: (c: PhoneCtx) => string; mode: 'replace' | 'append' }>();
 export function registerPhoneApp(name: string, icon: string, color: string, render: (c: PhoneCtx) => string, mode: 'replace' | 'append' = 'replace') {
@@ -241,6 +262,10 @@ export class LifeHud {
   ctx: PhoneCtx | null = null;
   /** Systems draw their own phone apps: return the rows' html (same .row markup, buttons with data-app and data-id). */
   appRenderers: Record<string, (c: PhoneCtx) => string> = {};
+  /** an app can handle Back itself (a chat thread goes back to the list); return true when it did */
+  appBack: Record<string, () => boolean> = {};
+  /** red count bubbles on app icons (unread texts, missed calls) */
+  badges: Record<string, number> = {};
   onAction?: (app: string, id: string) => void;
   onBuy?: (id: string) => void;
   radarCv: HTMLCanvasElement; radarG: CanvasRenderingContext2D;
@@ -281,8 +306,8 @@ export class LifeHud {
     </svg><div class="sv"><span class="num" id="kmh">0</span><small>KM/H</small></div><div class="gear num" id="gear">N</div></div>
   <div id="help" class="gl"></div><div id="subs" class="ts"></div><div id="title"><span class="t" id="title-t"></span><small id="title-s"></small><div class="bar"></div></div>
   <div id="prompt" class="gl"></div><div id="xhair"></div>
-  <div id="phone"><div id="scr"><div class="isl"></div><div class="st"><span id="ph-t"></span><span id="ph-b">5G · 64%</span></div><div class="big" id="ph-big"></div><div class="small" id="ph-s"></div><div class="small" id="ph-name" style="margin-top:6px;color:var(--teal);opacity:1"></div><div id="apps"></div>
-    <div id="appview"><h3 id="av-h"></h3><div class="list" id="av-l"></div><button class="back" id="av-back" aria-label="Home"></button></div></div></div>
+  <div id="phone"><div id="scr"><div class="wall"></div><div class="isl"></div><div class="st"><span id="ph-t"></span><i>5G <b></b></i></div><div class="big" id="ph-big"></div><div class="small" id="ph-s"></div><div class="small" id="ph-name" style="margin-top:4px;color:#7ef3df;opacity:1"></div><div id="apps"></div><div id="dock"></div><div class="home"></div>
+    <div id="appview"><div class="nav"><button class="bk" id="av-bk" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Back</button><span class="ai" id="av-ic"></span><h3 id="av-h"></h3></div><div class="list" id="av-l"></div><button class="back" id="av-back" aria-label="Home screen"></button></div></div></div>
 </div>
 <div id="landmap"><div id="lm-catch" style="position:absolute;inset:0;pointer-events:auto;touch-action:none;cursor:grab"></div><div id="lm-top" class="gl"><b>LANDMAP</b><span>Drag to move · scroll or pinch to zoom · tap a plot</span><button class="btn ghost" id="lm-x">Close<kbd>M</kbd></button></div>
   <div id="lm-legend" class="gl"><span><i style="background:#8b5cf6"></i>Yours</span><span><i style="background:#49e08a"></i>Vacant</span><span><i style="background:#f59e0b"></i>Unfinished</span><span><i style="background:#9ba3b4"></i>Built</span></div>
@@ -301,7 +326,10 @@ ${touch ? `<div id="tc">
     this.radarCv = this.el('radar') as HTMLCanvasElement; this.radarG = this.radarCv.getContext('2d')!;
     this.speedArc = this.el('spd-arc') as unknown as SVGPathElement; this.rpmArc = this.el('rpm-arc') as unknown as SVGPathElement;
     this.renderApps();
-    this.el('av-back').onclick = () => this.closeApp();
+    this.el('av-back').onclick = () => this.closeApp(); this.el('av-bk').onclick = () => { const n = this.appOpen; if (n && this.appBack[n]?.()) { this.refreshApp(); return; } this.closeApp(); };
+    // typing in a phone field must not drive the car or open menus: stop game keys before any other listener sees them
+    addEventListener('keydown', (e) => { const t = e.target as HTMLElement | null; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') && t.closest('#appview') && e.key !== 'Enter' && e.key !== 'Escape') e.stopImmediatePropagation(); }, true);
+    addEventListener('keyup', (e) => { const t = e.target as HTMLElement | null; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') && t.closest('#appview')) e.stopImmediatePropagation(); }, true);
     this.el('call-yes').onclick = () => this.answer(true); this.el('call-no').onclick = () => this.answer(false);
   }
   private arc(cx: number, cy: number, r: number, a0: number, a1: number) {
@@ -393,22 +421,27 @@ ${touch ? `<div id="tc">
   }
 
   // ---------------------------------------------------------------- phone
-  renderApps() { this.el('apps').innerHTML = APPS.map(([n, s, c], i) => `<button data-i="${i}" class="${i === this.sel ? 'sel' : ''}"><span style="background:${c}">${s}</span>${n}</button>`).join(''); [...this.el('apps').children].forEach((b) => ((b as HTMLElement).onclick = () => { this.sel = +(b as HTMLElement).dataset.i!; this.openApp(); })); }
+  renderApps() {
+    const dock = new Set(DOCK); const btn = ([n, , c]: [string, string, string], i: number) => `<button data-i="${i}" class="${i === this.sel ? 'sel' : ''}"><span class="iw">${appIcon(n, c)}${this.badges[n] ? `<u>${this.badges[n] > 9 ? '9+' : this.badges[n]}</u>` : ''}</span><em>${n}</em></button>`;
+    this.el('apps').innerHTML = APPS.map((a, i) => (dock.has(a[0]) ? '' : btn(a, i))).join('');
+    this.el('dock').innerHTML = DOCK.map((n) => { const i = APPS.findIndex((a) => a[0] === n); return i < 0 ? '' : btn(APPS[i], i); }).join('');
+    for (const host of ['apps', 'dock']) [...this.el(host).children].forEach((b) => ((b as HTMLElement).onclick = () => { this.sel = +(b as HTMLElement).dataset.i!; this.openApp(); }));
+  }
   togglePhone(on?: boolean) { this.phoneUp = on ?? !this.phoneUp; this.el('phone').classList.toggle('up', this.phoneUp); if (!this.phoneUp) this.closeApp(); return this.phoneUp; }
   phoneNav(dx: number, dy: number) {
     if (this.appOpen) { const rows = this.el('av-l').querySelectorAll('.row'); if (!rows.length) return; this.rowSel = (this.rowSel + dy + rows.length) % rows.length; rows.forEach((r, i) => r.classList.toggle('sel', i === this.rowSel)); (rows[this.rowSel] as HTMLElement).scrollIntoView({ block: 'nearest' }); return; }
-    this.sel = (this.sel + dx + dy * 3 + APPS.length) % APPS.length; this.renderApps();
+    this.sel = (this.sel + dx + dy * 4 + APPS.length) % APPS.length; this.renderApps();
   }
   phoneSelect() {
     if (!this.appOpen) { this.openApp(); return; }
     const rows = this.el('av-l').querySelectorAll('.row'); const b = rows[this.rowSel]?.querySelector('button') as HTMLButtonElement | null; b?.click();
   }
-  phoneBack() { if (this.appOpen) this.closeApp(); else this.togglePhone(false); }
+  phoneBack() { const n = this.appOpen; if (n && this.appBack[n]?.()) { this.refreshApp(); return; } if (n) this.closeApp(); else this.togglePhone(false); }
   openApp() {
     const [name, , color] = APPS[this.sel];
     if (name === 'Land') { this.togglePhone(false); this.onAction?.('Landmap', ''); return; }
     this.appOpen = name; this.rowSel = 0;
-    this.el('appview').style.setProperty('--ac', color.replace(/linear-gradient\(160deg,([^,]+),.*/, '$1')); this.el('av-h').textContent = name;
+    this.el('appview').style.setProperty('--ac', appAccent(name, color)); this.el('av-h').textContent = name; this.el('av-ic').innerHTML = appIcon(name, color);
     this.refreshApp(); this.el('appview').style.display = 'flex';
   }
   /** open a phone app by name (from a menu in the world, e.g. "Check the books") */
