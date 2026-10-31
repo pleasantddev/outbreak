@@ -206,7 +206,9 @@ export class Economy extends EventEmitter {
     this.jobs.delete(accountId);
     const pay = Math.round(w.pay * Math.max(0.5, Math.min(1.5, bonusFactor)));
     this.noteIncome(accountId, pay);
-    return this.adjust(accountId, pay, 0, 'job.pay', { ref: id, note: `${Math.round(secs)}s` });
+    this.adjust(accountId, pay, 0, 'job.pay', { ref: id, note: `${Math.round(secs)}s` });
+    this.emit('income', accountId, pay, 'job'); // debts come out of earnings (src/body.ts)
+    return this.wallet(accountId);
   }
   /**
    * Cash the local simulation changed by itself (fines, wasted cash, loot picked up). Losses are accepted; gains are
@@ -221,7 +223,9 @@ export class Economy extends EventEmitter {
     if (now - w.m > 60_000) { w.m = now; w.msum = 0; } if (now - w.h > 3_600_000) { w.h = now; w.hsum = 0; }
     if (w.msum + d > rule.perMin || w.hsum + d > rule.perHour) { this.flag(accountId, 'gain-cap', { d, why, min: w.msum, hour: w.hsum }); this.earnWin.set(k, w); return this.wallet(accountId); }
     w.msum += d; w.hsum += d; this.earnWin.set(k, w); this.noteIncome(accountId, d);
-    return this.adjust(accountId, d, 0, 'client.gain', { note: why.slice(0, 40) });
+    this.adjust(accountId, d, 0, 'client.gain', { note: why.slice(0, 40) });
+    this.emit('income', accountId, d, why);
+    return this.wallet(accountId);
   }
   private earnWin = new Map<string, { m: number; msum: number; h: number; hsum: number }>();
   /** a street race wager: taken now, and the most the race can pay back is remembered for `clientDelta('race')` */

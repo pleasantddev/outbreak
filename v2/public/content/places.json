@@ -1608,6 +1608,262 @@
    "lon": 3.35827,
    "kind": "shop",
    "area": "Alausa"
+  },
+  {
+   "id": "chem_ladipo_market",
+   "name": "Mama Ngozi Chemist, Ladipo Auto Spare Parts",
+   "lat": 6.54497,
+   "lon": 3.34039,
+   "kind": "pharmacy",
+   "area": "Mushin"
+  },
+  {
+   "id": "chem_computer_village",
+   "name": "Good Health Chemist, Computer Village",
+   "lat": 6.59405,
+   "lon": 3.33963,
+   "kind": "pharmacy",
+   "area": "Ikeja"
+  },
+  {
+   "id": "chem_ashade_market",
+   "name": "Divine Mercy Pharmacy, Ashade",
+   "lat": 6.61394,
+   "lon": 3.32914,
+   "kind": "pharmacy",
+   "area": "Agege"
+  },
+  {
+   "id": "chem_dopemu_market",
+   "name": "Life Line Chemist, Dopemu",
+   "lat": 6.61296,
+   "lon": 3.31085,
+   "kind": "pharmacy",
+   "area": "Dopemu"
+  },
+  {
+   "id": "chem_ile_epo_market",
+   "name": "Alafia Pharmacy, Ile-Epo",
+   "lat": 6.63726,
+   "lon": 3.30084,
+   "kind": "pharmacy",
+   "area": "Abule Egba"
+  },
+  {
+   "id": "chem_igando_market",
+   "name": "Jesus Saves Chemist, Igando",
+   "lat": 6.55142,
+   "lon": 3.24075,
+   "kind": "pharmacy",
+   "area": "Igando"
+  },
+  {
+   "id": "chem_mushin_market",
+   "name": "Kola Medicine Store, Mushin",
+   "lat": 6.52779,
+   "lon": 3.35811,
+   "kind": "pharmacy",
+   "area": "Mushin"
+  },
+  {
+   "id": "chem_tejuosho",
+   "name": "Faith Pharmacy, Tejuosho",
+   "lat": 6.50854,
+   "lon": 3.36991,
+   "kind": "pharmacy",
+   "area": "Yaba"
+  },
+  {
+   "id": "chem_iponri_market",
+   "name": "God's Time Chemist, Iponri",
+   "lat": 6.48509,
+   "lon": 3.36414,
+   "kind": "pharmacy",
+   "area": "Iponri"
+  },
+  {
+   "id": "chem_aswani_market",
+   "name": "Bright Star Pharmacy, Aswani",
+   "lat": 6.53994,
+   "lon": 3.33078,
+   "kind": "pharmacy",
+   "area": "Isolo"
+  },
+  {
+   "id": "chem_mende_market",
+   "name": "Ayo Patent Medicine, Mende",
+   "lat": 6.57297,
+   "lon": 3.36918,
+   "kind": "pharmacy",
+   "area": "Mende"
+  },
+  {
+   "id": "chem_onigbongbo_market",
+   "name": "Rx Corner, Onigbongbo",
+   "lat": 6.57155,
+   "lon": 3.36577,
+   "kind": "pharmacy",
+   "area": "Onigbongbo"
+  },
+  {
+   "id": "chem_ketu_market",
+   "name": "Mama Ngozi Chemist, Ketu",
+   "lat": 6.59714,
+   "lon": 3.38359,
+   "kind": "pharmacy",
+   "area": "Ketu"
+  },
+  {
+   "id": "chem_mile12_market",
+   "name": "Good Health Chemist, Mile 12",
+   "lat": 6.60754,
+   "lon": 3.39256,
+   "kind": "pharmacy",
+   "area": "Mile 12"
+  },
+  {
+   "id": "chem_owode_onirin",
+   "name": "Divine Mercy Pharmacy, Owode Onirin",
+   "lat": 6.60986,
+   "lon": 3.41182,
+   "kind": "pharmacy",
+   "area": "Owode Onirin"
+  },
+  {
+   "id": "chem_trade_fair",
+   "name": "Life Line Chemist, Trade Fair Complex",
+   "lat": 6.46825,
+   "lon": 3.24297,
+   "kind": "pharmacy",
+   "area": "Ojo"
+  },
+  {
+   "id": "chem_alaba_intl",
+   "name": "Alafia Pharmacy, Alaba International",
+   "lat": 6.4629,
+   "lon": 3.19071,
+   "kind": "pharmacy",
+   "area": "Ojo"
+  },
+  {
+   "id": "chem_iddo_market",
+   "name": "Jesus Saves Chemist, Iddo",
+   "lat": 6.47132,
+   "lon": 3.38297,
+   "kind": "pharmacy",
+   "area": "Iddo"
+  },
+  {
+   "id": "chem_ebute_ero",
+   "name": "Kola Medicine Store, Ebute Ero",
+   "lat": 6.4634,
+   "lon": 3.38461,
+   "kind": "pharmacy",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "chem_idumota",
+   "name": "Faith Pharmacy, Idumota",
+   "lat": 6.46329,
+   "lon": 3.38644,
+   "kind": "pharmacy",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "chem_jankara",
+   "name": "God's Time Chemist, Jankara",
+   "lat": 6.46322,
+   "lon": 3.39317,
+   "kind": "pharmacy",
+   "area": "Lagos Island"
+  },
+  {
+   "id": "chem_oshodi",
+   "name": "Mama Ngozi Chemist, Oshodi",
+   "lat": 6.55614,
+   "lon": 3.35072,
+   "kind": "pharmacy",
+   "area": "Oshodi"
+  },
+  {
+   "id": "clinic_oshodi_interchange",
+   "name": "Mercy Clinic, Oshodi",
+   "lat": 6.55674,
+   "lon": 3.35192,
+   "kind": "clinic",
+   "area": "Oshodi"
+  },
+  {
+   "id": "clinic_yaba_station",
+   "name": "Divine Touch Clinic, Yaba",
+   "lat": 6.51207,
+   "lon": 3.3704,
+   "kind": "clinic",
+   "area": "Yaba"
+  },
+  {
+   "id": "clinic_surulere",
+   "name": "Goodness Clinic, Surulere",
+   "lat": 6.5013,
+   "lon": 3.35662,
+   "kind": "clinic",
+   "area": "Surulere"
+  },
+  {
+   "id": "clinic_ikeja_along",
+   "name": "St. Luke Clinic, Ikeja",
+   "lat": 6.59918,
+   "lon": 3.33504,
+   "kind": "clinic",
+   "area": "Ikeja"
+  },
+  {
+   "id": "clinic_mushin_market",
+   "name": "Ireti Clinic, Mushin",
+   "lat": 6.52694,
+   "lon": 3.35876,
+   "kind": "clinic",
+   "area": "Mushin"
+  },
+  {
+   "id": "clinic_obalende_park",
+   "name": "Island Family Clinic, Obalende",
+   "lat": 6.44995,
+   "lon": 3.40929,
+   "kind": "clinic",
+   "area": "Obalende"
+  },
+  {
+   "id": "lakeview_hospital",
+   "name": "Lakeview Specialist Hospital, Ikoyi",
+   "lat": 6.45384,
+   "lon": 3.42905,
+   "kind": "hospital",
+   "area": "Ikoyi"
+  },
+  {
+   "id": "optician_ikeja",
+   "name": "Clear Sight Opticians, Ikeja",
+   "lat": 6.5944,
+   "lon": 3.34048,
+   "kind": "optician",
+   "area": "Ikeja"
+  },
+  {
+   "id": "phone_repair_cv",
+   "name": "Otigba phone repairers",
+   "lat": 6.5934,
+   "lon": 3.34008,
+   "kind": "phones",
+   "area": "Ikeja"
+  },
+  {
+   "id": "phone_shop_oshodi",
+   "name": "Oshodi phone and accessories stalls",
+   "lat": 6.55494,
+   "lon": 3.35182,
+   "kind": "phones",
+   "area": "Oshodi"
   }
  ]
 }

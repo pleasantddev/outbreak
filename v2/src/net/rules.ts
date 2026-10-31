@@ -310,3 +310,73 @@ export function blimpPos(i: number, ms: number) {
   const yaw = Math.atan2(-Math.sin(a) * L.rx, Math.cos(a) * L.rz); // heading along the loop
   return { x, y: L.y + Math.sin(a * 3) * 6, z, yaw };
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// The body: illnesses, traits, hospitals. Shared by the server (which decides who is sick, who carries what, the luck
+// behind it, and every naira paid) and the client (symptoms on screen, the Health app, pharmacies).
+export type IllnessId = 'malaria' | 'typhoid' | 'food' | 'ulcer' | 'bp' | 'flu' | 'cough' | 'apollo' | 'cholera';
+export type Symptom = 'fever' | 'chills' | 'cough' | 'sneeze' | 'cramps' | 'runs' | 'redeyes' | 'headache' | 'pain' | 'weak';
+export interface Illness {
+  id: IllnessId; name: string; spreads: boolean;
+  /** chance per 10 seconds near a sick person or carrier (spreading illnesses only) */
+  spread?: number;
+  symptoms: Symptom[];
+  /** game hours it lasts untreated (then you get better, or worse if `worsens`) */
+  hours: number; worsens?: boolean;
+  /** the drug that clears it at a chemist (severity 1 to 2), and what a clinic charges to sort it out */
+  drug: DrugId; clinic: number;
+  /** what the walk does: 1 is normal */
+  walk: number;
+  /** how it starts, for the Health app once a clinic has named it */
+  how: string;
+}
+export type DrugId = 'paracetamol' | 'antimalarial' | 'antibiotics' | 'ors' | 'antacid' | 'bp_pills' | 'eyedrops' | 'cough_syrup';
+export const DRUGS: Record<DrugId, { name: string; price: number; eases: Symptom[] }> = {
+  paracetamol: { name: 'Paracetamol', price: 400, eases: ['fever', 'headache', 'pain'] },
+  antimalarial: { name: 'Antimalarial (ACT)', price: 3500, eases: ['fever', 'chills'] },
+  antibiotics: { name: 'Antibiotics', price: 4800, eases: ['fever'] },
+  ors: { name: 'ORS sachets', price: 600, eases: ['runs', 'weak'] },
+  antacid: { name: 'Antacid', price: 900, eases: ['pain'] },
+  bp_pills: { name: 'BP tablets', price: 2600, eases: ['headache'] },
+  eyedrops: { name: 'Eye drops', price: 1500, eases: ['redeyes'] },
+  cough_syrup: { name: 'Cough syrup', price: 1800, eases: ['cough', 'sneeze'] },
+};
+export const ILLNESSES: Record<IllnessId, Illness> = {
+  malaria: { id: 'malaria', name: 'Malaria', spreads: false, symptoms: ['fever', 'chills', 'headache', 'weak'], hours: 72, worsens: true, drug: 'antimalarial', clinic: 9000, walk: 0.88, how: 'Mosquito bites. Nights outside, rain and standing water.' },
+  typhoid: { id: 'typhoid', name: 'Typhoid', spreads: false, symptoms: ['fever', 'pain', 'weak'], hours: 96, worsens: true, drug: 'antibiotics', clinic: 14000, walk: 0.9, how: 'Dirty water and food that was not cooked well.' },
+  food: { id: 'food', name: 'Food poisoning', spreads: false, symptoms: ['cramps', 'runs', 'weak'], hours: 18, drug: 'ors', clinic: 5000, walk: 0.85, how: 'Food that has been sitting in the sun.' },
+  ulcer: { id: 'ulcer', name: 'Ulcer', spreads: false, symptoms: ['pain'], hours: 240, drug: 'antacid', clinic: 12000, walk: 0.96, how: 'Skipping meals and stress, again and again.' },
+  bp: { id: 'bp', name: 'High blood pressure', spreads: false, symptoms: ['headache'], hours: 480, drug: 'bp_pills', clinic: 15000, walk: 0.97, how: 'Stress, salt, no sleep. Lagos things.' },
+  flu: { id: 'flu', name: 'Flu', spreads: true, spread: 0.035, symptoms: ['fever', 'sneeze', 'weak'], hours: 36, drug: 'paracetamol', clinic: 5000, walk: 0.94, how: 'Catching it from someone close to you.' },
+  cough: { id: 'cough', name: 'Harmattan cough', spreads: true, spread: 0.03, symptoms: ['cough'], hours: 48, drug: 'cough_syrup', clinic: 4500, walk: 0.98, how: 'Dust, cold mornings, and the person coughing beside you.' },
+  apollo: { id: 'apollo', name: 'Apollo (red eye)', spreads: true, spread: 0.05, symptoms: ['redeyes'], hours: 30, drug: 'eyedrops', clinic: 4000, walk: 1, how: 'Anyone with Apollo who stands close. Do not touch your eyes.' },
+  cholera: { id: 'cholera', name: 'Cholera', spreads: true, spread: 0.012, symptoms: ['runs', 'cramps', 'weak'], hours: 30, worsens: true, drug: 'ors', clinic: 18000, walk: 0.8, how: 'Dirty water, and the hands of people who have it.' },
+};
+export const SYMPTOM_TEXT: Record<Symptom, string> = {
+  fever: 'Your body is hot', chills: 'You keep shivering', cough: 'You cannot stop coughing', sneeze: 'Sneezing and catarrh', cramps: 'Your stomach is turning',
+  runs: 'You need a toilet, fast', redeyes: 'Your eyes are red and itchy', headache: 'Your head is banging', pain: 'A sharp pain in your belly', weak: 'You feel weak',
+};
+/** negative traits, rolled when a character is made; some can be fixed */
+export type TraitId = 'slow' | 'myopia' | 'stomach' | 'sleeper' | 'breath' | 'clumsy' | 'sweaty';
+export const TRAITS: Record<TraitId, { name: string; says: string; fix?: { name: string; price: number; where: 'optician' | 'hospital' } }> = {
+  slow: { name: 'Slow walker', says: 'You walk a little slower than most people.' },
+  myopia: { name: 'Short sight', says: 'Things far away and at the edge of your eyes are blurry.', fix: { name: 'Glasses', price: 45000, where: 'optician' } },
+  stomach: { name: 'Weak stomach', says: 'Street food catches you more often.' },
+  sleeper: { name: 'Light sleeper', says: 'You get less from a night of sleep.' },
+  breath: { name: 'Short breath', says: 'Running tires you out faster.', fix: { name: 'Inhaler', price: 12000, where: 'hospital' } },
+  clumsy: { name: 'Butterfingers', says: 'Your phone falls from your hand more than it should.' },
+  sweaty: { name: 'Sweats a lot', says: 'You need a bath more often.' },
+};
+export const TRAIT_IDS = Object.keys(TRAITS) as TraitId[];
+/** hospital bills by kind of hospital (naira); a bill also covers what you were sick with */
+export const HOSPITAL_BILL = { general: 25000, teaching: 35000, private: 150000 };
+export function hospitalKind(name: string): keyof typeof HOSPITAL_BILL { return /teaching|luth|lasuth/i.test(name) ? 'teaching' : /specialist|private|clinic/i.test(name) ? 'private' : 'general'; }
+/** how much of each naira you earn goes to a debt until it is cleared */
+export const DEBT_GARNISH = 0.5;
+/** the luck number (-100 to 100) is never shown. Karma pulls it; a slow personal tide moves it day to day. */
+export function luckOf(karma: number, seed: number, ms: number) {
+  const day = ms / 86_400_000; const tide = Math.sin((day / 3.3 + seed) * Math.PI * 2) * 22 + Math.sin((day / 0.71 + seed * 7) * Math.PI * 2) * 8;
+  return Math.max(-100, Math.min(100, 60 * Math.tanh(karma / 150) + tide));
+}
+/** a lucky person who catches something spreading is more likely to just carry it, feel nothing and pass it on */
+export function carrierChance(luck: number) { return Math.max(0.05, Math.min(0.75, 0.25 + luck / 160)); }

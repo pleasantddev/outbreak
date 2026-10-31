@@ -32,6 +32,8 @@ export interface LifeHooks {
   trafficDriver?(kind: VehicleKind, x: number, z: number): number | null;
   /** the driver body for that citizen now exists */
   bound?(a: Actor): void;
+  /** the player died; return true if a system takes over (hospital, bill) and will call revive() itself */
+  onPlayerDeath?(by: Actor | null): boolean;
 }
 interface Driver { lane: number; s: number; speed: number; lateral: number; stuck: number; honk: number; wait: number }
 
@@ -694,10 +696,13 @@ export class LifeSim {
     if (t.vehicle !== null) this.exitVehicle(t);
     t.collider.setEnabled(false);
     if (t.role === 'player') {
+      if (this.hooks.onPlayerDeath?.(by)) return;
       this.events.push({ t: 'announce', title: 'WASTED', sub: 'General Hospital took ₦10,000 and patched you up.', tone: 'danger' });
       setTimeout(() => this.respawnPlayer(), 3500);
     }
   }
+  /** back on your feet (the hospital system has already moved you and settled the bill) */
+  revive() { const a = this.local; a.alive = true; a.hp = a.maxHp; a.collider.setEnabled(true); a.anim = 'idle'; this.wanted = 0; }
   respawnPlayer() {
     const a = this.local; a.alive = true; a.hp = a.maxHp; a.collider.setEnabled(true); a.anim = 'idle';
     this.cash = Math.max(0, this.cash - 10000); this.wanted = 0;

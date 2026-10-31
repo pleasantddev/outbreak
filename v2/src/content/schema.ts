@@ -70,7 +70,7 @@ import type { VehicleKind, WeaponId } from '../data/balance';
 
 /** A named spot on the real map. Missions, events and routes refer to these by id (or inline lat/lon). */
 export interface PlaceDef { id: string; name: string; lat: number; lon: number; /** arrival radius in metres (default 16) */ r?: number; area?: string; kind?: PlaceKind; note?: string }
-export type PlaceKind = 'park' | 'market' | 'bank' | 'station' | 'junction' | 'church' | 'mosque' | 'school' | 'hospital' | 'police' | 'fuel' | 'mechanic' | 'shop' | 'food' | 'bar' | 'office' | 'estate' | 'bridge' | 'jetty' | 'landmark' | 'street' | 'compound' | 'stop';
+export type PlaceKind = 'park' | 'market' | 'bank' | 'station' | 'junction' | 'church' | 'mosque' | 'school' | 'hospital' | 'clinic' | 'pharmacy' | 'optician' | 'phones' | 'police' | 'fuel' | 'mechanic' | 'shop' | 'food' | 'bar' | 'office' | 'estate' | 'bridge' | 'jetty' | 'landmark' | 'street' | 'compound' | 'stop';
 export type PlaceRef = string | { lat: number; lon: number; r?: number; name?: string };
 
 /** [speaker, line] */

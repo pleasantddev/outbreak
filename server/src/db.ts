@@ -189,6 +189,15 @@ const MIGRATIONS: string[] = [
   CREATE TABLE ad_views (ad_id INTEGER NOT NULL, account_id TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY (ad_id, account_id, day));
   CREATE TABLE ad_daily (ad_id INTEGER NOT NULL, day TEXT NOT NULL, sightings INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (ad_id, day));
   `,
+  // v7: the body (src/body.ts): hidden karma and luck seed, negative traits, illnesses (who is sick, who just carries
+  // it), immunity, the hospital debt, and whether a player was sent out of hospital in their underwear
+  `
+  CREATE TABLE player_body (account_id TEXT PRIMARY KEY, karma REAL NOT NULL DEFAULT 0, seed REAL NOT NULL, traits TEXT NOT NULL DEFAULT '[]', fixed TEXT NOT NULL DEFAULT '[]',
+    origin TEXT NOT NULL DEFAULT 'regular', ill TEXT NOT NULL DEFAULT '[]', immune TEXT NOT NULL DEFAULT '{}', known TEXT NOT NULL DEFAULT '[]', debt INTEGER NOT NULL DEFAULT 0,
+    stripped INTEGER NOT NULL DEFAULT 0, deaths INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL);
+  CREATE TABLE karma_log (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id TEXT NOT NULL, at INTEGER NOT NULL, delta REAL NOT NULL, why TEXT NOT NULL);
+  CREATE INDEX karma_acct ON karma_log(account_id, at);
+  `,
 ];
 
 export function openDb(file: string): DB {

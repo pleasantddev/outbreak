@@ -11,7 +11,7 @@ const VEHICLES = new Set(['okada', 'danfo', 'suv', 'sedan', 'hatch', 'jeep', 'po
 const WEAPONS = new Set(['pistol', 'smg', 'ar', 'shotgun', 'sniper', 'machete', 'fists']);
 const ROLES = new Set(['area', 'ped', 'police']);
 const ID = /^[a-z0-9_]+$/;
-const PLACE_KINDS = new Set(['park', 'market', 'bank', 'station', 'junction', 'church', 'mosque', 'school', 'hospital', 'police', 'fuel', 'mechanic', 'shop', 'food', 'bar', 'office', 'estate', 'bridge', 'jetty', 'landmark', 'street', 'compound', 'stop']);
+const PLACE_KINDS = new Set(['park', 'market', 'bank', 'station', 'junction', 'church', 'mosque', 'school', 'hospital', 'clinic', 'pharmacy', 'optician', 'phones', 'police', 'fuel', 'mechanic', 'shop', 'food', 'bar', 'office', 'estate', 'bridge', 'jetty', 'landmark', 'street', 'compound', 'stop']);
 const CATS = new Set(['story', 'transport', 'delivery', 'trade', 'crime', 'community', 'racing', 'mechanic', 'land', 'student', 'police', 'rescue']);
 const WEATHER = new Set(['clear', 'hot', 'harmattan', 'fog', 'rain', 'storm']);
 

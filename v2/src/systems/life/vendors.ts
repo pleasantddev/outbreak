@@ -1,6 +1,7 @@
 // Street trade. Market women, mama put, suya at night, roasted corn, pure water, recharge card, okrika clothes and the
 // pay toilet. Stalls appear by the roadside near markets, food spots, bus stops and your house, each with a trader who
 // has a name, a temper and a memory of how you treated her. Everything is bought by haggling (see haggle.ts).
+import { bodyApi } from '../body';
 import * as THREE from 'three';
 import type { GameCtx, GameSystem } from '../registry';
 import type { Actor } from '../../sim/types';
@@ -275,6 +276,7 @@ class Vendors {
       this.close();
       if (fx.k === 'pantry') { L.S.pantry += fx.n * n; c.hud.toast('Foodstuff', `${n > 1 ? n + ' x ' : ''}${g.label}. You fit cook am for house now.`, 'linear-gradient(160deg,#ff8a5c,#d1452c)', 'msg', 4); }
       if (fx.k === 'takeaway') { L.S.food += fx.n * n; c.hud.toast('Takeaway', 'E dey your cooler for house.', 'linear-gradient(160deg,#ff8a5c,#d1452c)', 'msg', 3.5); }
+      if (fx.k === 'eat') bodyApi.ate();
       if (fx.k === 'eat') L.doAction({ id: 'eat', label: `Eating ${g.label.toLowerCase()}`, gain: { hunger: (fx.hunger * n * 60) / fx.mins, fun: ((fx.fun ?? 0) * 60) / fx.mins, social: ((fx.social ?? 0) * 60) / fx.mins }, minutes: fx.mins, clip: 'Consume', spot: [0, 0, 0], moodlet: ['ate_out', 'Enjoyed street food', 4, 3] });
       if (fx.k === 'drink') { nv.hunger = Math.min(100, nv.hunger + (fx.hunger ?? 0) * n); nv.fun = Math.min(100, nv.fun + (fx.fun ?? 0) * n); nv.comfort = Math.min(100, nv.comfort + (fx.comfort ?? 0)); nv.bladder = Math.max(0, nv.bladder + (fx.bladder ?? 0) * n); L.doAction({ id: 'drink', label: `Drinking ${g.label.toLowerCase()}`, gain: {}, minutes: 4, clip: 'Consume', spot: [0, 0, 0] }); }
       if (fx.k === 'toilet') L.ui.black(() => { nv.bladder = 100; nv.hygiene = Math.max(0, nv.hygiene - 3); c.hud.toast('Pay toilet', 'E no clean, but e do the work.', 'var(--pur)', 'msg', 3); });

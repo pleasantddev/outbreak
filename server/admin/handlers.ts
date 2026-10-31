@@ -15,6 +15,7 @@ export interface HostRes { status?: number; body?: any }
 export interface WorldHooks {
   grid: { board(): any; force(f: number | 'all', on: boolean | null, hours?: number): any; collapse(hours: number): any; genScale: number; tick(): any };
   /** MyAds moderation and the real-money ledger (server/src/ads.ts, payments.ts) */
+  body?: { admin(accountId: string): any; karma(accountId: string, d: number, why: string): void; infect(accountId: string, id: any, now?: number, carrier?: boolean): boolean; payDebt?: any } | null;
   ads?: { queue(status?: string): any[]; review(id: number, decision: 'approve' | 'reject', note?: string): Promise<any>; upload(id: string): any; uploadFile(u: any): string | null; boards: any[] } | null;
 }
 export interface AdminDeps { db: SqlDb; dataDir: string; contentSeedDirs: string[]; live?: () => LiveHooks | null; world?: () => WorldHooks | null; version?: string; log?: (m: string) => void; setupCode?: string }
@@ -279,6 +280,19 @@ export function buildAdmin(deps: AdminDeps) {
     db.prepare('UPDATE businesses SET till=COALESCE(?,till), stock=COALESCE(?,stock), debt=COALESCE(?,debt) WHERE site=?').run(till ?? null, stock ?? null, debt ?? null, site);
     audit(c, 'biz.edit', 'business', site, `Edited ${row.type} at ${site}: ${JSON.stringify({ till, stock, debt })}`);
     return db.prepare('SELECT * FROM businesses WHERE site=?').get(site);
+  });
+
+  // ---------- the body: hidden luck and karma, illnesses (including what a player only carries), traits, hospital debt
+  const bodyOf = () => { const b = world().body; if (!b) throw bad('The body system is not attached.'); return b; };
+  route('GET', '/world/body/:id', 'players.view', (c) => bodyOf().admin(c.req.params.id));
+  route('POST', '/world/body/:id', 'players.economy', (c) => {
+    const b = c.req.body ?? {}; const id = c.req.params.id; const B = bodyOf(); const was = B.admin(id);
+    if (typeof b.karma === 'number' && Number.isFinite(b.karma)) { B.karma(id, Math.max(-2000, Math.min(2000, b.karma)) - was.karma, 'admin'); audit(c, 'body.karma', 'player', id, `Karma ${Math.round(was.karma)} -> ${b.karma}`); }
+    if (typeof b.infect === 'string') { B.infect(id, b.infect, Date.now(), !!b.carrier); audit(c, 'body.infect', 'player', id, `Gave ${b.infect}${b.carrier ? ' (carrier)' : ''}`); }
+    if (b.cure) { db.prepare("UPDATE player_body SET ill='[]' WHERE account_id=?").run(id); audit(c, 'body.cure', 'player', id, 'Cured everything'); }
+    if (typeof b.debt === 'number' && b.debt >= 0) { db.prepare('UPDATE player_body SET debt=? WHERE account_id=?').run(Math.floor(b.debt), id); audit(c, 'body.debt', 'player', id, `Debt ${was.debt} -> ${b.debt}`); }
+    if (b.dress) { db.prepare('UPDATE player_body SET stripped=0 WHERE account_id=?').run(id); audit(c, 'body.dress', 'player', id, 'Gave clothes back'); }
+    return B.admin(id);
   });
 
   // ---------- MyAds moderation and payments

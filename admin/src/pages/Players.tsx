@@ -55,13 +55,14 @@ export function PlayerPage({ id }: { id: string }) {
       </div>
       {active.map((s) => <div key={s.id} class="callout bad row"><Icon n="ban" /><div class="grow"><b>{s.kind.toUpperCase()}</b> {fmt.until(s.expiresAt)}, since {fmt.date(s.createdAt)} by {s.issuedBy}. Reason: {s.reason}</div></div>)}
       <div class="grid g4"><Stat k="Cash" v={fmt.naira(p.cash)} /><Stat k="Bank" v={fmt.naira(p.bank)} /><Stat k="Level" v={p.level} s={`${fmt.n(p.xp)} xp`} tone="teal" /><Stat k="Lifetime spend" v={fmt.naira(p.purchases.filter((x) => x.status === 'paid' && x.currency === 'NGN').reduce((a, b) => a + b.amount, 0))} s={`${p.purchases.length} orders`} /></div>
-      <Tabs cur={tab} on={setTab} tabs={[['overview', 'Overview'], ['items', 'Inventory and vehicles'], ['plots', `Plots (${p.plots.length})`], ['purchases', `Purchases (${p.purchases.length})`], ['safety', `Sanctions and reports (${p.sanctions.length + p.reports.length})`], ['notes', `Notes (${p.notes.length})`]]} />
+      <Tabs cur={tab} on={setTab} tabs={[['overview', 'Overview'], ['items', 'Inventory and vehicles'], ['plots', `Plots (${p.plots.length})`], ['purchases', `Purchases (${p.purchases.length})`], ['safety', `Sanctions and reports (${p.sanctions.length + p.reports.length})`], ['body', 'Body and luck'], ['notes', `Notes (${p.notes.length})`]]} />
       {tab === 'overview' && <Overview p={p} can={can} openEco={() => setDlg('economy')} openReset={() => setDlg('reset')} />}
       {tab === 'items' && <ItemsTab p={p} />}
       {tab === 'plots' && <PlotsTab p={p} />}
       {tab === 'purchases' && <PurchaseTable rows={p.purchases} />}
       {tab === 'safety' && <SafetyTab p={p} />}
       {tab === 'notes' && <NotesTab p={p} reload={res.reload} />}
+      {tab === 'body' && <BodyTab id={p.id} can={can} />}
       {dlg === 'sanction' && <SanctionDialog p={p} kind={sk} onClose={() => setDlg(null)} done={done} />}
       {dlg === 'unban' && <UnbanDialog p={p} active={active} onClose={() => setDlg(null)} done={done} />}
       {dlg === 'economy' && <EconomyDialog p={p} onClose={() => setDlg(null)} done={done} />}
@@ -155,4 +156,23 @@ function ResetDialog({ p, onClose, done }: { p: PlayerDetail; onClose: () => voi
       <Field label={`Type the player name (${p.name}) to confirm`} err={err}><input class="input" value={conf} onInput={(e) => setConf((e.target as HTMLInputElement).value)} /></Field>
     </Modal>
   );
+}
+
+/** the hidden side of a player: luck, karma, illnesses (including what they only carry), traits, hospital debt */
+function BodyTab({ id, can }: { id: string; can: (x: any) => boolean }) {
+  const b = useFetch<any>(() => api.get('/world/body/' + encodeURIComponent(id)), [id]); const [k, setK] = useState('');
+  const post = async (body: unknown, msg: string) => { try { await api.post('/world/body/' + encodeURIComponent(id), body); toast(msg, 'good'); b.reload(); } catch (e) { toastErr(e); } };
+  const d = b.data; if (!d) return <Loading />;
+  const edit = can('players.economy');
+  return (<div class="col gap">
+    <div class="grid g4"><Stat k="Luck now" v={d.luck} s="hidden, -100 to 100" tone={d.luck >= 0 ? 'teal' : 'red'} /><Stat k="Karma" v={Math.round(d.karma)} s="good and bad deeds" /><Stat k="Hospital debt" v={fmt.naira(d.debt)} s={d.stripped ? 'sent out in underwear' : ''} /><Stat k="Deaths" v={d.deaths} /></div>
+    <div class="grid g2">
+      <Panel title="Illness" flush><table class="tbl"><thead><tr><th>Illness</th><th>State</th><th>Since</th></tr></thead><tbody>{d.ill.map((i: any) => <tr key={i.id}><td>{i.id}</td><td>{i.carrier ? <Badge kind="warn">carrier, no symptoms</Badge> : <Badge kind="bad">sick, level {i.sev}</Badge>}</td><td class="mut">{fmt.ago(i.at)}</td></tr>)}{!d.ill.length && <tr><td colSpan={3} class="empty">Healthy</td></tr>}</tbody></table>
+        {edit && <div class="row gap wrap" style="padding:10px"><Btn kind="sm" onClick={() => post({ cure: true }, 'Cured')}>Cure all</Btn>{['flu', 'apollo', 'malaria'].map((x) => <Btn kind="sm" key={x} onClick={() => post({ infect: x }, `Gave ${x}`)}>Give {x}</Btn>)}<Btn kind="sm" onClick={() => post({ infect: 'flu', carrier: true }, 'Flu carrier')}>Flu carrier</Btn></div>}</Panel>
+      <Panel title="Traits and karma">
+        <div>{d.traits.length ? d.traits.map((t: string) => <Badge key={t} kind={d.fixed.includes(t) ? 'good' : ''}>{t}{d.fixed.includes(t) ? ' (fixed)' : ''}</Badge>) : <span class="mut">No negative traits</span>}</div>
+        {edit && <div class="row gap" style="margin-top:10px"><input placeholder="Set karma" value={k} onInput={(e) => setK((e.target as HTMLInputElement).value)} /><Btn kind="sm" onClick={() => post({ karma: Number(k) }, 'Karma set')}>Set</Btn>{d.debt > 0 && <Btn kind="sm" onClick={() => post({ debt: 0 }, 'Debt cleared')}>Clear debt</Btn>}{d.stripped && <Btn kind="sm" onClick={() => post({ dress: true }, 'Clothes back')}>Give clothes back</Btn>}</div>}
+        <table class="tbl" style="margin-top:10px"><tbody>{d.log.map((l: any, i: number) => <tr key={i}><td class="mut">{fmt.ago(l.at)}</td><td>{l.why}</td><td class="num">{l.delta > 0 ? '+' : ''}{Math.round(l.delta * 10) / 10}</td></tr>)}</tbody></table>
+      </Panel>
+    </div></div>);
 }

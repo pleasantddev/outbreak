@@ -256,10 +256,10 @@ export type ClientMsg =
   | { t: 'emote'; id: (typeof EMOTES)[number] }
   | { t: 'act'; n: number; a: string; [k: string]: unknown };
 
-export interface WhoInfo { id: number; name: string; model: string; skin: number; outfit: string; level: number; role?: string }
+export interface WhoInfo { id: number; name: string; model: string; skin: number; outfit: string; level: number; role?: string; /** down to underwear */ strip?: 1 }
 
 export type ServerMsg =
-  | { t: 'welcome'; id: number; v: number; tickHz: number; serverTime: number; epoch: number; cell: number; wallet: { cash: number; bank: number }; plots: string[]; online: number; profile: unknown; role: string; state: Record<string, unknown>; motd?: string; grid?: import('./rules').GridState; phone?: { number: string; publicId: string; unread: number }; ice?: { urls: string; username?: string; credential?: string }[]; ads?: LiveAd[] }
+  | { t: 'welcome'; id: number; v: number; tickHz: number; serverTime: number; epoch: number; cell: number; wallet: { cash: number; bank: number }; plots: string[]; online: number; profile: unknown; role: string; state: Record<string, unknown>; motd?: string; grid?: import('./rules').GridState; phone?: { number: string; publicId: string; unread: number }; ice?: { urls: string; username?: string; credential?: string }[]; ads?: LiveAd[]; body?: BodyView }
   | { t: 'pong'; c: number; s: number }
   | { t: 'who'; list: WhoInfo[] }
   | { t: 'chat'; ch: 'near' | 'global' | 'whisper' | 'system'; from: string; fromId: number; text: string; ts: number }
@@ -286,7 +286,8 @@ export type ServerMsg =
   | { t: 'call'; kind: 'ring' | 'accepted' | 'declined' | 'ended'; callId: string; from: string; fromAccount: string; peer: number }
   /** WebRTC signalling from another player (voice) */
   | { t: 'rtc'; from: number; data: unknown; radio: boolean; call: boolean }
-  | { t: 'ads'; list: LiveAd[] };
+  | { t: 'ads'; list: LiveAd[] }
+  | ({ t: 'body'; collapse?: boolean } & BodyView);
 
 /** Actions a client may send in `act`. The server owns the rules for each. */
 export const ACTS = ['plot.buy', 'bank.deposit', 'bank.withdraw', 'cash.transfer', 'cash.delta', 'job.start', 'job.done', 'shop.buy', 'state.put', 'tp', 'respawn'] as const;
@@ -296,3 +297,8 @@ export const cellKey = (cx: number, cz: number) => ((cx + 4096) << 13) | (cz + 4
 
 /** an approved ad that is up right now (server/src/ads.ts live()) */
 export interface LiveAd { id: number; kind: 'board' | 'drone' | 'blimp'; board: string | null; img: string | null; text: string | null; color: string | null; place: string | null; until: number }
+/** what the server tells a player about their own body (server/src/body.ts view): never luck, karma or what they only carry */
+export interface BodyView {
+  traits: import('./rules').TraitId[]; fixed: import('./rules').TraitId[]; debt: number; stripped: boolean; origin: string; deaths: number;
+  ill: { key: string; name: string | null; symptoms: import('./rules').Symptom[]; sev: number; walk: number; eased: boolean; drug: import('./rules').DrugId | null }[];
+}

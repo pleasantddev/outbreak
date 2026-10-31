@@ -119,6 +119,30 @@ function clothMaterial(base: THREE.MeshStandardMaterial, u: Record<string, THREE
   return m;
 }
 
+/**
+ * Down to underwear (the hospital sent you out with nothing, or you changed): a band of colour in bind space over any
+ * clothing material. Men: boxers. Women: bra and pants. Everything else on the clothing turns to skin, feet go bare.
+ * uStrip 0 leaves the outfit alone, so every clothing material carries this and one uniform switches it.
+ */
+function stripPatch(m: THREE.Material, u: Record<string, THREE.IUniform>) {
+  const prev = m.onBeforeCompile; const key = m.customProgramCacheKey?.call(m) ?? '';
+  m.onBeforeCompile = (sh, r) => {
+    prev.call(m, sh, r); Object.assign(sh.uniforms, u);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vStripP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvStripP = position;');
+    const hasZ = sh.fragmentShader.includes('uniform vec3 uZ;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>\nvarying vec3 vStripP; uniform float uStrip; uniform float uFem; uniform vec3 uSkin; uniform vec3 uUnder;${hasZ ? '' : ' uniform vec3 uZ;'}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        if (uStrip > 0.5) {
+          float y = vStripP.y; float waist = uZ.x, ankle = uZ.y, neck = uZ.z; vec3 sc = uSkin;
+          float legs = waist - ankle; float chest = neck - waist;
+          bool pants = y < waist && y > waist - legs * (uFem > 0.5 ? 0.16 : 0.3);
+          bool bra = uFem > 0.5 && y > waist + chest * 0.5 && y < waist + chest * 0.8;
+          diffuseColor.rgb = (pants || bra) ? uUnder : sc;
+        }`);
+  };
+  m.customProgramCacheKey = () => key + '|strip';
+}
+
 // ---------------------------------------------------------------- the person
 export interface CharState {
   anim: string; speed: number; moveYaw: number; aimYaw: number; pitch: number; aiming: boolean; armed: boolean; weapon: WeaponId | null;
@@ -175,7 +199,7 @@ export class HumanView {
   /** bone rotations as the mixer left them: restored before each mixer update so procedural aim never accumulates */
   private snap: { b: THREE.Bone; q: THREE.Quaternion }[] = [];
   private skins: THREE.SkinnedMesh[] = []; private fullGeo: THREE.BufferGeometry[] = [];
-  lodOn = false; private shadowMode = 2; private bigSkins = new Set<THREE.SkinnedMesh>();
+  lodOn = false; private shadowMode = 2; private bigSkins = new Set<THREE.SkinnedMesh>(); private accMeshes: THREE.SkinnedMesh[] = []; stripped = false;
 
   constructor(assets: HumanAssets, look: CharacterLook, seed = Math.random() * 100) {
     this.id = rosterOf(look);
@@ -189,6 +213,7 @@ export class HumanView {
       uTop: { value: lin(look.topColor) }, uAcc: { value: lin(look.topAccent) }, uPants: { value: lin(look.pantsColor) }, uShoe: { value: lin(look.shoes) },
       uPat: { value: def.patterned || def.zoned ? PATTERN_ID[look.topPattern] : 0 }, uPantsPat: { value: PATTERN_ID[look.pants] }, uZ: { value: V(d.waistY, d.ankleY, d.neckY) },
       uHit: { value: 0 }, uDirt: { value: look.scars + 0.25 },
+      uStrip: { value: 0 }, uFem: { value: def.sex === 'f' ? 1 : 0 }, uSkin: { value: tone.clone() }, uUnder: { value: lin(def.sex === 'f' ? 0x1b1b22 : 0x2c3e66) },
     };
     const cache = new Map<THREE.Material, THREE.Material>();
     this.model.traverse((o) => {
@@ -210,12 +235,14 @@ export class HumanView {
         else if (slot === 'hair') { mat = src.clone(); mat.color.set(0x0c0907); mat.roughness = 0.7; }
         else if (slot === 'eyes') { mat = src.clone(); mat.color.set(0x140a06); mat.roughness = 0.08; }
         else mat = src.clone();
+        if (slot === 'top' || slot === 'pants' || slot === 'shoes') stripPatch(mat, this.u);
         if (def.clip && def.clip.test(src.name)) { mat.transparent = false; mat.alphaTest = 0.5; mat.depthWrite = true; mat.alphaToCoverage = true; }
         else if (mat.transparent && !(mat as any).alphaMap) { mat.transparent = false; mat.depthWrite = true; }
         mat.envMapIntensity = 0.8;
         cache.set(src, mat); this.mats.push(mat);
       }
       sm.material = mat;
+      if ((def.slots.find(([rx]) => rx.test(src.name))?.[1]) === 'acc') this.accMeshes.push(sm);
     });
     // the three largest meshes carry the silhouette: they are the only ones that cast a shadow once the person is a few metres away
     [...this.skins].sort((a, b) => b.geometry.attributes.position.count - a.geometry.attributes.position.count).slice(0, 3).forEach((m) => this.bigSkins.add(m));
@@ -226,6 +253,8 @@ export class HumanView {
     this.play('Idle_Loop', 0);
   }
 
+  /** underwear only: boxers for men, bra and pants for women (the 16+ floor), bare feet, no vest or bag */
+  setStripped(on: boolean) { if (on === this.stripped) return; this.stripped = on; this.u.uStrip.value = on ? 1 : 0; for (const m of this.accMeshes) m.visible = !on; }
   /** 0: casts no shadow, 1: only the biggest meshes, 2: everything. Shadow passes redraw skinned meshes every time (they are never frustum culled). */
   setShadow(mode: 0 | 1 | 2) {
     if (mode === this.shadowMode) return; this.shadowMode = mode;

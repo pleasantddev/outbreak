@@ -13,6 +13,7 @@ import type { OnlineApi } from '../api.ts';
 import { Businesses } from '../business.ts';
 import { PhoneNet } from '../phone.ts';
 import type { Ads } from '../ads.ts';
+import { Body } from '../body.ts';
 import { Grid as PowerGrid, FEEDERS } from '../grid.ts';
 import { HttpError } from '../auth.ts';
 import { run } from '../db.ts';
@@ -68,13 +69,15 @@ export class Hub implements OnlineApi {
   private saveTimer: NodeJS.Timeout | null = null;
 
   races: RaceLobbies;
-  biz: Businesses; phone: PhoneNet; power = new PowerGrid(); private adsRef: Ads | null = null; private adTimer: ReturnType<typeof setInterval> | null = null;
+  biz: Businesses; phone: PhoneNet; body: Body; power = new PowerGrid(); private adsRef: Ads | null = null; private adTimer: ReturnType<typeof setInterval> | null = null;
   /** live voice calls between two connections */
   private calls = new Map<string, { a: Conn; b: Conn; live: boolean; at: number }>(); private lastSwitch = new Map<string, number>();
   /** what the admin panel can steer in the game world */
-  get world() { return { grid: this.power, biz: this.biz, ads: this.adsRef }; }
+  get world() { return { grid: this.power, biz: this.biz, ads: this.adsRef, body: this.body }; }
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
-    this.biz = new Businesses(db, econ); this.phone = new PhoneNet(db);
+    this.biz = new Businesses(db, econ); this.phone = new PhoneNet(db); this.body = new Body(db, econ);
+    const bodyOut = (accountId: string) => { const c = this.byAccount.get(accountId); if (c) { const v = this.body.view(accountId); this.send(c, { t: 'body', ...v } as any); this.syncStrip(c, v.stripped); } };
+    this.body.on('sick', bodyOut); this.body.on('changed', bodyOut);
     // light changes reach everybody at once; the shout goes to the feeders that just got light
     this.power.on('change', (st: ReturnType<PowerGrid['state']>, prev: string) => {
       this.broadcastJson({ t: 'grid', ...st });
@@ -183,7 +186,7 @@ export class Hub implements OnlineApi {
       t: 'welcome', id, v: PROTOCOL_VERSION, tickHz: this.cfg.tickHz, serverTime: this.now(), epoch: Date.now(), cell: CELL, wallet: w, plots: this.econ.plotsOf(auth.account.id).map((p) => p.id),
       online: this.conns.size, profile: publicProfile(profile), role: auth.account.role, motd: this.cfg.motd, grid: this.power.state(),
       phone: (() => { const p = this.phone.ensure(auth.account.id); return { number: p.number, publicId: p.public_id, unread: this.phone.unread(auth.account.id) }; })(),
-      ice: this.iceServers(), ads: this.adsRef?.live() ?? [],
+      ice: this.iceServers(), ads: this.adsRef?.live() ?? [], body: (() => { const v = this.body.view(auth.account.id); (c as any).stripped = v.stripped; return v; })(),
       state: { ...st.blobs, vehicles: st.vehicles, skills: st.skills, missions: st.missions, pos: last },
     });
     this.log.info(`join ${profile.name} (#${id}) online=${this.conns.size}`);
@@ -449,6 +452,21 @@ export class Hub implements OnlineApi {
           const oc = this.byAccount.get(r.owner); if (oc) this.send(oc, { t: 'toast', title: 'Customer', body: `${c.profile.name} bought from your shop. ₦${r.item.price.toLocaleString('en-NG')} in the till.` }); break;
         }
         case 'ads.seen': ok({ counted: this.adsRef?.seen(id, m.ids) ?? 0 }); break;
+        // the body: death and the hospital bill, chemists and clinics, debts, getting dressed again
+        case 'body.me': ok({ body: this.body.view(id) }); break;
+        case 'body.died': {
+          const now = performance.now(); if (now - (c.ms as any).lastDeath < 15_000) throw new HttpError(429, 'Too soon.'); (c.ms as any).lastDeath = now;
+          const pos = this.outdoorPos(c); const r = this.body.died(id, pos);
+          c.ms.lastTp = 0; c.ms.tpUntil = now + 6000; // the jump to the hospital is ours
+          if (typeof m.by === 'number') { const k = this.conns.get(m.by); if (k && k !== c) this.body.karma(k.account.id, -8, 'killed a player'); }
+          this.syncStrip(c, r.stripped || this.body.view(id).stripped); ok({ ...r, body: this.body.view(id), ...this.walletOf(c) }); break;
+        }
+        case 'body.exposure': { const got = this.body.exposure(id, String(m.kind ?? '')); ok({ body: got ? this.body.view(id) : undefined }); break; }
+        case 'body.treat': { const r = this.body.treat(id, this.outdoorPos(c), { where: m.where, drug: m.drug, op: m.op }); ok({ ...r, body: this.body.view(id), ...this.walletOf(c) }); break; }
+        case 'body.paydebt': ok({ ...this.body.payDebt(id, m.amount), body: this.body.view(id), ...this.walletOf(c) }); break;
+        case 'body.dress': { const r = this.body.dress(id, this.outdoorPos(c)); this.syncStrip(c, false); ok({ ...r, body: this.body.view(id), ...this.walletOf(c) }); break; }
+        // only bad deeds come from the game itself; good deeds are counted where the server can see them
+        case 'karma.deed': { const BAD: Record<string, number> = { assault: -1, theft: -2, robbery: -4, murder: -10, police: -6, scam: -5, littering: -0.2 }; const d = BAD[String(m.kind)]; if (d) this.body.karma(id, d, String(m.kind)); ok(); break; }
         case 'tp': case 'respawn': {
           const now = performance.now();
           if (now - c.ms.lastTp < 10_000) { this.econ.flag(id, 'tp-spam', { a: m.a }); throw new HttpError(429, 'Too many teleports.'); }
@@ -514,14 +532,19 @@ export class Hub implements OnlineApi {
     const game = String(m.game ?? '');
     if (game === 'slots') {
       const bet = Math.floor(Number(m.bet)); if (!SLOT_BETS.includes(bet)) throw new HttpError(400, 'Bad bet.'); if (cash() < bet) throw new HttpError(400, 'Not enough cash.');
-      this.econ.casino(id, -bet, 'slots'); const r = slotSpin(rand, bet); const w = r.win ? this.econ.casino(id, r.win, 'slots') : this.econ.wallet(id);
+      this.econ.casino(id, -bet, 'slots'); let r = slotSpin(rand, bet);
+      // the hidden luck: a lucky player sometimes gets a losing spin back, an unlucky one sometimes loses a win
+      const luck = this.body.luck(id); if ((!r.win && luck > 0 && rand() < luck / 100 * 0.12) || (r.win && luck < 0 && rand() < -luck / 100 * 0.12)) r = slotSpin(rand, bet);
+      const w = r.win ? this.econ.casino(id, r.win, 'slots') : this.econ.wallet(id);
       return { reels: r.reels, win: r.win, cash: w.cash, bank: w.bank };
     }
     if (game === 'roulette') {
       const bets = (m.bets ?? {}) as Record<string, number>; let staked = 0;
       for (const [k, v] of Object.entries(bets)) { if (!ROULETTE_KEYS.test(k) || !Number.isInteger(v) || v < 500 || v > 500_000) throw new HttpError(400, 'Bad bet.'); staked += v; }
       if (!staked || staked > 1_000_000) throw new HttpError(400, 'Bad stake.'); if (cash() < staked) throw new HttpError(400, 'Not enough cash.');
-      this.econ.casino(id, -staked, 'roulette'); const n = randomInt(0, 37); let back = 0; for (const [k, v] of Object.entries(bets)) back += v * roulettePays(k, n);
+      this.econ.casino(id, -staked, 'roulette'); let n = randomInt(0, 37); const pays = (x: number) => Object.entries(bets).reduce((t, [k, v]) => t + v * roulettePays(k, x), 0);
+      const luck = this.body.luck(id); if ((pays(n) < staked && luck > 0 && rand() < luck / 100 * 0.1) || (pays(n) > staked && luck < 0 && rand() < -luck / 100 * 0.1)) n = randomInt(0, 37);
+      const back = pays(n);
       const w = back ? this.econ.casino(id, back, 'roulette') : this.econ.wallet(id); return { num: n, back, staked, cash: w.cash, bank: w.bank };
     }
     if (game === 'bj') {
@@ -536,6 +559,17 @@ export class Hub implements OnlineApi {
     }
     throw new HttpError(400, 'Unknown game.');
   }
+  /** everyone near sees you in your underwear (or dressed again) */
+  private syncStrip(c: Conn, on: boolean) { if (!!(c as any).stripped === on) return; (c as any).stripped = on; this.announceWho(c); }
+  /** illnesses spread between players standing close and run their course; the sick see it, carriers do not */
+  private bodyTick() {
+    try {
+      const list = [...this.conns.values()].map((c) => ({ accountId: c.account.id, x: c.ms.x, z: c.ms.z, space: this.spaceOf(c) }));
+      const r = this.body.tick(list);
+      for (const a of r.changed) { const c = this.byAccount.get(a); if (c) this.send(c, { t: 'body', ...this.body.view(a) } as any); }
+      for (const a of r.collapsed) { const c = this.byAccount.get(a); if (c) this.send(c, { t: 'body', ...this.body.view(a), collapse: true } as any); }
+    } catch (e) { this.log.warn('body tick', e); }
+  }
   /** never store a position inside the interior zone: a player who logs out indoors comes back at the door */
   private outdoorPos(c: Conn) { return c.ms.interior && c.ms.doorFrom ? c.ms.doorFrom : inInteriorZone(c.ms.x, c.ms.z) ? { x: 900, z: -330 } : { x: c.ms.x, z: c.ms.z }; }
   private walletOf(c: Conn) { const w = this.econ.wallet(c.account.id); return { cash: w.cash, bank: w.bank }; }
@@ -543,6 +577,7 @@ export class Hub implements OnlineApi {
   // ------------------------------------------------------------------------------------------ snapshots
   private tick() {
     this.tickN++; this.stats0.ticks++;
+    if (this.tickN % (this.cfg.tickHz * 10) === 0) this.bodyTick();
     if (this.tickN % this.cfg.tickHz === 0) { this.races.tick(); this.power.tick(); }
     const R = this.cfg.interestRings; const now = performance.now();
     // parked cars time out
@@ -635,5 +670,5 @@ export class Hub implements OnlineApi {
 
 const num = (v: unknown) => (typeof v === 'number' ? v : undefined);
 const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
-function whoOf(o: Conn): WhoInfo { return { id: o.id, name: o.profile.name, model: o.profile.model, skin: o.profile.skin, outfit: o.profile.outfit, level: 1 + Math.floor(Math.sqrt(Math.max(0, o.profile.xp) / 60)), role: o.role === 'player' ? undefined : o.role }; }
+function whoOf(o: Conn): WhoInfo { return { id: o.id, name: o.profile.name, model: o.profile.model, skin: o.profile.skin, outfit: o.profile.outfit, level: 1 + Math.floor(Math.sqrt(Math.max(0, o.profile.xp) / 60)), role: o.role === 'player' ? undefined : o.role, ...((o as any).stripped ? { strip: 1 as const } : {}) }; }
 void keyOf; void cellCoord;

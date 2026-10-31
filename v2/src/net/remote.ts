@@ -60,6 +60,7 @@ export class RemoteWorld {
   setWho(list: WhoInfo[]) { for (const w of list) { this.who.set(w.id, w); const p = this.players.get(w.id); if (p) this.applyWho(p, w); } }
   private applyWho(p: RP, w: WhoInfo) {
     const changed = !p.who || p.who.model !== w.model || p.who.skin !== w.skin || p.who.outfit !== w.outfit; p.who = w;
+    (p as any).view?.setStripped?.(!!w.strip);
     p.plate.className = 'nt-plate' + (w.role && w.role !== 'user' ? ' mod' : '');
     p.plate.innerHTML = ''; p.plate.append(document.createTextNode(w.name)); const lv = document.createElement('small'); lv.textContent = `Lv ${w.level}`; p.plate.append(lv);
     if (changed && p.view) { p.view.dispose(); p.view = null; p.built = false; }
@@ -177,7 +178,7 @@ export class RemoteWorld {
         if (built >= 2) { p.plate.style.display = 'none'; continue; } // spread the cost of building people over frames
         const w = p.who; const look = lookFor({ name: w?.name ?? 'Player', model: (w?.model as any) ?? 'survivor', skin: w?.skin ?? 1, outfit: w?.outfit ?? 'street' }, NEUTRAL);
         if (!((look.model as string) in BASE_LOOKS)) look.model = 'survivor' as any;
-        try { p.view = new HumanView(this.assets, look, p.id * 7.3); } catch { continue; }
+        try { p.view = new HumanView(this.assets, look, p.id * 7.3); p.view.setStripped(!!w?.strip); } catch { continue; }
         this.view.scene.add(p.view.root); p.view.root.position.set(x, y, z); p.built = true; built++;
       }
       const v = p.view;
