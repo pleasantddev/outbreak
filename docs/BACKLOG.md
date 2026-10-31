@@ -20,14 +20,14 @@ to switch between phones".
 Rules: stripped means down to underwear (the 16+ floor); hacking is a game mechanic, never real technique.
 
 ### LIFE (LEAD builds these; the shift may take one if LEAD has not started it)
-- [ ] Luck and karma: hidden server-side luck per player, moved by karma (good and bad deeds), read by casino odds,
+- [x] (750c28f) Luck and karma: hidden server-side luck per player, moved by karma (good and bad deeds), read by casino odds,
       carrier chance, accidents, finds; admin can see and tune it.
-- [ ] Sickness: a set of illnesses (malaria, typhoid, cholera, flu, a cough that spreads, ulcer, hypertension...),
+- [x] (750c28f) Sickness: a set of illnesses (malaria, typhoid, cholera, flu, a cough that spreads, ulcer, hypertension...),
       symptoms that change play, transmissible ones spread between nearby players (server), silent carriers decided by
       luck, non-transmissible ones just hurt; pharmacies, clinics and hospitals treat them for a fee.
-- [ ] Hospital respawn: death sends you to the nearest hospital with a bill; can't pay means discharged in underwear
+- [x] (750c28f) Hospital respawn: death sends you to the nearest hospital with a bill; can't pay means discharged in underwear
       with everything you carried gone and a debt that comes out of what you earn next.
-- [ ] Negative traits rolled at character creation (slower walk, myopia edge blur, weak stomach, light sleeper...),
+- [x] (750c28f) Negative traits rolled at character creation (slower walk, myopia edge blur, weak stomach, light sleeper...),
       some can be treated (glasses at an optician).
 ### SPORTS lane adds
 - [ ] Renting: new players start with no home; rent rooms and flats (face-me-I-face-you to a Lekki flat) from NPC
