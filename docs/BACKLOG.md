@@ -52,12 +52,12 @@ players upload and attest they own).
 - [ ] Copy pass over every player-facing string with the humanizer guide.
 
 ### SPORTS (Opus agent, low effort)
-- [ ] Property Manager app: list your property for sale yourself or through an agent (commission), set price; only
+- [x] (337a54e, 3112520) Property Manager app: list your property for sale yourself or through an agent (commission), set price; only
       listed property shows a price or can be bought; agents manage rentals.
-- [ ] Pitches, courts and stadiums on the map are ownable property (server ownership, listing rules above).
-- [ ] Book and fix matches: owners rent out slots; players challenge each other; scheduled kick-offs.
-- [ ] Football match: players control footballers, FIFA-style controls, online between real players, AI fills.
-- [ ] Basketball match: 2K-style, online between real players.
+- [x] (337a54e, 3112520) Pitches, courts and stadiums on the map are ownable property (server ownership, listing rules above).
+- [x] (337a54e) Book and fix matches: owners rent out slots; players challenge each other; scheduled kick-offs.
+- [x] (3112520, first version: host client sim, server checks score) Football match: players control footballers, FIFA-style controls, online between real players, AI fills.
+- [x] (3112520, first version) Basketball match: 2K-style, online between real players.
 
 ### IDEAS (Sonnet teammate)
 - [ ] Ideas artifact: a running page of new ideas in the founder's spirit, each with a status, kept current.
