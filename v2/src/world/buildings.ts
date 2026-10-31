@@ -1,6 +1,7 @@
 // Lagos buildings from OSM footprints: raised plinth, painted plaster or bare block, windows with frames,
 // burglar bars and louvres, shopfronts with roller shutters, parapet roofs, long-span aluminium hip roofs,
 // unfinished shells with starter bars. One merged mesh per tile, PBR from the wall texture array.
+import { T_ROOF } from './oshodi';
 import { lampShared, LAMP_GLSL } from './lamps';
 import { powerShared, POWER_GLSL } from '../systems/power';
 import * as THREE from 'three';
@@ -20,8 +21,8 @@ const ROOFC: [number, number, number][] = [[0.55, 0.58, 0.62], [0.2, 0.35, 0.6],
 export interface BuildingTile { mesh: THREE.Mesh; roofProps: { tanks: number[]; bars: number[] }; heights: Map<number, number> }
 
 export function buildingHeight(b: Building) {
+  if (b.kind === BK.terminal) return T_ROOF;
   if (b.height > 0) return Math.max(2.4, b.height);
-  if (b.kind === BK.terminal) return 6.8;
   if (b.kind === BK.market) return 5.5 + hash(b.id, 6) * 1.5;
   if (b.kind === BK.station) return 5.2;
   if (b.kind === BK.shed) return 2.6;
