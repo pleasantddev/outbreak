@@ -34,7 +34,7 @@ Rules: stripped means down to underwear (the 16+ floor); hacking is a game mecha
       landlords and from player owners through Property Manager; rent due, caution fee, eviction. IJGB (rich returnee)
       starting background gets a flat from day one.
 ### LEAD adds
-- [ ] Phones as items: models from a small phone to a tablet (screen size, apps, battery), switch between them, cracks
+- [x] (PHONES_HASH) Phones as items: models from a small phone to a tablet (screen size, apps, battery), switch between them, cracks
       over time and from falls, repair or buy at Computer Village Ikeja and phone shops, a shady repairer with the
       hacking skill can clone your phone and keep reading it until you change phones or get it cleaned.
 - [ ] Economy guard against inflation: money sinks (rent, bills, repairs, wear, fees, hospital), earnings scaled to

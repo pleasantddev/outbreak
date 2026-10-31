@@ -155,6 +155,8 @@ class BodyApp {
     try { await view.world.store.around(x, z, 900); } catch { /* go anyway */ }
     const has = () => { for (const t of view.world.tiles.values()) if (x >= t.x0 && x < t.x0 + TILE && z >= t.z0 && z < t.z0 + TILE) return true; return false; };
     for (let i = 0; i < 150 && !has(); i++) { view.world.update(x, z, true); await sleep(16); }
+    // out front on the pavement, not inside the building
+    try { this.ctx.loadRoute?.(x, z, x, z); const sp = this.ctx.graph?.snap(x, z, 'walk', 300)?.[0]; if (sp) { x = sp.x; z = sp.z; } } catch { /* the point itself */ }
     me.pos.x = x; me.pos.y = 0.05; me.pos.z = z; me.vy = 0; me.body.setTranslation({ x, y: 1, z }, true);
   }
   /** they took everything: weapons, armour, what was in your bag, and your clothes */

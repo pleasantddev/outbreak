@@ -14,6 +14,7 @@ import { Businesses } from '../business.ts';
 import { PhoneNet } from '../phone.ts';
 import type { Ads } from '../ads.ts';
 import { Body } from '../body.ts';
+import { Devices } from '../devices.ts';
 import { Grid as PowerGrid, FEEDERS } from '../grid.ts';
 import { HttpError } from '../auth.ts';
 import { run } from '../db.ts';
@@ -71,15 +72,17 @@ export class Hub implements OnlineApi {
   private saveTimer: NodeJS.Timeout | null = null;
 
   races: RaceLobbies; fixtures: Fixtures; props: Properties;
-  biz: Businesses; phone: PhoneNet; body: Body; power = new PowerGrid(); private adsRef: Ads | null = null; private adTimer: ReturnType<typeof setInterval> | null = null;
+  biz: Businesses; phone: PhoneNet; body: Body; devices: Devices; power = new PowerGrid(); private adsRef: Ads | null = null; private adTimer: ReturnType<typeof setInterval> | null = null;
   /** live voice calls between two connections */
   private calls = new Map<string, { a: Conn; b: Conn; live: boolean; at: number }>(); private lastSwitch = new Map<string, number>();
   /** what the admin panel can steer in the game world */
-  get world() { return { grid: this.power, biz: this.biz, ads: this.adsRef, body: this.body }; }
+  get world() { return { grid: this.power, biz: this.biz, ads: this.adsRef, body: this.body, devices: this.devices }; }
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
     this.biz = new Businesses(db, econ); this.phone = new PhoneNet(db); this.body = new Body(db, econ);
     const bodyOut = (accountId: string) => { const c = this.byAccount.get(accountId); if (c) { const v = this.body.view(accountId); this.send(c, { t: 'body', ...v } as any); this.syncStrip(c, v.stripped); } };
     this.body.on('sick', bodyOut); this.body.on('changed', bodyOut);
+    this.devices = new Devices(db, econ, this.body);
+    this.devices.on('alert', (accountId: string, text: string) => this.toast(accountId, 'Bank alert', text));
     this.props = new Properties(db, econ);
     this.props.onChange = (kind, id, owner, ownerName) => this.broadcastJson({ t: 'prop', kind, id, owner, ownerName } as any);
     this.fixtures = new Fixtures({
@@ -195,7 +198,7 @@ export class Hub implements OnlineApi {
       t: 'welcome', id, v: PROTOCOL_VERSION, tickHz: this.cfg.tickHz, serverTime: this.now(), epoch: Date.now(), cell: CELL, wallet: w, plots: this.econ.plotsOf(auth.account.id).map((p) => p.id),
       online: this.conns.size, profile: publicProfile(profile), role: auth.account.role, motd: this.cfg.motd, grid: this.power.state(),
       phone: (() => { const p = this.phone.ensure(auth.account.id); return { number: p.number, publicId: p.public_id, unread: this.phone.unread(auth.account.id) }; })(),
-      ice: this.iceServers(), ads: this.adsRef?.live() ?? [], body: (() => { const v = this.body.view(auth.account.id); (c as any).stripped = v.stripped; return v; })(),
+      ice: this.iceServers(), ads: this.adsRef?.live() ?? [], phones: this.devices.view(auth.account.id), body: (() => { const v = this.body.view(auth.account.id); (c as any).stripped = v.stripped; return v; })(),
       state: { ...st.blobs, vehicles: st.vehicles, skills: st.skills, missions: st.missions, pos: last },
     });
     this.log.info(`join ${profile.name} (#${id}) online=${this.conns.size}`);
@@ -476,6 +479,40 @@ export class Hub implements OnlineApi {
         case 'body.treat': { const r = this.body.treat(id, this.outdoorPos(c), { where: m.where, drug: m.drug, op: m.op }); ok({ ...r, body: this.body.view(id), ...this.walletOf(c) }); break; }
         case 'body.paydebt': ok({ ...this.body.payDebt(id, m.amount), body: this.body.view(id), ...this.walletOf(c) }); break;
         case 'body.dress': { const r = this.body.dress(id, this.outdoorPos(c)); this.syncStrip(c, false); ok({ ...r, body: this.body.view(id), ...this.walletOf(c) }); break; }
+        // ---- phones as things: buy, switch, cracks, repairs, and the clone a crooked repairer keeps (src/devices.ts)
+        case 'dev.list': ok({ phones: this.devices.view(id), clones: this.devices.clones(id) }); break;
+        case 'dev.buy': ok({ phones: this.devices.buy(id, m.model, this.outdoorPos(c)), ...this.walletOf(c) }); break;
+        case 'dev.use': ok({ phones: this.devices.use(id, m.id) }); break;
+        case 'dev.drop': { const cr = this.devices.drop(id, Number(m.hard) || 1); ok({ crack: cr, phones: cr !== null ? this.devices.view(id) : undefined }); break; }
+        case 'dev.repair': ok({ ...this.devices.shopRepair(id, m.id, this.outdoorPos(c)), ...this.walletOf(c) }); break;
+        case 'dev.clean': ok({ ...this.devices.clean(id, m.id, this.outdoorPos(c)), ...this.walletOf(c) }); break;
+        case 'dev.offer': {
+          const t = this.conns.get(Number(m.to)); if (!t || t === c || this.spaceOf(t) !== this.spaceOf(c) || Math.hypot(t.ms.x - c.ms.x, t.ms.z - c.ms.z) > 6) throw new HttpError(400, 'Stand next to them.');
+          const o = this.devices.offer(id, c.profile.name, t.account.id, m.price, m.clone);
+          this.send(t, { t: 'devoffer', id: o.id, fromName: o.fromName, price: o.price } as any); ok({ offer: o.id }); break;
+        }
+        case 'dev.accept': {
+          const o = this.devices.offers.get(String(m.offer)); const hx = o ? (this.econ.state(o.from).skills as any)?.xp?.hack ?? 0 : 0;
+          const r = this.devices.accept(id, m.offer, Math.min(10, 1 + Math.floor(Math.sqrt(Math.max(0, Number(hx)) / 50))));
+          const rc = this.byAccount.get(r.offer.from); if (rc) this.send(rc, { t: 'toast', title: 'Phone repair', body: `${c.profile.name} paid ₦${r.offer.price.toLocaleString('en-NG')}.${r.offer.clone ? (r.cloned ? ' You kept a copy of their phone.' : ' The copy did not take.') : ''}` });
+          ok({ phones: this.devices.view(id), ...this.walletOf(c) }); break;
+        }
+        case 'clone.list': ok({ clones: this.devices.clones(id) }); break;
+        case 'clone.read': {
+          const d = this.devices.clone(id, m.device); this.devices.noteMove(d.id, id, 'read');
+          ok(m.with ? { thread: this.phone.thread(d.owner_id, m.with, true) } : { threads: this.phone.threads(d.owner_id), contacts: this.phone.contacts(d.owner_id) }); break;
+        }
+        case 'clone.send': {
+          const d = this.devices.clone(id, m.device); const r = this.phone.send(d.owner_id, m.to, m.body); this.devices.noteMove(d.id, id, 'text');
+          const to = this.byAccount.get(r.to); const owner = this.byAccount.get(d.owner_id);
+          if (to) this.send(to, { t: 'msg', id: r.id, from: d.owner_id, fromName: owner?.profile.name ?? 'Contact', body: r.body, at: r.at });
+          this.body.karma(id, -1, 'texted as someone else'); ok({ msg: r }); break;
+        }
+        case 'clone.locate': {
+          const d = this.devices.clone(id, m.device); const o = this.byAccount.get(d.owner_id); this.devices.noteMove(d.id, id, 'locate');
+          ok(o ? { at: this.outdoorPos(o), inside: !!o.ms.interior } : { at: null }); break;
+        }
+        case 'clone.steal': ok({ ...this.devices.steal(id, m.device, m.amount), ...this.walletOf(c) }); break;
         // only bad deeds come from the game itself; good deeds are counted where the server can see them
         case 'karma.deed': { const BAD: Record<string, number> = { assault: -1, theft: -2, robbery: -4, murder: -10, police: -6, scam: -5, littering: -0.2 }; const d = BAD[String(m.kind)]; if (d) this.body.karma(id, d, String(m.kind)); ok(); break; }
         // ---- Property Manager, venues, bookings, fixtures (src/property.ts, realtime/matches.ts)
@@ -613,6 +650,7 @@ export class Hub implements OnlineApi {
   private tick() {
     this.tickN++; this.stats0.ticks++;
     if (this.tickN % (this.cfg.tickHz * 10) === 0) this.bodyTick();
+    if (this.tickN % (this.cfg.tickHz * 60) === 0) for (const c of this.conns.values()) { try { if (this.devices.age(c.account.id, 1) !== null) this.send(c, { t: 'phones', list: this.devices.view(c.account.id) } as any); } catch { /* skip */ } }
     if (this.tickN % this.cfg.tickHz === 0) { this.races.tick(); this.power.tick(); this.fixtures.tick(); }
     if (this.tickN % (this.cfg.tickHz * 30) === 0) { try { this.props.tick(); } catch (e) { this.log.warn('props tick', e); } }
     const R = this.cfg.interestRings; const now = performance.now();

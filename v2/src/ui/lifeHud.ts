@@ -97,6 +97,11 @@ const css = `
 #xhair:after{top:10px;left:0;height:2px;width:22px;clip-path:polygon(0 0,30% 0,30% 100%,0 100%,0 0,70% 0,100% 0,100% 100%,70% 100%)}
 #phone{position:absolute;right:max(28px,env(safe-area-inset-right));bottom:-120%;width:min(318px,44vh);aspect-ratio:9/19.3;border-radius:44px;background:linear-gradient(150deg,#5b5d66,#1b1c21 30%,#0b0b0e 70%,#2a2b31);padding:8px;box-shadow:0 30px 70px rgba(0,0,0,.65),inset 0 0 0 1.5px rgba(255,255,255,.16),inset 0 0 0 4px #0b0b0e;transform:rotate(-3deg);transform-origin:100% 100%;transition:bottom .38s cubic-bezier(.2,.8,.2,1);pointer-events:auto;z-index:8}
 #phone.up{bottom:max(16px,env(safe-area-inset-bottom))}
+#phone{width:calc(min(318px,44vh) * var(--ps,1))}
+#phone.tab{aspect-ratio:3/4.1;width:min(470px,66vh);border-radius:30px;transform:rotate(-1.5deg)} #phone.tab #scr{border-radius:24px} #phone.tab #apps{grid-template-columns:repeat(6,1fr)} #phone.tab .isl{display:none}
+#phone.small{border-radius:30px;background:linear-gradient(150deg,#3a3f4a,#15171c 40%,#0b0b0e)} #phone.small #scr{border-radius:22px} #phone.small .isl{display:none}
+#ph-crack{position:absolute;inset:0;pointer-events:none;z-index:30;opacity:0;background-repeat:no-repeat;background-size:100% 100%;mix-blend-mode:screen}
+
 #scr{position:relative;width:100%;height:100%;border-radius:37px;overflow:hidden;color:#fff;background:#0b0d16;font-family:Inter,system-ui,sans-serif}
 #scr .wall{position:absolute;inset:0;background:radial-gradient(120% 60% at 85% -5%,rgba(255,140,60,.55),transparent 60%),radial-gradient(90% 55% at -10% 30%,rgba(139,92,246,.5),transparent 65%),radial-gradient(90% 50% at 50% 115%,rgba(45,224,200,.45),transparent 70%),linear-gradient(180deg,#1a1430,#0b0d16 70%)}
 #scr .wall:after{content:'';position:absolute;left:0;right:0;bottom:23%;height:16%;opacity:.35;background:linear-gradient(0deg,#05060b,transparent);-webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 60' preserveAspectRatio='none'><path d='M0 60V40h14V28h10v12h8V18h12v22h6V30h16v-8h6v8h10v10h12V12h14v28h8V26h10v14h16V20h8v-6h6v6h8v20h12V30h14v10h10V24h16v16h12v20z'/></svg>") bottom/100% 100% no-repeat;mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 60' preserveAspectRatio='none'><path d='M0 60V40h14V28h10v12h8V18h12v22h6V30h16v-8h6v8h10v10h12V12h14v28h8V26h10v14h16V20h8v-6h6v6h8v20h12V30h14v10h10V24h16v16h12v20z'/></svg>") bottom/100% 100% no-repeat}
@@ -256,6 +261,22 @@ export interface HudFrame { time: string; real: string; weather: string; temp: n
 const fmt = (n: number) => '₦' + Math.round(n).toLocaleString();
 const initials = (s: string) => s.split(/\s+/).filter(Boolean).slice(-2).map((w) => w[0]).join('').toUpperCase();
 
+/** spider cracks on the glass, deterministic per level */
+function crackSvg(level: number) {
+  let seed = 7 + level * 13; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const lines: string[] = []; const hubs = level === 1 ? 1 : level === 2 ? 2 : 4;
+  for (let h = 0; h < hubs; h++) {
+    const cx = 20 + r() * 60, cy = 15 + r() * 70; const n = level === 1 ? 3 : 6 + level * 2;
+    for (let i = 0; i < n; i++) {
+      let x = cx, y = cy; const a0 = r() * Math.PI * 2; let d = `M${x.toFixed(1)} ${y.toFixed(1)}`; const len = (level === 1 ? 18 : 30 + level * 12) * (0.5 + r());
+      for (let k = 0; k < 5; k++) { const a = a0 + (r() - 0.5) * 0.7; x += Math.cos(a) * len / 5; y += Math.sin(a) * len / 5; d += ` L${x.toFixed(1)} ${y.toFixed(1)}`; }
+      lines.push(`<path d="${d}" stroke="white" stroke-opacity="${(0.55 + r() * 0.4).toFixed(2)}" stroke-width="${(0.25 + r() * 0.35).toFixed(2)}" fill="none"/>`);
+    }
+    if (level >= 2) lines.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(1.5 + level).toFixed(1)}" fill="white" fill-opacity=".25"/>`);
+  }
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">${lines.join('')}</svg>`);
+}
+
 export class LifeHud {
   root: HTMLElement; el = (id: string) => document.getElementById(id)!;
   subQueue: { who: string; text: string; secs: number }[] = []; subT = 0; titleT = 0; flashT = 0;
@@ -308,7 +329,7 @@ export class LifeHud {
   <div id="help" class="gl"></div><div id="subs" class="ts"></div><div id="title"><span class="t" id="title-t"></span><small id="title-s"></small><div class="bar"></div></div>
   <div id="prompt" class="gl"></div><div id="xhair"></div>
   <div id="phone"><div id="scr"><div class="wall"></div><div class="isl"></div><div class="st"><span id="ph-t"></span><i>5G <b></b></i></div><div class="big" id="ph-big"></div><div class="small" id="ph-s"></div><div class="small" id="ph-name" style="margin-top:4px;color:#7ef3df;opacity:1"></div><div id="apps"></div><div id="dock"></div><div class="home"></div>
-    <div id="appview"><div class="nav"><button class="bk" id="av-bk" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Back</button><span class="ai" id="av-ic"></span><h3 id="av-h"></h3></div><div class="list" id="av-l"></div><button class="back" id="av-back" aria-label="Home screen"></button></div></div></div>
+    <div id="appview"><div class="nav"><button class="bk" id="av-bk" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Back</button><span class="ai" id="av-ic"></span><h3 id="av-h"></h3></div><div class="list" id="av-l"></div><button class="back" id="av-back" aria-label="Home screen"></button></div><div id="ph-crack"></div></div></div>
 </div>
 <div id="landmap"><div id="lm-catch" style="position:absolute;inset:0;pointer-events:auto;touch-action:none;cursor:grab"></div><div id="lm-top" class="gl"><b>LANDMAP</b><span>Drag to move · scroll or pinch to zoom · tap a plot</span><button class="btn ghost" id="lm-x">Close<kbd>M</kbd></button></div>
   <div id="lm-legend" class="gl"><span><i style="background:#8b5cf6"></i>Yours</span><span><i style="background:#49e08a"></i>Vacant</span><span><i style="background:#f59e0b"></i>Unfinished</span><span><i style="background:#9ba3b4"></i>Built</span></div>
@@ -424,9 +445,17 @@ ${touch ? `<div id="tc">
   // ---------------------------------------------------------------- phone
   renderApps() {
     const dock = new Set(DOCK); const btn = ([n, , c]: [string, string, string], i: number) => `<button data-i="${i}" class="${i === this.sel ? 'sel' : ''}"><span class="iw">${appIcon(n, c)}${this.badges[n] ? `<u>${this.badges[n] > 9 ? '9+' : this.badges[n]}</u>` : ''}</span><em>${n}</em></button>`;
-    this.el('apps').innerHTML = APPS.map((a, i) => (dock.has(a[0]) ? '' : btn(a, i))).join('');
+    this.el('apps').innerHTML = APPS.map((a, i) => (dock.has(a[0]) || (this.appFilter && !this.appFilter(a[0])) ? '' : btn(a, i))).join('');
     this.el('dock').innerHTML = DOCK.map((n) => { const i = APPS.findIndex((a) => a[0] === n); return i < 0 ? '' : btn(APPS[i], i); }).join('');
     for (const host of ['apps', 'dock']) [...this.el(host).children].forEach((b) => ((b as HTMLElement).onclick = () => { this.sel = +(b as HTMLElement).dataset.i!; this.openApp(); }));
+  }
+  /** a small phone runs fewer apps */
+  appFilter: ((name: string) => boolean) | null = null;
+  /** which phone is in your hand: its size, its shape and the state of its glass (0 clean to 3 shattered) */
+  setDevice(d: { scale: number; tablet?: boolean; small?: boolean; crack: number; basic?: (n: string) => boolean }) {
+    const ph = this.el('phone'); ph.style.setProperty('--ps', String(d.scale)); ph.classList.toggle('tab', !!d.tablet); ph.classList.toggle('small', !!d.small);
+    this.appFilter = d.basic ?? null; const cr = this.el('ph-crack'); cr.style.opacity = String([0, 0.55, 0.8, 1][d.crack] ?? 0); cr.style.backgroundImage = d.crack ? `url("${crackSvg(d.crack)}")` : 'none';
+    this.renderApps();
   }
   togglePhone(on?: boolean) { this.phoneUp = on ?? !this.phoneUp; this.el('phone').classList.toggle('up', this.phoneUp); document.body.classList.toggle('phone-up', this.phoneUp); if (!this.phoneUp) this.closeApp(); return this.phoneUp; }
   phoneNav(dx: number, dy: number) {

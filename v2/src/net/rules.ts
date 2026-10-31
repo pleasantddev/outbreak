@@ -380,3 +380,22 @@ export function luckOf(karma: number, seed: number, ms: number) {
 }
 /** a lucky person who catches something spreading is more likely to just carry it, feel nothing and pass it on */
 export function carrierChance(luck: number) { return Math.max(0.05, Math.min(0.75, 0.25 + luck / 160)); }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Phones as things you own: models from a small phone to a tablet, screens that crack, repairs, and clones.
+export type PhoneModelId = 'kpakam' | 'gidi' | 'eko' | 'tab';
+export interface PhoneModel { id: PhoneModelId; name: string; kind: string; price: number; tough: number; scale: number; basic?: boolean; blurb: string }
+export const PHONE_MODELS: Record<PhoneModelId, PhoneModel> = {
+  kpakam: { id: 'kpakam', name: 'Kpakam K2', kind: 'Small phone', price: 18000, tough: 1.5, scale: 0.84, basic: true, blurb: 'Calls, texts, bank, map. Falls from a storey building and keeps working.' },
+  gidi: { id: 'gidi', name: 'Gidi Neo 8', kind: 'Phone', price: 95000, tough: 1, scale: 1, blurb: 'Every app. What most of Lagos carries.' },
+  eko: { id: 'eko', name: 'Eko Pro Max', kind: 'Flagship', price: 650000, tough: 0.75, scale: 1.05, blurb: 'Big, bright and expensive. The glass knows it.' },
+  tab: { id: 'tab', name: 'Tab Lagos 10', kind: 'Tablet', price: 240000, tough: 0.65, scale: 1.32, blurb: 'A big screen for business, MyAds and matches.' },
+};
+/** apps a small phone can run */
+export const BASIC_APPS = ['Phone', 'Messages', 'Contacts', 'Wallet', 'Bank', 'Map', 'Settings', 'Health', 'Top Up', 'Phones'];
+/** 0 clean, 1 hairline, 2 cracked, 3 shattered; a shop repair costs this share of the phone's price */
+export const CRACK_NAMES = ['Clean', 'Hairline crack', 'Cracked screen', 'Shattered'];
+export const REPAIR_SHARE = [0, 0.12, 0.25, 0.4];
+export const PHONE_CLEAN_PRICE = 7500;
+/** how much a hacker can move out of a cloned phone's bank in a day */
+export const CLONE_DAY_LIMIT = 50000;

@@ -217,6 +217,13 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX booking_by ON bookings(by_id);
   `,
+  // v9: phones as things you own (src/devices.ts): model, cracks, which one is in your hand, and who secretly cloned it
+  `
+  CREATE TABLE devices (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, model TEXT NOT NULL, crack INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 0,
+    cloned_by TEXT, cloned_at INTEGER, bought_at INTEGER NOT NULL);
+  CREATE INDEX dev_owner ON devices(owner_id); CREATE INDEX dev_clone ON devices(cloned_by);
+  CREATE TABLE clone_moves (id INTEGER PRIMARY KEY AUTOINCREMENT, device TEXT NOT NULL, hacker TEXT NOT NULL, kind TEXT NOT NULL, amount INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL);
+  `,
 ];
 
 export function openDb(file: string): DB {

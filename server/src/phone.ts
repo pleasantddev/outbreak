@@ -59,9 +59,9 @@ export class PhoneNet {
       FROM t JOIN last ON last.other=t.other AND last.at=t.at LEFT JOIN profiles f ON f.account_id=t.other LEFT JOIN contacts c ON c.owner_id=@me AND c.contact_id=t.other
       LEFT JOIN phones p ON p.account_id=t.other GROUP BY t.other ORDER BY t.at DESC LIMIT 50`, { me: owner });
   }
-  thread(owner: string, other: unknown) {
+  thread(owner: string, other: unknown, peek = false) {
     const o = String(other ?? '');
-    run(this.db, 'UPDATE messages SET read=1 WHERE from_id=? AND to_id=? AND read=0', o, owner);
+    if (!peek) run(this.db, 'UPDATE messages SET read=1 WHERE from_id=? AND to_id=? AND read=0', o, owner); // a clone reads without marking anything read
     return all<{ id: number; from_id: string; body: string; at: number }>(this.db, 'SELECT id, from_id, body, at FROM messages WHERE (from_id=@a AND to_id=@b) OR (from_id=@b AND to_id=@a) ORDER BY id DESC LIMIT 60', { a: owner, b: o }).reverse();
   }
   unread(owner: string) { return one<{ n: number }>(this.db, 'SELECT COUNT(*) AS n FROM messages WHERE to_id=? AND read=0', owner)!.n; }
