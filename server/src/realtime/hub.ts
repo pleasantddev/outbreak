@@ -21,6 +21,8 @@ import {
 } from '../../../v2/src/net/protocol.ts';
 import { randomInt } from 'node:crypto';
 import { RaceLobbies } from './races.ts';
+import { Fixtures } from './matches.ts';
+import { Properties } from '../property.ts';
 import { BjTable, slotSpin, roulettePays, ROULETTE_KEYS, SLOT_BETS, inInteriorZone } from '../../../v2/src/net/rules.ts';
 import { cleanChat } from '../../../v2/src/net/rules.ts';
 import { Grid, cellCoord, keyOf, type GridNode } from './grid.ts';
@@ -63,12 +65,19 @@ export class Hub implements OnlineApi {
   private pingTimer: NodeJS.Timeout | null = null;
   private saveTimer: NodeJS.Timeout | null = null;
 
-  races: RaceLobbies;
+  races: RaceLobbies; fixtures: Fixtures; props: Properties;
   biz: Businesses; power = new PowerGrid(); private lastSwitch = new Map<string, number>();
   /** what the admin panel can steer in the game world */
   get world() { return { grid: this.power, biz: this.biz }; }
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
     this.biz = new Businesses(db, econ);
+    this.props = new Properties(db, econ);
+    this.props.onChange = (kind, id, owner, ownerName) => this.broadcastJson({ t: 'prop', kind, id, owner, ownerName } as any);
+    this.fixtures = new Fixtures({
+      debit: (id, n, kind) => { this.econ.adjust(id, -n, 0, kind); }, credit: (id, n, kind) => { this.econ.adjust(id, n, 0, kind); },
+      send: (id, msg) => { const c = this.byAccount.get(id); if (c) this.send(c, msg as any); }, flag: (id, what, info) => this.econ.flag(id, what, info), now: () => performance.now(),
+      booking: (v, s) => this.props.booking(v, s), venueOwner: (v) => this.props.venueOwner(v), minMs: cfg.matchMinMs,
+    });
     // light changes reach everybody at once; the shout goes to the feeders that just got light
     this.power.on('change', (st: ReturnType<PowerGrid['state']>, prev: string) => {
       this.broadcastJson({ t: 'grid', ...st });
@@ -177,6 +186,7 @@ export class Hub implements OnlineApi {
   private drop(c: Conn) {
     if (c.dead) return; c.dead = true;
     try { this.races.leave(c.account.id); } catch { /* not racing */ }
+    try { const fk = this.fixtures.byAccount.get(c.account.id); if (fk && this.fixtures.list.get(fk)?.state === 'open') this.fixtures.leave(c.account.id); } catch { /* not in a match */ }
     this.conns.delete(c.id); if (this.byAccount.get(c.account.id) === c) this.byAccount.delete(c.account.id);
     this.grid.remove(c);
     if (c.veh) this.removeVehicle(c.veh);
@@ -268,6 +278,7 @@ export class Hub implements OnlineApi {
       case 'whisper': this.onWhisper(c, String(m.to ?? ''), m.text); break;
       case 'emote': if ((EMOTES as readonly string[]).includes(m.id)) this.toNear(c, { t: 'emote', id: c.id, e: m.id }, 80, true); break;
       case 'act': void this.onAct(c, m); break;
+      case 'mx': this.fixtures.relay(c.account.id, (m as any).d); break;
     }
   }
 
@@ -396,6 +407,30 @@ export class Hub implements OnlineApi {
           const r = this.biz.serve(id, m.site, this.at(c)); ok({ ...r.wallet, item: r.item });
           const oc = this.byAccount.get(r.owner); if (oc) this.send(oc, { t: 'toast', title: 'Customer', body: `${c.profile.name} bought from your shop. ₦${r.item.price.toLocaleString('en-NG')} in the till.` }); break;
         }
+        // ---- Property Manager, venues, bookings, fixtures (src/property.ts, realtime/matches.ts)
+        case 'prop.mine': ok({ list: this.props.owned(id), bookings: this.props.myBookings(id) }); break;
+        case 'prop.market': ok({ list: this.props.market(m.kind) }); break;
+        case 'prop.info': ok({ info: this.props.info(m.kind, m.id) }); break;
+        case 'prop.list': ok({ listing: this.props.list(id, m) }); break;
+        case 'prop.unlist': this.props.unlist(id, m); ok(); break;
+        case 'prop.buy': {
+          const r = this.props.buy(id, m); ok({ ...r.wallet, price: r.price });
+          const sc = this.byAccount.get(r.seller); if (sc) this.send(sc, { t: 'toast', title: 'Property sold', body: `${c.profile.name} bought your property for ₦${r.price.toLocaleString('en-NG')}. Money is in your bank.` }); break;
+        }
+        case 'venue.all': ok({ list: this.props.allVenues() }); break;
+        case 'venue.get': ok({ venue: this.props.venue(m.id), fixtures: this.fixtures.open().filter((f) => f.venue === m.id) }); break;
+        case 'venue.buy': { const r = this.props.buyVenue(id, m.id, this.at(c)); ok({ ...r.wallet, price: r.price }); break; }
+        case 'venue.fee': ok({ fee: this.props.setFee(id, m.id, m.fee) }); break;
+        case 'venue.book': {
+          const r = this.props.book(id, m.id, m.slot); ok({ ...r.wallet, fee: r.fee, slot: r.slot });
+          const oc = r.owner && r.fee ? this.byAccount.get(r.owner) : undefined; if (oc) this.send(oc, { t: 'toast', title: 'Booking', body: `${c.profile.name} booked your venue. ₦${Math.round(r.fee * 0.9).toLocaleString('en-NG')} paid in.` }); break;
+        }
+        case 'fx.open': ok({ list: this.fixtures.open() }); break;
+        case 'fx.create': ok({ fixture: this.fixtures.create(id, c.profile.name, m), ...this.walletOf(c) }); break;
+        case 'fx.join': ok({ fixture: this.fixtures.join(id, c.profile.name, m), ...this.walletOf(c) }); break;
+        case 'fx.leave': this.fixtures.leave(id); ok({ ...this.walletOf(c) }); break;
+        case 'fx.start': ok({ fixture: this.fixtures.start(id) }); break;
+        case 'fx.report': this.fixtures.report(id, m.sa, m.sb); ok(); break;
         case 'tp': case 'respawn': {
           const now = performance.now();
           if (now - c.ms.lastTp < 10_000) { this.econ.flag(id, 'tp-spam', { a: m.a }); throw new HttpError(429, 'Too many teleports.'); }
@@ -481,7 +516,8 @@ export class Hub implements OnlineApi {
   // ------------------------------------------------------------------------------------------ snapshots
   private tick() {
     this.tickN++; this.stats0.ticks++;
-    if (this.tickN % this.cfg.tickHz === 0) { this.races.tick(); this.power.tick(); }
+    if (this.tickN % this.cfg.tickHz === 0) { this.races.tick(); this.power.tick(); this.fixtures.tick(); }
+    if (this.tickN % (this.cfg.tickHz * 30) === 0) { try { this.props.tick(); } catch (e) { this.log.warn('props tick', e); } }
     const R = this.cfg.interestRings; const now = performance.now();
     // parked cars time out
     if (this.tickN % (this.cfg.tickHz * 10) === 0) { const t = Date.now(); for (const v of [...this.vehicles.values()]) if (v.parkedAt && t - v.parkedAt > PARKED_TTL) this.removeVehicle(v); }

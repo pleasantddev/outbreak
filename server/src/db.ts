@@ -159,6 +159,25 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX biz_owner ON businesses(owner_id);
   `,
+  // v4: property listings (Property Manager app), sports venues and bookings (rules in v2/src/net/sports.ts, run by src/property.ts)
+  `
+  CREATE TABLE listings (
+    kind TEXT NOT NULL, id TEXT NOT NULL, owner_id TEXT NOT NULL REFERENCES accounts(id),
+    mode TEXT NOT NULL, price INTEGER NOT NULL, rent INTEGER NOT NULL DEFAULT 0,
+    hour INTEGER NOT NULL, listed_at INTEGER NOT NULL, log TEXT NOT NULL DEFAULT '[]',
+    PRIMARY KEY (kind, id)
+  );
+  CREATE TABLE venues (
+    id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES accounts(id),
+    fee INTEGER NOT NULL, earned INTEGER NOT NULL DEFAULT 0, bought_at INTEGER NOT NULL
+  );
+  CREATE INDEX venue_owner ON venues(owner_id);
+  CREATE TABLE bookings (
+    venue TEXT NOT NULL, slot INTEGER NOT NULL, by_id TEXT NOT NULL REFERENCES accounts(id), fee INTEGER NOT NULL, at INTEGER NOT NULL,
+    PRIMARY KEY (venue, slot)
+  );
+  CREATE INDEX booking_by ON bookings(by_id);
+  `,
 ];
 
 export function openDb(file: string): DB {

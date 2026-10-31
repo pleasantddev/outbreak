@@ -20,7 +20,7 @@ export interface Config {
   tickHz: number; maxPlayers: number; interestRings: number; nearChatRadius: number;
   startCash: number; adminEmail: string; adminPassword: string;
   allowOrigins: string; staticDir: string; adminDir: string;
-  guestAccounts: boolean; trustClientPlotPrice: boolean;
+  guestAccounts: boolean; trustClientPlotPrice: boolean; /** shortest match the server settles (ms); unset = 90% of the sport's length */ matchMinMs?: number;
   mapBounds: [number, number, number, number];
   motd: string; trustProxy: boolean;
   /** enforce: correct and kick; log: only record; off: no checks (load tests) */

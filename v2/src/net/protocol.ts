@@ -254,7 +254,9 @@ export type ClientMsg =
   | { t: 'chat'; ch: 'near' | 'global'; text: string }
   | { t: 'whisper'; to: string; text: string }
   | { t: 'emote'; id: (typeof EMOTES)[number] }
-  | { t: 'act'; n: number; a: string; [k: string]: unknown };
+  | { t: 'act'; n: number; a: string; [k: string]: unknown }
+  /** match traffic relayed by the server between the members of a live fixture (realtime/matches.ts) */
+  | { t: 'mx'; d: unknown };
 
 export interface WhoInfo { id: number; name: string; model: string; skin: number; outfit: string; level: number; role?: string }
 
@@ -271,6 +273,9 @@ export type ServerMsg =
   | { t: 'content'; kind: string; etag: string }
   | { t: 'kick'; reason: string }
   | { t: 'toast'; title: string; body: string }
+  | { t: 'mx'; from: string; d: unknown }
+  | { t: 'fixture'; key: string; state: string; [k: string]: unknown }
+  | { t: 'prop'; kind: string; id: string; owner: string | null; ownerName: string | null }
   | { t: 'lobby'; key: string; state: string; [k: string]: unknown }
   /** another player did something to you: greeted you, invited you to their room, or (as the owner) left it with you inside */
   | { t: 'social'; kind: 'greet' | 'invite' | 'evict' | 'ticket'; from: string; fromId: number; owner?: string; door?: { x: number; z: number; yaw: number }; amount?: number; room?: unknown; designer?: boolean }
