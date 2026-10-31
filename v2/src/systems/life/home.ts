@@ -111,8 +111,10 @@ export function buildHome(): Lot {
   { const cm = new THREE.MeshStandardMaterial({ map: plaster('#ece6d6', 91), roughness: 0.95, side: THREE.BackSide }); const cl = new THREE.Mesh(new THREE.PlaneGeometry(9.2, 16.4), cm); cl.rotation.x = -Math.PI / 2; cl.position.set(0, 2.85, 8.2); g.add(cl); }
   // light: warm bulb in your room, a cold tube in the corridor, a dim one in the bathroom
   const lights: THREE.PointLight[] = [];
-  const bulb = (x: number, y: number, z: number, col: number, I: number, r: number) => { const l = new THREE.PointLight(col, I, r, 1.6); l.position.set(x, y, z); g.add(l); lights.push(l); const m = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: col })); m.position.copy(l.position); g.add(m); };
+  const bulb = (x: number, y: number, z: number, col: number, I: number, r: number) => { const l = new THREE.PointLight(col, I, r, 1.6); l.position.set(x, y, z); g.add(l); lights.push(l); const m = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: col })); l.add(m); }; // the bulb glass is a child of its light, so it goes dark with it
   bulb(2.8, 2.6, 5.2, 0xffd6a0, 9, 7); bulb(0, 2.7, 7, 0xdff4ff, 7, 11); bulb(0, 2.6, 15.2, 0xfff0d0, 4, 4.5);
+  // moonlight through the window of your room, only shown when the bulbs are off (systems/life/bills.ts)
+  const moon = new THREE.PointLight(0x86a4e8, 2.4, 9, 1.5); moon.position.set(5.7, 2.0, 5.5); moon.name = 'moon'; moon.visible = false; g.add(moon);
   return {
     group: g, walls, boxes, placed, lights, mats: { room: mat.room, floor: floorM.room },
     spawn: { x: 0, z: 1.1, yaw: 0 }, exit: { x: 0, z: -0.9 }, ceil: { x0: -4.6, z0: 0, x1: 4.6, z1: 16.4, y: 2.85 },

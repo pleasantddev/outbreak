@@ -15,8 +15,9 @@ import { career } from './ranks';
 import { net } from '../../net/client';
 import { sfx } from '../leisure/sfx';
 import { people } from '../net';
+import { MotorParkProps, siteFromArea, standSpots, parkToWorld, type ParkSite } from '../../world/motorpark';
 
-interface Park { id: string; x: number; z: number; name: string }
+interface Park { id: string; x: number; z: number; name: string; site?: ParkSite }
 interface Bus { v: Vehicle; driver: Actor; fare: number; until: number; paid: boolean; mood: number }
 const CUT = [0.6, 0.5, 0.4, 0.3, 0.15]; // the chairman's share by your rank
 const CHAIRMEN = ['Chairman Kokoro', 'Baba Ijebu-Ode', 'Chairman Sule', 'Alhaji Garage', 'Oga Ticket'];
@@ -38,8 +39,21 @@ class Agbero {
     for (const [k, r] of this.ctx.store.regions) {
       if (this.seen.has(k)) continue; this.seen.add(k);
       for (const a of r.areas) { if (a.kind !== AREA.busStation) continue; const n = a.pts.length / 2; if (n < 3) continue; let x = 0, z = 0; for (let q = 0; q < n; q++) { x += a.pts[q * 2]; z += a.pts[q * 2 + 1]; } x /= n; z /= n;
-        const id = `p:${Math.round(x)}:${Math.round(z)}`; this.parks.set(id, { id, x, z, name: a.name || 'Motor park' }); }
+        const id = `p:${Math.round(x)}:${Math.round(z)}`; this.parks.set(id, { id, x, z, name: a.name || 'Motor park', site: siteFromArea(id, a.name || 'Motor park', a.pts) ?? undefined }); }
     }
+  }
+  private dress: MotorParkProps | null = null; private crowd = new Map<string, Actor[]>();
+  /** canopies, benches, the union shed and a few people standing about, only for parks near you */
+  private dressParks() {
+    const me = this.ctx.sim.local; const s = this.ctx.sim;
+    this.dress ??= new MotorParkProps(this.ctx.view.scene);
+    this.dress.sync([...this.parks.values()].map((p) => p.site).filter((x): x is ParkSite => !!x), me.pos.x, me.pos.z);
+    for (const p of this.near(80)) if (p.site && !this.crowd.has(p.id)) {
+      const list: Actor[] = [];
+      for (const sp of standSpots(p.site)) { const w = parkToWorld(p.site, sp.lx, sp.lz); const a = s.spawnActor('ped', { x: w.x, y: 0.05, z: w.z }, undefined, sp.role); Object.assign(a as any, { _keep: true, _script: true, act: { clip: 'Idle_Loop', yaw: Math.random() * Math.PI * 2 } }); list.push(a); }
+      this.crowd.set(p.id, list);
+    }
+    for (const [id, list] of this.crowd) { const p = this.parks.get(id); if (!p || Math.hypot(p.x - me.pos.x, p.z - me.pos.z) > 130) { for (const a of list) if (!(a as any)._gone) s.removeActor(a); this.crowd.delete(id); } }
   }
   private near(r: number) { const me = this.ctx.sim.local; return [...this.parks.values()].filter((p) => Math.hypot(p.x - me.pos.x, p.z - me.pos.z) < r); }
   /** the chairman stands at every park near you */
@@ -123,7 +137,7 @@ class Agbero {
         () => { c.hud.say('Agbero', pick(['You dey form? Oya park there!', 'See this one! I go collect double next time.']), 3); if (Math.random() < 0.5) { const W = (this.ctx.systems.get('wear') as any)?.api; const w = W?.of(v); if (w) { w.body = Math.max(0, w.body - 8); c.hud.toast('Agbero', 'He slapped your side mirror off. Body damage.', 'var(--red)', 'msg', 3.5); } } }, 9);
       return; }
   }
-  frame(dt: number) { this.scanT -= dt; if (this.scanT <= 0) { this.scanT = 2; this.scan(); this.chairmen(); this.asDriver(); } this.traffic(dt); }
+  frame(dt: number) { this.scanT -= dt; if (this.scanT <= 0) { this.scanT = 2; this.scan(); this.chairmen(); this.dressParks(); this.asDriver(); } this.traffic(dt); }
   get onShift() { return !!this.shift; }
 }
 let A: Agbero | null = null;
