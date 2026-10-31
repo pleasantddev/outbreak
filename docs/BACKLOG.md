@@ -19,7 +19,7 @@ maintain access later to your device and do everything your device can do from t
 to switch between phones".
 Rules: stripped means down to underwear (the 16+ floor); hacking is a game mechanic, never real technique.
 
-### LIFE (new Opus agent, low effort)
+### LIFE (LEAD builds these; the shift may take one if LEAD has not started it)
 - [ ] Luck and karma: hidden server-side luck per player, moved by karma (good and bad deeds), read by casino odds,
       carrier chance, accidents, finds; admin can see and tune it.
 - [ ] Sickness: a set of illnesses (malaria, typhoid, cholera, flu, a cough that spreads, ulcer, hypertension...),
@@ -74,9 +74,9 @@ players upload and attest they own).
       push-to-talk and open mic, mute per player. Police walkie-talkie: radio channel per zone while on duty.
 - [x] Payments: Paystack (53d2323) (server initialize + verify + webhook, env PAYSTACK_SECRET_KEY / PAYSTACK_PUBLIC_KEY), test
       mode without keys; every real-money purchase goes through it; admin ledger.
-- [ ] MyAds: billboard inventory (Oshodi bridges, expressways, rooftops), price from ₦4,500/day by location, size and
+- [x] MyAds (ba96eb3): billboard inventory (Oshodi bridges, expressways, rooftops), price from ₦4,500/day by location, size and
       days; image upload with size spec per board; moderation queue in admin; real-player impression tracking per day.
-- [ ] MyAds extras: drone shows (your text in the night sky for a set time), ad blimps that cross the map. Pricey.
+- [x] MyAds extras (ba96eb3): drone shows (your text in the night sky for a set time), ad blimps that cross the map. Pricey.
 - [ ] Clubs: DJ booth (players DJ from a big Nigerian set list streamed from Audius plus CC tracks), song upload to
       your phone library and paid promotion into club rotation, pole dancer job (athletic, clothed, paid), club
       shutdown (book the club, spray money, the whole room knows), parody big clubs.
