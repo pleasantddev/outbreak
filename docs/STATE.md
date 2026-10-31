@@ -43,3 +43,12 @@
   this repo's docs. Agents: SPORTS (Opus low, worktree /home/claude/wt/sports, branch hl-sports), IDEAS (Sonnet,
   /home/claude/wt/look, branch hl-look). Built: phone v2 (icons, dock, Back), phone network (numbers, IDs, contacts,
   texts, calls), voice (proximity, calls, radio), server tests 75.
+- 31 Oct 09:00 shift: Paystack payments (53d2323). server/src/payments.ts + routes/pay.ts: server prices every product
+  (sku "kind:id"), initialize -> hosted checkout, verify on return, HMAC-signed webhook, settle exactly once (pending ->
+  paid, goods in the same transaction), amount/currency mismatch flagged not granted. Test mode when no
+  PAYSTACK_SECRET_KEY and not NODE_ENV=production. purchases table got the admin Store page's columns (migration v5),
+  so the admin ledger shows real rows; GET /api/pay/ledger for game admins. Client: systems/pay.ts (Top Up app: cash
+  packs from content/iap.json, promo codes, receipts) and payApi.checkout(sku, meta) for MyAds and clubs to reuse:
+  register a server product with api.payments.register(kind, { quote, fulfil }). Only cash/bank packs are sold until
+  items, cosmetics, boosts and passes have fulfilment. Admin refunds mark the row but do not claw back cash yet.
+  Server tests 86/86. Checked in the browser against a local test server: bought Market Day, wallet +₦1.5m.

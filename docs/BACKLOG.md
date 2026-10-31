@@ -37,7 +37,7 @@ players upload and attest they own).
       (server-stored, offline delivery); voice calls player to player.
 - [x] Proximity voice chat (b82fe6d) (WebRTC, server signalling): hear players near you, volume by distance, same-space only,
       push-to-talk and open mic, mute per player. Police walkie-talkie: radio channel per zone while on duty.
-- [ ] (in progress: shift 31 Oct 09:00) Payments: Paystack (server initialize + verify + webhook, env PAYSTACK_SECRET_KEY / PAYSTACK_PUBLIC_KEY), test
+- [x] Payments: Paystack (53d2323) (server initialize + verify + webhook, env PAYSTACK_SECRET_KEY / PAYSTACK_PUBLIC_KEY), test
       mode without keys; every real-money purchase goes through it; admin ledger.
 - [ ] MyAds: billboard inventory (Oshodi bridges, expressways, rooftops), price from ₦4,500/day by location, size and
       days; image upload with size spec per board; moderation queue in admin; real-player impression tracking per day.
