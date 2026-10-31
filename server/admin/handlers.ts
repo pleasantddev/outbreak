@@ -1,5 +1,6 @@
 // Framework-agnostic admin API. `buildAdmin(deps)` returns route definitions; server/routes/admin.ts mounts them on the
 // game server (register(api)) and admin/dev-server.ts mounts them on a stub server. Everything is under /api/admin.
+import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { Auth, checkPasswordStrength } from './auth';
 import { ContentStore, KIND_RE } from './content';
@@ -13,6 +14,9 @@ export interface HostRes { status?: number; body?: any }
 /** game world controls the server hands the admin: the power grid and the businesses (see server/src/grid.ts, business.ts) */
 export interface WorldHooks {
   grid: { board(): any; force(f: number | 'all', on: boolean | null, hours?: number): any; collapse(hours: number): any; genScale: number; tick(): any };
+  /** MyAds moderation and the real-money ledger (server/src/ads.ts, payments.ts) */
+  ads?: { queue(status?: string): any[]; review(id: number, decision: 'approve' | 'reject', note?: string): Promise<any>; upload(id: string): any; uploadFile(u: any): string | null; boards: any[] } | null;
+  payments?: { ledger(limit?: number): any[]; live: boolean } | null;
 }
 export interface AdminDeps { db: SqlDb; dataDir: string; contentSeedDirs: string[]; live?: () => LiveHooks | null; world?: () => WorldHooks | null; version?: string; log?: (m: string) => void; setupCode?: string }
 export interface RouteDef { method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; path: string; auth: boolean; handler: (req: HostReq) => Promise<HostRes> | HostRes }
@@ -276,6 +280,30 @@ export function buildAdmin(deps: AdminDeps) {
     db.prepare('UPDATE businesses SET till=COALESCE(?,till), stock=COALESCE(?,stock), debt=COALESCE(?,debt) WHERE site=?').run(till ?? null, stock ?? null, debt ?? null, site);
     audit(c, 'biz.edit', 'business', site, `Edited ${row.type} at ${site}: ${JSON.stringify({ till, stock, debt })}`);
     return db.prepare('SELECT * FROM businesses WHERE site=?').get(site);
+  });
+
+  // ---------- MyAds moderation and payments
+  const adsOf = () => { const a = world().ads; if (!a) throw bad('Ads are not attached to this server.'); return a; };
+  route('GET', '/world/ads', 'reports.view', (c) => {
+    const st = ['review', 'approved', 'rejected', 'unpaid'].includes(String(c.req.query.status)) ? String(c.req.query.status) : 'review';
+    return { status: st, list: adsOf().queue(st), boards: adsOf().boards.length };
+  });
+  route('GET', '/world/uploads/:id', 'reports.view', (c) => {
+    const a = adsOf(); const u = a.upload(c.req.params.id); const f = u && a.uploadFile(u); if (!f) throw bad('No such picture');
+    return { id: u.id, size: u.name, dataUrl: `data:${u.mime};base64,${readFileSync(f).toString('base64')}` };
+  });
+  route('POST', '/world/ads/:id', 'reports.resolve', async (c) => {
+    const b = c.req.body ?? {}; const d = b.decision === 'approve' ? 'approve' : b.decision === 'reject' ? 'reject' : null; if (!d) throw bad('Approve or reject');
+    const note = typeof b.note === 'string' ? b.note.slice(0, 200) : '';
+    if (d === 'reject' && !note) throw bad('Say why, the advertiser sees it');
+    const id = Number(c.req.params.id); let row; try { row = await adsOf().review(id, d, note); } catch (e: any) { throw new HttpError(e?.status ?? 400, e?.message ?? 'Review failed'); }
+    audit(c, d === 'approve' ? 'ads.approve' : 'ads.reject', 'ad', String(id), `${d === 'approve' ? 'Approved' : 'Rejected'} ad ${id}${note ? `: ${note}` : ''}`);
+    return row;
+  });
+  route('GET', '/world/payments', 'store.view', () => {
+    const p = world().payments; if (!p) throw bad('Payments are not attached to this server.');
+    const list = p.ledger(300); const paid = list.filter((r: any) => r.status === 'paid');
+    return { live: p.live, list, paidNaira: paid.reduce((n: number, r: any) => n + r.amount_kobo / 100, 0), count: list.length };
   });
 
   // ---------- live ops

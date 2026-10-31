@@ -12,6 +12,7 @@ import type { ContentStore } from '../content.ts';
 import type { OnlineApi } from '../api.ts';
 import { Businesses } from '../business.ts';
 import { PhoneNet } from '../phone.ts';
+import type { Ads } from '../ads.ts';
 import { Grid as PowerGrid, FEEDERS } from '../grid.ts';
 import { HttpError } from '../auth.ts';
 import { run } from '../db.ts';
@@ -67,11 +68,12 @@ export class Hub implements OnlineApi {
   private saveTimer: NodeJS.Timeout | null = null;
 
   races: RaceLobbies;
-  biz: Businesses; phone: PhoneNet; power = new PowerGrid();
+  biz: Businesses; phone: PhoneNet; power = new PowerGrid(); private adsRef: Ads | null = null; private adTimer: ReturnType<typeof setInterval> | null = null;
   /** live voice calls between two connections */
   private calls = new Map<string, { a: Conn; b: Conn; live: boolean; at: number }>(); private lastSwitch = new Map<string, number>();
   /** what the admin panel can steer in the game world */
-  get world() { return { grid: this.power, biz: this.biz }; }
+  get world() { return { grid: this.power, biz: this.biz, ads: this.adsRef, payments: this.payRef }; }
+  payRef: import('../payments.ts').Payments | null = null;
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
     this.biz = new Businesses(db, econ); this.phone = new PhoneNet(db);
     // light changes reach everybody at once; the shout goes to the feeders that just got light
@@ -93,7 +95,15 @@ export class Hub implements OnlineApi {
   }
 
   now() { return Math.floor(performance.now() - this.t0); }
+  /** MyAds: the live feed goes to everyone when it changes; notes reach the advertiser */
+  set ads(a: Ads | null) {
+    this.adsRef = a; if (!a) return;
+    a.on('feed', (list: unknown) => { for (const c of this.conns.values()) this.send(c, { t: 'ads', list } as any); });
+    a.on('note', (accountId: string, title: string, body: string) => { this.toast(accountId, title, body); });
+  }
+  get ads() { return this.adsRef; }
   start() {
+    this.adTimer = setInterval(() => { try { this.adsRef?.pushFeed(); } catch (e) { this.log.warn('ad feed', e); } }, 60_000);
     const period = 1000 / this.cfg.tickHz; let next = performance.now() + period;
     const loop = () => {
       const t = performance.now(); try { this.tick(); } catch (e) { this.log.error('tick failed', e); }
@@ -107,6 +117,7 @@ export class Hub implements OnlineApi {
     this.saveTimer = setInterval(() => this.saveAll(), 20_000);
   }
   async stop() {
+    if (this.adTimer) clearInterval(this.adTimer);
     if (this.timer) clearTimeout(this.timer); if (this.pingTimer) clearInterval(this.pingTimer); if (this.saveTimer) clearInterval(this.saveTimer);
     this.saveAll();
     for (const c of this.conns.values()) { try { c.ws.close(1001, 'Server restarting'); } catch { /* gone */ } }
@@ -173,7 +184,7 @@ export class Hub implements OnlineApi {
       t: 'welcome', id, v: PROTOCOL_VERSION, tickHz: this.cfg.tickHz, serverTime: this.now(), epoch: Date.now(), cell: CELL, wallet: w, plots: this.econ.plotsOf(auth.account.id).map((p) => p.id),
       online: this.conns.size, profile: publicProfile(profile), role: auth.account.role, motd: this.cfg.motd, grid: this.power.state(),
       phone: (() => { const p = this.phone.ensure(auth.account.id); return { number: p.number, publicId: p.public_id, unread: this.phone.unread(auth.account.id) }; })(),
-      ice: this.iceServers(),
+      ice: this.iceServers(), ads: this.adsRef?.live() ?? [],
       state: { ...st.blobs, vehicles: st.vehicles, skills: st.skills, missions: st.missions, pos: last },
     });
     this.log.info(`join ${profile.name} (#${id}) online=${this.conns.size}`);
@@ -438,6 +449,7 @@ export class Hub implements OnlineApi {
           const r = this.biz.serve(id, m.site, this.at(c)); ok({ ...r.wallet, item: r.item });
           const oc = this.byAccount.get(r.owner); if (oc) this.send(oc, { t: 'toast', title: 'Customer', body: `${c.profile.name} bought from your shop. ₦${r.item.price.toLocaleString('en-NG')} in the till.` }); break;
         }
+        case 'ads.seen': ok({ counted: this.adsRef?.seen(id, m.ids) ?? 0 }); break;
         case 'tp': case 'respawn': {
           const now = performance.now();
           if (now - c.ms.lastTp < 10_000) { this.econ.flag(id, 'tp-spam', { a: m.a }); throw new HttpError(429, 'Too many teleports.'); }

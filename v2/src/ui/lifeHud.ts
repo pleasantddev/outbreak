@@ -134,7 +134,8 @@ const css = `
 #appview canvas{width:100%;border-radius:14px;background:#151826}
 #appview .back{margin:8px auto 10px;width:118px;height:5px;background:#11131a;opacity:.35;border:none;border-radius:3px;padding:0;pointer-events:auto;cursor:pointer;flex:none}
 #scr .home{position:absolute;left:50%;bottom:6px;width:118px;height:5px;margin-left:-59px;border-radius:3px;background:#fff;opacity:.6;z-index:3}
-@media (max-height:560px){#phone{transform:none;width:min(360px,58vw);aspect-ratio:auto;height:calc(100vh - 24px);border-radius:30px}#phone.up{bottom:12px}#scr{border-radius:24px}#scr .big{font-size:40px;padding-top:8px}#apps{grid-template-columns:repeat(5,1fr);max-height:calc(100% - 150px);padding-top:10px}#appview .nav{padding-top:14px}#scr .isl{display:none}}
+@media (max-height:560px){#phone{transform:none;width:min(360px,58vw);aspect-ratio:auto;height:calc(100vh - 24px);border-radius:30px}#phone.up{bottom:12px}#scr{border-radius:24px}#scr .big{font-size:40px;padding-top:8px}#apps{grid-template-columns:repeat(5,1fr);max-height:calc(100% - 150px);padding-top:10px}#appview .nav{padding-top:30px}#scr .isl{display:none}}
+body.phone-up #nt-badge{display:none}
 #landmap{position:fixed;inset:0;z-index:6;display:none;pointer-events:none;font-family:Inter,sans-serif;color:var(--txt)}
 #landmap.on{display:block}
 #lm-top{position:absolute;left:max(18px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;pointer-events:auto}
@@ -427,7 +428,7 @@ ${touch ? `<div id="tc">
     this.el('dock').innerHTML = DOCK.map((n) => { const i = APPS.findIndex((a) => a[0] === n); return i < 0 ? '' : btn(APPS[i], i); }).join('');
     for (const host of ['apps', 'dock']) [...this.el(host).children].forEach((b) => ((b as HTMLElement).onclick = () => { this.sel = +(b as HTMLElement).dataset.i!; this.openApp(); }));
   }
-  togglePhone(on?: boolean) { this.phoneUp = on ?? !this.phoneUp; this.el('phone').classList.toggle('up', this.phoneUp); if (!this.phoneUp) this.closeApp(); return this.phoneUp; }
+  togglePhone(on?: boolean) { this.phoneUp = on ?? !this.phoneUp; this.el('phone').classList.toggle('up', this.phoneUp); document.body.classList.toggle('phone-up', this.phoneUp); if (!this.phoneUp) this.closeApp(); return this.phoneUp; }
   phoneNav(dx: number, dy: number) {
     if (this.appOpen) { const rows = this.el('av-l').querySelectorAll('.row'); if (!rows.length) return; this.rowSel = (this.rowSel + dy + rows.length) % rows.length; rows.forEach((r, i) => r.classList.toggle('sel', i === this.rowSel)); (rows[this.rowSel] as HTMLElement).scrollIntoView({ block: 'nearest' }); return; }
     this.sel = (this.sel + dx + dy * 4 + APPS.length) % APPS.length; this.renderApps();

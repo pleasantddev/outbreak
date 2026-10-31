@@ -9,6 +9,8 @@ import type { Accounts, AccountRow } from './accounts.ts';
 import type { Economy } from './economy.ts';
 import type { ContentStore } from './content.ts';
 import type { RateLimiter } from './auth.ts';
+import type { Payments } from './payments.ts';
+import type { Ads } from './ads.ts';
 
 export type AuthLevel = 'none' | 'user' | 'mod' | 'admin';
 
@@ -70,6 +72,9 @@ export interface Api {
   /** domain events: 'login' | 'signup' | 'ban' | 'unban' | 'wallet' | 'plot' | 'content' | 'flag' | 'purchase' | 'chat' */
   events: EventEmitter;
   limiters: Record<string, RateLimiter>;
+  /** real money (Paystack) and MyAds */
+  payments: Payments;
+  ads: Ads;
   route(method: string, path: string, handler: Handler, opts?: RouteOpts): void;
   get(path: string, handler: Handler, opts?: RouteOpts): void;
   post(path: string, handler: Handler, opts?: RouteOpts): void;

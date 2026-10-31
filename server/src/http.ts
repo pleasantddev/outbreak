@@ -39,7 +39,7 @@ async function readBody(req: IncomingMessage, limit: number): Promise<any> {
   const chunks: Buffer[] = []; let n = 0;
   for await (const c of req) { n += (c as Buffer).length; if (n > limit) throw new HttpError(413, 'Request body is too large.'); chunks.push(c as Buffer); }
   if (!n) return {};
-  const text = Buffer.concat(chunks).toString('utf8');
+  const text = Buffer.concat(chunks).toString('utf8'); (req as any).rawBody = text; // webhooks sign the raw bytes
   try { return JSON.parse(text); } catch { throw new HttpError(400, 'Body must be valid JSON.'); }
 }
 
