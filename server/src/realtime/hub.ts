@@ -15,6 +15,7 @@ import { PhoneNet } from '../phone.ts';
 import type { Ads } from '../ads.ts';
 import { Body } from '../body.ts';
 import { Devices } from '../devices.ts';
+import type { Clubs } from '../clubs.ts';
 import { Grid as PowerGrid, FEEDERS } from '../grid.ts';
 import { HttpError } from '../auth.ts';
 import { run } from '../db.ts';
@@ -73,10 +74,11 @@ export class Hub implements OnlineApi {
 
   races: RaceLobbies; fixtures: Fixtures; props: Properties;
   biz: Businesses; phone: PhoneNet; body: Body; devices: Devices; power = new PowerGrid(); private adsRef: Ads | null = null; private adTimer: ReturnType<typeof setInterval> | null = null;
+  private clubsRef: Clubs | null = null; private clubTimer: ReturnType<typeof setInterval> | null = null;
   /** live voice calls between two connections */
   private calls = new Map<string, { a: Conn; b: Conn; live: boolean; at: number }>(); private lastSwitch = new Map<string, number>();
   /** what the admin panel can steer in the game world */
-  get world() { return { grid: this.power, biz: this.biz, ads: this.adsRef, body: this.body, devices: this.devices }; }
+  get world() { return { grid: this.power, biz: this.biz, ads: this.adsRef, body: this.body, devices: this.devices, clubs: this.clubsRef }; }
   constructor(private cfg: Config, private db: DB, private accounts: Accounts, private econ: Economy, private content: ContentStore, private log: Logger) {
     this.biz = new Businesses(db, econ); this.phone = new PhoneNet(db); this.body = new Body(db, econ);
     const bodyOut = (accountId: string) => { const c = this.byAccount.get(accountId); if (c) { const v = this.body.view(accountId); this.send(c, { t: 'body', ...v } as any); this.syncStrip(c, v.stripped); } };
@@ -116,8 +118,32 @@ export class Hub implements OnlineApi {
     a.on('note', (accountId: string, title: string, body: string) => { this.toast(accountId, title, body); });
   }
   get ads() { return this.adsRef; }
+  /** the clubs: what plays, who works, sprays and shutdowns reach the people in the room; the whole city hears about a shutdown */
+  set clubs(k: Clubs | null) {
+    this.clubsRef = k; if (!k) return;
+    k.on('club', (v: unknown) => this.broadcastJson({ t: 'club', club: v } as any));
+    k.on('spray', (ev: { club: string; from: string; to: string | null; toId: string | null; amount: number }) => {
+      for (const c of this.conns.values()) if (k.inClub(ev.club as any, this.clubPos(c))) this.send(c, { t: 'spray', ...ev } as any);
+      if (ev.toId) this.toast(ev.toId, 'Money dey rain', `${ev.from} sprayed you ₦${ev.amount.toLocaleString('en-NG')}.`);
+    });
+    k.on('shutdown', (ev: { club: string; name: string; until: number }) => {
+      const r = k.place(ev.club as any); void r;
+      this.broadcast(`${ev.name} don shut down ${ev.club.toUpperCase()}! Drinks are free for everybody inside for the next hour or so.`, 'Lagos Nightlife');
+    });
+    k.on('ended', (acct: string, club: string, job: string, earned: number) => this.toast(acct, job === 'dj' ? 'Off the decks' : 'Off the stage', `You left your post at ${club.toUpperCase()}. This shift paid ₦${Math.round(earned).toLocaleString('en-NG')}.`));
+    k.on('note', (acct: string, title: string, body: string) => { this.toast(acct, title, body); });
+  }
+  get clubs() { return this.clubsRef; }
+  /** where a connection stands for the clubs: nowhere while inside a loaded interior */
+  private clubPos(c: Conn) { return c.ms.interior ? { x: 1e9, y: 0, z: 1e9 } : { x: c.ms.x, y: c.ms.y, z: c.ms.z }; }
+  clubTick(now = Date.now()) {
+    const k = this.clubsRef; if (!k) return;
+    const on = new Map<string, { x: number; y: number; z: number }>(); for (const c of this.conns.values()) if (c.haveState) on.set(c.account.id, this.clubPos(c));
+    k.tick(on, now);
+  }
   start() {
     this.adTimer = setInterval(() => { try { this.adsRef?.pushFeed(); } catch (e) { this.log.warn('ad feed', e); } }, 60_000);
+    this.clubTimer = setInterval(() => { try { this.clubTick(); } catch (e) { this.log.warn('clubs', e); } }, 5_000);
     const period = 1000 / this.cfg.tickHz; let next = performance.now() + period;
     const loop = () => {
       const t = performance.now(); try { this.tick(); } catch (e) { this.log.error('tick failed', e); }
@@ -131,7 +157,7 @@ export class Hub implements OnlineApi {
     this.saveTimer = setInterval(() => this.saveAll(), 20_000);
   }
   async stop() {
-    if (this.adTimer) clearInterval(this.adTimer);
+    if (this.adTimer) clearInterval(this.adTimer); if (this.clubTimer) clearInterval(this.clubTimer);
     if (this.timer) clearTimeout(this.timer); if (this.pingTimer) clearInterval(this.pingTimer); if (this.saveTimer) clearInterval(this.saveTimer);
     this.saveAll();
     for (const c of this.conns.values()) { try { c.ws.close(1001, 'Server restarting'); } catch { /* gone */ } }
@@ -198,7 +224,7 @@ export class Hub implements OnlineApi {
       t: 'welcome', id, v: PROTOCOL_VERSION, tickHz: this.cfg.tickHz, serverTime: this.now(), epoch: Date.now(), cell: CELL, wallet: w, plots: this.econ.plotsOf(auth.account.id).map((p) => p.id),
       online: this.conns.size, profile: publicProfile(profile), role: auth.account.role, motd: this.cfg.motd, grid: this.power.state(),
       phone: (() => { const p = this.phone.ensure(auth.account.id); return { number: p.number, publicId: p.public_id, unread: this.phone.unread(auth.account.id) }; })(),
-      ice: this.iceServers(), ads: this.adsRef?.live() ?? [], phones: this.devices.view(auth.account.id), body: (() => { const v = this.body.view(auth.account.id); (c as any).stripped = v.stripped; return v; })(),
+      ice: this.iceServers(), ads: this.adsRef?.live() ?? [], clubs: this.clubsRef?.views() ?? [], phones: this.devices.view(auth.account.id), body: (() => { const v = this.body.view(auth.account.id); (c as any).stripped = v.stripped; return v; })(),
       state: { ...st.blobs, vehicles: st.vehicles, skills: st.skills, missions: st.missions, pos: last },
     });
     this.log.info(`join ${profile.name} (#${id}) online=${this.conns.size}`);
@@ -516,6 +542,22 @@ export class Hub implements OnlineApi {
         // only bad deeds come from the game itself; good deeds are counted where the server can see them
         case 'karma.deed': { const BAD: Record<string, number> = { assault: -1, theft: -2, robbery: -4, murder: -10, police: -6, scam: -5, littering: -0.2 }; const d = BAD[String(m.kind)]; if (d) this.body.karma(id, d, String(m.kind)); ok(); break; }
         // ---- Property Manager, venues, bookings, fixtures (src/property.ts, realtime/matches.ts)
+        // ---- clubs: decks, pole stages, the bar, spraying, shutdowns and the song crate (src/clubs.ts)
+        case 'club.state': ok({ clubs: this.clubsOrThrow().views() }); break;
+        case 'club.decks': ok({ club: this.clubsOrThrow().takeDecks(id, c.profile.name, m.club, this.clubPos(c)) }); break;
+        case 'club.pole': ok({ club: this.clubsOrThrow().takePole(id, c.profile.name, m.club, m.pole, this.clubPos(c), !!(c as any).stripped) }); break;
+        case 'club.leave': ok({ ended: this.clubsOrThrow().endShift(id), ...this.walletOf(c) }); break;
+        case 'club.play': ok({ club: this.clubsOrThrow().play(id, m.club, m.track) }); break;
+        case 'club.spray': ok({ spray: this.clubsOrThrow().spray(id, c.profile.name, m.club, m.to, m.amount, this.clubPos(c)), ...this.walletOf(c) }); break;
+        case 'club.shutdown': ok({ club: this.clubsOrThrow().shutdown(id, c.profile.name, m.club, this.clubPos(c)), ...this.walletOf(c) }); break;
+        case 'club.bar': {
+          const k = this.clubsOrThrow(); const where = k.whereIs(this.clubPos(c)); if (!where) throw new HttpError(400, 'Find the bar inside a club.');
+          const price = k.barPrice(where); if (price) { if (this.econ.wallet(id).cash < price) throw new HttpError(402, 'Not enough cash for a drink.', { code: 'broke' }); this.econ.adjust(id, -price, 0, 'club.bar', { note: where }); }
+          ok({ price, ...this.walletOf(c) }); break;
+        }
+        case 'club.crate': { const k = this.clubsOrThrow(); const cl = typeof m.club === 'string' && ['zilox', 'gele', 'orun'].includes(m.club) ? m.club as 'zilox' : 'zilox'; ok({ list: k.crate(cl), mine: k.mine(id) }); break; }
+        case 'songs.mine': ok({ list: this.clubsOrThrow().mine(id) }); break;
+        case 'songs.remove': ok({ list: this.clubsOrThrow().remove(id, m.id) }); break;
         case 'prop.mine': ok({ list: this.props.owned(id), bookings: this.props.myBookings(id) }); break;
         case 'prop.market': ok({ list: this.props.market(m.kind) }); break;
         case 'prop.info': ok({ info: this.props.info(m.kind, m.id) }); break;
@@ -564,6 +606,7 @@ export class Hub implements OnlineApi {
   }
   /** STUN for everyone, TURN when the operator configured one (voice through strict NATs) */
   private iceServers() { const l: { urls: string; username?: string; credential?: string }[] = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }]; const t = process.env.TURN_URL; if (t) l.push({ urls: t, username: process.env.TURN_USER, credential: process.env.TURN_PASS }); return l; }
+  private clubsOrThrow() { if (!this.clubsRef) throw new HttpError(503, 'The clubs are closed right now.'); return this.clubsRef; }
   private at(c: Conn) { return { x: c.ms.x, z: c.ms.z, interior: c.ms.interior }; }
   private nearConn(c: Conn, to: unknown, r: number): Conn {
     const o = this.conns.get(Number(to)); if (!o || o === c || o.dead || !o.haveState) throw new HttpError(404, 'They are not around.');

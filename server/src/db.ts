@@ -224,6 +224,15 @@ const MIGRATIONS: string[] = [
   CREATE INDEX dev_owner ON devices(owner_id); CREATE INDEX dev_clone ON devices(cloned_by);
   CREATE TABLE clone_moves (id INTEGER PRIMARY KEY AUTOINCREMENT, device TEXT NOT NULL, hacker TEXT NOT NULL, kind TEXT NOT NULL, amount INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL);
   `,
+  // v10: clubs (src/clubs.ts): songs players upload and attest they own, and paid promotions into club rotation
+  `
+  CREATE TABLE songs (id TEXT PRIMARY KEY, account_id TEXT NOT NULL, title TEXT NOT NULL, artist TEXT NOT NULL, mime TEXT NOT NULL, bytes INTEGER NOT NULL, secs INTEGER NOT NULL,
+    status TEXT NOT NULL, note TEXT, plays INTEGER NOT NULL DEFAULT 0, attest_at INTEGER NOT NULL, created_at INTEGER NOT NULL);
+  CREATE INDEX songs_owner ON songs(account_id); CREATE INDEX songs_status ON songs(status);
+  CREATE TABLE song_promos (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id TEXT NOT NULL, account_id TEXT NOT NULL, club TEXT NOT NULL, start_at INTEGER NOT NULL, end_at INTEGER NOT NULL,
+    price_kobo INTEGER NOT NULL, status TEXT NOT NULL, payment_ref TEXT, created_at INTEGER NOT NULL);
+  CREATE INDEX promo_live ON song_promos(status, end_at); CREATE INDEX promo_song ON song_promos(song_id);
+  `,
 ];
 
 export function openDb(file: string): DB {

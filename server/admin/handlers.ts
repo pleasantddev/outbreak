@@ -17,6 +17,8 @@ export interface WorldHooks {
   /** MyAds moderation and the real-money ledger (server/src/ads.ts, payments.ts) */
   body?: { admin(accountId: string): any; karma(accountId: string, d: number, why: string): void; infect(accountId: string, id: any, now?: number, carrier?: boolean): boolean; payDebt?: any } | null;
   ads?: { queue(status?: string): any[]; review(id: number, decision: 'approve' | 'reject', note?: string): Promise<any>; upload(id: string): any; uploadFile(u: any): string | null; boards: any[] } | null;
+  /** club song moderation (server/src/clubs.ts): players attest they own what they upload; staff clear it for clubs */
+  clubs?: { queue(status?: string): any[]; review(id: string, decision: 'approve' | 'reject', note?: string): Promise<any>; song(id: string): any; songFile(s: any): string | null; views(): any[] } | null;
 }
 export interface AdminDeps { db: SqlDb; dataDir: string; contentSeedDirs: string[]; live?: () => LiveHooks | null; world?: () => WorldHooks | null; version?: string; log?: (m: string) => void; setupCode?: string }
 export interface RouteDef { method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; path: string; auth: boolean; handler: (req: HostReq) => Promise<HostRes> | HostRes }
@@ -314,6 +316,24 @@ export function buildAdmin(deps: AdminDeps) {
     return row;
   });
 
+  // ---------- club songs: listen, then clear for clubs or turn down (paid promotions on a turned-down song are refunded)
+  const clubsOf = () => { const k = world().clubs; if (!k) throw bad('Clubs are not attached to this server.'); return k; };
+  route('GET', '/world/songs', 'reports.view', (c) => {
+    const st = ['review', 'approved', 'rejected'].includes(String(c.req.query.status)) ? String(c.req.query.status) : 'review';
+    return { status: st, list: clubsOf().queue(st), clubs: clubsOf().views() };
+  });
+  route('GET', '/world/songs/:id/audio', 'reports.view', (c) => {
+    const k = clubsOf(); const sg = k.song(c.req.params.id); const f = sg && k.songFile(sg); if (!f) throw bad('No such song');
+    return { id: sg.id, title: sg.title, dataUrl: `data:${sg.mime};base64,${readFileSync(f).toString('base64')}` };
+  });
+  route('POST', '/world/songs/:id', 'reports.resolve', async (c) => {
+    const b = c.req.body ?? {}; const d = b.decision === 'approve' ? 'approve' : b.decision === 'reject' ? 'reject' : null; if (!d) throw bad('Approve or reject');
+    const note = typeof b.note === 'string' ? b.note.slice(0, 200) : '';
+    if (d === 'reject' && !note) throw bad('Say why, the artist sees it');
+    let row; try { row = await clubsOf().review(c.req.params.id, d, note); } catch (e: any) { throw new HttpError(e?.status ?? 400, e?.message ?? 'Review failed'); }
+    audit(c, d === 'approve' ? 'songs.approve' : 'songs.reject', 'song', c.req.params.id, `${d === 'approve' ? 'Cleared' : 'Turned down'} "${row.title}"${note ? `: ${note}` : ''}`);
+    return row;
+  });
 
   // ---------- live ops
   route('GET', '/ops/status', 'liveops.view', () => {

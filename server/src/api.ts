@@ -11,6 +11,7 @@ import type { ContentStore } from './content.ts';
 import type { RateLimiter } from './auth.ts';
 import type { Payments } from './payments.ts';
 import type { Ads } from './ads.ts';
+import type { Clubs } from './clubs.ts';
 
 export type AuthLevel = 'none' | 'user' | 'mod' | 'admin';
 
@@ -80,6 +81,7 @@ export interface Api {
   limiters: Record<string, RateLimiter>;
   /** MyAds: billboards, drone shows, blimps (sold through payments) */
   ads: Ads;
+  clubs: Clubs;
   route(method: string, path: string, handler: Handler, opts?: RouteOpts): void;
   get(path: string, handler: Handler, opts?: RouteOpts): void;
   post(path: string, handler: Handler, opts?: RouteOpts): void;

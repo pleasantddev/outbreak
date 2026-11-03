@@ -261,7 +261,7 @@ export type ClientMsg =
 export interface WhoInfo { id: number; name: string; model: string; skin: number; outfit: string; level: number; role?: string; /** down to underwear */ strip?: 1 }
 
 export type ServerMsg =
-  | { t: 'welcome'; id: number; v: number; tickHz: number; serverTime: number; epoch: number; cell: number; wallet: { cash: number; bank: number }; plots: string[]; online: number; profile: unknown; role: string; state: Record<string, unknown>; motd?: string; grid?: import('./rules').GridState; phone?: { number: string; publicId: string; unread: number }; ice?: { urls: string; username?: string; credential?: string }[]; ads?: LiveAd[]; body?: BodyView; phones?: { id: string; model: import('./rules').PhoneModelId; crack: number; active: boolean }[] }
+  | { t: 'welcome'; id: number; v: number; tickHz: number; serverTime: number; epoch: number; cell: number; wallet: { cash: number; bank: number }; plots: string[]; online: number; profile: unknown; role: string; state: Record<string, unknown>; motd?: string; grid?: import('./rules').GridState; phone?: { number: string; publicId: string; unread: number }; ice?: { urls: string; username?: string; credential?: string }[]; ads?: LiveAd[]; body?: BodyView; phones?: { id: string; model: import('./rules').PhoneModelId; crack: number; active: boolean }[]; clubs?: ClubView[] }
   | { t: 'pong'; c: number; s: number }
   | { t: 'who'; list: WhoInfo[] }
   | { t: 'chat'; ch: 'near' | 'global' | 'whisper' | 'system'; from: string; fromId: number; text: string; ts: number }
@@ -294,7 +294,11 @@ export type ServerMsg =
   | { t: 'ads'; list: LiveAd[] }
   | ({ t: 'body'; collapse?: boolean } & BodyView)
   | { t: 'phones'; list: { id: string; model: import('./rules').PhoneModelId; crack: number; active: boolean }[] }
-  | { t: 'devoffer'; id: string; fromName: string; price: number };
+  | { t: 'devoffer'; id: string; fromName: string; price: number }
+  | { t: 'club'; club: ClubView }
+  | { t: 'spray'; club: import('./clubs').ClubId; from: string; fromId: string; to: string | null; toId: string | null; amount: number };
+/** one club as everybody sees it: who is on the decks and the stages, what is playing, a shutdown, the crowd */
+export interface ClubView { id: import('./clubs').ClubId; dj: { id: string; name: string; since: number } | null; poles: Record<string, { id: string; name: string }>; track: import('./clubs').ClubTrack | null; shutdown: { by: string; name: string; until: number } | null; crowd: number }
 
 /** Actions a client may send in `act`. The server owns the rules for each. */
 export const ACTS = ['plot.buy', 'bank.deposit', 'bank.withdraw', 'cash.transfer', 'cash.delta', 'job.start', 'job.done', 'shop.buy', 'state.put', 'tp', 'respawn'] as const;
