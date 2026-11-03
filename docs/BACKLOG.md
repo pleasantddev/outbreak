@@ -77,7 +77,7 @@ players upload and attest they own).
 - [x] MyAds (ba96eb3): billboard inventory (Oshodi bridges, expressways, rooftops), price from ₦4,500/day by location, size and
       days; image upload with size spec per board; moderation queue in admin; real-player impression tracking per day.
 - [x] MyAds extras (ba96eb3): drone shows (your text in the night sky for a set time), ad blimps that cross the map. Pricey.
-- [ ] Clubs: DJ booth (players DJ from a big Nigerian set list streamed from Audius plus CC tracks), song upload to
+- [ ] (in progress: shift 03 Nov 17:00) Clubs: DJ booth (players DJ from a big Nigerian set list streamed from Audius plus CC tracks), song upload to
       your phone library and paid promotion into club rotation, pole dancer job (athletic, clothed, paid), club
       shutdown (book the club, spray money, the whole room knows), parody big clubs.
 - [ ] Wardrobe: buy clothes (market, okrika, boutiques), change outfits, strip to underwear (boxers; bra and pants).
