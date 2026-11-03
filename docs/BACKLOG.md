@@ -77,9 +77,16 @@ players upload and attest they own).
 - [x] MyAds (ba96eb3): billboard inventory (Oshodi bridges, expressways, rooftops), price from ₦4,500/day by location, size and
       days; image upload with size spec per board; moderation queue in admin; real-player impression tracking per day.
 - [x] MyAds extras (ba96eb3): drone shows (your text in the night sky for a set time), ad blimps that cross the map. Pricey.
-- [ ] (in progress: shift 03 Nov 17:00) Clubs: DJ booth (players DJ from a big Nigerian set list streamed from Audius plus CC tracks), song upload to
+- [x] (05f83e8, 5f19029) Clubs: DJ booth (players DJ from a big Nigerian set list streamed from Audius plus CC tracks), song upload to
       your phone library and paid promotion into club rotation, pole dancer job (athletic, clothed, paid), club
       shutdown (book the club, spray money, the whole room knows), parody big clubs.
+- [ ] SHIFT: clubs follow-ups. Check the Audius crate and streams in a real browser (the build sandbox cannot reach
+      api.audius.co, so the crate search and stream URL are written to Audius's public API but untested); ride the ORUN
+      lift online (tp + rooftop deck collision is new); DJ mixing touches (crossfade, BPM); VIP tables in the open-world
+      clubs; bouncer and entry fee; retire the old EUPHORIA interior or make it a fourth club.
+- [ ] SHIFT: the player slowly sinks through the ground where there is no road, pavement or deck under them (seen at
+      Falomo in front of ZILOX: about 2 cm a frame on the city ground plane). The clubs now have their own floor slab;
+      find the root cause in sim/life.ts (ground cuboid or the character controller).
 - [ ] Wardrobe: buy clothes (market, okrika, boutiques), change outfits, strip to underwear (boxers; bra and pants).
 - [ ] Police career: divisions by zone, patrols, respond to crimes, arrests, checkpoints (satire), walkie-talkie radio.
 - [ ] LASTMA career: traffic control at junctions, book offenders (NPC and player), towing.

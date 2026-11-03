@@ -52,3 +52,15 @@
   register a server product with api.payments.register(kind, { quote, fulfil }). Only cash/bank packs are sold until
   items, cosmetics, boosts and passes have fulfilment. Admin refunds mark the row but do not claw back cash yet.
   Server tests 86/86. Checked in the browser against a local test server: bought Market Day, wallet +₦1.5m.
+- 03 Nov 17:00 shift: clubs (05f83e8 server, 5f19029 client). server/src/clubs.ts + net/clubs.ts rules: DJ decks and
+  pole stage shifts at ZILOX, GELE, ORUN paid by the house per minute (base + per real player in the room, night pays
+  full, day 35%, daily caps), workers dropped when they walk off or log out (hub.clubTick every 5 s); spraying (cash
+  only, house keeps 10%), shutdowns (N8m to N25m, 45 min, free bar, city-wide chat line); songs (migration v10:
+  songs, song_promos) uploaded via POST /api/songs with a rights tick, heard by owner/staff until cleared, admin page
+  "Clubs and songs" to clear or turn down (refunds promos), promotion sold as sku song:<id> {club, days}; the house set
+  drops promoted songs between its own grooves when nobody is on the decks. Client systems/clubs.ts: things at the
+  decks, stages, bar and floor; DJ panel (Audius crate, player songs, my songs, house); NPC crowd, house DJ and stage
+  dancers at night; two lights follow you into the club; money notes in the air; Clubs app with My Music. World:
+  walkable pole stages, DJ stage and a floor slab (TileCol decks), ORUN rooftop deck + rail walls and a lift at the
+  lobby. Offline: same rules on the save. Server tests 109/109. Browser-checked offline at ZILOX (pole, decks, spray,
+  app); Audius is unreachable from the sandbox so the stream path is unverified.
