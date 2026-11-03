@@ -173,6 +173,7 @@ export class WorldStreamer {
     }
     if (br.length || railDecks.length) { const dc = deckCollision([...br.map((r) => deckProfile(r)), ...railDecks]); col.decks.push(dc); }
     if (ft.poles) col.poles.push(...ft.poles);
+    if (ft.decks) col.decks.push(...ft.decks);
     for (const f of ft.fenceWalls) col.walls.push({ ax: f.ax, az: f.az, bx: f.bx, bz: f.bz, h: f.h });
     // the shore is a wall: nobody drives or walks into the lagoon
     for (const w of waters) {

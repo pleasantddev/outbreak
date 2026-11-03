@@ -70,6 +70,14 @@ function groove() {
     }
   };
   const id = setInterval(tick, 25);
-  return { stop: () => { clearInterval(id); out.gain.setTargetAtTime(0.0001, a.currentTime, 0.25); setTimeout(() => out.disconnect(), 1500); } };
+  return { out, stop: () => { clearInterval(id); out.gain.setTargetAtTime(0.0001, a.currentTime, 0.25); setTimeout(() => out.disconnect(), 1500); } };
+}
+/** the house groove heard from the street clubs, its volume set by how close you are (0 stops it) */
+let street: { stop: () => void; out: GainNode } | null = null;
+export function clubMix(vol: number) {
+  const a = ctx(); if (!a) return;
+  if (vol <= 0.01) { if (street) { street.stop(); street = null; } return; }
+  if (!street) street = groove();
+  street.out.gain.cancelScheduledValues(a.currentTime); street.out.gain.setTargetAtTime(Math.max(0.0001, vol * 0.75), a.currentTime, 0.25);
 }
 export function audioTime() { return ctx()?.currentTime ?? 0; }

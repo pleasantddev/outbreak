@@ -119,7 +119,7 @@ export interface FeatureInput {
   /** True for points on the road or its verge, so props stay off the carriageway. */
   onRoad: (x: number, z: number) => boolean;
 }
-export interface FeatureOut { poles?: number[]; group: THREE.Group; courts: { x: number; z: number; r: number }[]; fenceWalls: { ax: number; az: number; bx: number; bz: number; h: number }[]; mechSites: Area[] }
+export interface FeatureOut { poles?: number[]; decks?: { pos: number[]; idx: number[] }[]; group: THREE.Group; courts: { x: number; z: number; r: number }[]; fenceWalls: { ax: number; az: number; bx: number; bz: number; h: number }[]; mechSites: Area[] }
 
 const RAILC: RGB = [0.27, 0.26, 0.27], RUST: RGB = [0.42, 0.24, 0.14], BALLAST: RGB = [0.46, 0.45, 0.43], BALLAST_D: RGB = [0.36, 0.34, 0.28], CONC: RGB = [0.66, 0.65, 0.62];
 
@@ -366,7 +366,9 @@ export function buildFeatures(inp: FeatureInput): FeatureOut {
   }
   footbridgeCovers(TG, inp.roads, x0, z0, size);
   buildBillboards(TG, g, x0, z0, size);
-  buildClubs({ L: TG, N: NG, x0, z0, size, sign: (s) => signs.push(s), walls: out.fenceWalls, poles: termPoles });
+  const clubDeck = { pos: [] as number[], idx: [] as number[] };
+  buildClubs({ L: TG, N: NG, x0, z0, size, sign: (s) => signs.push(s), walls: out.fenceWalls, poles: termPoles, decks: clubDeck });
+  if (clubDeck.idx.length) out.decks = [clubDeck];
   if (NG.count) { const m = new THREE.Mesh(NG.build(), clubMaterial()); g.add(m); }
   if (TG.count) { const m = new THREE.Mesh(TG.build(), vertexMat()); m.castShadow = true; m.receiveShadow = true; g.add(m); }
   out.poles = termPoles;

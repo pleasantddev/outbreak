@@ -32,7 +32,7 @@ export function inClub(x: number, z: number, m = 0): boolean {
   return false;
 }
 
-export interface ClubCtx { L: Geo; N: Geo; x0: number; z0: number; size: number; sign: (s: { cx: number; cy: number; cz: number; ang: number; w: number; h: number; uv: ReturnType<typeof signUV> }) => void; walls: { ax: number; az: number; bx: number; bz: number; h: number }[]; poles: number[] }
+export interface ClubCtx { L: Geo; N: Geo; x0: number; z0: number; size: number; sign: (s: { cx: number; cy: number; cz: number; ang: number; w: number; h: number; uv: ReturnType<typeof signUV> }) => void; walls: { ax: number; az: number; bx: number; bz: number; h: number }[]; poles: number[]; /** walkable surfaces in world space: pole stages, the rooftop deck */ decks?: { pos: number[]; idx: number[] } }
 
 /** signs.ts picks a colour plate from a 0..1 fraction; this maps a plate number 0..9 to it. */
 const plate = (i: number) => (i + 0.5) / 10;
@@ -64,6 +64,8 @@ export function buildClubs(T: ClubCtx) {
       // slab, forecourt, walls with a door gap in the front wall, roof
       bx(L, -hw - 1, hw + 1, -hd - 11, hd + 1, 0, 0.08, [0.2, 0.2, 0.22]);
       bx(L, -hw, hw, -hd, hd, 0.08, 0.1, [0.07, 0.07, 0.09]);
+      // a walkable slab over the lot (the city's ground plane is too coarse to stand on for long here)
+      if (T.decks) { const D = T.decks; const b0 = D.pos.length / 3; for (const [u, v] of [[-hw - 1, -hd - 11], [hw + 1, -hd - 11], [hw + 1, hd + 1], [-hw - 1, hd + 1]]) { const [x, z] = P(u, v); D.pos.push(x + x0, 0.09, z + z0); } D.idx.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3); }
       bx(L, -hw, hw, hd - t, hd, 0, h, wallC); bx(L, -hw, -hw + t, -hd, hd, 0, h, wallC); bx(L, hw - t, hw, -hd, hd, 0, h, wallC);
       bx(L, -hw, -dw / 2, -hd, -hd + t, 0, h, wallC); bx(L, dw / 2, hw, -hd, -hd + t, 0, h, wallC); bx(L, -dw / 2, dw / 2, -hd, -hd + t, 3.4, h, wallC);
       bx(L, -hw - 0.3, hw + 0.3, -hd - 0.3, hd + 0.3, h, h + 0.45, [0.1, 0.1, 0.12], [0.3, 0.3, 0.32]);
@@ -97,6 +99,9 @@ export function buildClubs(T: ClubCtx) {
     if (roof) { // deck on the roof of the tower, glass-and-steel rail, string lights, sign standing on the street edge
       const hw = c.w / 2 + 1.5, hd = c.d / 2 + 1.5; const wx = (u: number, v: number): [number, number] => [c.x + u - x0, c.z + v - z0];
       const [dx0, dz0] = wx(0, 0); addBox(LI, dx0, gy, dz0, hw * 2, 0.06, hd * 2, 0, [0.26, 0.18, 0.12], { top: [0.36, 0.25, 0.16] });
+      // collision: the deck you stand on, and the rail (a wall from the street up past the rail, so it is the tower side too)
+      if (T.decks) { const D = T.decks; const b = D.pos.length / 3; for (const [u, v] of [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]]) D.pos.push(c.x + u, gy + 0.06, c.z + v); D.idx.push(b, b + 2, b + 1, b, b + 3, b + 2); }
+      for (const [a, b] of [[[-hw, -hd], [hw, -hd]], [[hw, -hd], [hw, hd]], [[hw, hd], [-hw, hd]], [[-hw, hd], [-hw, -hd]]]) T.walls.push({ ax: c.x + a[0], az: c.z + a[1], bx: c.x + b[0], bz: c.z + b[1], h: gy + 1.3 });
       for (let u = -hw; u <= hw + 0.01; u += 3) for (const v of [-hd, hd]) { const [x, z] = wx(u, v); addCyl(LI, x, gy, z, 0.04, 1.35, STEEL, 6); }
       for (let v = -hd; v <= hd + 0.01; v += 3) for (const u of [-hw, hw]) { const [x, z] = wx(u, v); addCyl(LI, x, gy, z, 0.04, 1.35, STEEL, 6); }
       for (const v of [-hd, hd]) { const [x, z] = wx(0, v); addBox(LI, x, gy + 1.3, z, hw * 2, 0.05, 0.08, 0, STEEL); }
@@ -124,6 +129,10 @@ export function buildClubs(T: ClubCtx) {
     {
       const sd = c.djStage; const back = c.kind === 'rooftop' ? 1.2 : 1.6;
       pbox(LI, dj, 0, -back, sd.w, sd.d, floorY, sd.y - (floorY - gy), [0.09, 0.09, 0.12], [0.16, 0.16, 0.2]);
+      // the stage top is walkable, from the back wall to the desk, so the DJ stands up there with the decks
+      if (T.decks) { const D = T.decks; const b0 = D.pos.length / 3; const y = gy + sd.y + 0.02; const ss = Math.sin(dj.yaw), cc = Math.cos(dj.yaw);
+        for (const [du, dv] of [[-sd.w / 2, -back - sd.d / 2], [sd.w / 2, -back - sd.d / 2], [sd.w / 2, 0.5], [-sd.w / 2, 0.5]]) D.pos.push(dj.x + ss * dv + cc * du, y, dj.z + cc * dv - ss * du);
+        D.idx.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3); }
       pbox(LI, dj, 0, 0.9, 3.0, 0.8, gy + sd.y, 1.05, [0.1, 0.1, 0.13], [0.2, 0.2, 0.24]);
       pbox(N, dj, 0, 1.31, 3.0, 0.03, gy + sd.y + 0.2, 0.05, neon);
       for (const du of [-0.7, 0.7]) { pbox(LI, dj, du, 0.88, 0.6, 0.6, gy + sd.y + 1.05, 0.1, BLACK); pbox(N, dj, du, 0.88, 0.5, 0.5, gy + sd.y + 1.15, 0.02, acc); }
@@ -136,7 +145,8 @@ export function buildClubs(T: ClubCtx) {
       const x = pl.x - x0, z = pl.z - z0; const top = roof ? 3.6 : Math.min(c.h - 0.6, 5.0);
       addCyl(LI, x, floorY - 0.0, z, pl.r, pl.y - floorY, [0.07, 0.07, 0.09], 18); addCyl(N, x, pl.y, z, pl.r, 0.04, neon, 18); addCyl(N, x, pl.y, z, pl.r - 0.18, 0.045, [0.03, 0.03, 0.04], 18);
       addCyl(LI, x, pl.y, z, 0.045, top - (pl.y - gy), STEEL, 8); addCyl(LI, x, gy + top - 0.05, z, 0.16, 0.1, STEEL, 8);
-      T.poles.push(pl.x, pl.z, pl.r + 0.15);
+      // the stage is a short solid you can stand on (a dancer works up there); the pole itself is a thin post
+      if (T.decks) prism(T.decks, pl.x, pl.z, pl.r, floorY, pl.y); T.poles.push(pl.x, pl.z, 0.1);
     }
     // bar: counter along the wall with a lit edge, back shelves with bottles, stools on the guest side
     {
@@ -166,6 +176,13 @@ export function buildClubs(T: ClubCtx) {
       for (const dv of [-fl.d * 0.35, 0, fl.d * 0.35]) { pbox(LI, fl, 0, dv, fl.w + 3, 0.3, ty, 0.3, [0.35, 0.36, 0.4]); for (let k = -fl.w / 2; k <= fl.w / 2; k += 2.2) pbox(N, fl, k, dv, 0.3, 0.3, ty - 0.35, 0.3, k % 4.4 < 1.1 ? neon : acc); }
     }
   }
+}
+/** a closed n-sided prism (top, sides) for the physics trimesh, world coordinates */
+function prism(D: { pos: number[]; idx: number[] }, x: number, z: number, r: number, y0: number, y1: number, n = 14) {
+  const b = D.pos.length / 3;
+  for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; D.pos.push(x + Math.cos(a) * r, y1, z + Math.sin(a) * r, x + Math.cos(a) * r, y0, z + Math.sin(a) * r); }
+  D.pos.push(x, y1, z); const top = b + n * 2;
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; const t0 = b + i * 2, t1 = b + j * 2; D.idx.push(top, t1, t0, t0, t1, t1 + 1, t0, t1 + 1, t0 + 1); }
 }
 export function clubMaterial() { return new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, side: THREE.DoubleSide }); }
 void addQuad;
