@@ -84,7 +84,7 @@ players upload and attest they own).
       api.audius.co, so the crate search and stream URL are written to Audius's public API but untested); ride the ORUN
       lift online (tp + rooftop deck collision is new); DJ mixing touches (crossfade, BPM); VIP tables in the open-world
       clubs; bouncer and entry fee; retire the old EUPHORIA interior or make it a fourth club.
-- [ ] Ground sinking fix (SHIFT). (in progress: shift 03 Nov 21:05 UTC) The player slowly sinks through the ground where there is no road, pavement or deck under them (seen at
+- [x] (4bd8955) Ground sinking fix (SHIFT). Root cause: the single 80 km ground cuboid (f32 shape casts), now 256 m slabs. The player slowly sinks through the ground where there is no road, pavement or deck under them (seen at
       Falomo in front of ZILOX: about 2 cm a frame on the city ground plane). The clubs now have their own floor slab;
       find the root cause in sim/life.ts (ground cuboid or the character controller).
 - [ ] Wardrobe: buy clothes (market, okrika, boutiques), change outfits, strip to underwear (boxers; bra and pants).

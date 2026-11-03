@@ -64,3 +64,8 @@
   walkable pole stages, DJ stage and a floor slab (TileCol decks), ORUN rooftop deck + rail walls and a lift at the
   lobby. Offline: same rules on the save. Server tests 109/109. Browser-checked offline at ZILOX (pole, decks, spray,
   app); Audius is unreachable from the sandbox so the stream path is unverified.
+- 03 Nov 21:05 shift: ground sinking fixed (4bd8955). Root cause was the single 80 km ground cuboid in sim/life.ts: Rapier
+  is f32 and its shape casts against a cuboid that size lose precision, so the character controller let actors sink
+  (0.8 m at spawn, -165 m in a minute at ZILOX in a Node repro; cuboids up to 500 m half-size are exact). Ground is now
+  overlapping 256 m slabs laid around every actor and vehicle each step (LifeSim.ensureGround / keepGround), pruned when
+  nobody is within ~640 m. Browser-checked offline at spawn and at ZILOX: feet hold at y=0.030 idle and walking.
