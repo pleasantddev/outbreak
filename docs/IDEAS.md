@@ -104,7 +104,7 @@ Rules every idea has to respect: 16+, no nudity, no real brand logos, parody nam
 
 42. **Oshodi Transport Interchange.** Three six-level terminals with open bays, a ticketing hall, four parking floors, a union chairman's office on the ground floor and covered footbridges over the expressway. Why: it is the home district and the founder asked for it by name. Size L. Status: building.
 
-43. **ZILOX, GELE and ORUN.** Three parody clubs with a DJ booth and pole stages each: a big Ikoyi superclub, a lounge, and a rooftop deck on a 21 level tower. Why: players can DJ and dance for pay, and the clubs need real places to stand. Size L. Status: building.
+43. **ZILOX, GELE and ORUN.** Three parody clubs with a DJ booth and pole stages each: a big Ikoyi superclub, a lounge, and a rooftop deck on a 21 level tower. Why: players can DJ and dance for pay, and the clubs need real places to stand. Size L. Status: shipped.
 
 ## What I am building next
 
