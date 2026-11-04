@@ -34,7 +34,7 @@ Then play again. Your world is in the `data` folder and is kept between updates.
 - Money, land, shops and shares are saved in `data/hustlelife.db` on the computer running the game.
 - Voice chat needs a secure connection, so it works on the host computer only for now.
 - Payments run in test mode here. Nothing is ever charged.
-- `node start.mjs --fresh` starts a new world (the old one is renamed, not deleted). `--port 9000` uses another port. `--no-open` skips opening the browser.
+- `node start.mjs --fresh` starts a new world (the old one is renamed, not deleted). `--port 9000` uses another port. `--no-open` skips opening the browser. `--logs` shows everything the server says.
 - Add `?server=off` to the address to play offline on that device.
 
 Source and dev tools live on the `hustlelife` branch. This branch is rebuilt from it with `node tools/release-play.mjs`.

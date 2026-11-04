@@ -6,6 +6,7 @@
 //   node start.mjs --port 9000  use another port (default 8787)
 //   node start.mjs --no-open    do not open the browser
 //   node start.mjs --fresh      start a new world (the old one is kept in data/, renamed)
+//   node start.mjs --logs       show everything the server says
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, renameSync } from 'node:fs';
 import { createServer } from 'node:net';
@@ -43,7 +44,17 @@ const env = {
   STATIC_DIR: join(ROOT, 'game'), HL_PUBLIC_DIR: join(ROOT, 'game'), SEED_CONTENT_DIR: join(ROOT, 'game', 'content'),
   HL_SHARED_DATA: join(ROOT, 'server', 'shared'), DATA_DIR: process.env.DATA_DIR ?? join(ROOT, 'data'), GUEST_ACCOUNTS: process.env.GUEST_ACCOUNTS ?? 'true',
 };
-const server = spawn(process.execPath, [join(ROOT, 'server', 'server.mjs')], { cwd: ROOT, env, stdio: 'inherit' });
+const server = spawn(process.execPath, [join(ROOT, 'server', 'server.mjs')], { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'] });
+// a quiet window: who comes and goes, and real problems. --logs shows everything the server says.
+const quiet = /no plots\.bin|payments: TEST MODE/;
+const relay = (stream, out) => { let buf = ''; stream.on('data', (d) => { buf += d; let i; while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i); buf = buf.slice(i + 1); show(line, out); } }); };
+const show = (line, out) => {
+  if (has('--logs')) { out.write(line + '\n'); return; }
+  const m = / INFO  (join|leave) (.+?) \(#\d+\) online=(\d+)/.exec(line);
+  if (m) { console.log(`  ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}  ${m[2]} ${m[1] === 'join' ? 'joined' : 'left'} · ${m[3]} online`); return; }
+  if (/ (WARN |ERROR) /.test(line) && !quiet.test(line)) out.write(line + '\n');
+};
+relay(server.stdout, process.stdout); relay(server.stderr, process.stderr);
 if (mac && server.pid) { try { spawn('caffeinate', ['-i', '-w', String(server.pid)], { stdio: 'ignore' }).unref(); } catch { /* fine */ } } // no sleeping while you host
 
 // this computer's address on the Wi-Fi
