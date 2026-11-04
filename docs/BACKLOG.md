@@ -80,10 +80,12 @@ players upload and attest they own).
 - [x] (05f83e8, 5f19029) Clubs: DJ booth (players DJ from a big Nigerian set list streamed from Audius plus CC tracks), song upload to
       your phone library and paid promotion into club rotation, pole dancer job (athletic, clothed, paid), club
       shutdown (book the club, spray money, the whole room knows), parody big clubs.
-- [ ] Clubs follow-ups (SHIFT) (in progress: shift 04 Nov 01:00 UTC). Check the Audius crate and streams in a real browser (the build sandbox cannot reach
+- [x] (031c8f8) Clubs follow-ups part 1 (SHIFT): bouncer and cover at the door (wristband per night, staff in free, no
+      underwear), VIP tables with bottle service, DJ crossfade between songs.
+- [ ] Clubs follow-ups part 2 (SHIFT). Check the Audius crate and streams in a real browser (the build sandbox cannot reach
       api.audius.co, so the crate search and stream URL are written to Audius's public API but untested); ride the ORUN
-      lift online (tp + rooftop deck collision is new); DJ mixing touches (crossfade, BPM); VIP tables in the open-world
-      clubs; bouncer and entry fee; retire the old EUPHORIA interior or make it a fourth club.
+      lift online (tp + rooftop deck collision is new); BPM display / beat-matched mixing; VIP table invites for friends;
+      retire the old EUPHORIA interior (systems/leisure/club.ts) or make it a fourth club.
 - [x] (4bd8955) Ground sinking fix (SHIFT). Root cause: the single 80 km ground cuboid (f32 shape casts), now 256 m slabs. The player slowly sinks through the ground where there is no road, pavement or deck under them (seen at
       Falomo in front of ZILOX: about 2 cm a frame on the city ground plane). The clubs now have their own floor slab;
       find the root cause in sim/life.ts (ground cuboid or the character controller).

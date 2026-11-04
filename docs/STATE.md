@@ -69,3 +69,10 @@
   (0.8 m at spawn, -165 m in a minute at ZILOX in a Node repro; cuboids up to 500 m half-size are exact). Ground is now
   overlapping 256 m slabs laid around every actor and vehicle each step (LifeSim.ensureGround / keepGround), pruned when
   nobody is within ~640 m. Browser-checked offline at spawn and at ZILOX: feet hold at y=0.030 idle and walking.
+- 04 Nov 01:00 shift: clubs part 1 (031c8f8). Door: cover from 9pm (ZILOX N10k, GELE N5k, ORUN N8k, net/clubs.ts COVER),
+  waived by day and during a shutdown; wristband per Lagos night (nightOf: noon to noon) kept in Clubs.passes; staff band
+  free but the bar, sprays, VIP and shutdowns need a guest band (HttpError code 'band', the client opens the door panel);
+  underwear refused. Client gate: walk through a ground club door at night without a band and the bouncer puts you back
+  outside; ORUN lift checks too. VIP: 30 real min per table, N500k/N150k/N300k, first bottle included, bottles N120k/N45k/N80k
+  host only with a 20 s gap, room gets clubfx sparklers. DJ: 2.5 s crossfade between streamed songs. Server tests 112/112.
+  Browser-checked offline at ZILOX at 23:00: bounced at the door, paid cover, booked a table, ordered a bottle.
