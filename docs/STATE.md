@@ -76,3 +76,18 @@
   outside; ORUN lift checks too. VIP: 30 real min per table, N500k/N150k/N300k, first bottle included, bottles N120k/N45k/N80k
   host only with a 20 s gap, room gets clubfx sparklers. DJ: 2.5 s crossfade between streamed songs. Server tests 112/112.
   Browser-checked offline at ZILOX at 23:00: bounced at the door, paid cover, booked a table, ordered a bottle.
+- 04 Nov 05:00 lead: founder asked (04:47) to review the shifts, publish, optimise for his 2016 MacBook Pro, make it playable on
+  phones, fix how the apps look, and add a real map with waypoints and GTA-style pointers. Done in b7bb1bf, published as
+  Version 9 of the game artifact (index + three chunks, places.json, iap.json, world/map/* 103 files; old JS nulled).
+  City map: tools/bake_map.ts bakes v2/public/world/map (tiles t{L}_{i}_{j}.webp at 32/16/8/4 m a pixel, labels.json,
+  pois.json from region POIs) with @napi-rs/canvas from a scratch node_modules (CANVAS_FROM=.../@napi-rs/canvas).
+  ui/citymap.ts (M, the Map app, tap the radar), ui/mapIcons.ts (category icons), systems/waypoint.ts (first in SYSTEMS so
+  the GPS follows it; purple beam). Radar draws icon blips (blip.icon = category). App kit `ak` in ui/lifeHud.ts (hero,
+  tiles, grouped lists, stats, cta); Bank, Weather, Roads, Settings rebuilt with it; other apps still use .row cards.
+  Perf: rungs Low and Minimum render straight to the canvas (Level.direct; sky/cloud/fx shaders include tone mapping and
+  colour space chunks; vignette and hurt as a CSS overlay), HUD writes only on change, ground slabs keyed by cell,
+  detection of Iris 5xx/6xx and Radeon Pro 4xx/5xx plus one rung cheaper on Retina panels; ?prof + window.__prof.report().
+  Resolution is still never lowered (founder rule). Phones held upright: the in-game phone fills the screen, minimap
+  moves under the touch row, ticker hidden. Agents SPORTS and IDEAS stopped on the weekly usage limit; resume with
+  SendMessage when wanted (SPORTS: basketball check, two-browser match, Renting; IDEAS: floating quads at Oshodi, widen
+  the map to VI/Lekki, club interiors).

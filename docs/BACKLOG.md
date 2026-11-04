@@ -5,6 +5,21 @@ unchecked item in their lane, builds it, tests it, ticks it here with the commit
 checkout), SPORTS (worktree hl-sports), IDEAS (worktree hl-look, the Sonnet teammate), SHIFT (scheduled cloud run: any
 unowned item, or finishing touches on a lead item).
 
+## Founder brief 5 (04 Nov 2026, 04:47)
+Verbatim keys: "look into what we have now from the schedule bot and then make the artifact", "it lags a lot but not as much
+as before on my 2016 mac pro so optimize it further", "make it playable on phone", "most importantly fix the way the apps
+look", "be able to check my map, add a waypoint (where I'm going then get directed) but also have the pointers like GTA to
+tell me where shit is".
+### LEAD
+- [x] (b7bb1bf) City map with baked tiles, icons, legend, labels; waypoint with GPS and beam; radar icons.
+- [x] (b7bb1bf) Performance: direct rendering on cheap rungs, HUD dirty writes, ground bookkeeping, Mac GPU detection.
+- [x] (b7bb1bf) Phones held upright: full-screen phone, HUD layout for thumbs.
+- [x] (b7bb1bf) App kit; Bank, Weather, Roads, Settings rebuilt.
+- [ ] Move the remaining apps (Wallet, Skills, Career, Business, Garage, Car, House, Home, ChopNow, OjaHome, Light, Market,
+      Street, Clubs, Property, Sports, Top Up, MyAds, Health, Phones) onto the app kit, each with its own hero and lists.
+- [ ] Map search box (type a place or a player), and road names when zoomed in.
+- [ ] Perf telemetry: a "Send performance report" button in Settings that posts the F3 stats and a 5 s profile to the server.
+
 ## Founder brief 4 (31 Oct 2026, 05:35 and 05:38)
 Verbatim keys: "Hospitals, clinics and sickness, transmittable one ... players can be sick and pass it on", "a hidden
 luck meter that a lot of the Shii in the game will run by ... fluctuates based on karma ... determines casino wins ...
