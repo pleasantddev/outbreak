@@ -99,8 +99,8 @@ export function detectDevice(gpuIn?: string): Detect {
   const has = (re: RegExp) => re.test(gpu);
   const software = has(/swiftshader|llvmpipe|softpipe|software|basic render|microsoft basic|mesa offscreen/);
   if (software) { level = 6; reason = 'software renderer'; }
-  else if (has(/apple/) && !has(/apple gpu/) || has(/apple m\d/)) { level = mobile ? 3 : 1; reason = 'Apple silicon'; }
-  else if (has(/apple gpu|apple a\d/)) { level = 3; reason = 'Apple mobile gpu'; }
+  else if (has(/apple/) && !has(/apple gpu/) || has(/apple m\d/)) { level = mobile ? 4 : 2; reason = 'Apple silicon'; }
+  else if (has(/apple gpu|apple a\d/)) { level = 4; reason = 'Apple mobile gpu'; }
   else if (has(/rtx\s?(20|30|40|50)\d\d|rx\s?(6|7|9)\d00|radeon pro w|arc\s?a[57]\d0|titan|rtx a\d/)) { level = 0; reason = 'discrete gpu'; }
   else if (has(/gtx\s?(16|10[5-8])\d|gtx\s?9[5-8]0|rx\s?(5[0-9]0|vega)|radeon rx|quadro|geforce/)) { level = has(/mx\s?\d|940|930|920/) ? 3 : 1; reason = has(/mx\s?\d/) ? 'entry laptop gpu' : 'mid discrete gpu'; }
   else if (has(/intel.*arc/)) { level = 2; reason = 'Intel Arc'; }
@@ -108,12 +108,13 @@ export function detectDevice(gpuIn?: string): Detect {
   else if (has(/iris\(tm\) graphics [56]\d\d|iris graphics [56]\d\d|iris\(tm\) plus graphics 6\d\d|intel.*(hd|uhd) graphics (5\d\d|6\d\d)/)) { level = 5; reason = 'older Intel laptop gpu'; }
   else if (has(/iris xe|iris\(r\) xe|iris plus|iris pro|radeon.*graphics|radeon\(tm\) graphics|vega \d+/)) { level = 3; reason = 'integrated gpu (modern)'; }
   else if (has(/intel|uhd|hd graphics|gma/)) { level = 4; reason = 'integrated intel gpu'; }
-  else if (has(/adreno.*\(?tm\)?\s?[78]\d\d|mali-g[78]\d|immortalis|xclipse/)) { level = 3; reason = 'recent phone gpu'; }
+  else if (has(/adreno.*\(?tm\)?\s?[78]\d\d|mali-g[78]\d|immortalis|xclipse/)) { level = 4; reason = 'recent phone gpu'; }
   else if (has(/adreno|mali|powervr|videocore|tegra/)) { level = 5; reason = 'older phone gpu'; }
-  if (mobile && level < 3) level = 3;
+  // the target is a mid-range phone: phones start at Low+ and only climb if the frames prove they can
+  if (mobile && level < 4) level = 4;
   // a Retina panel at native resolution is two to four times the pixels: start a rung cheaper on anything that is not a fast discrete gpu
   const px = (screen.width * screen.height) * Math.min(2, window.devicePixelRatio || 1) ** 2;
-  if (!mobile && px > 3_500_000 && level >= 2 && level < 6) { level += 1; reason += ', high-res screen'; }
+  if (!mobile && px > 3_500_000 && level >= 1 && level < 6) { level += 1; reason += ', high-res screen'; }
   if (mem <= 2) level += 2; else if (mem <= 4 && level < 6) level += 1;
   if (cores <= 2 && level < 6) level += 1;
   level = Math.max(0, Math.min(6, level));

@@ -117,7 +117,7 @@ export class WorldStreamer {
     const ownPlots = plots.filter((p) => inTile(p.cx, p.cz));
     const cp = yield* buildCompoundsG(ownPlots, near, rc, x0, z0);
     if (cp.geo) { const cm = new THREE.Mesh(cp.geo, this.buildMat); cm.castShadow = true; cm.receiveShadow = true; group.add(cm); }
-    this.stage = 'props'; yield;
+    this.stage = 'trees'; yield;
     // trees: a few per plot, more on vacant land, never inside a building
     const trees: { x: number; z: number; palm: boolean; s: number }[] = [];
     for (const pl of ownPlots) {
@@ -133,10 +133,11 @@ export class WorldStreamer {
         }
       }
     }
+    this.stage = 'props'; yield;
     const blocked = (x: number, z: number) => inClub(x, z, 2) || own.some((b) => Math.abs(b.cx - x) < 30 && Math.abs(b.cz - z) < 30 && pointInPoly(x, z, b.pts));
     const props = buildProps({ x0, z0, size: TILE, roads: roads.filter((r) => r.pts.length), trees, tanks: bb.tanks, bars: bb.bars, dishes: bb.dishes, blocked, poleBad: (x, z) => rc.poleBad(x, z) });
     props.group.position.set(-x0, 0, -z0); group.add(props.group);
-    this.stage = 'finish'; yield;
+    this.stage = 'bridges'; yield;
     // bridges whose first point is in this tile own their deck
     // every bridge segment whose midpoint lies in this tile belongs to this tile (long viaducts span many tiles)
     const br: Road[] = [];
@@ -150,11 +151,11 @@ export class WorldStreamer {
       }
     }
     if (br.length) { const b = buildBridges(br, x0, z0, this.asphalt, this.asphaltN); group.add(b.group); }
-    if (slice.due()) yield;
+    this.stage = 'features'; yield;
     // rails, platforms, courts, banks, mechanic villages
     const ft = buildFeatures({ x0, z0, size: TILE, rails, areas, pois, buildings: blds, roads, blocked, onRoad });
     group.add(ft.group);
-    if (slice.due()) yield;
+    this.stage = 'collision'; yield;
     this.group.add(group);
     // collision for the sim: building prisms, compound walls, poles and trunks, bridge decks
     const convex = (p: Float32Array) => { const n = p.length / 2; let sgn = 0; for (let i = 0; i < n; i++) { const a = i, b = (i + 1) % n, c = (i + 2) % n; const cr = (p[b * 2] - p[a * 2]) * (p[c * 2 + 1] - p[b * 2 + 1]) - (p[b * 2 + 1] - p[a * 2 + 1]) * (p[c * 2] - p[b * 2]); if (Math.abs(cr) < 1e-6) continue; const s2 = Math.sign(cr); if (sgn && s2 !== sgn) return false; sgn = s2; } return true; };
@@ -189,6 +190,7 @@ export class WorldStreamer {
         }
       }
     }
+    this.stage = 'register'; yield;
     const nt: Tile = { key, x0, z0, res, field, group, ground, lamps: props.lamps, dist: 0, col, roads, props: props.group };
     this.onTile?.(nt, true);
     return nt;
@@ -199,6 +201,8 @@ export class WorldStreamer {
   stage = 'gather';
   /** timing of the last slices, for the perf overlay */
   slices: [string, number][] = [];
+  /** every slice ever run, per build step: count, total and worst ms (perf reports) */
+  stats: Record<string, { n: number; sum: number; max: number }> = {};
   private job: { key: string; res: number; old?: Tile; gen: Generator<void, Tile, void> } | null = null;
   private disposeTile(t: Tile) {
     this.onTile?.(t, false);
@@ -244,7 +248,7 @@ export class WorldStreamer {
     while (this.job) {
       const w0 = performance.now(); slice.t0 = w0; const stage = this.stage;
       const r = this.job.gen.next();
-      this.slices.push([stage, performance.now() - w0]);
+      const sl = performance.now() - w0; this.slices.push([stage, sl]); const st = (this.stats[stage] ??= { n: 0, sum: 0, max: 0 }); st.n++; st.sum += sl; st.max = Math.max(st.max, sl);
       if (r.done) {
         const { key, old } = this.job; this.job = null;
         if (old) this.disposeTile(old);

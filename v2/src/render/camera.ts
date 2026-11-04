@@ -1,3 +1,4 @@
+import { interp } from './interp';
 // GTA-style third-person camera: free orbit, over-the-shoulder aim, collision pull-in, recoil and shake.
 import * as THREE from 'three';
 import type { Sim } from '../sim/sim';
@@ -33,11 +34,10 @@ export class ThirdPersonCamera {
     let targetDist = aiming ? (scoped ? 0.9 : 1.55) : this.indoor ? 2.5 : a.sprinting ? 4.1 : 3.5;
     let targetShoulder = aiming ? 0.62 : 0.55;
     let pivotY = a.crouch ? 1.15 : 1.6;
-    let base = new THREE.Vector3(a.pos.x, a.pos.y, a.pos.z);
+    let base = interp.actor(a, new THREE.Vector3());
     if (a.vehicle !== null) {
       const v = sim.vehicles[a.vehicle];
-      const p = v.body.translation();
-      base = new THREE.Vector3(p.x, p.y, p.z);
+      base = interp.vehicle(v, new THREE.Vector3());
       targetDist = v.kind === 'danfo' ? 8 : v.kind === 'okada' ? 4.6 : 6.8;
       targetShoulder = a.seat > 0 && aiming ? 0.6 : 0;
       pivotY = VEHICLES[v.kind].size[1] * 0.75 + 0.6;

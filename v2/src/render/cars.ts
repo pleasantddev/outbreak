@@ -160,9 +160,18 @@ function keke(seed: number): CarModel {
 }
 
 /** Pose wheels and doors from the sim. open[i] is 0..1 for fl, fr, rl, rr (slide uses the passenger value). */
-export function poseCar(m: CarModel, spin: number[], steer: number, open: number[]) {
+export function poseCar(m: CarModel, spin: number[], steer: number, open: number[], lift?: number[]) {
   m.wheels.forEach((w, i) => {
     if (!w) return;
+    if (lift && w.parent) {
+      // one metre along the car's up axis, in the wheel's parent space (models come scaled and rotated differently)
+      if (!w.userData.up) {
+        m.root.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(w.parent.matrixWorld).invert();
+        const p0 = new THREE.Vector3().setFromMatrixPosition(m.root.matrixWorld); const up = new THREE.Vector3(0, 1, 0).applyQuaternion(m.root.getWorldQuaternion(new THREE.Quaternion()));
+        w.userData.up = p0.clone().add(up).applyMatrix4(inv).sub(p0.applyMatrix4(inv)); w.userData.p0 = w.position.clone();
+      }
+      w.position.copy(w.userData.p0).addScaledVector(w.userData.up, lift[i] ?? 0);
+    }
     const sp = FILES[m.kind] ? w : (w.children[0] ?? w);
     sp.rotation.x = spin[i] ?? 0;
     if (i < 2) { if (sp === w) { w.rotation.set(spin[i] ?? 0, steer, 0, 'YXZ'); } else w.rotation.y = steer; }

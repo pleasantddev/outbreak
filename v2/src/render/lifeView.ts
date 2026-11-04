@@ -1,3 +1,5 @@
+import { prof } from '../prof';
+import { interp } from './interp';
 // Mirrors the LifeSim into the scene: streamed Lagos, sky and weather, people, cars with opening doors, effects.
 import * as THREE from 'three';
 import { N8AOPostPass } from 'n8ao';
@@ -199,24 +201,25 @@ export class LifeView {
   private tmpP = new THREE.Vector3(); private tmpD = new THREE.Vector3();
   private fr = new THREE.Frustum(); private frM = new THREE.Matrix4(); private frS = new THREE.Sphere(); private frInv = new THREE.Matrix4();
   private sphereInView(x: number, y: number, z: number, r: number) { this.frS.center.set(x, y, z); this.frS.radius = r; return this.fr.intersectsSphere(this.frS); }
+  private tmpQ = new THREE.Quaternion(); private spinT = [0, 0, 0, 0]; private liftT = [0, 0, 0, 0];
   frame(dt: number) {
     this.time += dt;
     const sim = this.sim, me = sim.local; const cam = this.camera;
     if (this.debugCam) { const d = this.debugCam; cam.position.set(d.x, d.y, d.z); cam.lookAt(d.tx, d.ty, d.tz); if (d.fov && cam.fov !== d.fov) { cam.fov = d.fov; cam.updateProjectionMatrix(); } cam.updateMatrixWorld(); }
     cam.updateMatrixWorld(); this.frM.multiplyMatrices(cam.projectionMatrix, this.frInv.copy(cam.matrixWorld).invert()); this.fr.setFromProjectionMatrix(this.frM);
     const L = this.landmap;
-    const focus0 = me.vehicle !== null ? (() => { const t = sim.vehicles[me.vehicle!].body.translation(); return new THREE.Vector3(t.x, t.y, t.z); })() : new THREE.Vector3(me.pos.x, me.pos.y, me.pos.z);
+    const focus0 = me.vehicle !== null ? interp.vehicle(sim.vehicles[me.vehicle!], new THREE.Vector3()) : interp.actor(me, new THREE.Vector3());
     const focus = L.on ? new THREE.Vector3(L.x, 0, L.z) : this.focusOverride ?? focus0;
-    this.world.update(focus.x, focus.z);
+    prof.t('v.stream', () => this.world.update(focus.x, focus.z));
     if (L.on) this.landmapFrame();
     this.atmo.indoor = this.indoor;
-    const env = this.atmo.update(dt, focus, cam, 30 * this.timeScale);
+    const env = prof.t('v.atmo', () => this.atmo.update(dt, focus, cam, 30 * this.timeScale));
     if (this.indoor) this.atmo.rain.visible = false; // interiors (systems/life venues) have a roof even if we never draw it
     if (L.on) { const fg = this.scene.fog as THREE.FogExp2 | null; if (fg && 'density' in fg) fg.density = Math.min(fg.density, 0.00035); this.atmo.rain.visible = false; }
     (sim as any).wet = this.atmo.wet; (sim as any).water = this.atmo.water;
     this.fx.update(dt, cam.position, { active: false, pos: { x: 0, y: -999, z: 0 }, carried: false } as any, { cx: 0, cz: 0, r: 99999, active: false } as any, [], this.time);
 
-    this.updateCrowd(dt, focus);
+    prof.t('v.crowd', () => this.updateCrowd(dt, focus));
     // people
     let shadowDyn = false; const shR2 = (this.L.shadowHalf + 25) ** 2;
     const seen = new Set<number>();
@@ -232,11 +235,11 @@ export class LifeView {
       v.view.root.visible = inView && !(self && this.firstPerson && a.vehicle !== null);
       if (!self) v.view.setLod(d > (v.view.lodOn ? 18 : 24));
       v.view.setShadow(this.L.shadowSize === 0 || d > this.L.shadowHalf * 0.95 ? 0 : d > 22 ? 1 : 2);
-      const p = this.tmpP.set(a.pos.x, a.pos.y, a.pos.z); const dp = this.tmpD.copy(p).sub(v.last);
+      const p = interp.actor(a, this.tmpP); const dp = this.tmpD.copy(p).sub(v.last);
       const sp = Math.hypot(dp.x, dp.z) / Math.max(dt, 1e-3);
       if (Math.hypot(dp.x, dp.z) > 0.002) { v.moveYaw = Math.atan2(dp.x, dp.z); if (d * d < shR2) shadowDyn = true; }
       v.last.copy(p);
-      v.view.root.position.lerp(p, Math.min(1, dt * 30)); if (a.vehicle !== null) v.view.root.position.copy(p);
+      v.view.root.position.copy(p); // already smooth between physics steps (render/interp.ts)
       if (!inView) { v.fireEdge = v.reloadEdge = v.meleeEdge = false; v.hit = Math.max(0, v.hit - dt); v.acc += dt; continue; }
       const w = sim.currentWeapon(a);
       const wid: WeaponId | null = w && w.id !== 'fists' ? w.id : null;
@@ -253,8 +256,8 @@ export class LifeView {
       if (act && a.vehicle === null && a.alive) { st.anim = 'emote'; st.clip = act.clip; st.clipHold = act.hold; st.clipSpeed = act.speed; st.faceYaw = act.yaw; st.armed = false; }
       else if (em) { if (performance.now() < em.until && sp < 0.3 && a.vehicle === null && a.alive) { st.anim = 'emote'; st.clip = em.clip; st.armed = false; } else (a as any).emote = undefined; }
       if (a.vehicle !== null) {
-        const veh = sim.vehicles[a.vehicle]; const r = veh.body.rotation(); const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w)); st.aimYaw = Math.atan2(fw.x, fw.z);
-        const cm = this.cars.get(veh.id)?.m; if (cm) { const t = seatTarget(cm, a.seat, veh.body.translation(), r, v.seat); if (t) { v.seat = t; st.seat = t; } }
+        const veh = sim.vehicles[a.vehicle]; const vp = interp.vehicle(veh, new THREE.Vector3(), this.tmpQ); const r = this.tmpQ; const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(r); st.aimYaw = Math.atan2(fw.x, fw.z);
+        const cm = this.cars.get(veh.id)?.m; if (cm) { const t = seatTarget(cm, a.seat, vp, r, v.seat); if (t) { v.seat = t; st.seat = t; } }
       } else v.seat = undefined;
       // far people animate at a reduced rate (time is accumulated, so speed is unchanged); seated ones stay in step with their car
       v.acc += dt; const every = self || a.vehicle !== null ? 1 : d < 28 ? 1 : d < 55 ? 2 : d < 95 ? 4 : 8;
@@ -275,12 +278,11 @@ export class LifeView {
       if (c && c.key !== key) { c.m?.root.removeFromParent(); this.cars.delete(veh.id); c = undefined; }
       if (!c) { c = { m: null, loading: true, key }; this.cars.set(veh.id, c); const cc = c; buildCar(veh.kind, (veh as any).seed).then((m) => { if (this.cars.get(veh.id) !== cc) return; cc.m = m; cc.loading = false; this.scene.add(m.root); }); }
       if (!c.m) continue;
-      const m = c.m; const p = veh.body.translation(), r = veh.body.rotation();
-      m.root.position.set(p.x, p.y, p.z); m.root.quaternion.set(r.x, r.y, r.z, r.w);
+      const m = c.m; interp.vehicle(veh, m.root.position, m.root.quaternion); const p = m.root.position;
       const dist0 = Math.hypot(p.x - cam.position.x, p.z - cam.position.z);
       // far cars swap to the merged model: no wheels, doors or interior to pose or draw
       if (m.far && m.near) { const farNow = dist0 > this.L.carFar - (m.far.visible ? 6 : 0) && me.vehicle !== veh.id; if (m.far.visible !== farNow) { m.far.visible = farNow; m.near.visible = !farNow; } }
-      if (!m.far?.visible) poseCar(m, veh.wheelSpin, veh.wheelSteer, (veh as any).doors);
+      if (!m.far?.visible) { interp.wheels(veh as any, this.spinT, this.liftT); poseCar(m, this.spinT, veh.wheelSteer, (veh as any).doors, this.liftT); }
       const driven = veh.seats[0] !== null && !veh.destroyed;
       for (const h of m.headlights) h.emissiveIntensity = driven ? (night > 0.3 ? 8 : 0.6) : 0;
       for (const b of m.brake) b.emissiveIntensity = driven ? (veh.throttle < 0 || (sim.actors[veh.seats[0]!]?.cmd.jump) ? 6 : night > 0.3 ? 2 : 0.2) : 0;
@@ -331,8 +333,8 @@ export class LifeView {
       const h = Math.round(this.hurt * 20) / 20; if (h !== this.vigHurt) { this.vigHurt = h; this.vig.style.boxShadow = h > 0 ? `inset 0 0 ${Math.round(160 * h)}px ${Math.round(60 * h)}px rgba(200,10,20,${(0.55 * h).toFixed(2)})` : ''; }
       // the composer (postprocessing) turns autoClear off; drawing straight to the canvas we must clear colour and depth ourselves,
       // or GPUs that keep the last frame's depth buffer draw nothing but the sky
-      this.renderer.setRenderTarget(null); this.renderer.clear(true, true, true); this.renderer.render(this.scene, this.camera);
-    } else this.composer.render(dt);
+      this.renderer.setRenderTarget(null); this.renderer.clear(true, true, true); prof.t('v.render', () => this.renderer.render(this.scene, this.camera));
+    } else prof.t('v.render', () => this.composer.render(dt));
   }
 
   openLandmap(x: number, z: number, owned: string[]) { const L = this.landmap; L.on = true; L.x = x; L.z = z; L.h = 320; L.owned = owned; L.builtAt = { x: 1e9, z: 1e9 }; }

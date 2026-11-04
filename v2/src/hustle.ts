@@ -28,6 +28,7 @@ import type { CharacterLook } from './data/cosmetics';
 import { Governor, LEVELS, PRESET_LEVEL, detectDevice, loadPref, savePref, type Pref, type Tier } from './render/quality';
 import { PerfHud } from './render/perfhud';
 import { prof } from './prof';
+import { interp } from './render/interp';
 import { CityMap, type MapMarker } from './ui/citymap';
 import { waypoints } from './systems/waypoint';
 import CLUBS from './data/clubs.json';
@@ -457,11 +458,12 @@ function loop(t: number) {
     if (ctx) for (const s of SYSTEMS) s.filterCommand?.(ctx, cmd);
     acc += Math.min(dt, 0.1); let steps = 0;
     while (acc >= 1 / 60 && steps < 4) {
-      sim.setCommand(0, cmd); prof.t('sim.step', () => sim.step(1 / 60));
+      sim.setCommand(0, cmd); interp.beforeStep(sim as any); prof.t('sim.step', () => sim.step(1 / 60));
       if (ctx) for (const s of SYSTEMS) if (s.step) prof.t('step:' + s.id, () => s.step!(ctx!, 1 / 60));
       cmd.interact = false; cmd.reload = false; cmd.heal = false;
       acc -= 1 / 60; steps++;
     }
+    interp.alpha = Math.min(1, acc * 60);
     if (ctx) for (const e of sim.events) for (const s of SYSTEMS) s.onEvent?.(ctx, e);
     view.handleEvents(sim.events, hud); sim.events.length = 0;
   }
