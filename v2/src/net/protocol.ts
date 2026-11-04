@@ -296,9 +296,12 @@ export type ServerMsg =
   | { t: 'phones'; list: { id: string; model: import('./rules').PhoneModelId; crack: number; active: boolean }[] }
   | { t: 'devoffer'; id: string; fromName: string; price: number }
   | { t: 'club'; club: ClubView }
-  | { t: 'spray'; club: import('./clubs').ClubId; from: string; fromId: string; to: string | null; toId: string | null; amount: number };
+  | { t: 'spray'; club: import('./clubs').ClubId; from: string; fromId: string; to: string | null; toId: string | null; amount: number }
+  | { t: 'clubfx'; kind: 'vip' | 'bottle'; club: import('./clubs').ClubId; table: string; name: string };
 /** one club as everybody sees it: who is on the decks and the stages, what is playing, a shutdown, the crowd */
-export interface ClubView { id: import('./clubs').ClubId; dj: { id: string; name: string; since: number } | null; poles: Record<string, { id: string; name: string }>; track: import('./clubs').ClubTrack | null; shutdown: { by: string; name: string; until: number } | null; crowd: number }
+export interface ClubView { id: import('./clubs').ClubId; dj: { id: string; name: string; since: number } | null; poles: Record<string, { id: string; name: string }>; track: import('./clubs').ClubTrack | null; shutdown: { by: string; name: string; until: number } | null; crowd: number;
+  /** cover at the door right now (0 by day or during a shutdown) and who holds each VIP table */
+  cover?: number; vip?: Record<string, { id: string; name: string; until: number }> }
 
 /** Actions a client may send in `act`. The server owns the rules for each. */
 export const ACTS = ['plot.buy', 'bank.deposit', 'bank.withdraw', 'cash.transfer', 'cash.delta', 'job.start', 'job.done', 'shop.buy', 'state.put', 'tp', 'respawn'] as const;

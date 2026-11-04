@@ -17,14 +17,16 @@ import { lagosDay } from '../../v2/src/net/rules.ts';
 import {
   CLUB_IDS, CLUB_RULES, CLUB_REACH, DECK_REACH, HOUSE_SET, POLE_REACH, SHUTDOWN_MIN, SONG_ARTIST_MAX, SONG_DAY_UPLOADS, SONG_KEEP, SONG_MAX_BYTES, SONG_MAX_SECS,
   SONG_MIN_SECS, SONG_TITLE_MAX, SPRAY_GAP_MS, SPRAY_NOTES, audioKind, cleanSongText, cleanTrack, clubHours, dayCap, isClub, promoQuote, shiftPay, sprayNet,
-  type ClubId, type ClubTrack,
+  BOTTLE_GAP_MS, BOTTLE_PRICE, DOOR_REACH, DRESS_CODE, NO_BAND, VIP_MIN, VIP_PRICE, coverFor, nightOf,
+  type ClubId, type ClubTrack, type PassKind,
 } from '../../v2/src/net/clubs.ts';
 
 interface Pose { x: number; y: number; z: number }
-interface ClubPlace { id: ClubId; floor: Pose; dj: Pose; poles: (Pose & { id: string })[]; roof: number | null }
+interface ClubPlace { id: ClubId; floor: Pose; dj: Pose; poles: (Pose & { id: string })[]; roof: number | null; door: Pose; vip: (Pose & { id: string })[] }
+export interface Table { by: string; name: string; until: number; lastBottle: number; bottles: number }
 export interface Post { accountId: string; name: string; since: number; paidTo: number; earned: number }
 export interface Pos { x: number; y?: number; z: number }
-interface Live { id: ClubId; dj: Post | null; poles: Record<string, Post>; track: ClubTrack | null; shutdown: { by: string; name: string; until: number } | null; crowd: number; lastTrack: number; house: number }
+interface Live { id: ClubId; dj: Post | null; poles: Record<string, Post>; track: ClubTrack | null; shutdown: { by: string; name: string; until: number } | null; crowd: number; lastTrack: number; house: number; vip: Record<string, Table> }
 export interface SongRow { id: string; account_id: string; title: string; artist: string; mime: string; bytes: number; secs: number; status: string; note: string | null; plays: number; attest_at: number; created_at: number }
 interface PromoRow { id: number; song_id: string; account_id: string; club: string; start_at: number; end_at: number; price_kobo: number; status: string; payment_ref: string | null; created_at: number }
 const DAY = 86_400_000;
@@ -35,13 +37,15 @@ export class Clubs extends EventEmitter {
   live = new Map<ClubId, Live>();
   private paid = new Map<string, number>(); // `${acct}:${job}:${day}` -> naira paid by the house today
   private lastSpray = new Map<string, number>();
+  /** wristbands: `${acct}:${club}:${night}` -> guest (paid cover or came in free) or staff (here to work) */
+  private passes = new Map<string, PassKind>();
   readonly dir: string;
   constructor(private db: DB, private econ: Economy, private pay: Payments | null, dataDir: string, file = resolve(import.meta.dirname, '../../v2/src/data/clubs.json')) {
     super();
     this.dir = join(dataDir, 'songs'); mkdirSync(this.dir, { recursive: true });
     let raw: any[] = []; try { raw = JSON.parse(readFileSync(file, 'utf8')); } catch { raw = []; }
-    for (const c of raw) if (isClub(c.id)) this.places.push({ id: c.id, floor: c.floor, dj: c.dj, poles: c.poles ?? [], roof: c.kind === 'rooftop' ? Number(c.roofY) : null });
-    for (const id of CLUB_IDS) this.live.set(id, { id, dj: null, poles: {}, track: null, shutdown: null, crowd: 0, lastTrack: 0, house: 0 });
+    for (const c of raw) if (isClub(c.id)) this.places.push({ id: c.id, floor: c.floor, dj: c.dj, poles: c.poles ?? [], roof: c.kind === 'rooftop' ? Number(c.roofY) : null, door: c.door, vip: c.vip ?? [] });
+    for (const id of CLUB_IDS) this.live.set(id, { id, dj: null, poles: {}, track: null, shutdown: null, crowd: 0, lastTrack: 0, house: 0, vip: {} });
     // promotion is sold through the one checkout: sku 'song:<songId>' with { club, days } in meta
     pay?.register('song', { quote: (a, id, meta) => this.quotePromo(a, id, meta), fulfil: (p) => this.promoPaid(p) });
   }
@@ -59,10 +63,63 @@ export class Clubs extends EventEmitter {
   view(id: ClubId, now = Date.now()) {
     const L = this.live.get(id)!; const sh = L.shutdown && L.shutdown.until > now ? L.shutdown : null;
     return { id, dj: L.dj ? { id: L.dj.accountId, name: L.dj.name, since: L.dj.since } : null, poles: Object.fromEntries(Object.entries(L.poles).map(([k, p]) => [k, { id: p.accountId, name: p.name }])),
-      track: L.track, shutdown: sh, crowd: L.crowd };
+      track: L.track, shutdown: sh, crowd: L.crowd, cover: coverFor(id, clubHours(now), !!sh),
+      vip: Object.fromEntries(Object.entries(L.vip).filter(([, t]) => t.until > now).map(([k, t]) => [k, { id: t.by, name: t.name, until: t.until }])) };
   }
   views(now = Date.now()) { return CLUB_IDS.map((id) => this.view(id, now)); }
   private changed(id: ClubId) { this.emit('club', this.view(id)); }
+
+  // ------------------------------------------------------------------------------------------ the door
+  private shut(L: Live, now: number) { return !!L.shutdown && L.shutdown.until > now; }
+  private key(acct: string, id: ClubId, now: number) { return `${acct}:${id}:${nightOf(clubHours(now))}`; }
+  pass(acct: string, id: ClubId, now = Date.now()): PassKind | null { return this.passes.get(this.key(acct, id, now)) ?? null; }
+  /** hand a wristband out (tests, admin, a VIP booking) */
+  admit(acct: string, id: ClubId, kind: PassKind, now = Date.now()) { const k = this.key(acct, id, now); if (this.passes.get(k) !== 'guest') this.passes.set(k, kind); }
+  /** can this person buy, spray and book in here right now? By day and during a shutdown nobody pays at the door */
+  guestOk(acct: string, id: ClubId, now = Date.now()) { const L = this.live.get(id)!; return coverFor(id, clubHours(now), this.shut(L, now)) === 0 || this.pass(acct, id, now) === 'guest'; }
+  private needGuest(acct: string, id: ClubId, now: number) { if (!this.guestOk(acct, id, now)) throw new HttpError(403, NO_BAND, { code: 'band' }); }
+  /** the bouncer: pay cover (cash only, the man at the door does not do transfer), or walk in as staff to work the decks or a stage */
+  enter(acct: string, id: unknown, kind: unknown, p: Pos, stripped: boolean, now = Date.now()) {
+    const L = this.club(id); const pl = this.place(L.id)!; const want: PassKind = kind === 'staff' ? 'staff' : 'guest';
+    const atDoor = Math.hypot(p.x - pl.door.x, p.z - pl.door.z) <= DOOR_REACH || this.inClub(L.id, p);
+    if (!atDoor) throw new HttpError(400, 'Talk to the bouncer at the door.');
+    if (stripped) throw new HttpError(403, DRESS_CODE, { code: 'dress' });
+    const have = this.pass(acct, L.id, now);
+    if (have === 'guest' || (have === want)) return { club: L.id, pass: have, paid: 0 };
+    const fee = want === 'staff' ? 0 : coverFor(L.id, clubHours(now), this.shut(L, now));
+    if (fee) {
+      if (this.econ.wallet(acct).cash < fee) throw new HttpError(402, `Cover is ₦${fee.toLocaleString('en-NG')}, cash.`, { code: 'broke' });
+      this.econ.adjust(acct, -fee, 0, 'club.cover', { note: CLUB_RULES[L.id].short });
+    }
+    this.admit(acct, L.id, want, now); return { club: L.id, pass: want, paid: fee };
+  }
+
+  // ------------------------------------------------------------------------------------------ VIP tables
+  /** book a table for VIP_MIN minutes: the first bottle is on the house, your name is on the table, and the wristband comes with it */
+  bookVip(acct: string, name: string, id: unknown, table: unknown, p: Pos, now = Date.now()) {
+    const L = this.club(id); const pl = this.place(L.id)!; const t = pl.vip.find((v) => v.id === table); const R = CLUB_RULES[L.id];
+    if (!t) throw new HttpError(404, 'No VIP table there.');
+    if (!this.inClub(L.id, p)) throw new HttpError(400, 'Come inside to book a table.');
+    this.needGuest(acct, L.id, now);
+    const held = L.vip[t.id]; if (held && held.until > now) { if (held.by === acct) throw new HttpError(409, 'This table is already yours.'); throw new HttpError(409, `Reserved for ${held.name}.`); }
+    if (Object.values(L.vip).some((v) => v.by === acct && v.until > now)) throw new HttpError(409, `You already have a table at ${R.short}.`);
+    const price = VIP_PRICE[L.id]; const w = this.econ.wallet(acct);
+    if (w.cash + w.bank < price) throw new HttpError(402, `A VIP table at ${R.short} is ₦${price.toLocaleString('en-NG')}.`, { code: 'broke' });
+    const c = Math.min(w.cash, price); this.econ.adjust(acct, -c, -(price - c), 'club.vip', { note: R.short });
+    L.vip[t.id] = { by: acct, name, until: now + VIP_MIN * 60_000, lastBottle: now, bottles: 1 }; this.admit(acct, L.id, 'guest', now);
+    this.changed(L.id); this.emit('vip', { club: L.id, table: t.id, name }); return this.view(L.id, now);
+  }
+  /** bottle service at your own table: pricey, and the money leaves the economy (the house keeps it) */
+  bottle(acct: string, id: unknown, p: Pos, now = Date.now()) {
+    const L = this.club(id); const R = CLUB_RULES[L.id];
+    const e = Object.entries(L.vip).find(([, v]) => v.by === acct && v.until > now); if (!e) throw new HttpError(403, 'Bottle service is for your own VIP table.');
+    if (!this.inClub(L.id, p)) throw new HttpError(400, 'Go back to your table first.');
+    const [table, t] = e; if (now - t.lastBottle < BOTTLE_GAP_MS) throw new HttpError(429, 'Waiter: "Your last bottle never finish, oga."');
+    const price = BOTTLE_PRICE[L.id]; const w = this.econ.wallet(acct);
+    if (w.cash + w.bank < price) throw new HttpError(402, `A bottle here is ₦${price.toLocaleString('en-NG')}.`, { code: 'broke' });
+    const c = Math.min(w.cash, price); this.econ.adjust(acct, -c, -(price - c), 'club.bottle', { note: R.short });
+    t.lastBottle = now; t.bottles++; this.emit('bottle', { club: L.id, table, name: t.name }); return { club: L.id, table, bottles: t.bottles, price };
+  }
 
   // ------------------------------------------------------------------------------------------ shifts
   takeDecks(acct: string, name: string, id: unknown, p: Pos, now = Date.now()) {
@@ -111,10 +168,12 @@ export class Clubs extends EventEmitter {
         this.payPost(L, s.job, s.post, now);
       }
       if (L.shutdown && L.shutdown.until <= now) { L.shutdown = null; dirty = true; }
+      for (const [k, t] of Object.entries(L.vip)) if (t.until <= now) { delete L.vip[k]; dirty = true; }
       // nobody on the decks: the house set, with paid promotions dropped in between
       if (!L.dj && (!L.track || now > L.track.at + L.track.secs * 1000)) { L.track = this.nextHouse(L, now); dirty = true; }
       if (dirty) this.changed(L.id);
     }
+    if (this.passes.size > 20_000) { const n = nightOf(clubHours(now)); for (const k of this.passes.keys()) if (!k.endsWith(`:${n}`)) this.passes.delete(k); }
     if (this.paid.size > 20_000) { const d = lagosDay(now); for (const k of this.paid.keys()) if (!k.endsWith(d)) this.paid.delete(k); }
   }
   private nextHouse(L: Live, now: number): ClubTrack {
@@ -142,6 +201,7 @@ export class Clubs extends EventEmitter {
   // ------------------------------------------------------------------------------------------ money in the room
   spray(acct: string, name: string, id: unknown, to: unknown, amount: unknown, p: Pos, now = Date.now()) {
     const L = this.club(id); if (!this.inClub(L.id, p)) throw new HttpError(400, 'You have to be in the club to spray.');
+    this.needGuest(acct, L.id, now);
     const n = Number(amount); if (!(SPRAY_NOTES as readonly number[]).includes(n)) throw new HttpError(400, 'Pick a bundle.');
     if ((this.lastSpray.get(acct) ?? 0) > now - SPRAY_GAP_MS) throw new HttpError(429, 'Easy. One bundle at a time.');
     const target = String(to ?? 'floor'); let tgt: Post | null = null;
@@ -159,11 +219,19 @@ export class Clubs extends EventEmitter {
   shutdown(acct: string, name: string, id: unknown, p: Pos, now = Date.now()) {
     const L = this.club(id); const r = CLUB_RULES[L.id];
     if (!this.inClub(L.id, p)) throw new HttpError(400, 'You have to be inside to shut it down.');
+    this.needGuest(acct, L.id, now);
     if (L.shutdown && L.shutdown.until > now) throw new HttpError(409, `${L.shutdown.name} already shut ${r.short} down tonight.`);
     const w = this.econ.wallet(acct); if (w.cash + w.bank < r.shutdown) throw new HttpError(402, `Shutting down ${r.short} costs ₦${r.shutdown.toLocaleString('en-NG')}.`, { code: 'broke' });
     const c = Math.min(w.cash, r.shutdown); this.econ.adjust(acct, -c, -(r.shutdown - c), 'club.shutdown', { note: r.short });
     L.shutdown = { by: acct, name, until: now + SHUTDOWN_MIN * 60_000 }; this.changed(L.id);
     this.emit('shutdown', { club: L.id, name, until: L.shutdown.until }); return this.view(L.id);
+  }
+  /** the bar: a guest's wristband at night, free while a shutdown holds */
+  buyDrink(acct: string, p: Pos, now = Date.now()) {
+    const where = this.whereIs(p); if (!where) throw new HttpError(400, 'Find the bar inside a club.');
+    this.needGuest(acct, where, now); const price = this.barPrice(where, now);
+    if (price) { if (this.econ.wallet(acct).cash < price) throw new HttpError(402, 'Not enough cash for a drink.', { code: 'broke' }); this.econ.adjust(acct, -price, 0, 'club.bar', { note: where }); }
+    return { club: where, price };
   }
   /** free drinks while a shutdown holds */
   barPrice(id: ClubId, now = Date.now()) { const L = this.live.get(id)!; return L.shutdown && L.shutdown.until > now ? 0 : CLUB_RULES[id].bar; }

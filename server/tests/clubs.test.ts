@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { boot, http, makePlayer, TestClient, type TestServer } from './helpers.ts';
-import { CLUB_RULES, SHUTDOWN_MIN, promoQuote, shiftPay, sprayNet, clubHours, audioKind, cleanTrack, DJ_PAY } from '../../v2/src/net/clubs.ts';
+import { BOTTLE_PRICE, COVER, VIP_MIN, VIP_PRICE, coverFor, nightOf, CLUB_RULES, SHUTDOWN_MIN, promoQuote, shiftPay, sprayNet, clubHours, audioKind, cleanTrack, DJ_PAY } from '../../v2/src/net/clubs.ts';
 
 let s: TestServer;
 beforeAll(async () => { s = await boot(); });
@@ -63,6 +63,7 @@ describe('clubs online', () => {
     await put(dancer, pole.x, pole.z + 0.5); const r = await dancer.c.act('club.pole', { club: 'zilox', pole: pole.id }); expect(r.err ?? 'ok').toBe('ok');
     expect(r.club.poles[pole.id].name).toBe('Stage Sade');
     await put(fan, Z.floor.x, Z.floor.z);
+    K().admit(fan.accountId, 'zilox', 'guest'); // a wristband, so the test runs the same at any Lagos hour
     const a0 = wallet(fan.accountId).cash, b0 = wallet(dancer.accountId).cash;
     const sp = await fan.c.act('club.spray', { club: 'zilox', to: dancer.accountId, amount: 5000 }); expect(sp.err ?? 'ok').toBe('ok');
     expect(wallet(fan.accountId).cash).toBe(a0 - 5000); expect(wallet(dancer.accountId).cash).toBe(b0 + sprayNet(5000));
@@ -80,6 +81,7 @@ describe('clubs online', () => {
   it('shutting a club down costs big, tells the whole city, makes the bar free, and only one at a time', async () => {
     const boss = await mk('Odogwu Boss'); const other = await mk('Small Boy');
     await put(boss, Z.floor.x, Z.floor.z); await put(other, Z.floor.x + 1, Z.floor.z);
+    K().admit(boss.accountId, 'zilox', 'guest'); K().admit(other.accountId, 'zilox', 'guest');
     s.api.economy.adjust(other.accountId, 10_000, 0, 'test');
     const bar = await other.c.act('club.bar'); expect(bar.price).toBe(CLUB_RULES.zilox.bar);
     expect((await boss.c.act('club.shutdown', { club: 'zilox' })).ok).toBe(false); // broke
@@ -126,5 +128,61 @@ describe('clubs online', () => {
     await s.api.clubs.review(id, 'reject', 'Sample not cleared'); expect(K().promoted('zilox')).toHaveLength(0);
     const mineAfter = await http(s, 'GET', '/api/songs/mine', undefined, art.token); expect(mineAfter.json.list[0]).toMatchObject({ status: 'rejected', note: 'Sample not cleared' });
     art.c.close(); dj.c.close();
+  }, 20000);
+});
+
+/** an epoch ms near now when the Lagos clock reads hour h (one game hour is two real minutes) */
+const atHour = (h: number) => { const b = Date.now(); return b + (((h - (clubHours(b) % 24)) % 24 + 24) % 24) * 120_000; };
+
+describe('the door and VIP tables', () => {
+  it('rules: cover only at night, never during a shutdown; one wristband lasts the whole night', () => {
+    const night = clubHours(atHour(23)), late = clubHours(atHour(23) + 8 * 120_000), day = clubHours(atHour(14));
+    expect(coverFor('zilox', night, false)).toBe(COVER.zilox); expect(coverFor('zilox', night, true)).toBe(0); expect(coverFor('gele', day, false)).toBe(0);
+    expect(nightOf(night)).toBe(nightOf(clubHours(atHour(23) + 4 * 120_000))); // 11pm and 3am are the same night
+    expect(nightOf(late)).toBe(nightOf(night)); expect(nightOf(night + 14)).toBe(nightOf(night) + 1);
+  });
+
+  it('the bouncer charges cover once a night, turns away people in underwear, staff walk in free but cannot buy, and services need a wristband', async () => {
+    const L = K(); const a = (await makePlayer(s, 'Door Dayo')).accountId; const d2 = (await makePlayer(s, 'Day Dupe')).accountId;
+    const n = atHour(23); const door = { x: Z.door.x, z: Z.door.z - 2 }, floor = { x: Z.floor.x, z: Z.floor.z };
+    expect(() => L.enter(a, 'zilox', 'guest', { x: Z.door.x + 80, z: Z.door.z }, false, n)).toThrow(/bouncer/);
+    expect(() => L.enter(a, 'zilox', 'guest', door, true, n)).toThrow(/dress/);
+    expect(() => L.enter(a, 'zilox', 'guest', door, false, n)).toThrow(/Cover/); // broke
+    s.api.economy.adjust(a, 50_000, 0, 'test'); const c0 = wallet(a).cash;
+    // no wristband: the bar, spraying and VIP all send you to the door
+    expect(() => L.buyDrink(a, floor, n)).toThrow(/Wristband/);
+    expect(() => L.spray(a, 'A', 'zilox', 'floor', 1000, floor, n)).toThrow(/Wristband/);
+    expect(L.enter(a, 'zilox', 'staff', door, false, n)).toMatchObject({ pass: 'staff', paid: 0 }); expect(wallet(a).cash).toBe(c0);
+    expect(() => L.buyDrink(a, floor, n)).toThrow(/Wristband/); // staff band: here to work, not to drink
+    expect(L.enter(a, 'zilox', 'guest', door, false, n)).toMatchObject({ pass: 'guest', paid: COVER.zilox }); expect(wallet(a).cash).toBe(c0 - COVER.zilox);
+    expect(L.enter(a, 'zilox', 'guest', door, false, n + 6 * 120_000)).toMatchObject({ paid: 0 }); // still the same night at 5am
+    expect(L.buyDrink(a, floor, n).price).toBe(CLUB_RULES.zilox.bar);
+    expect(() => L.buyDrink(a, { x: CLUBS.find((c) => c.id === 'gele').floor.x, z: CLUBS.find((c) => c.id === 'gele').floor.z }, n)).toThrow(/Wristband/); // a band is per club
+    // by day the door is open
+    expect(L.enter(d2, 'gele', 'guest', { x: CLUBS[1].door.x, z: CLUBS[1].door.z }, false, atHour(15))).toMatchObject({ paid: 0 });
+  });
+
+  it('VIP: costs big, one table each, the name is on it, bottles for the host only, the table frees itself', async () => {
+    const host = await mk('Table Tunde'); const guest = await mk('Guest Gbenga');
+    await put(host, Z.floor.x, Z.floor.z); await put(guest, Z.floor.x + 1, Z.floor.z);
+    K().admit(host.accountId, 'zilox', 'guest'); K().admit(guest.accountId, 'zilox', 'guest');
+    const t1 = Z.vip[0].id, t2 = Z.vip[1].id;
+    expect((await host.c.act('club.vip', { club: 'zilox', table: t1 })).ok).toBe(false); // broke
+    s.api.economy.adjust(host.accountId, 100_000, VIP_PRICE.zilox + BOTTLE_PRICE.zilox, 'test'); const w0 = wallet(host.accountId);
+    const r = await host.c.act('club.vip', { club: 'zilox', table: t1 }); expect(r.err ?? 'ok').toBe('ok');
+    expect(r.club.vip[t1]).toMatchObject({ name: 'Table Tunde' }); expect(r.club.vip[t1].until).toBeGreaterThan(Date.now() + (VIP_MIN - 1) * 60_000);
+    const w1 = wallet(host.accountId); expect(w0.cash + w0.bank - (w1.cash + w1.bank)).toBe(VIP_PRICE.zilox); expect(w1.cash).toBe(0); // cash first, then bank
+    await guest.c.until(() => guest.c.msgs.some((m) => m.t === 'clubfx' && m.kind === 'vip' && m.name === 'Table Tunde'));
+    s.api.economy.adjust(guest.accountId, 0, VIP_PRICE.zilox, 'test');
+    const taken = await guest.c.act('club.vip', { club: 'zilox', table: t1 }); expect(taken.ok).toBe(false); expect(taken.err).toMatch(/Table Tunde/);
+    expect((await host.c.act('club.vip', { club: 'zilox', table: t2 })).err).toMatch(/already have a table/);
+    expect((await guest.c.act('club.bottle', { club: 'zilox' })).ok).toBe(false); // not your table
+    const L = K().live.get('zilox')!; L.vip[t1].lastBottle -= 60_000;
+    const b = await host.c.act('club.bottle', { club: 'zilox' }); expect(b.err ?? 'ok').toBe('ok'); expect(b.bottles).toBe(2);
+    expect((await host.c.act('club.bottle', { club: 'zilox' })).err).toMatch(/never finish/);
+    await guest.c.until(() => guest.c.msgs.some((m) => m.t === 'clubfx' && m.kind === 'bottle'));
+    L.vip[t1].until = Date.now() - 1; tick(); expect(K().view('zilox').vip![t1]).toBeUndefined();
+    expect((await guest.c.act('club.vip', { club: 'zilox', table: t1 })).err ?? 'ok').toBe('ok');
+    host.c.close(); guest.c.close();
   }, 20000);
 });

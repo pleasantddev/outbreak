@@ -130,6 +130,9 @@ export class Hub implements OnlineApi {
       const r = k.place(ev.club as any); void r;
       this.broadcast(`${ev.name} don shut down ${ev.club.toUpperCase()}! Drinks are free for everybody inside for the next hour or so.`, 'Lagos Nightlife');
     });
+    // a table booked or a bottle on its way: everybody in that room sees the sparklers
+    const roomFx = (kind: 'vip' | 'bottle') => (ev: { club: string; table: string; name: string }) => { for (const c of this.conns.values()) if (k.inClub(ev.club as any, this.clubPos(c))) this.send(c, { t: 'clubfx', kind, ...ev } as any); };
+    k.on('vip', roomFx('vip')); k.on('bottle', roomFx('bottle'));
     k.on('ended', (acct: string, club: string, job: string, earned: number) => this.toast(acct, job === 'dj' ? 'Off the decks' : 'Off the stage', `You left your post at ${club.toUpperCase()}. This shift paid ₦${Math.round(earned).toLocaleString('en-NG')}.`));
     k.on('note', (acct: string, title: string, body: string) => { this.toast(acct, title, body); });
   }
@@ -550,11 +553,10 @@ export class Hub implements OnlineApi {
         case 'club.play': ok({ club: this.clubsOrThrow().play(id, m.club, m.track) }); break;
         case 'club.spray': ok({ spray: this.clubsOrThrow().spray(id, c.profile.name, m.club, m.to, m.amount, this.clubPos(c)), ...this.walletOf(c) }); break;
         case 'club.shutdown': ok({ club: this.clubsOrThrow().shutdown(id, c.profile.name, m.club, this.clubPos(c)), ...this.walletOf(c) }); break;
-        case 'club.bar': {
-          const k = this.clubsOrThrow(); const where = k.whereIs(this.clubPos(c)); if (!where) throw new HttpError(400, 'Find the bar inside a club.');
-          const price = k.barPrice(where); if (price) { if (this.econ.wallet(id).cash < price) throw new HttpError(402, 'Not enough cash for a drink.', { code: 'broke' }); this.econ.adjust(id, -price, 0, 'club.bar', { note: where }); }
-          ok({ price, ...this.walletOf(c) }); break;
-        }
+        case 'club.bar': { const r = this.clubsOrThrow().buyDrink(id, this.clubPos(c)); ok({ price: r.price, ...this.walletOf(c) }); break; }
+        case 'club.enter': ok({ ...this.clubsOrThrow().enter(id, m.club, m.kind, this.clubPos(c), !!(c as any).stripped), ...this.walletOf(c) }); break;
+        case 'club.vip': ok({ club: this.clubsOrThrow().bookVip(id, c.profile.name, m.club, m.table, this.clubPos(c)), ...this.walletOf(c) }); break;
+        case 'club.bottle': ok({ ...this.clubsOrThrow().bottle(id, m.club, this.clubPos(c)), ...this.walletOf(c) }); break;
         case 'club.crate': { const k = this.clubsOrThrow(); const cl = typeof m.club === 'string' && ['zilox', 'gele', 'orun'].includes(m.club) ? m.club as 'zilox' : 'zilox'; ok({ list: k.crate(cl), mine: k.mine(id) }); break; }
         case 'songs.mine': ok({ list: this.clubsOrThrow().mine(id) }); break;
         case 'songs.remove': ok({ list: this.clubsOrThrow().remove(id, m.id) }); break;

@@ -1,7 +1,9 @@
 // The three parody clubs in the open world (world/clubs.ts builds them): work the decks and play from a Naija crate
 // streamed from Audius, cleared player songs and our own house grooves; work a pole stage (athletic, clothed, paid by
 // the house); buy a drink; spray money on whoever is working; shut the whole club down. The Clubs phone app shows what
-// is on tonight, and My Music lets you upload songs you own and pay to put them in club rotation. Online the server
+// is on tonight, and My Music lets you upload songs you own and pay to put them in club rotation. At night a bouncer
+// works every door: cover for a wristband, staff walk in free to work, nobody gets in wearing underwear. VIP tables
+// come with bottle service and your name on the table. Online the server
 // decides everything (server/src/clubs.ts); offline the same numbers run on the save so single player still works.
 import * as THREE from 'three';
 import type { GameCtx, GameSystem, GoalPoint } from './registry';
@@ -18,6 +20,7 @@ import { clubMix } from './leisure/sfx';
 import {
   AUDIUS_APP, AUDIUS_QUERIES, CLUB_RULES, DECK_REACH, HOUSE_SET, POLE_REACH, PROMO_DAYS, SHUTDOWN_MIN, SONG_MAX_BYTES, SONG_MAX_SECS, SONG_MIN_SECS, SPRAY_NOTES,
   clubHours, dayCap, isClubNight, isClub, promoQuote, shiftPay, type ClubId, type ClubTrack,
+  BOTTLE_GAP_MS, BOTTLE_PRICE, COVER, DRESS_CODE, NO_BAND, VIP_MIN, VIP_PRICE, coverFor, nightOf, type PassKind,
 } from '../net/clubs';
 
 interface Crate { src: ClubTrack['src']; id: string; title: string; artist: string; secs: number; promo?: boolean; owner?: string | null }
@@ -58,10 +61,14 @@ class ClubsLife {
   private seenShutdown = new Set<string>(); private payT = 0; private tickT = 0; private app: { s: 'home' } | { s: 'music' } = { s: 'home' }; private said = '';
   private upload: { file: File | null; title: string; artist: string; attest: boolean; busy: boolean } = { file: null, title: '', artist: '', attest: false, busy: false };
   private promoPick = new Map<string, { club: ClubId | 'all'; days: number }>();
+  /** wristbands this Lagos night, online as the server said, offline on the save */
+  private bands = new Map<string, PassKind>();
+  private fading: { a: HTMLAudioElement; v: number } | null = null; private fadeIn = 1; private baseVol = 0;
+  private bounced = 0; private bouncers = new Map<ClubId, any>();
   constructor(private ctx: GameCtx) {}
   get life() { return lifeSystem.api; }
   /** the offline save: shifts paid today and a DJ's last song */
-  private get S(): { paid: Record<string, number>; track: Record<string, ClubTrack | null> } { return ((this.ctx.save as any).clubs ??= { paid: {}, track: {} }); }
+  private get S(): { paid: Record<string, number>; track: Record<string, ClubTrack | null>; bands?: Record<string, PassKind>; vip?: Record<string, { club: ClubId; table: string; until: number; last: number }> } { return ((this.ctx.save as any).clubs ??= { paid: {}, track: {} }); }
   private now() { return net.active ? net.epochNow : Date.now(); }
 
   init() {
@@ -79,6 +86,7 @@ class ClubsLife {
     net.on('welcome', (w: any) => take(w?.clubs));
     net.on('club', (m: any) => { if (m?.club && isClub(m.club.id)) { this.views.set(m.club.id, m.club); this.syncShift(); this.redraw(); } });
     net.on('spray', (m: any) => this.burst(m.club, m.toId, m.amount));
+    net.on('clubfx', (m: any) => { if (!isClub(m?.club)) return; const t = this.def(m.club).vip.find((v) => v.id === m.table); if (t) this.sparkle(m.club, t); if (m.kind === 'vip' && this.nearest()?.d! < 40) this.ctx.hud.toast(CLUB_RULES[m.club as ClubId].short, `${m.name} just took a VIP table. Bottles dey come.`, GRAD, 'msg', 3); });
     // two coloured lights follow you into whichever club you are in, so people on the floor are not black shapes
     for (let i = 0; i < 2; i++) { const l = new THREE.PointLight(0xffffff, 0, 24, 1.4); this.lamps.push(l); this.ctx.view.scene.add(l); }
   }
@@ -115,6 +123,8 @@ class ClubsLife {
         if (Math.hypot(me.x - c.door.x, me.z - c.door.z) < 6 && me.y < 10) out.push({ id: `club:${id}:up`, name: 'Lift', x: c.door.x, z: c.door.z, yaw: 0, actions: [], kind: 'object', reach: 3, verb: `Take the lift up to ${CLUB_RULES[id].short}`, open: () => void this.lift(c, true) });
         if (Math.hypot(me.x - c.lift.to.x, me.z - c.lift.to.z) < 6 && this.roofOk(c, me.y)) out.push({ id: `club:${id}:down`, name: 'Lift', x: c.lift.to.x, z: c.lift.to.z, y: c.lift.to.y, yaw: 0, actions: [], kind: 'object', reach: 2.5, verb: 'Take the lift down', open: () => void this.lift(c, false) });
       }
+      // the bouncer at the door (the ORUN one stands in the lobby by the lift)
+      if (Math.hypot(me.x - c.door.x, me.z - c.door.z) < 9 && me.y < 10) { const fee = this.coverNow(id); const b = this.band(id); out.push({ id: `club:${id}:door`, name: 'Bouncer', x: c.door.x, z: c.door.z, yaw: 0, actions: [], kind: 'object', reach: 6, verb: b === 'guest' ? 'Wristband on' : fee ? `Talk to the bouncer (cover ${naira(fee)})` : 'Talk to the bouncer', open: () => this.doorPanel(id) }); }
       if (Math.hypot(me.x - c.floor.x, me.z - c.floor.z) > 30 || !this.roofOk(c, me.y)) continue;
       const v = this.views.get(id)!; const onShift = this.shift?.club === id;
       out.push({ id: `club:${id}:dj`, name: 'DJ booth', x: c.dj.x, z: c.dj.z, y: c.dj.y, yaw: c.dj.yaw, actions: [], kind: 'object', reach: DECK_REACH,
@@ -124,17 +134,117 @@ class ClubsLife {
         out.push({ id: `club:${id}:${p.id}`, name: 'Pole stage', x: p.x, z: p.z, y: p.y, yaw: p.yaw, actions: [], kind: 'object', reach: POLE_REACH,
           verb: me2 ? 'Step off the stage' : w && w.id !== mine ? `${w.name} is on this stage` : 'Work the pole stage (paid shift)', open: () => void (me2 ? this.leave() : this.pole(id, p.id)) });
       }
+      const vip = this.vipOf(id); const mineT = this.myTable(id);
+      for (const t of c.vip) {
+        const held = vip[t.id]; const me3 = mineT === t.id;
+        out.push({ id: `club:${id}:${t.id}`, name: 'VIP table', x: t.x, z: t.z, y: t.y, yaw: t.yaw, actions: [], kind: 'object', reach: 2.6,
+          verb: me3 ? `Order a bottle (${short(BOTTLE_PRICE[id])})` : held ? `Reserved for ${held.name}` : mineT ? 'You have a table already' : `Book this VIP table (${short(VIP_PRICE[id])})`,
+          open: () => void (me3 ? this.bottle(id) : held || mineT ? null : this.bookVip(id, t.id)) });
+      }
       const bar = this.barPrice(id);
       out.push({ id: `club:${id}:bar`, name: 'Bar', x: c.bar.x, z: c.bar.z, y: c.bar.y, yaw: c.bar.yaw, actions: [], kind: 'object', reach: 3, verb: bar ? `Buy a drink (${naira(bar)})` : 'Free drink tonight', open: () => void this.drink(id) });
       out.push({ id: `club:${id}:floor`, name: 'Dance floor', x: c.floor.x, z: c.floor.z, y: c.floor.y, yaw: c.floor.yaw, actions: [], kind: 'object', reach: Math.max(c.floor.w, c.floor.d) / 2, verb: 'Spray money / shut it down', open: () => this.sprayPanel(id) });
     }
     return out;
   }
+  // ------------------------------------------------------------------------------------------ the door
+  private night() { return nightOf(net.active ? clubHours(this.now()) : this.ctx.view.atmo.hour); }
+  private shutNow(id: ClubId) { const v = this.views.get(id); return !!v?.shutdown && v.shutdown.until > this.now(); }
+  /** cover at the door right now: the server's rule on the shared clock online, the local clock offline */
+  coverNow(id: ClubId) { return coverFor(id, net.active ? clubHours(this.now()) : this.ctx.view.atmo.hour, this.shutNow(id)); }
+  band(id: ClubId): PassKind | null { const k = `${id}:${this.night()}`; return net.active ? this.bands.get(k) ?? null : this.S.bands?.[k] ?? null; }
+  private setBand(id: ClubId, kind: PassKind) { const k = `${id}:${this.night()}`; if (net.active) this.bands.set(k, kind); else { const b = (this.S.bands ??= {}); for (const x of Object.keys(b)) if (!x.endsWith(`:${this.night()}`)) delete b[x]; if (b[k] !== 'guest') b[k] = kind; } }
+  /** in here as a paying guest (or the door is open anyway) */
+  guest(id: ClubId) { return this.coverNow(id) === 0 || this.band(id) === 'guest'; }
+  private canEnter(id: ClubId) { return this.coverNow(id) === 0 || !!this.band(id) || this.shift?.club === id; }
+  private stripped() { return !!(this.ctx.save as any).body?.stripped; }
+  /** local frame of a ground club: u across, v front (door side, negative) to back */
+  private local(c: ClubDef, x: number, z: number) { const fx = -Math.sin(c.yaw), fz = -Math.cos(c.yaw); const dx = x - c.x, dz = z - c.z; return { u: dx * fz - dz * fx, v: dx * fx + dz * fz }; }
+  /** a step outside the door, facing the club */
+  private outside(c: ClubDef) { const dx = c.door.x - c.inside.x, dz = c.door.z - c.inside.z; const L = Math.hypot(dx, dz) || 1; return { x: c.door.x + (dx / L) * 2.6, z: c.door.z + (dz / L) * 2.6, yaw: Math.atan2(-dx, -dz) }; }
+  private doorPanel(id: ClubId) {
+    const R = CLUB_RULES[id]; const fee = this.coverNow(id); const have = this.band(id);
+    const o = new Overlay(this.ctx, { title: `${R.short} door`, sub: fee ? `Cover tonight: ${naira(fee)} cash. ${naira(this.ctx.sim.cash)} on you.` : this.shutNow(id) ? 'Somebody shut the club down. The door is free tonight.' : 'The door is open. Cover starts at 9pm.', width: 420 });
+    const line = h('div', { style: 'font-size:13px;line-height:1.45;color:var(--mut);margin-bottom:10px', text: have === 'guest' ? 'You have a wristband. Go in and enjoy.' : this.stripped() ? DRESS_CODE : fee ? 'Bouncer: "Wristband na for the night. You fit come out come back, nobody go charge you again."' : 'Bouncer: "Enter, the place never full yet."' });
+    o.body.append(line);
+    const row = h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' });
+    if (have !== 'guest' && fee) row.append(h('button', { class: 'fk-btn green', text: `Pay cover (${naira(fee)})`, onclick: () => { o.close(); void this.enter(id, 'guest'); } }));
+    if (!have && fee) row.append(h('button', { class: 'fk-btn ghost', text: 'I am here to work (staff)', onclick: () => { o.close(); void this.enter(id, 'staff'); } }));
+    row.append(h('button', { class: 'fk-btn ghost', text: 'Close', onclick: () => o.close() }));
+    o.body.append(row); o.open();
+  }
+  private async enter(id: ClubId, kind: PassKind) {
+    if (net.active) { const r = await this.act('club.enter', { club: id, kind }); if (!r) return false; this.setBand(id, r.pass); if (r.paid) this.ctx.hud.toast(CLUB_RULES[id].short, `Wristband on. ${naira(r.paid)} at the door.`, GRAD, 'cash', 3); else this.ctx.hud.toast(CLUB_RULES[id].short, kind === 'staff' ? 'Staff band on. The decks and the stages are inside.' : 'Wristband on.', GRAD, 'msg', 3); return true; }
+    if (this.stripped()) { this.ctx.hud.toast('Bouncer', DRESS_CODE, 'var(--red)', 'msg', 4); return false; }
+    const fee = kind === 'staff' ? 0 : this.coverNow(id);
+    if (fee && !spend(this.ctx, fee)) { this.ctx.hud.toast('Bouncer', `Cover is ${naira(fee)}, cash. Go to the ATM first.`, 'var(--red)', 'cash', 3.5); return false; }
+    this.setBand(id, kind); this.ctx.hud.toast(CLUB_RULES[id].short, fee ? `Wristband on. ${naira(fee)} at the door.` : kind === 'staff' ? 'Staff band on. The decks and the stages are inside.' : 'Wristband on.', GRAD, fee ? 'cash' : 'msg', 3);
+    return true;
+  }
+  /** a server refusal that means "go to the door": open the door panel instead of a dead end */
+  private noBand(r: any, id: ClubId) { if (r?.code === 'band' || String(r?.err ?? '').startsWith('Bouncer: "Wristband')) { this.doorPanel(id); return true; } return false; }
+  /** the soft gate: walk through a ground club's door at night without a band and the bouncer walks you back out */
+  private gate() {
+    const me = this.ctx.sim.local.pos; if (this.ctx.sim.local.vehicle || me.y > 4) return;
+    for (const c of CLUBS) {
+      if (!isClub(c.id) || c.kind === 'rooftop') continue; const id = c.id as ClubId;
+      const { u, v } = this.local(c, me.x, me.z); if (Math.abs(u) > c.w / 2 || v < -c.d / 2 + 0.6 || v > c.d / 2) continue;
+      const ok = this.canEnter(id) && !(this.stripped() && !this.band(id) && this.coverNow(id) > 0);
+      if (ok) continue;
+      const o = this.outside(c); this.place(o.x, 0.1, o.z, o.yaw);
+      if (performance.now() - this.bounced > 4000) { this.bounced = performance.now(); this.ctx.hud.toast('Bouncer', this.stripped() ? DRESS_CODE : NO_BAND, 'var(--red)', 'msg', 3.5); this.doorPanel(id); }
+    }
+  }
+  /** a bouncer in black at every door at night (and in the ORUN lobby) */
+  private doormen() {
+    const me = this.ctx.sim.local.pos; const hour = this.ctx.view.atmo.hour; const on = isClubNight(hour) || hour >= 20;
+    for (const c of CLUBS) {
+      if (!isClub(c.id)) continue; const id = c.id as ClubId; const near = on && Math.hypot(me.x - c.door.x, me.z - c.door.z) < 70 && me.y < 20; const b = this.bouncers.get(id);
+      if (!near) { if (b) { this.ctx.sim.removeActor(b); this.bouncers.delete(id); } continue; }
+      if (b) continue;
+      const o = this.outside(c); const dx = c.door.x - o.x, dz = c.door.z - o.z; const L = Math.hypot(dx, dz) || 1; const side = 1.9; const px = o.x - (dz / L) * side, pz = o.z + (dx / L) * side;
+      const lk = this.ctx.sim.randomLook(); Object.assign(lk, { body: 'male', top: 'tee', topPattern: 'solid', topColor: '#0b0b0d', pants: 'solid', pantsColor: '#0b0b0d', head: 'none' });
+      this.bouncers.set(id, this.spawn(px, 0, pz, o.yaw + Math.PI, { clip: 'Idle_Loop' }, lk, 'Bouncer'));
+    }
+  }
+
+  // ------------------------------------------------------------------------------------------ VIP
+  private vipOf(id: ClubId) { if (net.active) return this.views.get(id)?.vip ?? {}; const out: Record<string, { id: string; name: string; until: number }> = {}; const t = this.S.vip?.[id]; if (t && t.until > Date.now()) out[t.table] = { id: 'me', name: this.ctx.profile?.name ?? 'You', until: t.until }; return out; }
+  private myTable(id: ClubId) { const mine = net.account?.id ?? 'me'; return Object.entries(this.vipOf(id)).find(([, t]) => t.id === mine)?.[0] ?? null; }
+  private async bookVip(id: ClubId, table: string) {
+    const R = CLUB_RULES[id]; const price = VIP_PRICE[id];
+    if (net.active) { const r: any = await net.act('club.vip', { club: id, table }); if (!r?.ok) { if (!this.noBand(r, id)) this.ctx.hud.toast('VIP', r?.err ?? 'That did not work.', 'var(--red)', 'msg', 3.5); return; } this.views.set(id, r.club); }
+    else {
+      if (!this.guest(id)) { this.doorPanel(id); return; }
+      if (this.myTable(id)) { this.ctx.hud.toast('VIP', `You already have a table at ${R.short}.`, 'var(--red)', 'msg', 3); return; }
+      if (!spend(this.ctx, price)) { this.ctx.hud.toast('VIP', `A VIP table at ${R.short} is ${naira(price)}.`, 'var(--red)', 'cash', 3.5); return; }
+      (this.S.vip ??= {})[id] = { club: id, table, until: Date.now() + VIP_MIN * 60_000, last: Date.now() };
+    }
+    const t = this.def(id).vip.find((v) => v.id === table)!; this.sit(t); this.sparkle(id, t);
+    const n = this.life?.needs; if (n) { n.v.social = Math.min(100, n.v.social + 20); n.v.fun = Math.min(100, n.v.fun + 15); addMoodlet(n, 'vip', 'Big man at the VIP table', 18, 6); }
+    this.ctx.hud.title('VIP TABLE', `${R.short} · your name is on the table for ${VIP_MIN} minutes. First bottle is on the house.`, 3.5);
+  }
+  private async bottle(id: ClubId) {
+    const R = CLUB_RULES[id]; const price = BOTTLE_PRICE[id]; const table = this.myTable(id); if (!table) return;
+    if (net.active) { const r = await this.act('club.bottle', { club: id }); if (!r) return; }
+    else {
+      const t = this.S.vip![id]!; if (Date.now() - t.last < BOTTLE_GAP_MS) { this.ctx.hud.toast('VIP', 'Waiter: "Your last bottle never finish, oga."', 'var(--red)', 'msg', 3); return; }
+      if (!spend(this.ctx, price)) { this.ctx.hud.toast('VIP', `A bottle here is ${naira(price)}.`, 'var(--red)', 'cash', 3); return; } t.last = Date.now();
+    }
+    this.sparkle(id, this.def(id).vip.find((v) => v.id === table)!);
+    const n = this.life?.needs; if (n) { n.v.fun = Math.min(100, n.v.fun + 10); n.v.social = Math.min(100, n.v.social + 10); n.v.bladder = Math.max(0, n.v.bladder - 12); addMoodlet(n, 'bottle', 'Bottle service', 10, 4); }
+    this.ctx.hud.toast(R.short, `Bottle on the way with sparklers. ${naira(price)}.`, GRAD, 'cash', 3);
+  }
+  /** sit on the sofa behind your table */
+  private sit(t: { x: number; y: number; z: number; yaw: number }) { const fx = Math.sin(t.yaw), fz = Math.cos(t.yaw); this.place(t.x - fx * 0.45, t.y + 0.02, t.z - fz * 0.45, t.yaw); (this.ctx.sim.local as any).act = { clip: 'Sitting_Idle_Loop', yaw: t.yaw }; }
+
   private barPrice(id: ClubId) { const v = this.views.get(id); return v?.shutdown && v.shutdown.until > this.now() ? 0 : CLUB_RULES[id].bar; }
   private place(x: number, y: number, z: number, yaw: number) {
     const me = this.ctx.sim.local; me.pos = { x, y, z }; me.vy = 0; me.yaw = yaw; me.body.setTranslation({ x, y: y + 0.9, z }, true); this.ctx.view.cam.yaw = yaw;
   }
   private async lift(c: ClubDef, up: boolean) {
+    const id = c.id as ClubId;
+    if (up && (!this.canEnter(id) || (this.stripped() && this.coverNow(id) > 0))) { this.ctx.hud.toast('Bouncer', this.stripped() ? DRESS_CODE : NO_BAND, 'var(--red)', 'msg', 3.5); this.doorPanel(id); return; }
     if (net.active) await net.act('tp');
     const L = c.lift!; if (up) { this.place(L.to.x, L.to.y + 0.1, L.to.z, L.to.yaw); this.ctx.hud.title(CLUB_RULES[c.id as ClubId].short, '21 floors up. Lagos at your feet.', 2.5); }
     else this.place(c.door.x, 0.05, c.door.z + 1.6, 0);
@@ -179,12 +289,14 @@ class ClubsLife {
   // ------------------------------------------------------------------------------------------ the bar, spraying, shutdowns
   private async drink(id: ClubId) {
     let price = this.barPrice(id);
-    if (net.active) { const r = await this.act('club.bar'); if (!r) return; price = r.price; }
+    if (net.active) { const r: any = await net.act('club.bar'); if (!r?.ok) { if (!this.noBand(r, id)) this.ctx.hud.toast('Club', r?.err ?? 'That did not work.', 'var(--red)', 'msg', 3.5); return; } price = r.price; }
+    else if (!this.guest(id)) { this.doorPanel(id); return; }
     else if (price && !spend(this.ctx, price)) { this.ctx.hud.toast('Bar', `A drink here is ${naira(price)}.`, 'var(--red)', 'cash', 3); return; }
     const n = this.life?.needs; if (n) { n.v.fun = Math.min(100, n.v.fun + 8); n.v.social = Math.min(100, n.v.social + 6); n.v.bladder = Math.max(0, n.v.bladder - 10); addMoodlet(n, 'clubdrink', price ? 'Drinks at the club' : 'Free drinks, somebody shut it down', price ? 4 : 8, 3); }
     this.ctx.hud.toast('Bar', price ? `Chilled one for ${naira(price)}. Enjoy.` : 'On the big boss tonight. Cheers!', GRAD, 'cash', 2.5);
   }
   private sprayPanel(id: ClubId) {
+    if (!this.guest(id)) { this.ctx.hud.toast('Bouncer', NO_BAND, 'var(--red)', 'msg', 3); this.doorPanel(id); return; }
     const v = this.views.get(id)!; const c = this.def(id); const R = CLUB_RULES[id]; const mine = net.account?.id ?? 'me';
     type T = { id: string; name: string; what: string };
     const targets: T[] = [];
@@ -283,16 +395,25 @@ class ClubsLife {
     if (!t || !key || this.failed.has(key)) { this.stopAudio(); clubMix(t ? vol : 0); return; }
     clubMix(0);
     if (this.audioKey !== key) {
-      this.stopAudio(); const a = new Audio(); a.preload = 'auto'; a.crossOrigin = 'anonymous'; this.audio = a; this.audioKey = key;
+      // the DJ mixes: the old song fades out under the new one over a couple of seconds
+      if (this.audio && !this.audio.paused) { this.dropFade(); this.fading = { a: this.audio, v: this.audio.volume }; this.audio = null; this.audioKey = ''; this.fadeIn = 0; } else { this.stopAudio(); this.fadeIn = 1; }
+      const a = new Audio(); a.preload = 'auto'; a.crossOrigin = 'anonymous'; this.audio = a; this.audioKey = key;
       a.onerror = () => { this.failed.add(key); this.stopAudio(); };
       a.src = t.src === 'audius' ? `https://api.audius.co/v1/tracks/${t.id}/stream?app_name=${AUDIUS_APP}` : this.songUrl(t.id);
     }
-    const a = this.audio!; a.volume = Math.min(1, vol * 0.9);
+    const a = this.audio!; this.baseVol = Math.min(1, vol * 0.9); a.volume = this.baseVol * this.fadeIn;
     const want = Math.max(0, (this.now() - t.at) / 1000);
     if (a.readyState >= 1 && Number.isFinite(a.duration) && want < a.duration && Math.abs(a.currentTime - want) > 4) { try { a.currentTime = want; } catch { /* not seekable yet */ } }
     if (a.paused) void a.play().catch(() => { /* waits for a tap */ });
   }
-  private stopAudio() { if (this.audio) { this.audio.pause(); this.audio.removeAttribute('src'); this.audio.load(); this.audio = null; } this.audioKey = ''; }
+  private static FADE = 2.5;
+  private dropFade() { const f = this.fading; if (!f) return; f.a.pause(); f.a.removeAttribute('src'); f.a.load(); this.fading = null; }
+  /** crossfade: the outgoing song ramps down while the incoming one ramps up */
+  private fade(dt: number) {
+    if (this.fadeIn < 1) { this.fadeIn = Math.min(1, this.fadeIn + dt / ClubsLife.FADE); if (this.audio) this.audio.volume = this.baseVol * this.fadeIn; }
+    const f = this.fading; if (!f) return; f.v -= dt / ClubsLife.FADE; if (f.v <= 0) { this.dropFade(); return; } f.a.volume = Math.max(0, Math.min(1, f.v));
+  }
+  private stopAudio() { this.dropFade(); if (this.audio) { this.audio.pause(); this.audio.removeAttribute('src'); this.audio.load(); this.audio = null; } this.audioKey = ''; }
 
   // ------------------------------------------------------------------------------------------ the room: NPC crowd, a house DJ, dancers, money in the air
   private crowd() {
@@ -336,6 +457,17 @@ class ClubsLife {
       this.fx.group.add(m); this.fx.notes.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * 0.6, -0.6 - Math.random() * 0.5, (Math.random() - 0.5) * 0.6), t: 2.4 + Math.random() });
     }
   }
+  /** sparklers rising off a VIP table: a bottle is on its way */
+  sparkle(id: ClubId, t: { x: number; y: number; z: number }) {
+    const me = this.ctx.sim.local.pos; if (Math.hypot(me.x - t.x, me.z - t.z) > 70) return; void id;
+    if (!this.fx) { const g = new THREE.Group(); this.ctx.view.scene.add(g); this.fx = { group: g, notes: [] }; }
+    const geo = new THREE.PlaneGeometry(0.06, 0.06);
+    for (let i = 0; i < 40 && this.fx.notes.length < 260; i++) {
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: i % 3 ? 0xffd25a : 0xfff4c2, side: THREE.DoubleSide, toneMapped: false }));
+      m.position.set(t.x + (Math.random() - 0.5) * 0.5, t.y + 0.9, t.z + (Math.random() - 0.5) * 0.5);
+      this.fx.group.add(m); this.fx.notes.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * 0.9, 1.2 + Math.random() * 1.4, (Math.random() - 0.5) * 0.9), t: 0.9 + Math.random() * 0.8 });
+    }
+  }
   private fxStep(dt: number) {
     const F = this.fx; if (!F) return;
     for (const p of F.notes) { p.t -= dt; p.m.position.addScaledVector(p.v, dt); p.m.rotation.x += dt * 4; p.m.rotation.y += dt * 3; p.v.x = Math.sin(p.t * 5) * 0.4; }
@@ -346,18 +478,20 @@ class ClubsLife {
   frame(dt: number) {
     this.fxStep(dt); this.tickT -= dt;
     if (this.tickT <= 0) {
-      this.tickT = 0.5; this.music(); this.crowd(); this.light();
+      this.tickT = 0.5; this.music(); this.crowd(); this.light(); this.doormen();
       // a shutdown in the club you are in: the room goes up
       const near = this.nearest();
       if (near && near.d < 30) { const v = this.views.get(near.c.id as ClubId); const sh = v?.shutdown; if (sh && sh.until > this.now() && !this.seenShutdown.has(`${v!.id}:${sh.until}`)) { this.seenShutdown.add(`${v!.id}:${sh.until}`); this.ctx.hud.title(`${CLUB_RULES[v!.id].short} DON SHUT DOWN`, `${sh.name} bought the whole club. Drinks are free.`, 4); this.burst(v!.id, 'floor', 100000); } }
       if (!net.active) for (const v of this.views.values()) if (v.shutdown && v.shutdown.until < Date.now()) v.shutdown = null;
     }
+    this.gate(); this.fade(dt);
     this.payLocal(dt);
     // keep the shift pose: the DJ behind the decks, the dancer on the stage
     const s = this.shift; if (s) { const me = this.ctx.sim.local as any; if (!me.act) me.act = s.job === 'dj' ? { clip: 'Idle_Rail_Loop', yaw: me.yaw } : { clip: 'Dance_Loop', speed: 1.1, yaw: me.yaw }; }
   }
   /** moving ends a pole shift (you walked off the stage); the DJ can turn and wave but walking off ends it too */
   filterCommand(c: { mx: number; mz: number; jump: boolean }) {
+    const me = this.ctx.sim.local as any; if (!this.shift && me.act?.clip === 'Sitting_Idle_Loop' && (this.nearest()?.d ?? 99) < 40 && (Math.abs(c.mx) + Math.abs(c.mz) > 0.3 || c.jump)) me.act = undefined;
     if (!this.shift || this.panel?.isOpen) return;
     if (Math.abs(c.mx) + Math.abs(c.mz) > 0.3 || c.jump) void this.leave();
   }
@@ -373,10 +507,10 @@ class ClubsLife {
       const sh = v.shutdown && v.shutdown.until > this.now() ? v.shutdown : null; const workers = Object.values(v.poles).length;
       out.push(`<div class="row"><b>${esc(R.name)}${sh ? ' · SHUT DOWN' : ''}</b>${esc(c.tag.split(',')[0])}<br>
         ${t ? `Now playing: ${esc(t.title)} by ${esc(t.artist)}<br>` : ''}${v.dj ? `On the decks: ${esc(v.dj.name)}. ` : 'House DJ on the decks. '}${workers ? `${workers} on the stages. ` : ''}${v.crowd ? `${v.crowd} players inside.` : ''}
-        ${sh ? `<br>${esc(sh.name)} bought out the club. Drinks free till ${new Date(sh.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.` : `<br>Drinks ${naira(R.bar)}. Shut it down for ${short(R.shutdown)}.`}
+        ${sh ? `<br>${esc(sh.name)} bought out the club. Drinks free till ${new Date(sh.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.` : `<br>Cover ${naira(COVER[c.id as ClubId])} from 9pm. Drinks ${naira(R.bar)}. VIP table ${short(VIP_PRICE[c.id as ClubId])}. Shut it down for ${short(R.shutdown)}.`}${(() => { const n = Object.keys(this.vipOf(c.id as ClubId)).length; return n ? `<br>${n} VIP table${n > 1 ? 's' : ''} booked tonight.` : ''; })()}
         <br><button class="btn" data-cl="go:${c.id}">Take me there</button></div>`);
     }
-    out.push(`<div class="row"><b>Work the clubs</b>Take the decks or a pole stage at any club. The house pays by the minute, more when the room is full, and anybody can spray you. Pole stage work is athletic and the outfit stays on.</div>`);
+    out.push(`<div class="row"><b>Work the clubs</b>Take the decks or a pole stage at any club. The house pays by the minute, more when the room is full, and anybody can spray you. Pole stage work is athletic and the outfit stays on. At night, tell the bouncer you are staff and you walk in free.</div>`);
     out.push(`<div class="cell" data-cl="music"><div class="tx"><b>My Music</b><span>Upload your own songs and pay to get them into club rotation</span></div></div>`);
     return out.join('');
   }

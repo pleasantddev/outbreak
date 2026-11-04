@@ -85,3 +85,21 @@ export const HOUSE_SET = [
 /** where the Audius crate comes from: searches the DJ panel runs (the stream is Audius's, the artists chose to share it) */
 export const AUDIUS_QUERIES = ['afrobeats', 'amapiano', 'naija', 'afropop', 'afro house', 'lagos', 'highlife', 'alte', 'afro fusion', 'street pop'];
 export const AUDIUS_APP = 'HustleLife';
+
+// ------------------------------------------------------------------------------------------ the door and VIP
+/** cover at the door from 9pm, waived while somebody has the club shut down. Staff walk in free to work. */
+export const COVER: Record<ClubId, number> = { zilox: 10_000, gele: 5_000, orun: 8_000 };
+/** a VIP table holds this many real minutes (about two Lagos nights) and comes with a first bottle */
+export const VIP_MIN = 30;
+export const VIP_PRICE: Record<ClubId, number> = { zilox: 500_000, gele: 150_000, orun: 300_000 };
+export const BOTTLE_PRICE: Record<ClubId, number> = { zilox: 120_000, gele: 45_000, orun: 80_000 };
+export const BOTTLE_GAP_MS = 20_000;
+/** how close to the door you must be to talk to the bouncer (metres) */
+export const DOOR_REACH = 10;
+/** one Lagos night runs noon to noon, so a wristband bought at 11pm still works at 3am */
+export const nightOf = (hours: number) => Math.floor((hours - 12) / 24);
+export const coverFor = (club: ClubId, hours: number, shutdown: boolean) => (!isClubNight(hours) || shutdown ? 0 : COVER[club]);
+export type PassKind = 'guest' | 'staff';
+/** what the bouncer says to somebody in underwear */
+export const DRESS_CODE = 'Bouncer: "Ah ah, where your clothes? Go and dress, then come back."';
+export const NO_BAND = 'Bouncer: "Wristband first, my guy. Cover is at the door."';
