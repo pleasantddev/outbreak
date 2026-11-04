@@ -95,3 +95,5 @@
   network play (`node lan.mjs`, docs/LAN.md; same-origin pages join their server, LAN sign-in opens on Guest). The
   scheduled build shift is switched off at the founder's request (pause to talk); its last run pushed to branch
   shift-1104-0459 (clubs part 2) and is not merged.
+- 04 Nov 06:50 WAT (Version 12 published): `play` branch for the founder (orphan; built game, one-file server, launcher,
+  double-click files), rebuilt by `node tools/release-play.mjs --push`. Fixed: a brand-new player had no HUD after Play.

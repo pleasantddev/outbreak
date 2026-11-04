@@ -2,6 +2,10 @@
 
 One computer hosts the game. Everyone on the same Wi-Fi plays online on it from a phone or a laptop, with nothing to install.
 
+Just want to play? Use the `play` branch: `git clone -b play --depth 1 https://github.com/pleasantddev/outbreak.git hustlelife`,
+then double-click Play HustleLife. It is the built game and nothing else; its README has the rest. Rebuild it from here
+with `node tools/release-play.mjs --push`. The steps below are for running from the source on this branch.
+
 ## On the computer that hosts
 
 You need Node 22 or newer (the LTS from https://nodejs.org) and this repository on the `hustlelife` branch.
