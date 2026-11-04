@@ -8,6 +8,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 /** server/ directory, whether running from src (tsx) or dist/server/src (compiled) */
 export const SERVER_DIR = resolve(here, existsSync(resolve(here, '../routes')) ? '..' : '../../../../server');
 export const REPO_DIR = resolve(SERVER_DIR, '..');
+/** files the server reads from the game: its public folder (world manifest, places, content seeds) and the shared data
+ * tables (power feeders, clubs, billboards). The play build sets both, since it ships the built game, not the sources. */
+export const PATHS = {
+  publicDir: process.env.HL_PUBLIC_DIR ?? resolve(REPO_DIR, 'v2/public'),
+  sharedData: process.env.HL_SHARED_DATA ?? resolve(REPO_DIR, 'v2/src/data'),
+};
 
 const env = process.env;
 const num = (k: string, d: number) => { const v = Number(env[k]); return Number.isFinite(v) && env[k] !== undefined && env[k] !== '' ? v : d; };
@@ -51,7 +57,7 @@ export function loadConfig(over: Partial<Config> = {}): Config {
     port: num('PORT', 8787), host: env.HOST ?? '0.0.0.0',
     dataDir, dbFile: env.DB_FILE ?? resolve(dataDir, 'hustlelife.db'),
     contentDir: env.CONTENT_DIR ?? resolve(dataDir, 'content'),
-    seedContentDir: env.SEED_CONTENT_DIR ?? resolve(REPO_DIR, 'v2/public/content'),
+    seedContentDir: env.SEED_CONTENT_DIR ?? resolve(PATHS.publicDir, 'content'),
     plotsFile: env.PLOTS_FILE ?? resolve(dataDir, 'plots.bin'),
     jwtSecret: '', tokenDays: num('TOKEN_DAYS', 30),
     tickHz: Math.max(5, Math.min(30, num('TICK_HZ', 15))), maxPlayers: num('MAX_PLAYERS', 500), interestRings: num('INTEREST_RINGS', 3), nearChatRadius: num('NEAR_CHAT_RADIUS', 60),

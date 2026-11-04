@@ -18,7 +18,10 @@ import { Clubs } from './clubs.ts';
 
 export interface Running { api: Api; http: Server; hub: Hub; cfg: Config; db: DB; port: number; routes: string[]; close(): Promise<void> }
 
-export async function startServer(over: Partial<Config> = {}): Promise<Running> {
+/** route plug-ins handed in directly (the single-file play build); otherwise every server/routes/*.ts is loaded from disk */
+export type RouteModules = Record<string, { register: (api: Api) => unknown }>;
+
+export async function startServer(over: Partial<Config> = {}, modules?: RouteModules): Promise<Running> {
   const cfg = loadConfig(over);
   const db = openDb(cfg.dbFile);
   const content = new ContentStore(cfg, log);
@@ -40,7 +43,9 @@ export async function startServer(over: Partial<Config> = {}): Promise<Running> 
     route: (m, p, h, o) => router.add(m, p, h, o), get: add('GET'), post: add('POST'), put: add('PUT'), patch: add('PATCH'), del: add('DELETE'),
   };
   if (cfg.adminEmail && cfg.adminPassword) { await accounts.ensureAdmin(cfg.adminEmail, cfg.adminPassword); log.info(`admin account ready: ${cfg.adminEmail}`); }
-  const routes = await loadRoutes(api, resolve(SERVER_DIR, 'routes'));
+  let routes: string[];
+  if (modules) { routes = []; for (const [name, m] of Object.entries(modules)) { await m.register(api); routes.push(name); } }
+  else routes = await loadRoutes(api, resolve(SERVER_DIR, 'routes'));
   log.info(`routes loaded: ${routes.join(', ')}`);
   const http = createHttp(api, router);
   hub.attach(http);

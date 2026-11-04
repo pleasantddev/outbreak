@@ -7,6 +7,7 @@ import { EventEmitter } from 'node:events';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
+import { PATHS } from './config.ts';
 import type { DB } from './db.ts';
 import { all, one, run } from './db.ts';
 import { HttpError } from './auth.ts';
@@ -40,7 +41,7 @@ export class Clubs extends EventEmitter {
   /** wristbands: `${acct}:${club}:${night}` -> guest (paid cover or came in free) or staff (here to work) */
   private passes = new Map<string, PassKind>();
   readonly dir: string;
-  constructor(private db: DB, private econ: Economy, private pay: Payments | null, dataDir: string, file = resolve(import.meta.dirname, '../../v2/src/data/clubs.json')) {
+  constructor(private db: DB, private econ: Economy, private pay: Payments | null, dataDir: string, file = resolve(PATHS.sharedData, 'clubs.json')) {
     super();
     this.dir = join(dataDir, 'songs'); mkdirSync(this.dir, { recursive: true });
     let raw: any[] = []; try { raw = JSON.parse(readFileSync(file, 'utf8')); } catch { raw = []; }

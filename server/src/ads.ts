@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
+import { PATHS } from './config.ts';
 import type { DB } from './db.ts';
 import { all, one, run } from './db.ts';
 import { HttpError } from './auth.ts';
@@ -44,7 +45,7 @@ export class Ads extends EventEmitter {
   private sightings = new Map<string, number>(); // `${ad}:${account}` -> last counted
   private lastFeed = '';
   readonly dir: string;
-  constructor(private db: DB, private pay: Payments, dataDir: string, boardsFile = resolve(import.meta.dirname, '../../v2/src/data/billboards.json')) {
+  constructor(private db: DB, private pay: Payments, dataDir: string, boardsFile = resolve(PATHS.sharedData, 'billboards.json')) {
     super();
     this.dir = join(dataDir, 'uploads'); mkdirSync(this.dir, { recursive: true });
     try { this.setBoards(JSON.parse(readFileSync(boardsFile, 'utf8'))); } catch { this.setBoards([]); }

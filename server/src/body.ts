@@ -9,6 +9,7 @@
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { PATHS } from './config.ts';
 import { randomInt } from 'node:crypto';
 import type { DB } from './db.ts';
 import { all, one, run } from './db.ts';
@@ -27,7 +28,7 @@ const J = <T>(s: string, d: T): T => { try { return JSON.parse(s) as T; } catch 
 const rand = () => randomInt(0, 2 ** 32) / 2 ** 32;
 
 /** the city's hospitals, clinics, chemists, opticians and markets from content/places.json, in world metres */
-export function loadPlaces(dir = resolve(import.meta.dirname, '../../v2/public')): Place[] {
+export function loadPlaces(dir = PATHS.publicDir): Place[] {
   try {
     const m = JSON.parse(readFileSync(resolve(dir, 'world/manifest.json'), 'utf8')); const o = m.origin;
     const kx = Math.cos((o.lat * Math.PI) / 180) * 111320, kz = 110574;

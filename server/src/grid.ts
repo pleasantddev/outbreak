@@ -4,12 +4,11 @@
 // admins can force any feeder or the whole grid. When the light changes, everybody hears about it.
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import { PATHS } from './config.ts';
 import { BAND_HOURS, GRID_OVERRIDE_HOURS, generation, gridState, scheduledOn, worldHours, type FeederDef, type GridState } from '../../v2/src/net/rules.ts';
 
-const here = dirname(fileURLToPath(import.meta.url));
-export const FEEDERS: FeederDef[] = JSON.parse(readFileSync(resolve(here, '../../v2/src/data/feeders.json'), 'utf8'));
+export const FEEDERS: FeederDef[] = JSON.parse(readFileSync(resolve(PATHS.sharedData, 'feeders.json'), 'utf8'));
 
 export class Grid extends EventEmitter {
   /** operator switches: hold until `until` (game hours) */
