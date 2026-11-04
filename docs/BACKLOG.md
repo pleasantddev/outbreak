@@ -80,7 +80,7 @@ players upload and attest they own).
 - [x] (05f83e8, 5f19029) Clubs: DJ booth (players DJ from a big Nigerian set list streamed from Audius plus CC tracks), song upload to
       your phone library and paid promotion into club rotation, pole dancer job (athletic, clothed, paid), club
       shutdown (book the club, spray money, the whole room knows), parody big clubs.
-- [ ] Clubs follow-ups (SHIFT). Check the Audius crate and streams in a real browser (the build sandbox cannot reach
+- [ ] Clubs follow-ups (SHIFT) (in progress: shift 04 Nov 01:00 UTC). Check the Audius crate and streams in a real browser (the build sandbox cannot reach
       api.audius.co, so the crate search and stream URL are written to Audius's public API but untested); ride the ORUN
       lift online (tp + rooftop deck collision is new); DJ mixing touches (crossfade, BPM); VIP tables in the open-world
       clubs; bouncer and entry fee; retire the old EUPHORIA interior or make it a fourth club.
