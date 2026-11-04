@@ -69,7 +69,9 @@ export function signInCard(net: NetClient, opts: { upgrade?: boolean; dismissibl
     document.body.appendChild(veil); stopKeys(veil);
     for (const ev of ['touchstart', 'touchmove', 'touchend']) veil.addEventListener(ev, (e) => e.stopPropagation(), { passive: true });
     const $ = <T extends HTMLElement>(id: string) => veil.querySelector('#' + id) as T;
-    let tab: 'in' | 'up' | 'guest' = opts.upgrade ? 'up' : 'in';
+    // on a game hosted on someone's own network, testers just want to play: open on Guest
+    let lanHost = false; try { lanHost = !!(window as any).__HL_SAME_ORIGIN__ && /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|[\w-]+\.local$)/.test(location.hostname); } catch { /* no location */ }
+    let tab: 'in' | 'up' | 'guest' = opts.upgrade ? 'up' : guestOk && lanHost ? 'guest' : 'in';
     const idEl = $<HTMLInputElement>('nt-id'), pwEl = $<HTMLInputElement>('nt-pw'), err = $('nt-err'), go = $<HTMLButtonElement>('nt-go');
     const paint = () => {
       veil.querySelectorAll('.nt-tabs button').forEach((b) => b.classList.toggle('on', (b as HTMLElement).dataset.t === (tab === 'up' && opts.upgrade ? 'up' : tab)));
@@ -78,6 +80,7 @@ export function signInCard(net: NetClient, opts: { upgrade?: boolean; dismissibl
       pwEl.autocomplete = tab === 'in' ? 'current-password' : 'new-password'; err.textContent = '';
     };
     veil.querySelectorAll('.nt-tabs button').forEach((b) => b.addEventListener('click', () => { tab = (b as HTMLElement).dataset.t as typeof tab; paint(); (tab === 'guest' ? go : idEl).focus(); }));
+    if (tab === 'guest') paint();
     const done = (r: 'ok' | 'cancel') => { veil.style.opacity = '0'; veil.style.transition = 'opacity .25s'; setTimeout(() => veil.remove(), 260); resolve(r); };
     $('nt-form').addEventListener('submit', async (e) => {
       e.preventDefault(); err.textContent = ''; go.disabled = true; const label = go.textContent; go.textContent = 'One second…';

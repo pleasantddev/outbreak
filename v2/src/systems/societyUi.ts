@@ -1,5 +1,7 @@
 // Society UI: the price ticker, the Market and Street phone apps, floating tags on people who know you, and the F prompt.
 import { registerPhoneApp } from '../ui/lifeHud';
+/** street prices for the Market app's last tab */
+export const streetPrices: { html: (() => string) | null; data: (() => { rows: { label: string; price: number; change: number; hist: number[] }[]; news: { when: string; text: string }[]; now: { label: string; area: string; left: string }[]; infl: number } | null) | null } = { html: null, data: null };
 import type { GameCtx } from './registry';
 import { RT } from './societyRuntime';
 import { ACT_NAMES, fullStory, nameOf, ST, type Citizen } from './societyModel';
@@ -47,6 +49,12 @@ export class SocietyUi {
     this.plates = document.createElement('div'); this.plates.id = 'soc-plates'; document.body.appendChild(this.plates);
     this.prompt = document.createElement('div'); this.prompt.id = 'soc-prompt'; document.body.appendChild(this.prompt);
     registerPhoneApp('Market', 'M4 19V9M10 19V5M16 19v-8M22 19H2M19 5l-3 3', 'linear-gradient(160deg,#49e08a,#16895a)', () => this.marketHtml());
+    streetPrices.html = () => this.marketHtml(); // the Market app (systems/exchange.ts) shows these under Street prices
+    streetPrices.data = () => {
+      const soc = RT.soc; if (!soc) return null; const E = soc.E;
+      return { rows: E.rows(), infl: E.infl - 1, news: E.news.slice(0, 6).map((n) => ({ when: clock(n.t), text: n.text })),
+        now: (RT.events?.now() ?? []).map((n) => ({ label: n.label, area: n.area, left: n.minsLeft > 90 ? Math.round(n.minsLeft / 60) + ' h left' : n.minsLeft + ' min left' })) };
+    };
     registerPhoneApp('Street', 'M7 11V7.5a1.5 1.5 0 0 1 3 0V11m0-4a1.5 1.5 0 0 1 3 0v4m0-3.5a1.5 1.5 0 0 1 3 0V12m0-2a1.5 1.5 0 0 1 3 0v4a7 7 0 0 1-7 7h-1a6 6 0 0 1-6-6v-3a1.5 1.5 0 0 1 3 0', 'linear-gradient(160deg,#ff6b7a,#c2273a)', () => this.streetHtml());
     registerPhoneApp('Contacts', '', '', () => this.contactsHtml(), 'append');
   }

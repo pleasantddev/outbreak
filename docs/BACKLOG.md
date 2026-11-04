@@ -5,6 +5,23 @@ unchecked item in their lane, builds it, tests it, ticks it here with the commit
 checkout), SPORTS (worktree hl-sports), IDEAS (worktree hl-look, the Sonnet teammate), SHIFT (scheduled cloud run: any
 unowned item, or finishing touches on a lead item).
 
+## Founder follow-ups (04 Nov 2026, 05:18 to 05:44)
+Verbatim keys: "screen goes blank when i press play", "the map isn't showing me the way there", "the market app looking
+like an actual trading app and let people be able to buy and sell stocks or something even invest in other player owned
+businesses", "fix the tire issues then let's work on how to test it within my network, i want to be able to start a local
+server on my pc and then have others on the network test it", "then pause development so we can talk".
+### LEAD
+- [x] (424371d) Blank screen after Play on the cheap rungs; waypoint routes load the streets on the way.
+- [x] Eko Exchange: 12 parody Lagos companies, prices from shared noise (client and server agree), real players' orders
+      push prices, 1% fee as a money sink; stakes in other players' shops (100 units, owner keeps 51, investors paid
+      from the till); Market app rebuilt as a dark trading app (Stocks, Shops, Portfolio, Street prices).
+- [x] Local network play: `node lan.mjs` installs, builds, serves the game from the server, prints the Wi-Fi address;
+      a page served by a game server joins it without ?server=; LAN pages open the sign-in on Guest. docs/LAN.md.
+- [ ] "Tire issues": not described yet. Ask the founder what he sees (punctures from potholes and wear exist in
+      systems/wear.ts and sim/life.ts potholes).
+- [ ] Voice chat on the LAN needs https (getUserMedia); a self-signed cert option for lan.mjs.
+- [ ] PAUSED at the founder's request after the LAN work. Do not start new features until he has talked it through.
+
 ## Founder brief 5 (04 Nov 2026, 04:47)
 Verbatim keys: "look into what we have now from the schedule bot and then make the artifact", "it lags a lot but not as much
 as before on my 2016 mac pro so optimize it further", "make it playable on phone", "most importantly fix the way the apps

@@ -11,6 +11,8 @@ npm run loadtest -- --bots 60 --seconds 30
 ```
 
 The game turns multiplayer on with `?server=ws://host:8787` (remembered in localStorage). Without it the game is the offline single player build.
+A page served by the server itself (`STATIC_DIR`) joins that server on its own. To host a test on your Wi-Fi in one step, run `node lan.mjs`
+from the repository root (docs/LAN.md).
 
 ## Configuration (environment)
 

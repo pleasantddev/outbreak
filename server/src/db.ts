@@ -233,6 +233,19 @@ const MIGRATIONS: string[] = [
     price_kobo INTEGER NOT NULL, status TEXT NOT NULL, payment_ref TEXT, created_at INTEGER NOT NULL);
   CREATE INDEX promo_live ON song_promos(status, end_at); CREATE INDEX promo_song ON song_promos(song_id);
   `,
+  // v11: the Eko Exchange (src/exchange.ts): stock holdings and trades, price pressure from real players, and shares in
+  // player-owned businesses (units, offers, dividends paid when the owner empties the till)
+  `
+  CREATE TABLE holdings (account_id TEXT NOT NULL, sym TEXT NOT NULL, qty INTEGER NOT NULL, cost REAL NOT NULL, PRIMARY KEY (account_id, sym));
+  CREATE TABLE trades (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id TEXT NOT NULL, sym TEXT NOT NULL, side TEXT NOT NULL, qty INTEGER NOT NULL, price REAL NOT NULL, fee INTEGER NOT NULL, at INTEGER NOT NULL);
+  CREATE INDEX trades_acct ON trades(account_id, at);
+  CREATE TABLE ex_pressure (sym TEXT PRIMARY KEY, p REAL NOT NULL, at INTEGER NOT NULL);
+  CREATE TABLE biz_shares (site TEXT NOT NULL, holder_id TEXT NOT NULL, units INTEGER NOT NULL, cost REAL NOT NULL DEFAULT 0, PRIMARY KEY (site, holder_id));
+  CREATE TABLE biz_offers (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, seller_id TEXT NOT NULL, units INTEGER NOT NULL, price INTEGER NOT NULL, at INTEGER NOT NULL);
+  CREATE INDEX bo_site ON biz_offers(site);
+  CREATE TABLE biz_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, holder_id TEXT NOT NULL, amount INTEGER NOT NULL, at INTEGER NOT NULL);
+  CREATE INDEX bp_holder ON biz_payouts(holder_id, at);
+  `,
 ];
 
 export function openDb(file: string): DB {

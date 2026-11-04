@@ -91,3 +91,7 @@
   moves under the touch row, ticker hidden. Agents SPORTS and IDEAS stopped on the weekly usage limit; resume with
   SendMessage when wanted (SPORTS: basketball check, two-browser match, Renting; IDEAS: floating quads at Oshodi, widen
   the map to VI/Lekki, club interiors).
+- 04 Nov 06:15 WAT: Eko Exchange (shares, shop stakes, trading Market app; server migration v11, tests 115/115) and local
+  network play (`node lan.mjs`, docs/LAN.md; same-origin pages join their server, LAN sign-in opens on Guest). The
+  scheduled build shift is switched off at the founder's request (pause to talk); its last run pushed to branch
+  shift-1104-0459 (clubs part 2) and is not merged.

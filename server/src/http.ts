@@ -1,6 +1,6 @@
 // node:http glue: CORS, JSON bodies, bearer auth, bans, rate limits, errors, static files, and the route plug-in loader.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { existsSync, readdirSync, statSync, createReadStream } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync, createReadStream } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { Api, ApiRequest, AuthLevel, Router } from './api.ts';
@@ -11,7 +11,7 @@ import { banState } from './accounts.ts';
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff',
-  '.wasm': 'application/octet-stream', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav', '.txt': 'text/plain; charset=utf-8', '.map': 'application/json',
+  '.wasm': 'application/wasm', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav', '.txt': 'text/plain; charset=utf-8', '.map': 'application/json',
 };
 const LEVEL: Record<AuthLevel, number> = { none: 0, user: 1, mod: 2, admin: 3 };
 const roleLevel = (r: string) => (r === 'admin' ? 3 : r === 'mod' ? 2 : 1);
@@ -114,6 +114,13 @@ function serveStatic(api: Api, pathname: string, req: IncomingMessage, res: Serv
   if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
   if (!existsSync(file)) { if (!extname(rel)) file = join(root, 'index.html'); if (!existsSync(file)) return false; }
   const st = statSync(file); const ext = extname(file).toLowerCase();
+  // the game's own page: tell it this server is its server, so anyone who opens http://<this machine>:8787 on the
+  // network plays online here without typing ?server= (a ?server= in the address still wins)
+  if (ext === '.html' && root === resolve(cfg.staticDir || '/nonexistent')) {
+    const html = Buffer.from(readFileSync(file, 'utf8').replace('<head>', '<head><script>window.__HL_SAME_ORIGIN__=1</script>'));
+    res.setHeader('Content-Type', MIME[ext]); res.setHeader('Content-Length', html.length); res.setHeader('Cache-Control', 'no-cache');
+    res.statusCode = 200; res.end(req.method === 'HEAD' ? undefined : html); return true;
+  }
   res.setHeader('Content-Type', MIME[ext] ?? 'application/octet-stream');
   res.setHeader('Content-Length', st.size);
   res.setHeader('Cache-Control', /\.(html)$/.test(ext) ? 'no-cache' : 'public, max-age=3600');

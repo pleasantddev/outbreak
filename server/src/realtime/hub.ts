@@ -15,6 +15,7 @@ import { PhoneNet } from '../phone.ts';
 import type { Ads } from '../ads.ts';
 import { Body } from '../body.ts';
 import { Devices } from '../devices.ts';
+import { Exchange } from '../exchange.ts';
 import type { Clubs } from '../clubs.ts';
 import { Grid as PowerGrid, FEEDERS } from '../grid.ts';
 import { HttpError } from '../auth.ts';
@@ -73,7 +74,7 @@ export class Hub implements OnlineApi {
   private saveTimer: NodeJS.Timeout | null = null;
 
   races: RaceLobbies; fixtures: Fixtures; props: Properties;
-  biz: Businesses; phone: PhoneNet; body: Body; devices: Devices; power = new PowerGrid(); private adsRef: Ads | null = null; private adTimer: ReturnType<typeof setInterval> | null = null;
+  biz: Businesses; phone: PhoneNet; body: Body; devices: Devices; exchange: Exchange; power = new PowerGrid(); private adsRef: Ads | null = null; private adTimer: ReturnType<typeof setInterval> | null = null;
   private clubsRef: Clubs | null = null; private clubTimer: ReturnType<typeof setInterval> | null = null;
   /** live voice calls between two connections */
   private calls = new Map<string, { a: Conn; b: Conn; live: boolean; at: number }>(); private lastSwitch = new Map<string, number>();
@@ -84,6 +85,7 @@ export class Hub implements OnlineApi {
     const bodyOut = (accountId: string) => { const c = this.byAccount.get(accountId); if (c) { const v = this.body.view(accountId); this.send(c, { t: 'body', ...v } as any); this.syncStrip(c, v.stripped); } };
     this.body.on('sick', bodyOut); this.body.on('changed', bodyOut);
     this.devices = new Devices(db, econ, this.body);
+    this.exchange = new Exchange(db, econ); this.biz.splitter = (site, owner, n) => this.exchange.split(site, owner, n);
     this.devices.on('alert', (accountId: string, text: string) => this.toast(accountId, 'Bank alert', text));
     this.props = new Properties(db, econ);
     this.props.onChange = (kind, id, owner, ownerName) => this.broadcastJson({ t: 'prop', kind, id, owner, ownerName } as any);
@@ -542,6 +544,18 @@ export class Hub implements OnlineApi {
           ok(o ? { at: this.outdoorPos(o), inside: !!o.ms.interior } : { at: null }); break;
         }
         case 'clone.steal': ok({ ...this.devices.steal(id, m.device, m.amount), ...this.walletOf(c) }); break;
+        // ---- the Eko Exchange: shares of listed companies and units of players' shops (src/exchange.ts)
+        case 'ex.quotes': ok({ pressure: this.exchange.pressures() }); break;
+        case 'ex.trade': ok({ trade: this.exchange.trade(id, m.sym, m.side, m.qty), ...this.walletOf(c) }); break;
+        case 'ex.portfolio': ok({ portfolio: this.exchange.portfolio(id) }); break;
+        case 'bx.market': ok({ list: this.exchange.market(), mine: this.exchange.mine(id) }); break;
+        case 'bx.offer': ok({ ...this.exchange.offer(id, m.site, m.units, m.price) }); break;
+        case 'bx.cancel': this.exchange.cancel(id, m.id); ok(); break;
+        case 'bx.take': {
+          const r = this.exchange.take(id, m.id, m.units); const sc = this.byAccount.get(r.seller);
+          if (sc) this.send(sc, { t: 'toast', title: 'Eko Exchange', body: `${c.profile.name} bought ${r.units} units of your stake. ₦${r.value.toLocaleString('en-NG')} is in your bank.` });
+          ok({ units: r.units, value: r.value, fee: r.fee, ...this.walletOf(c) }); break;
+        }
         // only bad deeds come from the game itself; good deeds are counted where the server can see them
         case 'karma.deed': { const BAD: Record<string, number> = { assault: -1, theft: -2, robbery: -4, murder: -10, police: -6, scam: -5, littering: -0.2 }; const d = BAD[String(m.kind)]; if (d) this.body.karma(id, d, String(m.kind)); ok(); break; }
         // ---- Property Manager, venues, bookings, fixtures (src/property.ts, realtime/matches.ts)

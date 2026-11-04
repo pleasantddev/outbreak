@@ -9,7 +9,7 @@ export interface ServerAddr { http: string; ws: string; label: string }
 /** Accepts ws://host:port, wss://host, http(s)://host or bare host:port. */
 export function parseServerParam(raw: string | null | undefined): ServerAddr | null {
   if (!raw) return null; let s = raw.trim(); if (!s || s === 'off' || s === 'none' || s === '0') return null;
-  if (!/^[a-z]+:\/\//i.test(s)) s = (/^(localhost|127\.|192\.168\.|10\.)/.test(s) ? 'ws://' : 'wss://') + s;
+  if (!/^[a-z]+:\/\//i.test(s)) s = (/^(localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.|[\w-]+\.local\b)/.test(s) ? 'ws://' : 'wss://') + s;
   try {
     const u = new URL(s); const secure = u.protocol === 'wss:' || u.protocol === 'https:';
     if (!/^(ws|wss|http|https):$/.test(u.protocol)) return null;
@@ -32,6 +32,8 @@ export interface LocalState { bank: number; owned: string[]; ownedPts: Record<st
 function readServer(): ServerAddr | null {
   let q: string | null = null; try { q = new URLSearchParams(location.search).get('server'); } catch { /* no location */ }
   if (q !== null) { const a = parseServerParam(q); lsSet(K_SERVER, a ? q : null); return a; }
+  // served by a game server (a local network test, or a hosted build): that server is the one to join
+  try { if ((globalThis as any).__HL_SAME_ORIGIN__ && /^https?:$/.test(location.protocol)) return parseServerParam(location.origin); } catch { /* no location */ }
   return parseServerParam(lsGet(K_SERVER));
 }
 

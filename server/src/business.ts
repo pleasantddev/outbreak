@@ -13,6 +13,8 @@ export interface BizView { site: string; type: string; owner: string; ownerName:
 const rand = () => randomInt(0, 2 ** 32) / 2 ** 32;
 
 export class Businesses {
+  /** shares the till with outside investors; returns what the owner keeps */
+  splitter: ((site: string, owner: string, n: number) => number) | null = null;
   constructor(private db: DB, private econ: Economy, private now: () => number = Date.now) {}
   private row(site: string) { return one<Row>(this.db, 'SELECT b.*, f.name AS owner_name FROM businesses b LEFT JOIN profiles f ON f.account_id=b.owner_id WHERE b.site=?', site); }
   /** bring a business up to the present hour and save it */
@@ -60,7 +62,9 @@ export class Businesses {
     const r = this.mineRow(accountId, site); this.near(r.site, at); const n = Math.floor(r.till); if (n <= 0) throw new HttpError(400, 'The till is empty.');
     return this.db.transaction(() => {
       run(this.db, 'UPDATE businesses SET till=till-? WHERE site=?', n, r.site);
-      const w = this.econ.adjust(accountId, n, 0, 'biz.collect', { ref: r.site });
+      // investors who bought units on the Eko Exchange get their share first (src/exchange.ts)
+      const keep = this.splitter ? this.splitter(r.site, accountId, n) : n;
+      const w = this.econ.adjust(accountId, keep, 0, 'biz.collect', { ref: r.site });
       return { wallet: w, amount: n, biz: this.view(this.row(r.site)!) };
     })();
   }
