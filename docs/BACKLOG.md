@@ -97,7 +97,7 @@ players upload and attest they own).
       shutdown (book the club, spray money, the whole room knows), parody big clubs.
 - [x] (031c8f8) Clubs follow-ups part 1 (SHIFT): bouncer and cover at the door (wristband per night, staff in free, no
       underwear), VIP tables with bottle service, DJ crossfade between songs.
-- [ ] Clubs follow-ups part 2 (SHIFT). Check the Audius crate and streams in a real browser (the build sandbox cannot reach
+- [ ] Clubs follow-ups part 2 (SHIFT) (in progress: shift 04 Nov 05:00). Check the Audius crate and streams in a real browser (the build sandbox cannot reach
       api.audius.co, so the crate search and stream URL are written to Audius's public API but untested); ride the ORUN
       lift online (tp + rooftop deck collision is new); BPM display / beat-matched mixing; VIP table invites for friends;
       retire the old EUPHORIA interior (systems/leisure/club.ts) or make it a fourth club.
