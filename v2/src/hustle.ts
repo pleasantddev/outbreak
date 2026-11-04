@@ -99,6 +99,7 @@ async function boot() {
   const [tg, tw] = await Promise.all([loadTexSet('g', 8, size), loadTexSet('w', 8, size), preloadCars()]);
   sim = new LifeSim({ seed: (Math.random() * 1e9) | 0, name: 'You', look: PLAYER_LOOK, spawn, quality, potholes: potholesNear });
   sim.cash = save.cash ?? 1850;
+  if (device.mobile) document.documentElement.classList.add('hl-phone');
   view = new LifeView(canvas, sim, assets, store, tg, tw, quality, { hour: q.get('t') ? +q.get('t')! : undefined, weather: (q.get('w') as WeatherName) ?? undefined, level: startLevel, mobile: device.mobile });
   routeLine = new RouteLine(view.scene, startLevel >= 4 ? 36 : 72);
   gov = new Governor(pref, startLevel, { level: (l) => view.applyLevel(l) });
@@ -456,8 +457,10 @@ function loop(t: number) {
   if (started && !hud.landmapOn && modalDepth === 0) {
     const cmd = command(f, camInfo.aimDir, pad);
     if (ctx) for (const s of SYSTEMS) s.filterCommand?.(ctx, cmd);
-    acc += Math.min(dt, 0.1); let steps = 0;
-    while (acc >= 1 / 60 && steps < 4) {
+    // at most two physics steps per drawn frame: a phone that falls behind plays a touch slower instead of spiralling
+    // into ever longer frames (each late frame used to queue up to four steps, which made the next frame later still)
+    acc = Math.min(acc + dt, 2.2 / 60); let steps = 0;
+    while (acc >= 1 / 60 && steps < 2) {
       sim.setCommand(0, cmd); interp.beforeStep(sim as any); prof.t('sim.step', () => sim.step(1 / 60));
       if (ctx) for (const s of SYSTEMS) if (s.step) prof.t('step:' + s.id, () => s.step!(ctx!, 1 / 60));
       cmd.interact = false; cmd.reload = false; cmd.heal = false;

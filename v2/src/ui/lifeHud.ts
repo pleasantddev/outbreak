@@ -13,6 +13,10 @@ const css = `
 :root{--glass:rgba(12,14,22,.56);--glass2:rgba(18,20,32,.72);--line:rgba(255,255,255,.09);--txt:#f3f5f8;--mut:#9ba3b4;--teal:#2de0c8;--pur:#8b5cf6;--pur2:#6d3ef0;--grn:#49e08a;--red:#ff4d5e;--gold:#ffc53d;--blue:#4aa8ff}
 #hlhud{position:fixed;inset:0;pointer-events:none;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--txt);z-index:5;user-select:none;-webkit-font-smoothing:antialiased}
 .gl{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+/* phones: a blur behind every pill means the GPU re-blurs the moving game under it every frame; solid glass costs nothing */
+html.hl-phone{--glass:rgba(12,14,22,.8);--glass2:rgba(18,20,32,.86)}
+html.hl-phone *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.hl-phone .gl{box-shadow:none}
 .num{font-family:Rajdhani,Inter,sans-serif;font-weight:700;letter-spacing:.3px}
 .ts{text-shadow:0 1px 2px rgba(0,0,0,.7),0 0 10px rgba(0,0,0,.35)}
 #tr{position:absolute;right:max(18px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));display:flex;flex-direction:column;align-items:flex-end;gap:7px}

@@ -144,9 +144,9 @@ export class LobbyStage {
     this.place(this.site);
     // lights: key, teal rim, purple rim. Cars get their own headlight look from emissives and beams.
     const q = this.view.quality;
-    this.key = new THREE.SpotLight(0xffe2c4, 34, 16, 0.42, 0.85, 1.4); this.key.position.set(2.6, 3.6, 4.2); this.key.target.position.set(0, 1.0, 0);
-    this.rimA = new THREE.SpotLight(0x2de0c8, 40, 12, 0.5, 0.9, 1.4); this.rimA.position.set(-2.8, 2.6, -2.8); this.rimA.target.position.set(0, 1.1, 0);
-    this.rimB = new THREE.SpotLight(0x8b5cf6, 55, 12, 0.5, 0.9, 1.4); this.rimB.position.set(3.0, 2.4, -2.6); this.rimB.target.position.set(0, 1.1, 0);
+    this.key = new THREE.SpotLight(0xffe2c4, 34, 16, 0.42, 0.85, 1.4); this.key.userData.hlKeep = true; this.key.position.set(2.6, 3.6, 4.2); this.key.target.position.set(0, 1.0, 0);
+    this.rimA = new THREE.SpotLight(0x2de0c8, 40, 12, 0.5, 0.9, 1.4); this.rimA.userData.hlKeep = true; this.rimA.position.set(-2.8, 2.6, -2.8); this.rimA.target.position.set(0, 1.1, 0);
+    this.rimB = new THREE.SpotLight(0x8b5cf6, 55, 12, 0.5, 0.9, 1.4); this.rimB.userData.hlKeep = true; this.rimB.position.set(3.0, 2.4, -2.6); this.rimB.target.position.set(0, 1.1, 0);
     this.lights = q === 'low' ? [this.key, this.rimA] : [this.key, this.rimA, this.rimB];
     for (const l of this.lights) { this.group.add(l, (l as THREE.SpotLight).target); }
     this.ready = true;

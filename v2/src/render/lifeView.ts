@@ -47,6 +47,18 @@ class Grade extends Effect {
 
 interface ActorVis { ref: Actor; view: HumanView; last: THREE.Vector3; moveYaw: number; fireT: number; fireEdge: boolean; reloadEdge: boolean; meleeEdge: boolean; hit: number; acc: number; skip: number; phone: THREE.Mesh | null; seat?: import('./humans').SeatTarget }
 
+/** lights the game placed (see LifeView.manageLights): they live on a layer the camera never renders, so the shaders see
+ * only the fixed slots. Caught the moment they are added, so no frame is ever drawn with them. */
+const VIRTUAL = new Set<THREE.Light>();
+{
+  const add = THREE.Object3D.prototype.add;
+  THREE.Object3D.prototype.add = function (this: THREE.Object3D, ...objs: THREE.Object3D[]) {
+    const r = add.apply(this, objs);
+    for (const o of objs) o.traverse((l) => { if (((l as any).isPointLight || (l as any).isSpotLight) && !l.userData.hlKeep) { l.layers.set(31); VIRTUAL.add(l as THREE.Light); } });
+    return r;
+  } as any;
+}
+
 export class LifeView {
   renderer: THREE.WebGLRenderer; scene = new THREE.Scene(); camera: THREE.PerspectiveCamera;
   composer: EffectComposer; ao: any = null;
@@ -61,6 +73,29 @@ export class LifeView {
   cars = new Map<number, { m: CarModel | null; loading: boolean; key: string }>();
   loot = new Map<number, THREE.Object3D>();
   headlight: THREE.SpotLight; lightPool: THREE.PointLight[] = [];
+  /** fixed light slots the light manager fills from the nearest lamps the game placed (see manageLights) */
+  sysPool: THREE.PointLight[] = []; private lp = new THREE.Vector3();
+  /**
+   * Every light costs every lit pixel, and three.js builds a different shader for every light count. Systems add lamps
+   * all over the map (52 by the first minute), which made every pixel loop over 52 lights and rebuilt every shader the
+   * moment play began. So the renderer never sees those lamps directly: they move to a layer the camera ignores, and
+   * each frame the nearest few that are switched on (and whose rooms are showing) are copied into the fixed slots.
+   */
+  private manageLights() {
+    const cam = this.camera.position;
+    const pick: { l: THREE.Light; s: number; x: number; y: number; z: number }[] = [];
+    for (const l of VIRTUAL) {
+      if (!l.parent) { VIRTUAL.delete(l); continue; } if (l.intensity <= 0) continue;
+      let on = true, top: THREE.Object3D = l; for (let o: THREE.Object3D | null = l; o; o = o.parent) { if (!o.visible) { on = false; break; } top = o; } if (!on || top !== this.scene) continue;
+      l.getWorldPosition(this.lp); const r = (l as THREE.PointLight).distance || 30; const d = this.lp.distanceTo(cam);
+      if (d > r + 40) continue; pick.push({ l, s: d / r, x: this.lp.x, y: this.lp.y, z: this.lp.z });
+    }
+    pick.sort((a, b) => a.s - b.s);
+    this.sysPool.forEach((slot, i) => {
+      const p = pick[i]; if (!p) { slot.intensity = 0; return; } const src = p.l as THREE.PointLight;
+      slot.position.set(p.x, p.y, p.z); slot.color.copy(src.color); slot.intensity = src.intensity; slot.distance = src.distance || 30; slot.decay = src.decay ?? 1.6;
+    });
+  }
   /** a system can keep the world streaming around a place other than the player (for example while inside a house interior) */
   focusOverride: THREE.Vector3 | null = null;
   time = 0; hurt = 0; phoneBlend = 0; phoneUp = false; firstPerson = false;
@@ -93,8 +128,11 @@ export class LifeView {
     this.scene.add(this.world.group);
     this.fx = new Fx(this.scene, quality); this.fx.rainOn = false;
     this.cam = new ThirdPersonCamera(this.camera);
-    this.headlight = new THREE.SpotLight(0xfff4d0, 0, 70, 0.55, 0.5, 1.2); this.scene.add(this.headlight, this.headlight.target);
-    for (let i = 0; i < (this.level >= 4 ? 3 : this.level >= 2 ? 4 : 6); i++) { const l = new THREE.PointLight(0xffb060, 0, 34, 1.5); this.scene.add(l); this.lightPool.push(l); }
+    this.headlight = new THREE.SpotLight(0xfff4d0, 0, 70, 0.55, 0.5, 1.2); this.headlight.userData.hlKeep = true; this.scene.add(this.headlight, this.headlight.target);
+    // street lights: only the nearest two ever get a real light (roads and walls get the rest through the shaders)
+    for (let i = 0; i < (this.level >= 5 ? 1 : 2); i++) { const l = new THREE.PointLight(0xffb060, 0, 34, 1.5); l.userData.hlKeep = true; this.scene.add(l); this.lightPool.push(l); }
+    // every other lamp in the world (venue signs, stalls, interiors, muzzle flashes) borrows one of these few slots
+    for (let i = 0; i < (this.level >= 5 ? 1 : this.level >= 3 ? 2 : 3); i++) { const l = new THREE.PointLight(0xffffff, 0, 10, 1.6); l.userData.hlKeep = true; this.scene.add(l); this.sysPool.push(l); }
     this.applyLevel(this.level);
     window.addEventListener('resize', () => this.resize()); this.resize();
   }
@@ -191,12 +229,25 @@ export class LifeView {
   debugCam: { x: number; y: number; z: number; tx: number; ty: number; tz: number; fov?: number } | null = null;
   /** Compiles every shader the first minutes of play need, off the main thread where the browser allows it, so cars and crowds do not stall the first frames they appear in. */
   async precompile() {
+    // the sky's reflection map first. Every lit material compiles a different shader once scene.environment is set, so
+    // warming before it existed meant the whole city recompiled on the first frame after Play: a black screen for many
+    // seconds on a phone. Now every shader the street needs is built here, in parallel where the browser allows.
+    const me = this.sim.local; const focus = new THREE.Vector3(me.pos.x, me.pos.y, me.pos.z);
+    try { this.atmo.update(1 / 60, focus, this.camera, 0); } catch { /* compiled on first use instead */ }
     const added: THREE.Object3D[] = [];
     for (const k of ['sedan', 'hatch', 'jeep', 'police', 'danfo', 'keke', 'okada'] as const) {
       try { const m = await buildCar(k, 0); m.root.position.set(0, -400, 0); this.scene.add(m.root); added.push(m.root); } catch { /* a missing model only costs a later compile */ }
     }
+    // every body in the roster, near and far detail: each has its own morph targets, so its own shaders
+    const people: HumanView[] = [];
+    for (const id of ['survivor', 'rogue', 'trooper', 'girl', 'farah']) for (const lod of [false, true]) {
+      try { const v = new HumanView(this.assets, { ...me.look, model: id } as any, 1); v.setLod(lod); v.root.position.set(0, -400, 0); this.scene.add(v.root); people.push(v); } catch { /* not in this build */ }
+    }
     try { await this.renderer.compileAsync(this.scene, this.camera); } catch { /* older drivers: shaders compile on first use */ }
     for (const o of added) this.scene.remove(o);
+    for (const v of people) this.scene.remove(v.root); // not disposed: that would free the very shaders just built
+    // then once through the real frame (post passes, shadow map, rain, the player), hidden behind the loading screen
+    try { this.frame(1 / 60); } catch (e) { console.warn('[hl] warm frame', e); }
   }
   private tmpP = new THREE.Vector3(); private tmpD = new THREE.Vector3();
   private fr = new THREE.Frustum(); private frM = new THREE.Matrix4(); private frS = new THREE.Sphere(); private frInv = new THREE.Matrix4();
@@ -315,6 +366,8 @@ export class LifeView {
         this.lightPool.forEach((l, i) => { const s = spots[i]; if (!s || i >= 2) { l.intensity = 0; return; } l.position.set(s.x + Math.sin(s.r) * 1.9, 8.6, s.z + Math.cos(s.r) * 1.9); l.intensity = (power.on(s.x, s.z) || solarLamp(l.position.x, l.position.z) ? 160 : 0) * night; });
       } else { for (const u of U) u.w = 0; this.lightPool.forEach((l) => (l.intensity = 0)); }
     }
+
+    prof.t('v.lights', () => this.manageLights());
 
     // cash and guns on the ground
     const seenL = new Set<number>();

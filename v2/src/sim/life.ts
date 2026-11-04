@@ -1,3 +1,4 @@
+import { prof } from '../prof';
 // HustleLife simulation: the open city. Player, pedestrians, area boys, police, traffic, parked cars, hijacking,
 // fists and guns, the wahala (wanted) level, cash, potholes that bite tyres. No rendering in here.
 import { RAPIER, Physics, G, groups, MOVE_FILTER, quatYX, type RCollider, type RBody } from './physics';
@@ -327,13 +328,13 @@ export class LifeSim {
   setCommand(id: number, cmd: Command) { const a = this.actors[id]; if (a) { a.prevCmd = a.cmd; a.cmd = cmd; } }
   step(dt: number) {
     this.time += dt;
-    this.population(dt);
-    this.keepGround(dt);
-    for (const a of this.actors) if (a.alive && a.role !== 'player' && !(a as any)._gone && !(a as any)._script) this.think(a, dt);
-    for (const v of this.vehicles) if (v && !(v as any).gone && v.seats[0] !== null && this.actors[v.seats[0]!].role !== 'player') this.drive(v, dt);
-    for (const a of this.actors) if (a.alive && !(a as any)._gone) this.updateActor(a, dt);
-    for (const v of this.vehicles) if (v && !(v as any).gone) this.updateVehicle(v, dt);
-    this.phys.step();
+    prof.t('s.population', () => this.population(dt));
+    prof.t('s.ground', () => this.keepGround(dt));
+    prof.t('s.think', () => { for (const a of this.actors) if (a.alive && a.role !== 'player' && !(a as any)._gone && !(a as any)._script) this.think(a, dt); });
+    prof.t('s.drive', () => { for (const v of this.vehicles) if (v && !(v as any).gone && v.seats[0] !== null && this.actors[v.seats[0]!].role !== 'player') this.drive(v, dt); });
+    prof.t('s.actors', () => { for (const a of this.actors) if (a.alive && !(a as any)._gone) this.updateActor(a, dt); });
+    prof.t('s.vehicles', () => { for (const v of this.vehicles) if (v && !(v as any).gone) this.updateVehicle(v, dt); });
+    prof.t('s.physics', () => this.phys.step());
     this.syncSeats();
     this.updateWanted(dt);
     this.noises = this.noises.filter((n) => this.time - n.t < 2.5);
