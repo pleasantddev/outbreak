@@ -1,0 +1,2622 @@
+{
+ "version": 1,
+ "items": [
+  {
+   "id": "drive",
+   "name": "Driving",
+   "blurb": "Cars, danfos and jeeps. Faster, grippier, kinder to your tyres.",
+   "color": "#59a8ff",
+   "icon": "car",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "drive.top",
+     "mul": 1.008
+    },
+    {
+     "stat": "drive.grip",
+     "mul": 1.006
+    }
+   ],
+   "branches": [
+    {
+     "id": "racer",
+     "name": "Street Racer",
+     "desc": "Speed and grip. For the Third Mainland boys.",
+     "perks": [
+      {
+       "id": "drive_heavy_foot",
+       "name": "Heavy Foot",
+       "desc": "Cars go about 5 percent faster at the top end.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "drive.top",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "id": "drive_clean_line",
+       "name": "Clean Line",
+       "desc": "Corners bite harder. Grip up 8 percent.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "drive_heavy_foot"
+       ],
+       "mods": [
+        {
+         "stat": "drive.grip",
+         "mul": 1.08
+        }
+       ]
+      },
+      {
+       "id": "drive_nitro_nerve",
+       "name": "Nitro Nerve",
+       "desc": "A big jump in top speed, but you drink more fuel.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "drive_clean_line"
+       ],
+       "mods": [
+        {
+         "stat": "drive.top",
+         "mul": 1.06
+        },
+        {
+         "stat": "drive.fuel",
+         "mul": 1.12
+        }
+       ]
+      },
+      {
+       "id": "drive_ghost",
+       "name": "Third Mainland Ghost",
+       "desc": "Top speed and grip up again. They hear you after you pass.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "drive_nitro_nerve"
+       ],
+       "mods": [
+        {
+         "stat": "drive.top",
+         "mul": 1.08
+        },
+        {
+         "stat": "drive.grip",
+         "mul": 1.06
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "captain",
+     "name": "Danfo Captain",
+     "desc": "Make the bus pay.",
+     "perks": [
+      {
+       "id": "drive_conductor_eye",
+       "name": "Conductor's Eye",
+       "desc": "Fares pay 10 percent more.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "fare.mult",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "drive_soft_tyres",
+       "name": "Pothole Whisperer",
+       "desc": "Potholes cost your tyres 20 percent less.",
+       "tier": 2,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "drive.tire",
+         "mul": 0.8
+        }
+       ]
+      },
+      {
+       "id": "drive_rush_hour",
+       "name": "Rush Hour Hustler",
+       "desc": "Fares pay another 15 percent.",
+       "tier": 3,
+       "level": 6,
+       "requires": [
+        "drive_conductor_eye"
+       ],
+       "mods": [
+        {
+         "stat": "fare.mult",
+         "mul": 1.15
+        }
+       ]
+      },
+      {
+       "id": "drive_full_bus",
+       "name": "Full Bus, Full Pocket",
+       "desc": "Fares up again, and mission pay up 5 percent.",
+       "tier": 4,
+       "level": 9,
+       "cost": 2,
+       "requires": [
+        "drive_rush_hour"
+       ],
+       "mods": [
+        {
+         "stat": "fare.mult",
+         "mul": 1.2
+        },
+        {
+         "stat": "pay.cash",
+         "mul": 1.05
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "saver",
+     "name": "Fuel Saver",
+     "desc": "Petrol is not cheap. Make it last.",
+     "perks": [
+      {
+       "id": "drive_light_foot",
+       "name": "Light Foot",
+       "desc": "Burn 10 percent less fuel.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "drive.fuel",
+         "mul": 0.9
+        }
+       ]
+      },
+      {
+       "id": "drive_pothole_radar",
+       "name": "Pothole Radar",
+       "desc": "Potholes cost your tyres 25 percent less.",
+       "tier": 2,
+       "level": 4,
+       "mods": [
+        {
+         "stat": "drive.tire",
+         "mul": 0.75
+        }
+       ]
+      },
+      {
+       "id": "drive_eco",
+       "name": "Patient Driver",
+       "desc": "Burn 15 percent less fuel again.",
+       "tier": 3,
+       "level": 6,
+       "requires": [
+        "drive_light_foot"
+       ],
+       "mods": [
+        {
+         "stat": "drive.fuel",
+         "mul": 0.85
+        }
+       ]
+      },
+      {
+       "id": "drive_long_haul",
+       "name": "Long Haul",
+       "desc": "Less fuel and a bit more speed on the open road.",
+       "tier": 4,
+       "level": 9,
+       "cost": 2,
+       "requires": [
+        "drive_eco"
+       ],
+       "mods": [
+        {
+         "stat": "drive.fuel",
+         "mul": 0.8
+        },
+        {
+         "stat": "drive.top",
+         "mul": 1.03
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Driving a car or danfo at speed",
+    "Danfo and delivery routes",
+    "Races and chases"
+   ]
+  },
+  {
+   "id": "ride",
+   "name": "Riding",
+   "blurb": "Okada and keke. Squeeze through the gap before it closes.",
+   "color": "#ffb347",
+   "icon": "bike",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "ride.top",
+     "mul": 1.008
+    },
+    {
+     "stat": "ride.grip",
+     "mul": 1.01
+    }
+   ],
+   "branches": [
+    {
+     "id": "okada",
+     "name": "Okada Rider",
+     "desc": "The fast lane is whichever lane is empty.",
+     "perks": [
+      {
+       "id": "ride_lean",
+       "name": "Lean In",
+       "desc": "Okada grip up 8 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "ride.grip",
+         "mul": 1.08
+        }
+       ]
+      },
+      {
+       "id": "ride_weave",
+       "name": "Weave",
+       "desc": "Okada top speed up 5 percent.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "ride_lean"
+       ],
+       "mods": [
+        {
+         "stat": "ride.top",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "id": "ride_gap",
+       "name": "Gap Finder",
+       "desc": "Grip and top speed both up.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "ride_weave"
+       ],
+       "mods": [
+        {
+         "stat": "ride.grip",
+         "mul": 1.08
+        },
+        {
+         "stat": "ride.top",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "ride_express",
+       "name": "Express Rider",
+       "desc": "Fastest okada in Lagos, and fares pay more.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "ride_gap"
+       ],
+       "mods": [
+        {
+         "stat": "ride.top",
+         "mul": 1.08
+        },
+        {
+         "stat": "fare.mult",
+         "mul": 1.1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "keke",
+     "name": "Keke Boss",
+     "desc": "Three wheels, four passengers, one big smile.",
+     "perks": [
+      {
+       "id": "ride_keke_fare",
+       "name": "Squeeze Four In",
+       "desc": "Fares pay 10 percent more.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "fare.mult",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "ride_keke_steady",
+       "name": "Steady Hands",
+       "desc": "Three wheels stay planted. Grip up 10 percent.",
+       "tier": 2,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "ride.grip",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "ride_keke_regular",
+       "name": "Regular Customers",
+       "desc": "Fares and mission pay up.",
+       "tier": 3,
+       "level": 6,
+       "requires": [
+        "ride_keke_fare"
+       ],
+       "mods": [
+        {
+         "stat": "fare.mult",
+         "mul": 1.12
+        },
+        {
+         "stat": "pay.cash",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "ride_keke_boss",
+       "name": "Park Chairman",
+       "desc": "The union respects you. Reputation gains up 20 percent.",
+       "tier": 4,
+       "level": 9,
+       "cost": 2,
+       "requires": [
+        "ride_keke_regular"
+       ],
+       "mods": [
+        {
+         "stat": "pay.rep",
+         "mul": 1.2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "dispatch",
+     "name": "Dispatch Rider",
+     "desc": "Parcels do not wait.",
+     "perks": [
+      {
+       "id": "ride_pouch",
+       "name": "Delivery Bag",
+       "desc": "Mission cash up 5 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "id": "ride_shortcut",
+       "name": "Know the Shortcuts",
+       "desc": "Okada top speed up 4 percent.",
+       "tier": 2,
+       "level": 4,
+       "mods": [
+        {
+         "stat": "ride.top",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "ride_rain",
+       "name": "Ride in Rain",
+       "desc": "Wet roads hold you better. Grip up 10 percent.",
+       "tier": 3,
+       "level": 6,
+       "mods": [
+        {
+         "stat": "ride.grip",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "ride_courier",
+       "name": "Trusted Courier",
+       "desc": "Mission cash and skill XP up.",
+       "tier": 4,
+       "level": 9,
+       "cost": 2,
+       "requires": [
+        "ride_pouch"
+       ],
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.06
+        },
+        {
+         "stat": "pay.xp",
+         "mul": 1.1
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Riding an okada or keke",
+    "Okada runs and keke loops"
+   ]
+  },
+  {
+   "id": "fight",
+   "name": "Fighting",
+   "blurb": "Fists, elbows and a good stance.",
+   "color": "#ff5a5a",
+   "icon": "fist",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "melee.damage",
+     "mul": 1.012
+    },
+    {
+     "stat": "body.regen",
+     "mul": 1.01
+    }
+   ],
+   "branches": [
+    {
+     "id": "brawler",
+     "name": "Brawler",
+     "desc": "Hit hard. Hit first.",
+     "perks": [
+      {
+       "id": "fight_knuckle",
+       "name": "Knuckle Sandwich",
+       "desc": "Melee damage up 10 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "melee.damage",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "fight_fast_hands",
+       "name": "Fast Hands",
+       "desc": "Swing 12 percent faster.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "fight_knuckle"
+       ],
+       "mods": [
+        {
+         "stat": "melee.cooldown",
+         "mul": 0.88
+        }
+       ]
+      },
+      {
+       "id": "fight_lights_out",
+       "name": "Lights Out",
+       "desc": "Knock-down chance up 30 percent.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "fight_fast_hands"
+       ],
+       "mods": [
+        {
+         "stat": "melee.ko",
+         "mul": 1.3
+        }
+       ]
+      },
+      {
+       "id": "fight_haymaker",
+       "name": "Haymaker",
+       "desc": "Damage up 15 percent and a bigger knock-down chance.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "fight_lights_out"
+       ],
+       "mods": [
+        {
+         "stat": "melee.damage",
+         "mul": 1.15
+        },
+        {
+         "stat": "melee.ko",
+         "mul": 1.25
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "dirty",
+     "name": "Dirty Fighter",
+     "desc": "No referee in the street.",
+     "perks": [
+      {
+       "id": "fight_sand",
+       "name": "Handful of Sand",
+       "desc": "Knock-down chance up 15 percent.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "melee.ko",
+         "mul": 1.15
+        }
+       ]
+      },
+      {
+       "id": "fight_low_blow",
+       "name": "Low Blow",
+       "desc": "Swing 8 percent faster.",
+       "tier": 2,
+       "level": 5,
+       "mods": [
+        {
+         "stat": "melee.cooldown",
+         "mul": 0.92
+        }
+       ]
+      },
+      {
+       "id": "fight_scrap",
+       "name": "Scrap Instinct",
+       "desc": "Melee damage up 8 percent. Heal faster.",
+       "tier": 3,
+       "level": 7,
+       "mods": [
+        {
+         "stat": "melee.damage",
+         "mul": 1.08
+        },
+        {
+         "stat": "body.regen",
+         "mul": 1.2
+        }
+       ]
+      },
+      {
+       "id": "fight_rat",
+       "name": "Cornered Rat",
+       "desc": "Fast and mean. Cooldown down, damage up.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "fight_scrap"
+       ],
+       "mods": [
+        {
+         "stat": "melee.cooldown",
+         "mul": 0.85
+        },
+        {
+         "stat": "melee.damage",
+         "mul": 1.1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "bouncer",
+     "name": "Bouncer",
+     "desc": "Take hits, stay standing.",
+     "perks": [
+      {
+       "id": "fight_iron_jaw",
+       "name": "Iron Jaw",
+       "desc": "Max health up 10 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "body.hp",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "fight_second_wind",
+       "name": "Second Wind",
+       "desc": "Health regenerates 30 percent faster.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "fight_iron_jaw"
+       ],
+       "mods": [
+        {
+         "stat": "body.regen",
+         "mul": 1.3
+        }
+       ]
+      },
+      {
+       "id": "fight_wall",
+       "name": "Human Wall",
+       "desc": "Max health up another 15 percent.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "fight_second_wind"
+       ],
+       "mods": [
+        {
+         "stat": "body.hp",
+         "mul": 1.15
+        }
+       ]
+      },
+      {
+       "id": "fight_unmoved",
+       "name": "Unmoved",
+       "desc": "Max health and regeneration up again.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "fight_wall"
+       ],
+       "mods": [
+        {
+         "stat": "body.hp",
+         "mul": 1.1
+        },
+        {
+         "stat": "body.regen",
+         "mul": 1.3
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Hitting people",
+    "Winning fights"
+   ]
+  },
+  {
+   "id": "shoot",
+   "name": "Shooting",
+   "blurb": "Guns are loud. Be accurate, be quick, be quiet.",
+   "color": "#e0b84a",
+   "icon": "gun",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "gun.spread",
+     "mul": 0.993
+    },
+    {
+     "stat": "gun.reload",
+     "mul": 0.99
+    }
+   ],
+   "branches": [
+    {
+     "id": "marksman",
+     "name": "Marksman",
+     "desc": "One shot, one problem solved.",
+     "perks": [
+      {
+       "id": "shoot_steady",
+       "name": "Steady Breath",
+       "desc": "Spread down 10 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "gun.spread",
+         "mul": 0.9
+        }
+       ]
+      },
+      {
+       "id": "shoot_aim",
+       "name": "Calm Aim",
+       "desc": "Spread down another 12 percent.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "shoot_steady"
+       ],
+       "mods": [
+        {
+         "stat": "gun.spread",
+         "mul": 0.88
+        }
+       ]
+      },
+      {
+       "id": "shoot_punch",
+       "name": "Heavy Rounds",
+       "desc": "Gun damage up 10 percent.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "shoot_aim"
+       ],
+       "mods": [
+        {
+         "stat": "gun.damage",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "shoot_dead_eye",
+       "name": "Dead Eye",
+       "desc": "Damage and accuracy both up.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "shoot_punch"
+       ],
+       "mods": [
+        {
+         "stat": "gun.damage",
+         "mul": 1.12
+        },
+        {
+         "stat": "gun.spread",
+         "mul": 0.85
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "gunslinger",
+     "name": "Gunslinger",
+     "desc": "Speed over patience.",
+     "perks": [
+      {
+       "id": "shoot_quick",
+       "name": "Quick Hands",
+       "desc": "Reload 12 percent faster.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "gun.reload",
+         "mul": 0.88
+        }
+       ]
+      },
+      {
+       "id": "shoot_mag",
+       "name": "Mag Change",
+       "desc": "Reload 15 percent faster again.",
+       "tier": 2,
+       "level": 5,
+       "requires": [
+        "shoot_quick"
+       ],
+       "mods": [
+        {
+         "stat": "gun.reload",
+         "mul": 0.85
+        }
+       ]
+      },
+      {
+       "id": "shoot_spray",
+       "name": "Spray and Pray",
+       "desc": "Damage up 8 percent, accuracy a little worse.",
+       "tier": 3,
+       "level": 7,
+       "mods": [
+        {
+         "stat": "gun.damage",
+         "mul": 1.08
+        },
+        {
+         "stat": "gun.spread",
+         "mul": 1.08
+        }
+       ]
+      },
+      {
+       "id": "shoot_mad_max",
+       "name": "No Fear",
+       "desc": "Reload very fast and hit a bit harder.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "shoot_mag"
+       ],
+       "mods": [
+        {
+         "stat": "gun.reload",
+         "mul": 0.8
+        },
+        {
+         "stat": "gun.damage",
+         "mul": 1.06
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "quiet",
+     "name": "Quiet Hands",
+     "desc": "Less noise, less heat.",
+     "perks": [
+      {
+       "id": "shoot_witness",
+       "name": "Pocket It",
+       "desc": "Witnesses see you from 10 percent less distance.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "heat.witness",
+         "mul": 0.9
+        }
+       ]
+      },
+      {
+       "id": "shoot_cool",
+       "name": "Back Door",
+       "desc": "Wanted level cools 15 percent faster.",
+       "tier": 2,
+       "level": 5,
+       "mods": [
+        {
+         "stat": "heat.cool",
+         "mul": 0.85
+        }
+       ]
+      },
+      {
+       "id": "shoot_alibi",
+       "name": "Alibi",
+       "desc": "Witnesses see you from 15 percent less distance again.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "shoot_witness"
+       ],
+       "mods": [
+        {
+         "stat": "heat.witness",
+         "mul": 0.85
+        }
+       ]
+      },
+      {
+       "id": "shoot_clean",
+       "name": "Clean Getaway",
+       "desc": "Wanted cools fast and fines are lighter.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "shoot_cool"
+       ],
+       "mods": [
+        {
+         "stat": "heat.cool",
+         "mul": 0.8
+        },
+        {
+         "stat": "heat.fine",
+         "mul": 0.8
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Hitting with a gun",
+    "Gun kills"
+   ]
+  },
+  {
+   "id": "trade",
+   "name": "Trading",
+   "blurb": "Buy low, sell high, never pay the first price.",
+   "color": "#49e08a",
+   "icon": "cart",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "trade.haggle",
+     "add": 0.15
+    },
+    {
+     "stat": "trade.sell",
+     "mul": 1.004
+    }
+   ],
+   "branches": [
+    {
+     "id": "haggler",
+     "name": "Haggler",
+     "desc": "The first price is a lie.",
+     "perks": [
+      {
+       "id": "trade_first_price",
+       "name": "First Price Is a Joke",
+       "desc": "Buying prices drop 5 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "trade.buy",
+         "mul": 0.95
+        }
+       ]
+      },
+      {
+       "id": "trade_walk_away",
+       "name": "Walk Away",
+       "desc": "Haggle rolls get a +1 level bonus.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "trade_first_price"
+       ],
+       "mods": [
+        {
+         "stat": "trade.haggle",
+         "add": 1
+        }
+       ]
+      },
+      {
+       "id": "trade_market_voice",
+       "name": "Market Voice",
+       "desc": "Buying prices drop another 7 percent.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "trade_walk_away"
+       ],
+       "mods": [
+        {
+         "stat": "trade.buy",
+         "mul": 0.93
+        }
+       ]
+      },
+      {
+       "id": "trade_shark",
+       "name": "Oshodi Shark",
+       "desc": "Another +1 haggle level and cheaper buying.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "trade_market_voice"
+       ],
+       "mods": [
+        {
+         "stat": "trade.haggle",
+         "add": 1
+        },
+        {
+         "stat": "trade.buy",
+         "mul": 0.92
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "wholesaler",
+     "name": "Wholesaler",
+     "desc": "Move volume, keep the margin.",
+     "perks": [
+      {
+       "id": "trade_bulk",
+       "name": "Bulk Rate",
+       "desc": "Selling prices up 5 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "trade.sell",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "id": "trade_contacts",
+       "name": "Contacts",
+       "desc": "Selling prices up 6 percent and trader rep gains up.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "trade_bulk"
+       ],
+       "mods": [
+        {
+         "stat": "trade.sell",
+         "mul": 1.06
+        },
+        {
+         "stat": "pay.rep",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "trade_supply",
+       "name": "Supply Line",
+       "desc": "Selling prices up 8 percent.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "trade_contacts"
+       ],
+       "mods": [
+        {
+         "stat": "trade.sell",
+         "mul": 1.08
+        }
+       ]
+      },
+      {
+       "id": "trade_kingpin",
+       "name": "Ladipo Kingpin",
+       "desc": "Selling and mission pay both up.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "trade_supply"
+       ],
+       "mods": [
+        {
+         "stat": "trade.sell",
+         "mul": 1.1
+        },
+        {
+         "stat": "pay.cash",
+         "mul": 1.06
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "hustler",
+     "name": "Hustler",
+     "desc": "Small margins, many times a day.",
+     "perks": [
+      {
+       "id": "trade_side",
+       "name": "Side Hustle",
+       "desc": "Mission cash up 4 percent.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "trade_credit",
+       "name": "Credit Line",
+       "desc": "Skill XP gains up 10 percent.",
+       "tier": 2,
+       "level": 5,
+       "mods": [
+        {
+         "stat": "pay.xp",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "trade_merchant",
+       "name": "Merchant Instinct",
+       "desc": "Mission cash up 6 percent.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "trade_side"
+       ],
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.06
+        }
+       ]
+      },
+      {
+       "id": "trade_baron",
+       "name": "Market Baron",
+       "desc": "Cash and reputation gains up.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "trade_merchant"
+       ],
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.07
+        },
+        {
+         "stat": "pay.rep",
+         "mul": 1.15
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Buying and selling in markets",
+    "Haggling",
+    "Trade missions"
+   ]
+  },
+  {
+   "id": "mech",
+   "name": "Mechanics",
+   "blurb": "Open the bonnet and listen. Cappa knows.",
+   "color": "#c8a27a",
+   "icon": "wrench",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "mech.repair",
+     "mul": 0.985
+    },
+    {
+     "stat": "mech.hp",
+     "mul": 1.02
+    }
+   ],
+   "branches": [
+    {
+     "id": "panel",
+     "name": "Panel Beater",
+     "desc": "Bodywork and bones.",
+     "perks": [
+      {
+       "id": "mech_dent",
+       "name": "Dent Puller",
+       "desc": "Repairs need 10 percent less effort.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "mech.repair",
+         "mul": 0.9
+        }
+       ]
+      },
+      {
+       "id": "mech_weld",
+       "name": "Welder",
+       "desc": "Repairs restore 10 percent more.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "mech_dent"
+       ],
+       "mods": [
+        {
+         "stat": "mech.hp",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "mech_spray",
+       "name": "Spray Master",
+       "desc": "Repairs need 12 percent less effort again.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "mech_weld"
+       ],
+       "mods": [
+        {
+         "stat": "mech.repair",
+         "mul": 0.88
+        }
+       ]
+      },
+      {
+       "id": "mech_chassis",
+       "name": "Chassis Doctor",
+       "desc": "Repairs restore much more.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "mech_spray"
+       ],
+       "mods": [
+        {
+         "stat": "mech.hp",
+         "mul": 1.2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "engine",
+     "name": "Engine Doctor",
+     "desc": "Listen for the knock.",
+     "perks": [
+      {
+       "id": "mech_ear",
+       "name": "Good Ear",
+       "desc": "Repairs need 8 percent less effort.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "mech.repair",
+         "mul": 0.92
+        }
+       ]
+      },
+      {
+       "id": "mech_tune",
+       "name": "Tune Up",
+       "desc": "Your cars grip a little better.",
+       "tier": 2,
+       "level": 5,
+       "mods": [
+        {
+         "stat": "drive.grip",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "mech_swap",
+       "name": "Engine Swap",
+       "desc": "Cars go 4 percent faster.",
+       "tier": 3,
+       "level": 7,
+       "mods": [
+        {
+         "stat": "drive.top",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "mech_rebuild",
+       "name": "Full Rebuild",
+       "desc": "Repairs restore more, use less fuel after.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "mech_swap"
+       ],
+       "mods": [
+        {
+         "stat": "mech.hp",
+         "mul": 1.15
+        },
+        {
+         "stat": "drive.fuel",
+         "mul": 0.92
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "parts",
+     "name": "Spare Parts Hustler",
+     "desc": "Ladipo knows your face.",
+     "perks": [
+      {
+       "id": "mech_ladipo",
+       "name": "Ladipo Discount",
+       "desc": "Buying prices drop 5 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "trade.buy",
+         "mul": 0.95
+        }
+       ]
+      },
+      {
+       "id": "mech_fake_genuine",
+       "name": "Tokunbo Eye",
+       "desc": "Spot a real part. Haggle +1.",
+       "tier": 2,
+       "level": 4,
+       "mods": [
+        {
+         "stat": "trade.haggle",
+         "add": 1
+        }
+       ]
+      },
+      {
+       "id": "mech_scrap",
+       "name": "Scrap Dealer",
+       "desc": "Selling prices up 6 percent.",
+       "tier": 3,
+       "level": 7,
+       "mods": [
+        {
+         "stat": "trade.sell",
+         "mul": 1.06
+        }
+       ]
+      },
+      {
+       "id": "mech_cappa_king",
+       "name": "Cappa Oga",
+       "desc": "Mechanic rep gains up and mission pay up.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "mech_scrap"
+       ],
+       "mods": [
+        {
+         "stat": "pay.rep",
+         "mul": 1.2
+        },
+        {
+         "stat": "pay.cash",
+         "mul": 1.05
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Repair mini-games",
+    "Mechanic missions",
+    "Roadside fixes"
+   ]
+  },
+  {
+   "id": "street",
+   "name": "Street Smarts",
+   "blurb": "Know who to greet, who to avoid, and who to pay.",
+   "color": "#b07cff",
+   "icon": "eye",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "heat.cool",
+     "mul": 0.992
+    },
+    {
+     "stat": "heat.witness",
+     "mul": 0.995
+    }
+   ],
+   "branches": [
+    {
+     "id": "lowprofile",
+     "name": "Lie Low",
+     "desc": "Be forgettable.",
+     "perks": [
+      {
+       "id": "street_hood",
+       "name": "Face Cap",
+       "desc": "Witnesses see you from 10 percent less distance.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "heat.witness",
+         "mul": 0.9
+        }
+       ]
+      },
+      {
+       "id": "street_cool",
+       "name": "Cool Head",
+       "desc": "Wanted level cools 15 percent faster.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "street_hood"
+       ],
+       "mods": [
+        {
+         "stat": "heat.cool",
+         "mul": 0.85
+        }
+       ]
+      },
+      {
+       "id": "street_blend",
+       "name": "Blend In",
+       "desc": "Witnesses see you from 12 percent less distance again.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "street_cool"
+       ],
+       "mods": [
+        {
+         "stat": "heat.witness",
+         "mul": 0.88
+        }
+       ]
+      },
+      {
+       "id": "street_ghost",
+       "name": "Nobody Saw Anything",
+       "desc": "Heat cools very quickly.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "street_blend"
+       ],
+       "mods": [
+        {
+         "stat": "heat.cool",
+         "mul": 0.7
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "connections",
+     "name": "Connections",
+     "desc": "Everyone knows somebody.",
+     "perks": [
+      {
+       "id": "street_dash",
+       "name": "Small Dash",
+       "desc": "Fines are 15 percent lighter.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "heat.fine",
+         "mul": 0.85
+        }
+       ]
+      },
+      {
+       "id": "street_uncle",
+       "name": "Uncle in Force",
+       "desc": "Fines 20 percent lighter again.",
+       "tier": 2,
+       "level": 5,
+       "requires": [
+        "street_dash"
+       ],
+       "mods": [
+        {
+         "stat": "heat.fine",
+         "mul": 0.8
+        }
+       ]
+      },
+      {
+       "id": "street_favour",
+       "name": "Favours",
+       "desc": "Reputation gains up 15 percent.",
+       "tier": 3,
+       "level": 7,
+       "mods": [
+        {
+         "stat": "pay.rep",
+         "mul": 1.15
+        }
+       ]
+      },
+      {
+       "id": "street_big_man",
+       "name": "Big Man Reference",
+       "desc": "Fines tiny, reputation up.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "street_uncle"
+       ],
+       "mods": [
+        {
+         "stat": "heat.fine",
+         "mul": 0.7
+        },
+        {
+         "stat": "pay.rep",
+         "mul": 1.1
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "respect",
+     "name": "Area Respect",
+     "desc": "Be known where it counts.",
+     "perks": [
+      {
+       "id": "street_nod",
+       "name": "The Nod",
+       "desc": "Talking rolls get +1 level.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "talk.roll",
+         "add": 1
+        }
+       ]
+      },
+      {
+       "id": "street_hand",
+       "name": "Hand on Shoulder",
+       "desc": "Mission pay up 4 percent.",
+       "tier": 2,
+       "level": 4,
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "street_name",
+       "name": "Your Name Rings",
+       "desc": "Reputation gains up 20 percent.",
+       "tier": 3,
+       "level": 7,
+       "mods": [
+        {
+         "stat": "pay.rep",
+         "mul": 1.2
+        }
+       ]
+      },
+      {
+       "id": "street_oga",
+       "name": "Area Oga",
+       "desc": "Another talking level, more skill XP.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "street_nod"
+       ],
+       "mods": [
+        {
+         "stat": "talk.roll",
+         "add": 1
+        },
+        {
+         "stat": "pay.xp",
+         "mul": 1.1
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Crime and heat",
+    "Cooling off the police",
+    "Surviving wahala"
+   ]
+  },
+  {
+   "id": "charm",
+   "name": "Charisma",
+   "blurb": "Talk your way in, talk your way out.",
+   "color": "#ff7a9a",
+   "icon": "mouth",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "talk.roll",
+     "add": 0.15
+    },
+    {
+     "stat": "pay.rep",
+     "mul": 1.004
+    }
+   ],
+   "branches": [
+    {
+     "id": "tongue",
+     "name": "Silver Tongue",
+     "desc": "Make the room agree.",
+     "perks": [
+      {
+       "id": "charm_smile",
+       "name": "Easy Smile",
+       "desc": "Talking rolls get +1 level.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "talk.roll",
+         "add": 1
+        }
+       ]
+      },
+      {
+       "id": "charm_story",
+       "name": "Good Story",
+       "desc": "Reputation gains up 10 percent.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "charm_smile"
+       ],
+       "mods": [
+        {
+         "stat": "pay.rep",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "charm_oratory",
+       "name": "Pulpit Voice",
+       "desc": "Another +1 level on talking rolls.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "charm_story"
+       ],
+       "mods": [
+        {
+         "stat": "talk.roll",
+         "add": 1
+        }
+       ]
+      },
+      {
+       "id": "charm_senator",
+       "name": "Senator",
+       "desc": "Talking +1 and reputation up.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "charm_oratory"
+       ],
+       "mods": [
+        {
+         "stat": "talk.roll",
+         "add": 1
+        },
+        {
+         "stat": "pay.rep",
+         "mul": 1.15
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "alpha",
+     "name": "Alpha",
+     "desc": "Quiet confidence.",
+     "perks": [
+      {
+       "id": "charm_posture",
+       "name": "Straight Back",
+       "desc": "Witnesses see you from 5 percent less distance.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "heat.witness",
+         "mul": 0.95
+        }
+       ]
+      },
+      {
+       "id": "charm_stare",
+       "name": "Hard Stare",
+       "desc": "Knock-down chance up 10 percent.",
+       "tier": 2,
+       "level": 5,
+       "mods": [
+        {
+         "stat": "melee.ko",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "charm_calm",
+       "name": "Calm Voice",
+       "desc": "Fines 15 percent lighter.",
+       "tier": 3,
+       "level": 7,
+       "mods": [
+        {
+         "stat": "heat.fine",
+         "mul": 0.85
+        }
+       ]
+      },
+      {
+       "id": "charm_presence",
+       "name": "Presence",
+       "desc": "Talking +1, fines lighter again.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "charm_calm"
+       ],
+       "mods": [
+        {
+         "stat": "talk.roll",
+         "add": 1
+        },
+        {
+         "stat": "heat.fine",
+         "mul": 0.85
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "friendly",
+     "name": "Hustler's Smile",
+     "desc": "People like paying you.",
+     "perks": [
+      {
+       "id": "charm_tip",
+       "name": "Tips",
+       "desc": "Mission cash up 4 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "charm_regulars",
+       "name": "Regulars",
+       "desc": "Fares pay 8 percent more.",
+       "tier": 2,
+       "level": 4,
+       "mods": [
+        {
+         "stat": "fare.mult",
+         "mul": 1.08
+        }
+       ]
+      },
+      {
+       "id": "charm_referral",
+       "name": "Referrals",
+       "desc": "Mission cash up 6 percent.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "charm_tip"
+       ],
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.06
+        }
+       ]
+      },
+      {
+       "id": "charm_celeb",
+       "name": "Local Celebrity",
+       "desc": "Cash and reputation up.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "charm_referral"
+       ],
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.07
+        },
+        {
+         "stat": "pay.rep",
+         "mul": 1.15
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Conversation rolls",
+    "Calming people down",
+    "Choices with a talk check"
+   ]
+  },
+  {
+   "id": "stamina",
+   "name": "Stamina",
+   "blurb": "Run further, recover quicker, take a beating.",
+   "color": "#2de0c8",
+   "icon": "heart",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "stamina.max",
+     "mul": 1.02
+    },
+    {
+     "stat": "stamina.regen",
+     "mul": 1.02
+    }
+   ],
+   "branches": [
+    {
+     "id": "sprinter",
+     "name": "Sprinter",
+     "desc": "Outrun the problem.",
+     "perks": [
+      {
+       "id": "sta_quick",
+       "name": "Quick Start",
+       "desc": "Sprint speed up 4 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "move.sprint",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "sta_lungs",
+       "name": "Big Lungs",
+       "desc": "Sprint stamina lasts 20 percent longer.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "sta_quick"
+       ],
+       "mods": [
+        {
+         "stat": "stamina.max",
+         "mul": 1.2
+        }
+       ]
+      },
+      {
+       "id": "sta_burst",
+       "name": "Burst",
+       "desc": "Sprint speed up another 5 percent.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "sta_lungs"
+       ],
+       "mods": [
+        {
+         "stat": "move.sprint",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "id": "sta_usain",
+       "name": "Lagos Bolt",
+       "desc": "Sprint faster and recover quicker.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "sta_burst"
+       ],
+       "mods": [
+        {
+         "stat": "move.sprint",
+         "mul": 1.06
+        },
+        {
+         "stat": "stamina.regen",
+         "mul": 1.3
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "endurance",
+     "name": "Endurance",
+     "desc": "Keep going.",
+     "perks": [
+      {
+       "id": "sta_walk",
+       "name": "Long Legs",
+       "desc": "Jog speed up 5 percent.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "move.jog",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "id": "sta_recover",
+       "name": "Quick Recovery",
+       "desc": "Stamina recovers 30 percent faster.",
+       "tier": 2,
+       "level": 4,
+       "mods": [
+        {
+         "stat": "stamina.regen",
+         "mul": 1.3
+        }
+       ]
+      },
+      {
+       "id": "sta_tank",
+       "name": "Second Tank",
+       "desc": "Stamina lasts 30 percent longer.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "sta_recover"
+       ],
+       "mods": [
+        {
+         "stat": "stamina.max",
+         "mul": 1.3
+        }
+       ]
+      },
+      {
+       "id": "sta_marathon",
+       "name": "Marathon Hustler",
+       "desc": "Jog faster and last longer.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "sta_tank"
+       ],
+       "mods": [
+        {
+         "stat": "move.jog",
+         "mul": 1.06
+        },
+        {
+         "stat": "stamina.max",
+         "mul": 1.2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "tough",
+     "name": "Tough Body",
+     "desc": "Lagos builds you strong.",
+     "perks": [
+      {
+       "id": "sta_vit",
+       "name": "Good Food",
+       "desc": "Max health up 8 percent.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "body.hp",
+         "mul": 1.08
+        }
+       ]
+      },
+      {
+       "id": "sta_heal",
+       "name": "Heal Fast",
+       "desc": "Health regenerates 25 percent faster.",
+       "tier": 2,
+       "level": 5,
+       "mods": [
+        {
+         "stat": "body.regen",
+         "mul": 1.25
+        }
+       ]
+      },
+      {
+       "id": "sta_hard",
+       "name": "Hard Head",
+       "desc": "Max health up another 10 percent.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "sta_vit"
+       ],
+       "mods": [
+        {
+         "stat": "body.hp",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "sta_cockroach",
+       "name": "Cockroach",
+       "desc": "Health and regeneration up again.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "sta_hard"
+       ],
+       "mods": [
+        {
+         "stat": "body.hp",
+         "mul": 1.1
+        },
+        {
+         "stat": "body.regen",
+         "mul": 1.3
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Sprinting",
+    "Long walks"
+   ]
+  },
+  {
+   "id": "stealth",
+   "name": "Stealth",
+   "blurb": "Crouch low, move slow, be gone before they look.",
+   "color": "#8aa0b8",
+   "icon": "ninja",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "stealth.detect",
+     "mul": 0.99
+    },
+    {
+     "stat": "heat.witness",
+     "mul": 0.996
+    }
+   ],
+   "branches": [
+    {
+     "id": "shadow",
+     "name": "Shadow",
+     "desc": "Guards see what they expect to see.",
+     "perks": [
+      {
+       "id": "stl_soft",
+       "name": "Soft Steps",
+       "desc": "Guards notice you from 10 percent less distance.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "stealth.detect",
+         "mul": 0.9
+        }
+       ]
+      },
+      {
+       "id": "stl_dark",
+       "name": "Dark Clothes",
+       "desc": "Guards notice you from 12 percent less distance again.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "stl_soft"
+       ],
+       "mods": [
+        {
+         "stat": "stealth.detect",
+         "mul": 0.88
+        }
+       ]
+      },
+      {
+       "id": "stl_still",
+       "name": "Dead Still",
+       "desc": "Another 12 percent off the notice range.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "stl_dark"
+       ],
+       "mods": [
+        {
+         "stat": "stealth.detect",
+         "mul": 0.88
+        }
+       ]
+      },
+      {
+       "id": "stl_ghost",
+       "name": "Ghost",
+       "desc": "Hard for guards to see at all.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "stl_still"
+       ],
+       "mods": [
+        {
+         "stat": "stealth.detect",
+         "mul": 0.75
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "fingers",
+     "name": "Light Fingers",
+     "desc": "Take it and be gone.",
+     "perks": [
+      {
+       "id": "stl_pocket",
+       "name": "Pocket Sense",
+       "desc": "Witnesses see you from 10 percent less distance.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "heat.witness",
+         "mul": 0.9
+        }
+       ]
+      },
+      {
+       "id": "stl_cash",
+       "name": "Sticky Palm",
+       "desc": "Mission cash up 4 percent.",
+       "tier": 2,
+       "level": 5,
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "stl_cover",
+       "name": "Cover Story",
+       "desc": "Fines 20 percent lighter.",
+       "tier": 3,
+       "level": 7,
+       "mods": [
+        {
+         "stat": "heat.fine",
+         "mul": 0.8
+        }
+       ]
+      },
+      {
+       "id": "stl_clean",
+       "name": "Clean Hands",
+       "desc": "Witness distance and fines both down.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "stl_cover"
+       ],
+       "mods": [
+        {
+         "stat": "heat.witness",
+         "mul": 0.85
+        },
+        {
+         "stat": "heat.fine",
+         "mul": 0.85
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "escape",
+     "name": "Escape Artist",
+     "desc": "If they see you, be harder to catch.",
+     "perks": [
+      {
+       "id": "stl_dash",
+       "name": "Quick Exit",
+       "desc": "Sprint speed up 4 percent.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "move.sprint",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "stl_lose",
+       "name": "Lose Them",
+       "desc": "Wanted cools 15 percent faster.",
+       "tier": 2,
+       "level": 5,
+       "mods": [
+        {
+         "stat": "heat.cool",
+         "mul": 0.85
+        }
+       ]
+      },
+      {
+       "id": "stl_alley",
+       "name": "Alley Cat",
+       "desc": "Jog speed up 5 percent.",
+       "tier": 3,
+       "level": 7,
+       "mods": [
+        {
+         "stat": "move.jog",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "id": "stl_vanish",
+       "name": "Vanishing Act",
+       "desc": "Heat cools very fast.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "stl_lose"
+       ],
+       "mods": [
+        {
+         "stat": "heat.cool",
+         "mul": 0.7
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Crouching and sneaking",
+    "Sneak missions"
+   ]
+  },
+  {
+   "id": "hack",
+   "name": "Hacking",
+   "blurb": "Terminals, POS machines and the odd forgotten password.",
+   "color": "#4cd4ff",
+   "icon": "chip",
+   "maxLevel": 12,
+   "xpBase": 40,
+   "xpPow": 1.5,
+   "perLevel": [
+    {
+     "stat": "hack.secs",
+     "add": 0.3
+    }
+   ],
+   "branches": [
+    {
+     "id": "cracker",
+     "name": "Code Cracker",
+     "desc": "Shorter codes, more time.",
+     "perks": [
+      {
+       "id": "hack_patience",
+       "name": "Patience",
+       "desc": "Hacks get 3 more seconds.",
+       "tier": 1,
+       "level": 2,
+       "mods": [
+        {
+         "stat": "hack.secs",
+         "add": 3
+        }
+       ]
+      },
+      {
+       "id": "hack_short",
+       "name": "Shortcut",
+       "desc": "Codes are one digit shorter.",
+       "tier": 2,
+       "level": 4,
+       "requires": [
+        "hack_patience"
+       ],
+       "mods": [
+        {
+         "stat": "hack.len",
+         "add": -1
+        }
+       ]
+      },
+      {
+       "id": "hack_time",
+       "name": "Slow Clock",
+       "desc": "Hacks get 4 more seconds.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "hack_short"
+       ],
+       "mods": [
+        {
+         "stat": "hack.secs",
+         "add": 4
+        }
+       ]
+      },
+      {
+       "id": "hack_root",
+       "name": "Root Access",
+       "desc": "One digit shorter again and more time.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "hack_time"
+       ],
+       "mods": [
+        {
+         "stat": "hack.len",
+         "add": -1
+        },
+        {
+         "stat": "hack.secs",
+         "add": 3
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "pos",
+     "name": "POS Wizard",
+     "desc": "Money moves through small machines.",
+     "perks": [
+      {
+       "id": "hack_float",
+       "name": "Float Management",
+       "desc": "Mission cash up 4 percent.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.04
+        }
+       ]
+      },
+      {
+       "id": "hack_charge",
+       "name": "Charge Back",
+       "desc": "Skill XP up 10 percent.",
+       "tier": 2,
+       "level": 5,
+       "mods": [
+        {
+         "stat": "pay.xp",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "id": "hack_agent",
+       "name": "Super Agent",
+       "desc": "Mission cash up 6 percent.",
+       "tier": 3,
+       "level": 7,
+       "requires": [
+        "hack_float"
+       ],
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.06
+        }
+       ]
+      },
+      {
+       "id": "hack_bank",
+       "name": "Insider",
+       "desc": "Cash and fines both better.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "hack_agent"
+       ],
+       "mods": [
+        {
+         "stat": "pay.cash",
+         "mul": 1.06
+        },
+        {
+         "stat": "heat.fine",
+         "mul": 0.85
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "ghost",
+     "name": "Signal Ghost",
+     "desc": "Leave no trace.",
+     "perks": [
+      {
+       "id": "hack_vpn",
+       "name": "Hidden Number",
+       "desc": "Witnesses see you from 5 percent less distance.",
+       "tier": 1,
+       "level": 3,
+       "mods": [
+        {
+         "stat": "heat.witness",
+         "mul": 0.95
+        }
+       ]
+      },
+      {
+       "id": "hack_wipe",
+       "name": "Clear the Logs",
+       "desc": "Heat cools 12 percent faster.",
+       "tier": 2,
+       "level": 5,
+       "mods": [
+        {
+         "stat": "heat.cool",
+         "mul": 0.88
+        }
+       ]
+      },
+      {
+       "id": "hack_spoof",
+       "name": "Spoof",
+       "desc": "Guards notice you from 10 percent less distance.",
+       "tier": 3,
+       "level": 7,
+       "mods": [
+        {
+         "stat": "stealth.detect",
+         "mul": 0.9
+        }
+       ]
+      },
+      {
+       "id": "hack_phantom",
+       "name": "Phantom",
+       "desc": "Hack time, heat and sneaking all better.",
+       "tier": 4,
+       "level": 10,
+       "cost": 2,
+       "requires": [
+        "hack_spoof"
+       ],
+       "mods": [
+        {
+         "stat": "hack.secs",
+         "add": 3
+        },
+        {
+         "stat": "heat.cool",
+         "mul": 0.85
+        },
+        {
+         "stat": "stealth.detect",
+         "mul": 0.9
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "trains": [
+    "Terminal mini-games",
+    "Computer Village jobs"
+   ]
+  }
+ ]
+}

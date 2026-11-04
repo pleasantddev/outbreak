@@ -1,0 +1,64 @@
+{
+ "paintMode": "color",
+ "paintHue": 0,
+ "paintSat": 0,
+ "paintVal": 0,
+ "length": 4.7,
+ "width": 2.268,
+ "height": 1.908,
+ "front": "+z",
+ "wheels": [
+  {
+   "q": 0,
+   "x": 0.716,
+   "y": 0.512,
+   "z": 1.602,
+   "r": 0.512,
+   "w": 0.395
+  },
+  {
+   "q": 1,
+   "x": -0.716,
+   "y": 0.512,
+   "z": 1.602,
+   "r": 0.512,
+   "w": 0.395
+  },
+  {
+   "q": 2,
+   "x": 0.749,
+   "y": 0.471,
+   "z": -1.565,
+   "r": 0.471,
+   "w": 0.321
+  },
+  {
+   "q": 3,
+   "x": -0.749,
+   "y": 0.471,
+   "z": -1.565,
+   "r": 0.471,
+   "w": 0.321
+  }
+ ],
+ "paint": true,
+ "paintTextured": false,
+ "tris": 16006,
+ "srcTris": 16006,
+ "materials": [
+  "rubber",
+  "wheel",
+  "hubcaps",
+  "paint",
+  "secondary",
+  "bottom_black",
+  "brake_lights",
+  "glass",
+  "glass",
+  "chrome",
+  "glass",
+  "glass",
+  "glass",
+  "glass"
+ ]
+}

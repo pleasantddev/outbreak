@@ -1,0 +1,598 @@
+{
+ "compiled": "2026-10-17",
+ "reports": [
+  {
+   "id": "shasha-jimoh",
+   "name": "Jimoh bus stop",
+   "road": "Shasha Road",
+   "match": "shasha",
+   "area": "Akowonjo, Alimosho",
+   "lat": 6.6,
+   "lon": 3.297,
+   "radius": 180,
+   "severity": 3,
+   "reported": "2026-10-08",
+   "note": "Badly pitted; traffic from Dopemu and Akowonjo crawls through.",
+   "source": "https://ng.headtopics.com/news/motorists-lament-as-potholes-worsen-across-lagos-communities-88609985",
+   "placed": 30,
+   "snap_m": 695,
+   "x": -4391.9,
+   "z": -5210.0,
+   "road_used": [
+    "ShaSha Road"
+   ]
+  },
+  {
+   "id": "shasha-ajako",
+   "name": "Ajako",
+   "road": "Shasha Road",
+   "match": "shasha",
+   "area": "Alimosho",
+   "lat": 6.596,
+   "lon": 3.2925,
+   "radius": 150,
+   "severity": 3,
+   "reported": "2026-10-08",
+   "note": "Deteriorated for months.",
+   "source": "https://ng.headtopics.com/news/motorists-lament-as-potholes-worsen-across-lagos-communities-88609985",
+   "placed": 25,
+   "snap_m": 1194,
+   "x": -4391.3,
+   "z": -4749.6,
+   "road_used": [
+    "ShaSha Road"
+   ]
+  },
+  {
+   "id": "shasha-moshalashi",
+   "name": "Moshalashi end",
+   "road": "Shasha Road",
+   "match": "shasha",
+   "area": "Alimosho",
+   "lat": 6.593,
+   "lon": 3.289,
+   "radius": 150,
+   "severity": 3,
+   "reported": "2026-10-08",
+   "note": "Drivers cross into the opposite lane to dodge them.",
+   "source": "https://ng.headtopics.com/news/motorists-lament-as-potholes-worsen-across-lagos-communities-88609985",
+   "placed": 25,
+   "snap_m": 1579,
+   "x": -4393.8,
+   "z": -4479.5,
+   "road_used": [
+    "ShaSha Road"
+   ]
+  },
+  {
+   "id": "goddylove-ogunlana",
+   "name": "Goddylove Road by Ogunlana",
+   "road": "Goddylove Road",
+   "match": "goddylove|ogunlana",
+   "area": "Egbeda",
+   "lat": 6.5915,
+   "lon": 3.286,
+   "radius": 160,
+   "severity": 3,
+   "reported": "2026-10-08",
+   "note": "Large potholes and craters.",
+   "source": "https://ng.headtopics.com/news/motorists-lament-as-potholes-worsen-across-lagos-communities-88609985",
+   "placed": 27,
+   "snap_m": 1079,
+   "x": -5486.9,
+   "z": -4961.9,
+   "road_used": [
+    "Akinsanya Ogunlana Street"
+   ]
+  },
+  {
+   "id": "ikosi-road",
+   "name": "Ikosi Road",
+   "road": "Ikosi Road",
+   "match": "ikosi",
+   "area": "Ikosi-Isheri",
+   "lat": 6.601,
+   "lon": 3.393,
+   "radius": 300,
+   "severity": 2,
+   "reported": "2026-10-08",
+   "note": "Collapsed sections; potholes fill with water when it rains.",
+   "source": "https://ng.headtopics.com/news/motorists-lament-as-potholes-worsen-across-lagos-communities-88609985",
+   "placed": 27,
+   "snap_m": 733,
+   "x": 4846.2,
+   "z": -5042.9,
+   "road_used": [
+    "Ikosi Road"
+   ]
+  },
+  {
+   "id": "command-church-bus",
+   "name": "Command Sec. School to Church Bus roundabout",
+   "road": "Command Road",
+   "match": "command|church",
+   "area": "Ipaja, Alimosho",
+   "lat": 6.628,
+   "lon": 3.265,
+   "radius": 400,
+   "severity": 2,
+   "reported": "2026-10-16",
+   "note": "Potholes getting worse and damaging cars.",
+   "source": "https://www.tvcnews.tv/lg-tracker-alimosho-badagry-residents-raise-alarm-over-potholes-flooding/",
+   "placed": 36,
+   "snap_m": 591,
+   "x": -9216.9,
+   "z": -8310.0,
+   "road_used": [
+    "Command Secondary School Road"
+   ]
+  },
+  {
+   "id": "agbenugba",
+   "name": "Agbenugba Village (Plan-Ahead CDA)",
+   "road": "",
+   "match": "",
+   "area": "Alimosho",
+   "lat": 6.635,
+   "lon": 3.256,
+   "radius": 250,
+   "severity": 2,
+   "reported": "2026-10-16",
+   "note": "Abandoned drainage, road eroding.",
+   "source": "https://www.tvcnews.tv/lg-tracker-alimosho-badagry-residents-raise-alarm-over-potholes-flooding/",
+   "placed": 22,
+   "snap_m": 0,
+   "x": -9621.6,
+   "z": -9067.1,
+   "road_used": [
+    "",
+    "Command Secondary School Road"
+   ]
+  },
+  {
+   "id": "saka-street",
+   "name": "Saka Street",
+   "road": "Saka Street",
+   "match": "saka",
+   "area": "Oshodi-Isolo",
+   "lat": 6.544,
+   "lon": 3.327,
+   "radius": 120,
+   "severity": 3,
+   "reported": "2026-08-04",
+   "note": "Pothole wide enough to flood the street when it rains.",
+   "source": "https://guardian.ng/news/nigeria/metro/motorists-residents-bemoan-failing-oshodi-isolo-roads-seek-urgent-attention/",
+   "placed": 20,
+   "snap_m": 0,
+   "x": -1769.5,
+   "z": 995.2,
+   "road_used": [
+    "",
+    "Kolawole Shonibare Street"
+   ]
+  },
+  {
+   "id": "oyetayo-street",
+   "name": "Oyetayo Street",
+   "road": "Oyetayo Street",
+   "match": "oyetayo",
+   "area": "Oshodi-Isolo",
+   "lat": 6.545,
+   "lon": 3.329,
+   "radius": 120,
+   "severity": 3,
+   "reported": "2026-08-04",
+   "note": "Deep potholes and floodwater.",
+   "source": "https://guardian.ng/news/nigeria/metro/motorists-residents-bemoan-failing-oshodi-isolo-roads-seek-urgent-attention/",
+   "placed": 20,
+   "snap_m": 2512,
+   "x": 211.4,
+   "z": -907.5,
+   "road_used": [
+    "Oyetayo Street"
+   ]
+  },
+  {
+   "id": "okeafa-busstop",
+   "name": "Oke-Afa bus stop",
+   "road": "Isolo-Ikotun Road",
+   "match": "isolo|ikotun|ejigbo|okota",
+   "area": "Oke-Afa, Isolo",
+   "lat": 6.548,
+   "lon": 3.309,
+   "radius": 200,
+   "severity": 3,
+   "reported": "2026-08-13",
+   "note": "Contractor stopped after ~100 m of tiling; potholes and broken sections left.",
+   "source": "https://guardian.ng/news/nigeria/metro/motorists-lament-worsening-traffic-as-isolo-ikotun-road-project-stalls/",
+   "placed": 34,
+   "snap_m": 1512,
+   "x": -4639.4,
+   "z": -676.7,
+   "road_used": [
+    "Ejigbo Road"
+   ]
+  },
+  {
+   "id": "okeafa-ikotun",
+   "name": "Oke-Afa toward Ikotun",
+   "road": "Isolo-Ikotun Road",
+   "match": "ikotun|ejigbo|nnpc",
+   "area": "Ejigbo",
+   "lat": 6.553,
+   "lon": 3.298,
+   "radius": 500,
+   "severity": 2,
+   "reported": "2026-08-13",
+   "note": "Still in poor condition.",
+   "source": "https://guardian.ng/news/nigeria/metro/motorists-lament-worsening-traffic-as-isolo-ikotun-road-project-stalls/",
+   "placed": 45,
+   "snap_m": 756,
+   "x": -4639.4,
+   "z": -676.7,
+   "road_used": [
+    "Ejigbo Road"
+   ]
+  },
+  {
+   "id": "jakande-gate",
+   "name": "Jakande section",
+   "road": "Isolo-Ikotun Road",
+   "match": "ikotun|ejigbo|jakande",
+   "area": "Ejigbo",
+   "lat": 6.556,
+   "lon": 3.294,
+   "radius": 200,
+   "severity": 2,
+   "reported": "2026-08-13",
+   "note": "Poor condition, per photo caption.",
+   "source": "https://guardian.ng/news/nigeria/metro/motorists-lament-worsening-traffic-as-isolo-ikotun-road-project-stalls/",
+   "placed": 18,
+   "snap_m": 819,
+   "x": -4793.8,
+   "z": -861.2,
+   "road_used": [
+    "Ejigbo Road"
+   ]
+  },
+  {
+   "id": "nnpc-ejigbo",
+   "name": "NNPC roundabout / bus stop",
+   "road": "Isolo-Ikotun Road",
+   "match": "ikotun|ejigbo|nnpc",
+   "area": "Ejigbo",
+   "lat": 6.5585,
+   "lon": 3.289,
+   "radius": 160,
+   "severity": 3,
+   "reported": "2026-08-13",
+   "note": "Crater first reported 2022; section still unrepaired in Aug 2026 report.",
+   "source": "https://guardian.ng/news/trouble-for-motorists-as-crater-takes-over-nnpc-roundabout-ejigbo-lagos/",
+   "placed": 27,
+   "snap_m": 1184,
+   "x": -4826.4,
+   "z": -907.7,
+   "road_used": [
+    "Ejigbo Road"
+   ]
+  },
+  {
+   "id": "lae-uturn-tollgate",
+   "name": "U-Turn bus stop to Sango tollgate",
+   "road": "Lagos-Abeokuta Expressway",
+   "match": "abeokuta|expressway",
+   "area": "Abule Egba to Toll Gate",
+   "lat": 6.656,
+   "lon": 3.282,
+   "radius": 1600,
+   "severity": 2,
+   "reported": "2026-02-10",
+   "status": "federal rehabilitation Feb 11 to Mar 11 2026; game keeps scattered patching failures",
+   "note": "Failed sections both carriageways.",
+   "source": "https://allafrica.com/stories/202602110113.html",
+   "placed": 54,
+   "snap_m": 809,
+   "x": -6570.7,
+   "z": -12178.5,
+   "road_used": [
+    "Lagos-Abeokuta Expressway"
+   ]
+  },
+  {
+   "id": "sango-ota",
+   "name": "Sango Ota section",
+   "road": "Lagos-Abeokuta Expressway",
+   "match": "abeokuta|expressway|idiroko",
+   "area": "Sango Ota, Ogun",
+   "lat": 6.693,
+   "lon": 3.223,
+   "radius": 1200,
+   "severity": 3,
+   "reported": "2026-07",
+   "note": "Failed portions; NLC and residents locked down the road over its condition.",
+   "source": "https://gazettengr.com/ogun-govt-to-borrow-n13-billion-to-fix-failed-portions-of-lagos-abeokuta-expressway/",
+   "placed": 102,
+   "snap_m": 2343,
+   "x": -12209.9,
+   "z": -17569.1,
+   "road_used": [
+    "Lagos-Abeokuta Expressway"
+   ]
+  },
+  {
+   "id": "abule-egba-uturn",
+   "name": "Abule Egba U-turn, Sango-bound",
+   "road": "Lagos-Abeokuta Expressway",
+   "match": "abeokuta|expressway",
+   "area": "Abule Egba",
+   "lat": 6.647,
+   "lon": 3.2985,
+   "radius": 400,
+   "severity": 3,
+   "reported": "2023-07-02",
+   "note": "Failed stretch begins at the U-turn.",
+   "source": "https://gazettengr.com/residents-groan-over-poor-road-accidents-robbery-on-lagos-abeokuta-expressway/",
+   "placed": 30,
+   "snap_m": 576,
+   "x": -4609.2,
+   "z": -10877.5,
+   "road_used": [
+    "Lagos-Abeokuta Expressway"
+   ]
+  },
+  {
+   "id": "ile-epo-service",
+   "name": "Ile-Epo market service lane, Oshodi-bound",
+   "road": "Lagos-Abeokuta Expressway",
+   "match": "abeokuta|expressway|service",
+   "area": "Ile-Epo",
+   "lat": 6.63,
+   "lon": 3.308,
+   "radius": 250,
+   "severity": 3,
+   "reported": "2023-07-02",
+   "note": "Service lane collapsed.",
+   "source": "https://gazettengr.com/residents-groan-over-poor-road-accidents-robbery-on-lagos-abeokuta-expressway/",
+   "placed": 19,
+   "snap_m": 819,
+   "x": -4635.1,
+   "z": -8807.9,
+   "road_used": [
+    "Lagos-Abeokuta Expressway"
+   ]
+  },
+  {
+   "id": "egbeda-roundabout",
+   "name": "Roundabout to Egbeda",
+   "road": "Egbeda-Idimu Road",
+   "match": "egbeda|idimu|akowonjo",
+   "area": "Egbeda",
+   "lat": 6.592,
+   "lon": 3.29,
+   "radius": 250,
+   "severity": 2,
+   "reported": "2025-07-04",
+   "note": "Named by a bus driver as needing urgent attention.",
+   "source": "https://guardian.ng/news/nigeria/metro/lagos-residents-motorists-lament-deplorable-roads-urge-swift-intervention/",
+   "placed": 15,
+   "snap_m": 237,
+   "x": -6095.4,
+   "z": -4274.8,
+   "road_used": [
+    "Egbeda-Idimu Road"
+   ]
+  },
+  {
+   "id": "araromi-busstop",
+   "name": "Araromi bus stop",
+   "road": "",
+   "match": "araromi",
+   "area": "Iyana Ipaja",
+   "lat": 6.613,
+   "lon": 3.29,
+   "radius": 200,
+   "severity": 2,
+   "reported": "2025-07-04",
+   "note": "Floods in rain, dust in dry season (Modupe Ayoade St leads here).",
+   "source": "https://guardian.ng/news/nigeria/metro/lagos-residents-motorists-lament-deplorable-roads-urge-swift-intervention/",
+   "placed": 12,
+   "snap_m": 0,
+   "x": -5861.4,
+   "z": -6634.4,
+   "road_used": [
+    ""
+   ]
+  },
+  {
+   "id": "guinness-road",
+   "name": "Guinness Road",
+   "road": "Guinness Road",
+   "match": "guinness",
+   "area": "Ogba / Ikeja",
+   "lat": 6.625,
+   "lon": 3.341,
+   "radius": 300,
+   "severity": 2,
+   "reported": "2025-07-04",
+   "status": "LSPWC works ongoing in 2025",
+   "source": "https://guardian.ng/news/nigeria/metro/lagos-residents-motorists-lament-deplorable-roads-urge-swift-intervention/",
+   "placed": 18,
+   "snap_m": 0,
+   "x": -221.2,
+   "z": -7961.3,
+   "road_used": [
+    ""
+   ]
+  },
+  {
+   "id": "iyana-ipaja-aboru",
+   "name": "Iyana Ipaja to Aboru",
+   "road": "Aboru Road",
+   "match": "aboru|abule.?oki",
+   "area": "Iyana Ipaja",
+   "lat": 6.638,
+   "lon": 3.284,
+   "radius": 500,
+   "severity": 2,
+   "reported": "undated Guardian feature",
+   "note": "Rough stony road; canal crossing at Abule-Oki floods.",
+   "source": "https://guardian.ng/sunday-magazine/newsfeature/in-aboru-iyana-ipaja-residents-groan-over-bad-roads/",
+   "placed": 20,
+   "snap_m": 0,
+   "x": -6525.0,
+   "z": -9398.8,
+   "road_used": [
+    "",
+    "Church Road"
+   ]
+  },
+  {
+   "id": "agege-motor-idioro",
+   "name": "Agege Motor Road, Idi-Oro / Mushin end",
+   "road": "Agege Motor Road",
+   "match": "agege motor",
+   "area": "Mushin",
+   "lat": 6.529,
+   "lon": 3.362,
+   "radius": 400,
+   "severity": 3,
+   "reported": "undated Guardian report",
+   "note": "Crater-sized potholes holding murky water.",
+   "source": "https://m.guardian.ng/news/craters-refuse-mar-agege-motor-road-as-users-agonise/",
+   "placed": 30,
+   "snap_m": 419,
+   "x": 1849.9,
+   "z": 2989.5,
+   "road_used": [
+    "Agege Motor Road"
+   ]
+  },
+  {
+   "id": "mushin-ileiwe",
+   "name": "Ile-Iwe Meta, Mushin-Isolo road",
+   "road": "Mushin-Isolo Road",
+   "match": "isolo|mushin|ikotun",
+   "area": "Mushin",
+   "lat": 6.533,
+   "lon": 3.342,
+   "radius": 300,
+   "severity": 2,
+   "reported": "2021-03-25",
+   "note": "Several potholes; Aiye bus stop stretch.",
+   "source": "https://guardian.ng/?p=1373772",
+   "placed": 12,
+   "snap_m": 182,
+   "x": -131.4,
+   "z": 2392.2,
+   "road_used": [
+    "Isolo Road"
+   ]
+  },
+  {
+   "id": "abimbola-street",
+   "name": "Abimbola Street",
+   "road": "Abimbola Street",
+   "match": "abimbola",
+   "area": "Mushin",
+   "lat": 6.53,
+   "lon": 3.348,
+   "radius": 150,
+   "severity": 2,
+   "reported": "2021-03-25",
+   "source": "https://guardian.ng/?p=1373772",
+   "placed": 6,
+   "snap_m": 1908,
+   "x": -1353.9,
+   "z": 2493.1,
+   "road_used": [
+    "Abimbola Way"
+   ]
+  },
+  {
+   "id": "toyota-ladipo",
+   "name": "Toyota bus stop toward Ladipo",
+   "road": "Oshodi-Apapa Expressway",
+   "match": "apapa|oshodi|service|ladipo",
+   "area": "Ilasamaja / Ladipo",
+   "lat": 6.537,
+   "lon": 3.336,
+   "radius": 300,
+   "severity": 2,
+   "reported": "2017-10-28",
+   "note": "Service lane damage near the spare-parts market; also a road-workshop spillover reported 2020.",
+   "source": "https://guardian.ng/news/motorists-residents-groan-as-lagos-roads-deteriorate/",
+   "placed": 12,
+   "snap_m": 71,
+   "x": -703.6,
+   "z": 1778.2,
+   "road_used": [
+    "Apapa-Oworonshoki Expressway"
+   ]
+  },
+  {
+   "id": "sadiku-mechanic-iyana-isolo",
+   "name": "Sadiku, Mechanic bus stop, Iyana-Isolo, 5-Star",
+   "road": "Oshodi-Apapa Expressway service lane",
+   "match": "apapa|oshodi|service",
+   "area": "Isolo",
+   "lat": 6.525,
+   "lon": 3.333,
+   "radius": 600,
+   "severity": 2,
+   "reported": "2017-10-28",
+   "source": "https://guardian.ng/news/motorists-residents-groan-as-lagos-roads-deteriorate/",
+   "placed": 24,
+   "snap_m": 265,
+   "x": -842.9,
+   "z": 3126.8,
+   "road_used": [
+    "Apapa-Oworonshoki Expressway"
+   ]
+  },
+  {
+   "id": "gown-estate",
+   "name": "Gown Estate road",
+   "road": "",
+   "match": "gown",
+   "area": "Egbeda",
+   "lat": 6.598,
+   "lon": 3.278,
+   "radius": 200,
+   "severity": 1,
+   "reported": "2017-10-28",
+   "note": "Floods when it rains.",
+   "source": "https://guardian.ng/news/motorists-residents-groan-as-lagos-roads-deteriorate/",
+   "placed": 3,
+   "snap_m": 0,
+   "x": -7188.5,
+   "z": -4975.8,
+   "road_used": [
+    ""
+   ]
+  }
+ ],
+ "outside_current_map": [
+  {
+   "name": "FESTAC 2nd Avenue",
+   "source": "https://guardian.ng/features/agony-tears-as-potholes-flood-lagos-roads-again/",
+   "reported": "2018-09-21"
+  },
+  {
+   "name": "CMS-Ajah route",
+   "source": "https://guardian.ng/news/nigeria/metro/lagos-residents-motorists-lament-deplorable-roads-urge-swift-intervention/",
+   "reported": "2025-07-04"
+  },
+  {
+   "name": "Bonny Camp corridor, Victoria Island",
+   "source": "https://guardian.ng/features/agony-tears-as-potholes-flood-lagos-roads-again/",
+   "reported": "2018-09-21"
+  }
+ ],
+ "excluded": [
+  {
+   "name": "Third Mainland Bridge potholes (2026 posts)",
+   "reason": "Fact-checked as recycled 2021 photos",
+   "source": "https://factcheck.thecable.ng/fact-check-x-user-recycles-2021-pictures-as-third-mainland-bridge-in-2026/"
+  }
+ ]
+}

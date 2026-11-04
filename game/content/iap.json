@@ -1,0 +1,276 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "pack.cash.small",
+      "type": "currency",
+      "name": "Pocket Money",
+      "desc": "N250,000 in-game cash.",
+      "priceNGN": 500,
+      "priceUSD": 0.99,
+      "grants": {
+        "cash": 250000
+      },
+      "enabled": true,
+      "sort": 1,
+      "tag": ""
+    },
+    {
+      "id": "pack.cash.medium",
+      "type": "currency",
+      "name": "Market Day",
+      "desc": "N1,500,000 in-game cash.",
+      "priceNGN": 2500,
+      "priceUSD": 4.99,
+      "grants": {
+        "cash": 1500000
+      },
+      "enabled": true,
+      "sort": 2,
+      "tag": "popular"
+    },
+    {
+      "id": "pack.cash.large",
+      "type": "currency",
+      "name": "Big Man Wallet",
+      "desc": "N6,500,000 in-game cash.",
+      "priceNGN": 9000,
+      "priceUSD": 17.99,
+      "grants": {
+        "cash": 6500000
+      },
+      "enabled": true,
+      "sort": 3,
+      "tag": ""
+    },
+    {
+      "id": "pack.cash.huge",
+      "type": "currency",
+      "name": "Chairman Vault",
+      "desc": "N30,000,000 in-game cash.",
+      "priceNGN": 39000,
+      "priceUSD": 79.99,
+      "grants": {
+        "cash": 30000000
+      },
+      "enabled": true,
+      "sort": 4,
+      "tag": "best value"
+    },
+    {
+      "id": "bundle.starter",
+      "type": "bundle",
+      "name": "Starter Hustle Pack",
+      "desc": "Cash, an okada and a lagos-yellow paint job. One per account.",
+      "priceNGN": 3500,
+      "priceUSD": 6.99,
+      "grants": {
+        "cash": 800000,
+        "items": [
+          {
+            "id": "veh.okada",
+            "qty": 1
+          },
+          {
+            "id": "paint.lagos-yellow",
+            "qty": 1
+          }
+        ]
+      },
+      "enabled": true,
+      "sort": 5,
+      "tag": "new",
+      "limitPerAccount": 1
+    },
+    {
+      "id": "bundle.landlord",
+      "type": "bundle",
+      "name": "Landlord Pack",
+      "desc": "Plot voucher plus house decor set.",
+      "priceNGN": 18000,
+      "priceUSD": 34.99,
+      "grants": {
+        "cash": 2000000,
+        "items": [
+          {
+            "id": "voucher.plot",
+            "qty": 1
+          },
+          {
+            "id": "decor.generator",
+            "qty": 1
+          },
+          {
+            "id": "decor.sofa",
+            "qty": 2
+          }
+        ]
+      },
+      "enabled": true,
+      "sort": 6,
+      "tag": ""
+    },
+    {
+      "id": "cos.paint.neon-teal",
+      "type": "cosmetic",
+      "name": "Neon Teal Paint",
+      "desc": "Glowing teal vehicle paint.",
+      "priceNGN": 1500,
+      "priceUSD": 2.99,
+      "grants": {
+        "cosmetics": [
+          "paint.neon-teal"
+        ]
+      },
+      "enabled": true,
+      "sort": 7,
+      "tag": "",
+      "slot": "paint"
+    },
+    {
+      "id": "cos.paint.royal-purple",
+      "type": "cosmetic",
+      "name": "Royal Purple Paint",
+      "desc": "Deep purple pearl paint.",
+      "priceNGN": 1500,
+      "priceUSD": 2.99,
+      "grants": {
+        "cosmetics": [
+          "paint.royal-purple"
+        ]
+      },
+      "enabled": true,
+      "sort": 8,
+      "tag": "",
+      "slot": "paint"
+    },
+    {
+      "id": "cos.outfit.agbada",
+      "type": "cosmetic",
+      "name": "Agbada Set",
+      "desc": "Full agbada with cap.",
+      "priceNGN": 2000,
+      "priceUSD": 3.99,
+      "grants": {
+        "cosmetics": [
+          "cloth.agbada"
+        ]
+      },
+      "enabled": true,
+      "sort": 9,
+      "tag": "",
+      "slot": "outfit"
+    },
+    {
+      "id": "cos.plate.vanity",
+      "type": "cosmetic",
+      "name": "Vanity Plate Slot",
+      "desc": "One custom plate registration.",
+      "priceNGN": 2500,
+      "priceUSD": 4.99,
+      "grants": {
+        "items": [
+          {
+            "id": "plate.custom",
+            "qty": 1
+          }
+        ]
+      },
+      "enabled": true,
+      "sort": 10,
+      "tag": "",
+      "slot": "plate"
+    },
+    {
+      "id": "boost.xp.week",
+      "type": "boost",
+      "name": "Double XP (7 days)",
+      "desc": "Double experience for a week.",
+      "priceNGN": 1200,
+      "priceUSD": 2.49,
+      "grants": {
+        "boost": {
+          "xp": 2,
+          "days": 7
+        }
+      },
+      "enabled": true,
+      "sort": 11,
+      "tag": ""
+    },
+    {
+      "id": "pass.season1",
+      "type": "pass",
+      "name": "Detty Season Pass",
+      "desc": "Season 1 reward track.",
+      "priceNGN": 4500,
+      "priceUSD": 8.99,
+      "grants": {
+        "pass": "season1"
+      },
+      "enabled": true,
+      "sort": 12,
+      "tag": "",
+      "availableFrom": "2026-11-01",
+      "availableTo": "2027-02-01"
+    },
+    {
+      "id": "promo.WELCOME20",
+      "type": "promo",
+      "name": "Welcome 20",
+      "code": "WELCOME20",
+      "percentOff": 20,
+      "appliesTo": [
+        "*"
+      ],
+      "maxUses": 5000,
+      "perAccount": 1,
+      "from": "2026-10-25",
+      "to": "2027-01-31",
+      "enabled": true
+    },
+    {
+      "id": "promo.DECEMBER",
+      "type": "promo",
+      "name": "Detty December",
+      "code": "DETTY25",
+      "percentOff": 25,
+      "appliesTo": [
+        "pack.cash.medium",
+        "pack.cash.large"
+      ],
+      "maxUses": 2000,
+      "perAccount": 1,
+      "from": "2026-12-01",
+      "to": "2026-12-31",
+      "enabled": true
+    },
+    {
+      "id": "sale.independence",
+      "type": "sale",
+      "name": "Independence Day Sale",
+      "percentOff": 30,
+      "itemIds": [
+        "pack.cash.small",
+        "pack.cash.medium",
+        "cos.paint.neon-teal"
+      ],
+      "from": "2026-10-01",
+      "to": "2026-10-03",
+      "enabled": true
+    },
+    {
+      "id": "sale.weekend",
+      "type": "sale",
+      "name": "Weekend Flash",
+      "percentOff": 15,
+      "itemIds": [
+        "bundle.starter",
+        "bundle.landlord"
+      ],
+      "from": "2026-10-30",
+      "to": "2026-11-02",
+      "enabled": true
+    }
+  ]
+}

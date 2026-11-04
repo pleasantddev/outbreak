@@ -1,0 +1,59 @@
+{
+ "paintMode": "color",
+ "paintHue": 0,
+ "paintSat": 0,
+ "paintVal": 0,
+ "length": 4.07,
+ "width": 1.807,
+ "height": 1.321,
+ "front": "+z",
+ "wheels": [
+  {
+   "q": 0,
+   "x": 0.596,
+   "y": 0.312,
+   "z": 1.412,
+   "r": 0.312,
+   "w": 0.51
+  },
+  {
+   "q": 1,
+   "x": -0.595,
+   "y": 0.312,
+   "z": 1.412,
+   "r": 0.312,
+   "w": 0.496
+  },
+  {
+   "q": 2,
+   "x": 0.599,
+   "y": 0.404,
+   "z": -1.475,
+   "r": 0.404,
+   "w": 0.505
+  },
+  {
+   "q": 3,
+   "x": -0.566,
+   "y": 0.404,
+   "z": -1.533,
+   "r": 0.404,
+   "w": 0.556
+  }
+ ],
+ "paint": true,
+ "paintTextured": false,
+ "tris": 21590,
+ "srcTris": 21590,
+ "materials": [
+  "Material.005",
+  "velg",
+  "Material.003",
+  "paint",
+  "Material.004",
+  "lampu",
+  "glass",
+  "tepian",
+  "Material.001"
+ ]
+}
