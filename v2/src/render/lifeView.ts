@@ -329,7 +329,9 @@ export class LifeView {
     if (this.direct) {
       this.renderer.toneMappingExposure = 1.0 + env.night * 0.9;
       const h = Math.round(this.hurt * 20) / 20; if (h !== this.vigHurt) { this.vigHurt = h; this.vig.style.boxShadow = h > 0 ? `inset 0 0 ${Math.round(160 * h)}px ${Math.round(60 * h)}px rgba(200,10,20,${(0.55 * h).toFixed(2)})` : ''; }
-      this.renderer.setRenderTarget(null); this.renderer.render(this.scene, this.camera);
+      // the composer (postprocessing) turns autoClear off; drawing straight to the canvas we must clear colour and depth ourselves,
+      // or GPUs that keep the last frame's depth buffer draw nothing but the sky
+      this.renderer.setRenderTarget(null); this.renderer.clear(true, true, true); this.renderer.render(this.scene, this.camera);
     } else this.composer.render(dt);
   }
 

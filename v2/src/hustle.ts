@@ -488,7 +488,10 @@ function loop(t: number) {
       graphT -= dt; if (graphT <= 0) graphT = graph.sync(store.regions.values()) ? 0.15 : 0.6;
       guide.update(dt, P.x, P.z, me.vehicle !== null ? 'drive' : 'walk', jobTg);
       route = guide.remaining.length >= 4 ? guide.remaining : null;
-      if (guide.lost) note = 'No road route yet'; else if (guide.next) { const n = guide.next, d = n.dist >= 1000 ? `${(n.dist / 1000).toFixed(1)} km` : `${Math.round(n.dist / 10) * 10} m`; note = n.dir === 'arrive' ? `${d} to go` : `${n.dir === 'uturn' ? 'U-turn' : n.dir === 'left' ? 'Turn left' : 'Turn right'} in ${d}`; }
+      // no road route yet (far away, streets still loading): point straight at it so you always know the way
+      const far = Math.hypot(jobTg.x - P.x, jobTg.z - P.z); const dtxt = far >= 1000 ? `${(far / 1000).toFixed(1)} km` : `${Math.round(far / 10) * 10} m`;
+      if (!route) route = [P.x, P.z, jobTg.x, jobTg.z];
+      if (guide.lost || !guide.next) note = `${dtxt} that way`; else if (guide.next) { const n = guide.next, d = n.dist >= 1000 ? `${(n.dist / 1000).toFixed(1)} km` : `${Math.round(n.dist / 10) * 10} m`; note = n.dir === 'arrive' ? `${d} to go` : `${n.dir === 'uturn' ? 'U-turn' : n.dir === 'left' ? 'Turn left' : 'Turn right'} in ${d}`; }
     } else { if (guide.goal) guide.clear(); route = null; }
     routeLine?.update(view.time, jobTg ? guide.remaining : null, jobTg, 0.07, me.vehicle === null);
     parcelT -= dt; if (parcelT <= 0 && me.vehicle === null) { parcelT = 0.4; hud.parcel(parcelAt(me.pos.x, me.pos.z)); } else if (me.vehicle !== null) hud.parcel(null);

@@ -4,13 +4,19 @@ import type * as THREE_NS from 'three';
 import type { GameCtx, GameSystem, GoalPoint } from './registry';
 
 export interface Waypoint { x: number; z: number; label?: string }
+let routeAt = 0;
 let wp: Waypoint | null = null; let beam: THREE_NS.Mesh | null = null; let ctxRef: GameCtx | null = null;
 const listeners = new Set<() => void>();
 export const waypoints = {
   get(): Waypoint | null { return wp; },
   set(w: Waypoint | null) {
     wp = w; listeners.forEach((f) => f());
-    if (ctxRef) { if (w) ctxRef.hud.toast('Waypoint', `${w.label ? w.label + '. ' : ''}Follow the purple line.`, 'linear-gradient(160deg,#c084fc,#7c3aed)', 'msg', 2.5); }
+    if (ctxRef && w) {
+      // load the streets between here and there so the GPS can find a road route
+      const me = ctxRef.sim.local; const P = me.vehicle !== null ? ctxRef.sim.vehicles[me.vehicle].body.translation() : me.pos;
+      ctxRef.loadRoute?.(P.x, P.z, w.x, w.z); routeAt = performance.now();
+      ctxRef.hud.toast('Waypoint', `${w.label ? w.label + '. ' : ''}Follow the purple line.`, 'linear-gradient(160deg,#c084fc,#7c3aed)', 'msg', 2.5);
+    }
   },
   on(f: () => void) { listeners.add(f); return () => listeners.delete(f); },
 };
@@ -35,6 +41,7 @@ export const waypointSystem: GameSystem = {
     const me = ctx.sim.local; const veh = me.vehicle !== null ? ctx.sim.vehicles[me.vehicle].body.translation() : me.pos;
     if (wp && Math.hypot(veh.x - wp.x, veh.z - wp.z) < (me.vehicle !== null ? 30 : 18)) { ctx.hud.toast('Waypoint', 'You have arrived.', 'linear-gradient(160deg,#c084fc,#7c3aed)', 'msg', 2.5); wp = null; listeners.forEach((f) => f()); }
     if (!wp) { if (beam) beam.visible = false; return; }
+    if (performance.now() - routeAt > 20_000) { routeAt = performance.now(); ctx.loadRoute?.(veh.x, veh.z, wp.x, wp.z); }
     if (!beam) { beam = makeBeam(ctx); ctx.view.scene.add(beam); }
     const d = Math.hypot(veh.x - wp.x, veh.z - wp.z);
     beam.visible = d < 2400; beam.position.set(wp.x, 0, wp.z);
