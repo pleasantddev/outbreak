@@ -255,6 +255,9 @@ export class FrontEnd {
     this.hideHud(true);
   }
   private hideHud(on: boolean) {
+    // hidden once per visit: the creator and then the lobby both ask, and a second pass would remember "hidden" as the
+    // HUD's normal state, so a brand-new player came out of the lobby with no HUD at all
+    if (on && this.hudHidden.length) return;
     if (on) { for (const id of ['hlhud', 'tc', 'joy-base', 'joy-knob', 'landmap']) { const el = document.getElementById(id); if (el) { this.hudHidden.push([el, el.style.display]); el.style.display = 'none'; } } }
     else { for (const [el, d] of this.hudHidden) el.style.display = d; this.hudHidden = []; }
   }
