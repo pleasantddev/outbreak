@@ -53,17 +53,28 @@ class Racing {
   // ---------------------------------------------------------------- meet spots on long straight stretches of big road
   /** Meet spots come from the map, not from the player: long straight stretches of big road picked by a hash of their
    *  position, so every player in the session sees the same meets (and can race each other there). */
+  private regMeets = new WeakMap<object, Meet[]>();
   private placeMeets() {
+    // road data never changes, so each region's candidate spots are found once (this ran over every road of every loaded
+    // region every six seconds: a 100 ms hitch on a phone)
     const c = this.ctx; const me = c.sim.local; const out: Meet[] = [];
-    for (const r of c.store.regions.values()) for (const rd of r.roads) {
-      if (rd.cls > 4 || rd.flags & 4) continue;
-      for (let i = 0; i < rd.pts.length - 2; i += 2) {
-        const ax = rd.pts[i], az = rd.pts[i + 1], bx = rd.pts[i + 2], bz = rd.pts[i + 3]; const L = Math.hypot(bx - ax, bz - az); if (L < 90) continue;
-        const mx = Math.round((ax + bx) / 2), mz = Math.round((az + bz) / 2); let h = 2166136261; for (const ch of `${mx}:${mz}`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
-        if ((h >>> 0) % 4 !== 0) continue; if (out.some((m) => Math.hypot(m.ax - mx, m.az - mz) < 600)) continue;
-        const yaw = Math.atan2(bx - ax, bz - az); const nx = Math.cos(yaw), nz = -Math.sin(yaw);
-        out.push({ x: mx + nx * 14, z: mz + nz * 14, yaw, name: RT.placeName?.(mx, mz) ?? 'the expressway', ax: mx, az: mz });
+    for (const r of c.store.regions.values()) {
+      let cand = this.regMeets.get(r);
+      if (!cand) {
+        cand = [];
+        for (const rd of r.roads) {
+          if (rd.cls > 4 || rd.flags & 4) continue;
+          for (let i = 0; i < rd.pts.length - 2; i += 2) {
+            const ax = rd.pts[i], az = rd.pts[i + 1], bx = rd.pts[i + 2], bz = rd.pts[i + 3]; const L = Math.hypot(bx - ax, bz - az); if (L < 90) continue;
+            const mx = Math.round((ax + bx) / 2), mz = Math.round((az + bz) / 2); let h = 2166136261; for (const ch of `${mx}:${mz}`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+            if ((h >>> 0) % 4 !== 0) continue; if (cand.some((m) => Math.hypot(m.ax - mx, m.az - mz) < 600)) continue;
+            const yaw = Math.atan2(bx - ax, bz - az); const nx = Math.cos(yaw), nz = -Math.sin(yaw);
+            cand.push({ x: mx + nx * 14, z: mz + nz * 14, yaw, name: RT.placeName?.(mx, mz) ?? 'the expressway', ax: mx, az: mz });
+          }
+        }
+        this.regMeets.set(r, cand);
       }
+      for (const m of cand) if (!out.some((o) => Math.hypot(o.ax - m.ax, o.az - m.az) < 600)) out.push(m);
     }
     out.sort((a, b) => Math.hypot(a.ax - me.pos.x, a.az - me.pos.z) - Math.hypot(b.ax - me.pos.x, b.az - me.pos.z));
     const next = out.slice(0, 8); if (next.map((m) => m.ax + ':' + m.az).join() !== this.meets.map((m) => m.ax + ':' + m.az).join()) { for (const g of this.meetMesh) g?.removeFromParent(); this.meetMesh = []; this.meets = next; }

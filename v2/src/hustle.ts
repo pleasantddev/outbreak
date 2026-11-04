@@ -426,6 +426,7 @@ function command(f: ReturnType<Input['frame']>, aimDir: THREE.Vector3, pad: Retu
   return c;
 }
 
+let radarOdd = false;
 let fps = 60, frames = 0, fpsT = 0;
 function loop(t: number) {
   const rawDt = t - last; const dt = Math.min(0.1, rawDt / 1000); last = t;
@@ -506,7 +507,8 @@ function loop(t: number) {
     if (ctx) for (const f of ctx.blips) blips.push(...f());
     if (cityMap) { for (const m of cityMap.near(P.x, P.z, 420)) blips.push({ x: m.x, z: m.z, c: '', icon: m.cat } as any); cityMap.poke(); }
     plateUpdate();
-    prof.t('radar', () => hud.drawRadar(sim.net, P.x, P.z, view.cam.yaw + Math.PI, blips, potholesNear(P.x, P.z, 160), state.owned.map((id) => state.ownedPts[id]).filter(Boolean), route, note));
+    // phones redraw the radar every other frame (30 times a second is plenty for a map)
+    radarOdd = !radarOdd; if (!(device.mobile && radarOdd)) prof.t('radar', () => hud.drawRadar(sim.net, P.x, P.z, view.cam.yaw + Math.PI, blips, potholesNear(P.x, P.z, 160), state.owned.map((id) => state.ownedPts[id]).filter(Boolean), route, note));
     // prompts
     let pr: string | null = null;
     if (me.vehicle === null) for (const v of sim.liveVehicles()) { const p = v.body.translation(); if (Math.hypot(p.x - me.pos.x, p.z - me.pos.z) < 4) { pr = v.seats[0] !== null ? '<kbd>E</kbd>Jack this car' : (v as any).locked ? '<kbd>E</kbd>Break in' : '<kbd>E</kbd>Get in'; break; } }

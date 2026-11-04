@@ -8,7 +8,8 @@ import { CityEvents } from './societyEvents';
 import { SocietyUi } from './societyUi';
 import { RT } from './societyRuntime';
 
-const BUDGET_MS = 1.0;
+/** main-thread time the society sim may take per frame; phones get less (the world simply ticks a little slower there) */
+const budgetMs = () => (typeof document !== 'undefined' && document.documentElement.classList.contains('hl-phone') ? 0.5 : 1.0);
 let ui: SocietyUi | null = null; let saveT = 0; let started = false; let toastCd = 0;
 const perf = { frames: 0, total: 0, max: 0, ema: 0, last: 0, over1: 0, startedAt: 0 };
 
@@ -68,7 +69,7 @@ export const societySystem: GameSystem & { api: SocietyApi } = {
     const t0 = performance.now();
     const at = ctx.view.atmo; const now = at.day * 1440 + at.hour * 60;
     const P = ctx.sim.local.pos;
-    soc.update(now, P.x, P.z, ctx.view.world.store.regions.values(), BUDGET_MS);
+    soc.update(now, P.x, P.z, ctx.view.world.store.regions.values(), budgetMs());
     RT.bridge!.frame(dt, P); RT.events!.frame(dt);
     toastCd -= dt; ui?.frame(dt);
     saveT += dt; if (saveT > 25) { saveT = 0; flush(ctx); }
