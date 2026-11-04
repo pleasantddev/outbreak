@@ -26,7 +26,10 @@ class ParticleSystem {
       uniforms: { map: { value: softDot() }, scale: { value: 600 } },
       vertexShader: `attribute float size; attribute vec4 color; varying vec4 vC; uniform float scale;
         void main(){ vC = color; vec4 mv = modelViewMatrix * vec4(position,1.0); gl_PointSize = size * scale / -mv.z; gl_Position = projectionMatrix * mv; }`,
-      fragmentShader: `uniform sampler2D map; varying vec4 vC; void main(){ vec4 t = texture2D(map, gl_PointCoord); gl_FragColor = vec4(vC.rgb, vC.a * t.a); }`,
+      fragmentShader: `uniform sampler2D map; varying vec4 vC; void main(){ vec4 t = texture2D(map, gl_PointCoord); gl_FragColor = vec4(vC.rgb, vC.a * t.a);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}`,
       transparent: true, depthWrite: false, blending,
     });
     this.points = new THREE.Points(this.geo, mat);

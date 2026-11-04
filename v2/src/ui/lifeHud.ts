@@ -1,6 +1,7 @@
 // HustleLife HUD, modern RP style: glass panels, money pills, toasts, an incoming-call card, a dark minimap with
 // a teal GPS route, a speed arc with the gear, a parcel card for the land under your feet, the LANDMAP overlay,
 // and the phone in the hand.
+import { drawIcon } from './mapIcons';
 import { appIcon, appAccent } from './phoneIcons';
 import type { SimEvent } from '../sim/types';
 import type { LifeSim } from '../sim/life';
@@ -53,7 +54,7 @@ const css = `
 #mm{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));width:min(270px,34vw)}
 #mmhead{display:flex;flex-direction:column;gap:1px;margin:0 0 7px 4px;white-space:nowrap;overflow:hidden}
 #mmhead b{font-size:17px;font-weight:800;letter-spacing:.2px} #mmhead span{font-size:12.5px;color:#cfd5e1}
-#radarw{position:relative;border-radius:18px;overflow:hidden;padding:0;aspect-ratio:1.55}
+#radarw{position:relative;border-radius:18px;overflow:hidden;padding:0;aspect-ratio:1.55;cursor:pointer;pointer-events:auto}
 #radar{display:block;width:100%;height:100%}
 #mmdir{position:absolute;right:9px;top:8px;font-size:11px;font-weight:700;color:#cfd5e1;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.35)}
 #vitals{display:flex;gap:6px;margin-top:7px}
@@ -132,6 +133,30 @@ const css = `
 #appview .row{background:#fff;border:none;border-radius:16px;padding:12px 13px;font-size:12.5px;font-weight:500;line-height:1.4;color:#4b5263;pointer-events:auto;box-shadow:0 1px 2px rgba(16,24,40,.06),0 1px 1px rgba(16,24,40,.04)}
 #appview .row b{display:block;font-size:14px;font-weight:700;margin-bottom:3px;color:#11131a;letter-spacing:-.1px}
 #appview .row.sel{box-shadow:0 0 0 2px var(--ac,#6d3ef0)}
+/* app kit: the pieces real apps are made of (hero card, quick actions, grouped lists, stats). Any app can use them. */
+#appview .ak-hero{border-radius:22px;padding:16px 16px 14px;color:#fff;background:linear-gradient(140deg,var(--ac,#6d3ef0),color-mix(in srgb,var(--ac,#6d3ef0) 52%,#05060a));box-shadow:0 8px 22px color-mix(in srgb,var(--ac,#6d3ef0) 30%,transparent);position:relative;overflow:hidden}
+#appview .ak-hero:after{content:"";position:absolute;right:-40px;top:-40px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.1)}
+#appview .ak-hero small{display:block;opacity:.82;font:700 11px Inter,sans-serif;letter-spacing:.6px;text-transform:uppercase}
+#appview .ak-hero .big{font:800 32px Inter,sans-serif;letter-spacing:-1px;margin:4px 0 2px;color:#fff}
+#appview .ak-hero span{font-size:12.5px;opacity:.88}
+#appview .ak-hero .ak-pills{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap} #appview .ak-hero .ak-pills em{font-style:normal;background:rgba(255,255,255,.18);border-radius:999px;padding:4px 10px;font-size:11.5px;font-weight:600}
+#appview .ak-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+#appview .ak-tile{background:#fff;border:none;border-radius:16px;padding:11px 2px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;font:600 11px Inter,sans-serif;color:#11131a;cursor:pointer;pointer-events:auto;box-shadow:0 1px 2px rgba(16,24,40,.06)}
+#appview .ak-tile i{width:38px;height:38px;border-radius:12px;background:color-mix(in srgb,var(--ac,#6d3ef0) 13%,#fff);display:flex;align-items:center;justify-content:center}
+#appview .ak-tile svg,#appview .ak-item .ic svg{width:19px;height:19px;stroke:var(--ac,#6d3ef0);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#appview .ak-tile:active{transform:scale(.96)}
+#appview .ak-h{font:700 11px Inter,sans-serif;text-transform:uppercase;letter-spacing:.7px;color:#8a8f9c;margin:8px 6px -2px}
+#appview .ak-list{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.06)}
+#appview .ak-item{box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:11px 13px;border:none;background:none;width:100%;text-align:left;font:inherit;color:inherit;pointer-events:auto}
+#appview .ak-item+.ak-item{border-top:1px solid #eef0f4}
+#appview button.ak-item{cursor:pointer} #appview button.ak-item:active{background:#f6f7fa}
+#appview .ak-item .ic{flex:none;width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--ac,#6d3ef0) 13%,#fff);display:flex;align-items:center;justify-content:center}
+#appview .ak-item .tx{flex:1;min-width:0} #appview .ak-item .tx b{display:block;font-size:14px;color:#11131a;font-weight:650} #appview .ak-item .tx span{display:block;font-size:12px;color:#6b7280;margin-top:1px;line-height:1.35}
+#appview .ak-item .rt{flex:none;text-align:right;font:650 13.5px Inter,sans-serif;color:#11131a} #appview .ak-item .rt small{display:block;font-size:11px;color:#8a8f9c;font-weight:500}
+#appview .ak-item .chev{flex:none;width:8px;height:8px;border-right:2px solid #c3c7d0;border-top:2px solid #c3c7d0;transform:rotate(45deg);margin-left:4px}
+#appview .ak-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px} #appview .ak-stat{background:#fff;border-radius:14px;padding:10px 11px;box-shadow:0 1px 2px rgba(16,24,40,.06)} #appview .ak-stat small{display:block;color:#8a8f9c;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px} #appview .ak-stat b{display:block;font:800 17px Inter,sans-serif;color:#11131a;margin-top:2px}
+#appview .ak-cta{display:block;width:100%;border:none;border-radius:14px;padding:13px;background:var(--ac,#6d3ef0);color:#fff;font:700 14px Inter,sans-serif;cursor:pointer;pointer-events:auto}
+#appview .ak-note{font-size:11.5px;color:#8a8f9c;text-align:center;padding:2px 10px}
 #appview .row br+.btn,#appview .row .btn{margin-top:9px}
 #appview .row .btn{background:var(--ac,#6d3ef0);box-shadow:none;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:700;margin-right:4px}
 #appview .row .btn[disabled]{opacity:.45}
@@ -141,6 +166,17 @@ const css = `
 #scr .home{position:absolute;left:50%;bottom:6px;width:118px;height:5px;margin-left:-59px;border-radius:3px;background:#fff;opacity:.6;z-index:3}
 @media (max-height:560px){#phone{transform:none;width:min(360px,58vw);aspect-ratio:auto;height:calc(100vh - 24px);border-radius:30px}#phone.up{bottom:12px}#scr{border-radius:24px}#scr .big{font-size:40px;padding-top:8px}#apps{grid-template-columns:repeat(5,1fr);max-height:calc(100% - 150px);padding-top:10px}#appview .nav{padding-top:30px}#scr .isl{display:none}}
 body.phone-up #nt-badge{display:none}
+/* phones held upright: the in-game phone is your screen, so it fills it (no frame, no tilt), and the HUD makes room for the thumbs */
+@media (pointer:coarse) and (max-aspect-ratio:3/4){
+  #phone,#phone.tab,#phone.small{right:0;left:0;width:100%!important;height:100%;aspect-ratio:auto;border-radius:0;padding:0;transform:none;background:#0b0d16;box-shadow:none;bottom:-110%}
+  #phone.up{bottom:0} #scr,#phone.tab #scr,#phone.small #scr{border-radius:0} #scr .isl{display:none} #appview .nav{padding-top:calc(max(8px,env(safe-area-inset-top)) + 28px)}
+  #scr .st{padding-top:max(10px,env(safe-area-inset-top))} #apps{grid-template-columns:repeat(4,1fr)}
+  #mm{left:max(10px,env(safe-area-inset-left));top:calc(max(14px,env(safe-area-inset-top)) + 186px);bottom:auto;width:min(150px,38vw)} #mmhead span{display:none} #mmhead b{font-size:12px}
+  #soc-tick{display:none!important} #subs{bottom:42%;max-width:90vw}
+}
+/* phones held sideways: keep subtitles clear of the thumb buttons */
+@media (pointer:coarse) and (max-height:520px) and (min-aspect-ratio:4/3){ #subs{bottom:auto;top:24%} #soc-tick{max-width:30vw} }
+
 #landmap{position:fixed;inset:0;z-index:6;display:none;pointer-events:none;font-family:Inter,sans-serif;color:var(--txt)}
 #landmap.on{display:block}
 #lm-top{position:absolute;left:max(18px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;pointer-events:auto}
@@ -277,6 +313,23 @@ function crackSvg(level: number) {
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">${lines.join('')}</svg>`);
 }
 
+/** app kit helpers: build real-app screens from a few pieces (CSS in the phone style block) */
+const KI: Record<string, string> = {
+  plus: 'M12 5v14M5 12h14', minus: 'M5 12h14', send: 'M4 12h14M13 6l6 6-6 6', list: 'M5 7h14M5 12h14M5 17h9', cash: 'M3 7h18v10H3zM12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4', bank: 'M3 9l9-5 9 5M5 9v9M19 9v9M9 9v9M15 9v9M3 20h18',
+  sun: 'M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z', drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z', clock: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
+  road: 'M9 3 6 21M15 3l3 18M12 5v2M12 11v2M12 17v2', gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', cloud: 'M7 18h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 6.8 11 3.5 3.5 0 0 0 7 18z', home: 'M4 11l8-6 8 6v8H4z', bolt: 'M13 2 4 14h7l-1 8 9-12h-7z', pin: 'M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z',
+};
+const kicon = (k: string) => `<svg viewBox="0 0 24 24"><path d="${KI[k] ?? k}"/></svg>`;
+export const ak = {
+  hero: (label: string, big: string, sub = '', pills: string[] = []) => `<div class="ak-hero"><small>${label}</small><div class="big">${big}</div>${sub ? `<span>${sub}</span>` : ''}${pills.length ? `<div class="ak-pills">${pills.map((p) => `<em>${p}</em>`).join('')}</div>` : ''}</div>`,
+  tiles: (t: { icon: string; label: string; app: string; id: string }[]) => `<div class="ak-tiles">${t.map((x) => `<button class="ak-tile" data-app="${x.app}" data-id="${x.id}"><i>${kicon(x.icon)}</i>${x.label}</button>`).join('')}</div>`,
+  h: (t: string) => `<div class="ak-h">${t}</div>`,
+  list: (items: { icon?: string; title: string; sub?: string; right?: string; rsub?: string; app?: string; id?: string; chev?: boolean }[]) => `<div class="ak-list">${items.map((x) => { const tag = x.app ? 'button' : 'div'; return `<${tag} class="ak-item"${x.app ? ` data-app="${x.app}" data-id="${x.id}"` : ''}>${x.icon ? `<span class="ic">${kicon(x.icon)}</span>` : ''}<span class="tx"><b>${x.title}</b>${x.sub ? `<span>${x.sub}</span>` : ''}</span>${x.right !== undefined ? `<span class="rt">${x.right}${x.rsub ? `<small>${x.rsub}</small>` : ''}</span>` : ''}${x.chev || x.app ? '<i class="chev"></i>' : ''}</${tag}>`; }).join('')}</div>`,
+  stats: (s: [string, string][]) => `<div class="ak-stats">${s.map(([k, v]) => `<div class="ak-stat"><small>${k}</small><b>${v}</b></div>`).join('')}</div>`,
+  cta: (label: string, app: string, id: string) => `<button class="ak-cta" data-app="${app}" data-id="${id}">${label}</button>`,
+  note: (t: string) => `<div class="ak-note">${t}</div>`,
+};
+
 export class LifeHud {
   root: HTMLElement; el = (id: string) => document.getElementById(id)!;
   subQueue: { who: string; text: string; secs: number }[] = []; subT = 0; titleT = 0; flashT = 0;
@@ -313,7 +366,7 @@ export class LifeHud {
     <div id="stars" class="gl none">${[0, 1, 2, 3, 4].map(() => svg(I.star)).join('')}</div>
   </div>
   <div id="mm"><div id="mmhead" class="ts"><b id="area"></b><span id="street"></span></div>
-    <div id="radarw" class="gl"><canvas id="radar" width="540" height="348"></canvas><div id="mmdir"></div></div>
+    <div id="radarw" class="gl" title="Open the map (M)"><canvas id="radar" width="540" height="348"></canvas><div id="mmdir"></div></div>
     <div id="vitals"><div class="v"><i id="hp" style="width:100%"></i></div><div class="v"><i id="ar" style="width:0%"></i></div></div></div>
   <div id="nameplate"><b id="np-n"></b><i id="np-l"></i></div>
   <div id="parcel" class="gl"></div>
@@ -470,6 +523,7 @@ ${touch ? `<div id="tc">
   openApp() {
     const [name, , color] = APPS[this.sel];
     if (name === 'Land') { this.togglePhone(false); this.onAction?.('Landmap', ''); return; }
+    if (name === 'Map') { this.togglePhone(false); this.onAction?.('CityMap', ''); return; }
     this.appOpen = name; this.rowSel = 0;
     this.el('appview').style.setProperty('--ac', appAccent(name, color)); this.el('av-h').textContent = name; this.el('av-ic').innerHTML = appIcon(name, color);
     this.refreshApp(); this.el('appview').style.display = 'flex';
@@ -485,52 +539,63 @@ ${touch ? `<div id="tc">
     if (this.appRenderers[name]) html = this.appRenderers[name](c);
     else if (name === 'Hustles') html = c.jobs.map((j) => row(`${j.title} · ${fmt(j.pay)}`, j.desc, j.active ? ['Hustles', 'cancel:' + j.id, 'Drop it'] : ['Hustles', j.id, 'Take it'])).join('') || row('Nothing now', 'Check back when the city wakes up.');
     else if (name === 'Texts') html = c.texts.map(([w, t]) => row(w, t)).join('');
-    else if (name === 'Bank') html = row('Cash in hand', fmt(c.cash)) + row('Account', fmt(c.bank), ['Bank', 'deposit', 'Deposit ₦10,000']) + row('Withdraw', 'Any POS stand on the street will do. Small charge.', ['Bank', 'withdraw', 'Withdraw ₦10,000']);
-    else if (name === 'Weather') html = row('Now', `${c.weather}, ${c.season}`) + row('Game time', `${c.time} · day ${c.day}`) + row('Lagos time', `${c.real} WAT`) + row('Potholes', 'Rain fills them. Sun and harmattan dry them. Drive accordingly.');
-    else if (name === 'Roads') html = row('Pothole reports', 'From news reports and residents, 2023 to October 2026. Each report is snapped to the named road.') + c.potholes.map((p) => row(`${p.name}`, `${p.road} · ${p.area}<br>Reported ${p.reported} · ${p.placed} potholes placed`)).join('');
+    else if (name === 'Bank') html = ak.hero('Savings account', fmt(c.bank), `Cash in hand ${fmt(c.cash)}`, ['Account ' + (this.me.id ? String(this.me.id).slice(-10).toUpperCase() : '0123456789'), 'POS withdrawals 1.5%'])
+      + ak.tiles([{ icon: 'plus', label: 'Deposit', app: 'Bank', id: 'deposit' }, { icon: 'bank', label: 'Deposit all', app: 'Bank', id: 'deposit:all' }, { icon: 'minus', label: 'Withdraw', app: 'Bank', id: 'withdraw' }, { icon: 'cash', label: '₦50k out', app: 'Bank', id: 'withdraw:50000' }])
+      + ak.h('Your money') + ak.list([{ icon: 'cash', title: 'Cash in hand', sub: 'Robbers take this. The bank keeps the rest.', right: fmt(c.cash) }, { icon: 'bank', title: 'In the bank', sub: 'Safe. Spend it by card or POS.', right: fmt(c.bank) }])
+      + ak.note('Deposits and withdrawals are ₦10,000 at a time unless you pick another.');
+    else if (name === 'Weather') { const w = String(c.weather); const icon = /rain|storm/i.test(w) ? 'drop' : /cloud|fog|haze|harmattan/i.test(w) ? 'cloud' : 'sun'; html = ak.hero(`Lagos · ${c.season}`, w, `Game time ${c.time} · day ${c.day}`, [`Lagos time ${c.real}`])
+      + ak.h('Today') + ak.list([{ icon, title: 'Now', sub: w, right: c.time }, { icon: 'clock', title: 'Real Lagos time', sub: 'One game day is 48 real minutes', right: c.real }, { icon: 'road', title: 'Roads', sub: 'Rain fills the potholes. Sun and harmattan dry them out. Drive accordingly.' }]); }
+    else if (name === 'Roads') html = ak.hero('Pothole reports', String(c.potholes.length), 'From the news and residents, 2023 to 2026. Each one is snapped to its road.') + ak.list(c.potholes.slice(0, 60).map((p) => ({ icon: 'road', title: p.name, sub: `${p.road} · ${p.area}`, right: String(p.placed ?? 0), rsub: p.reported })));
     else if (name === 'Contacts') html = row(`${this.me.name} (you)`, this.me.id ? `Account ${this.me.id}` : 'Your number') + row('Mama Put', 'Under the bridge, Oshodi') + row('Conductor Sule', 'Oshodi park') + row('Baba Landlord', 'Sells land. Asks no questions. Charges for C of O.');
-    else if (name === 'Settings') html = row('Graphics', `Quality: ${c.quality}<br>Auto adapts to your device while you play. Tap to cycle Auto, High, Medium, Low. F3 shows frame stats.`, ['Settings', 'quality', 'Change']) + row('Weather', 'Cycle the weather (testing)', ['Settings', 'weather', 'Next']) + row('Time', 'Jump one hour', ['Settings', 'hour', '+1 hour']) + row('Lobby', 'Save and go back to the lobby. Change your look or your name there.', ['Settings', 'lobby', 'Back to lobby']);
+    else if (name === 'Settings') html = ak.h('Graphics') + ak.list([{ icon: 'bolt', title: `Quality: ${String(c.quality).split(' · ')[0]}`, sub: `${String(c.quality).split(' · ').slice(1).join(' · ')}. Auto adapts to your device while you play. Tap to cycle Auto, High, Medium, Low. F3 shows frame stats.`, app: 'Settings', id: 'quality' }])
+      + ak.h('World') + ak.list([{ icon: 'cloud', title: 'Weather', sub: 'Change the weather (testing)', app: 'Settings', id: 'weather' }, { icon: 'clock', title: 'Time', sub: 'Jump one hour', app: 'Settings', id: 'hour' }])
+      + ak.h('You') + ak.list([{ icon: 'home', title: 'Back to the lobby', sub: 'Saves first. Change your look or name there.', app: 'Settings', id: 'lobby' }]);
     else if (EXT_APPS.get(name)?.mode === 'replace') html = EXT_APPS.get(name)!.render(c);
     else if (APP_RENDER.has(name)) html = APP_RENDER.get(name)!(c, this);
     else html = `<canvas id="pmap" width="400" height="400"></canvas>` + row('Legend', 'Teal: your route · Red dots: reported potholes · Purple: your land');
     const extra = EXT_APPS.get(name); if (extra?.mode === 'append') html += extra.render(c);
     L.innerHTML = html;
-    L.querySelectorAll('button[data-app]').forEach((b) => ((b as HTMLElement).onclick = () => this.onAction?.((b as HTMLElement).dataset.app!, (b as HTMLElement).dataset.id!)));
+    L.querySelectorAll('button[data-app],.ak-item[data-app],.ak-tile[data-app]').forEach((b) => ((b as HTMLElement).onclick = () => this.onAction?.((b as HTMLElement).dataset.app!, (b as HTMLElement).dataset.id!)));
     L.querySelectorAll('.row').forEach((r, i) => r.classList.toggle('sel', i === this.rowSel));
   }
   closeApp() { this.appOpen = null; this.el('appview').style.display = 'none'; }
 
   // ---------------------------------------------------------------- per frame
+  /** write to the DOM only when the value changed: the HUD runs every frame and every write costs a style pass */
+  private dom = new Map<string, string>();
+  private tx(id: string, v: string) { const k = 't' + id; if (this.dom.get(k) === v) return; this.dom.set(k, v); this.el(id).textContent = v; }
+  private hx(id: string, v: string) { const k = 'h' + id; if (this.dom.get(k) === v) return; this.dom.set(k, v); this.el(id).innerHTML = v; }
+  private sw(e: HTMLElement, prop: 'width' | 'display', v: string) { if (e.style[prop] !== v) e.style[prop] = v; }
   update(dt: number, sim: LifeSim, s: HudFrame) {
     this.lastFrame = s;
-    this.el('clock').textContent = s.time;
-    this.el('sub2').textContent = `${s.weather} · ${Math.round(s.temp)}°`;
+    this.tx('clock', s.time);
+    this.tx('sub2', `${s.weather} · ${Math.round(s.temp)}°`);
     const cash = sim.cash;
     if (this.shown !== cash) { this.shown += Math.sign(cash - this.shown) * Math.max(1, Math.round(Math.abs(cash - this.shown) * dt * 6)); if (Math.abs(cash - this.shown) < 2) this.shown = cash; }
-    this.el('money').textContent = fmt(this.shown); this.el('bank').textContent = fmt(s.bank);
+    this.tx('money', fmt(this.shown)); this.tx('bank', fmt(s.bank));
     const me = sim.local;
-    const hp = Math.max(0, me.hp / me.maxHp); const H = this.el('hp') as HTMLElement; H.style.width = `${hp * 100}%`; H.classList.toggle('low', hp < 0.3);
-    (this.el('ar') as HTMLElement).style.width = `${me.inv.armor ? me.inv.armor.hp : 0}%`;
+    const hp = Math.max(0, me.hp / me.maxHp); const H = this.el('hp') as HTMLElement; this.sw(H, 'width', `${(hp * 100).toFixed(1)}%`); H.classList.toggle('low', hp < 0.3);
+    this.sw(this.el('ar') as HTMLElement, 'width', `${me.inv.armor ? me.inv.armor.hp : 0}%`);
     const st = this.el('stars'); st.classList.toggle('none', sim.wanted <= 0); [...st.children].forEach((b, i) => b.classList.toggle('on', i < sim.wanted));
-    this.el('area').textContent = s.area; this.el('street').textContent = s.street;
-    (this.el('xhair') as HTMLElement).style.display = s.aiming && !s.inCar ? 'block' : 'none';
+    this.tx('area', s.area); this.tx('street', s.street);
+    this.sw(this.el('xhair') as HTMLElement, 'display', s.aiming && !s.inCar ? 'block' : 'none');
     // weapon card on foot, speedo in a car
     const W = this.el('wcard') as HTMLElement, S = this.el('speedo') as HTMLElement;
-    W.style.display = !s.inCar ? 'flex' : 'none'; S.style.display = s.inCar ? 'block' : 'none';
+    this.sw(W, 'display', !s.inCar ? 'flex' : 'none'); this.sw(S, 'display', s.inCar ? 'block' : 'none');
     if (this.touch) { this.tcFlag('car', !!s.inCar); const tw = document.getElementById('tb-w'); const wl = s.weaponKind === 'gun' ? `${s.weapon} ${s.mag}/${s.ammo}` : (s.weapon || 'Fists'); if (tw && tw.textContent !== wl) tw.textContent = wl; }
     if (!s.inCar) {
-      this.el('w-name').textContent = s.weapon || 'Fists';
-      this.el('w-ico').innerHTML = svg(s.weaponKind === 'gun' ? I.gun : s.weaponKind === 'melee' ? I.blade : I.fist);
-      this.el('w-ammo').innerHTML = s.weaponKind === 'gun' ? `${s.mag} <small>/ ${s.ammo}</small>` : '';
+      this.tx('w-name', s.weapon || 'Fists');
+      this.hx('w-ico', svg(s.weaponKind === 'gun' ? I.gun : s.weaponKind === 'melee' ? I.blade : I.fist));
+      this.hx('w-ammo', s.weaponKind === 'gun' ? `${s.mag} <small>/ ${s.ammo}</small>` : '');
     } else {
-      this.el('kmh').textContent = String(Math.round(s.kmh)); this.el('gear').textContent = s.gear;
+      this.tx('kmh', String(Math.round(s.kmh))); this.tx('gear', s.gear);
       const f = Math.min(1, s.kmh / 180); this.speedArc.setAttribute('d', f > 0.004 ? this.arc(100, 100, 80, -130, -130 + 260 * f) : '');
       this.rpmArc.setAttribute('d', s.rpm > 0.01 ? this.arc(100, 100, 66, -130, -130 + 260 * Math.min(1, s.rpm)) : '');
       this.rpmArc.setAttribute('stroke', s.rpm > 0.85 ? '#ff4d5e' : '#2de0c8');
     }
-    this.el('ph-t').textContent = s.time; this.el('ph-big').textContent = s.time; this.el('ph-s').textContent = `${s.weather} · ${s.area}`;
-    if (this.subT > 0) { this.subT -= dt; if (this.subT <= 0) this.el('subs').innerHTML = ''; }
-    if (this.subT <= 0 && this.subQueue.length) { const n = this.subQueue.shift()!; this.el('subs').innerHTML = `<span class="who">${n.who}</span> ${n.text}`; this.subT = n.secs; }
+    this.tx('ph-t', s.time); this.tx('ph-big', s.time); this.tx('ph-s', `${s.weather} · ${s.area}`);
+    if (this.subT > 0) { this.subT -= dt; if (this.subT <= 0) this.hx('subs', ''); }
+    if (this.subT <= 0 && this.subQueue.length) { const n = this.subQueue.shift()!; this.hx('subs', `<span class="who">${n.who}</span> ${n.text}`); this.subT = n.secs; }
     if (this.titleT > 0) { this.titleT -= dt; if (this.titleT <= 0) { this.el('title').classList.remove('on'); this.el('hlhud').classList.remove('titling'); } }
     if (this.flashT > 0) { this.flashT -= dt; if (this.flashT <= 0) this.el('flash').style.opacity = '0'; }
     if (this.callCb) { this.callT -= dt; if (this.callT <= 0 || performance.now() > this.callUntil) this.answer(false); }
@@ -571,8 +636,11 @@ ${touch ? `<div id="tc">
       g.strokeStyle = '#2de0c8'; g.lineWidth = 6; g.stroke();
     }
     g.fillStyle = '#ff4d5e'; for (const h of potholes) { g.beginPath(); g.arc(h.x * S, h.z * S, 2.4, 0, 6.28); g.fill(); }
-    for (const b of blips) { g.fillStyle = b.c; g.strokeStyle = '#0b0d14'; g.lineWidth = 3; g.beginPath(); g.arc(b.x * S, b.z * S, b.r ?? 9, 0, 6.28); g.fill(); g.stroke(); }
+    for (const b of blips) { if ((b as any).icon) continue; g.fillStyle = b.c; g.strokeStyle = '#0b0d14'; g.lineWidth = 3; g.beginPath(); g.arc(b.x * S, b.z * S, b.r ?? 9, 0, 6.28); g.fill(); g.stroke(); }
     g.restore();
+    // GTA style icons (hospitals, chemists, police, fuel...) drawn upright at their spot
+    { const c = Math.cos(heading), s2 = Math.sin(heading);
+      for (const b of blips) { const ic = (b as any).icon; if (!ic) continue; const dx = (b.x - px) * S, dz = (b.z - pz) * S; const x = dx * c - dz * s2 + W / 2, y = dx * s2 + dz * c + H * 0.62; if (x < 10 || x > W - 10 || y < 10 || y > H - 10) continue; drawIcon(g, ic, x, y, 13); } }
     // off-map blips pinned to the edge
     for (const b of blips) {
       if ((b.r ?? 9) < 10) continue;

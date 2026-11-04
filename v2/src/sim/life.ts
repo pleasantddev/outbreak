@@ -93,9 +93,12 @@ export class LifeSim {
   // with a 2 m overlap (no flush seams) keep every cast local. Slabs far from everyone are pruned.
   private groundBody: RBody;
   private groundTiles = new Map<string, RCollider>();
+  private groundCells = new Set<number>();
   private groundPruneT = 0;
   ensureGround(x: number, z: number) {
     const ci = Math.floor(x / GROUND_TILE), cj = Math.floor(z / GROUND_TILE);
+    const cell = (ci + 4096) * 8192 + (cj + 4096); if (this.groundCells.has(cell)) return; // this 3x3 block is already laid
+    this.groundCells.add(cell);
     for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
       const k = i + ',' + j; if (this.groundTiles.has(k)) continue;
       const c = this.phys.world.createCollider(RAPIER.ColliderDesc.cuboid(GROUND_TILE / 2 + 2, 0.5, GROUND_TILE / 2 + 2).setTranslation((i + 0.5) * GROUND_TILE, -0.5, (j + 0.5) * GROUND_TILE)
@@ -105,17 +108,19 @@ export class LifeSim {
   }
   /** Ground under every actor and vehicle; slabs nobody is near get removed now and then. */
   private keepGround(dt: number) {
+    for (const a of this.actors) if (a.alive && !(a as any)._gone) this.ensureGround(a.pos.x, a.pos.z);
+    for (const v of this.vehicles) if (v && !(v as any).gone) { const t = v.body.translation(); this.ensureGround(t.x, t.z); }
+    if ((this.groundPruneT += dt) < 5 || this.groundTiles.size < 200) return;
     const pts: { x: number; z: number }[] = [];
     for (const a of this.actors) if (a.alive && !(a as any)._gone) pts.push(a.pos);
     for (const v of this.vehicles) if (v && !(v as any).gone) pts.push(v.body.translation());
-    for (const p of pts) this.ensureGround(p.x, p.z);
-    if ((this.groundPruneT += dt) < 5 || this.groundTiles.size < 200) return;
     this.groundPruneT = 0;
     for (const [k, c] of this.groundTiles) {
       const [i, j] = k.split(',').map(Number); const cx = (i + 0.5) * GROUND_TILE, cz = (j + 0.5) * GROUND_TILE;
       if (pts.some((p) => Math.abs(p.x - cx) < GROUND_TILE * 2.5 && Math.abs(p.z - cz) < GROUND_TILE * 2.5)) continue;
       this.phys.world.removeCollider(c, false); this.groundTiles.delete(k);
     }
+    this.groundCells.clear(); // re-check the blocks next step (cheap: one set lookup per actor)
   }
   brainOf(id: number) { return this.brains.get(id); }
   /** Spawns an actor bound to a citizen record: brain kind 'citizen', the society hook steers it. */

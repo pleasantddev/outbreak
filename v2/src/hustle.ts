@@ -27,6 +27,11 @@ import { WEATHER_ORDER, type WeatherName } from './render/sky';
 import type { CharacterLook } from './data/cosmetics';
 import { Governor, LEVELS, PRESET_LEVEL, detectDevice, loadPref, savePref, type Pref, type Tier } from './render/quality';
 import { PerfHud } from './render/perfhud';
+import { prof } from './prof';
+import { CityMap, type MapMarker } from './ui/citymap';
+import { waypoints } from './systems/waypoint';
+import CLUBS from './data/clubs.json';
+import type { MapCat } from './ui/mapIcons';
 import { intro as loadScreen } from './ui/intro';
 import { FrontEnd, readSettings, type PlayChoice } from './ui/lobby';
 import { LobbyStage } from './render/lobbyScene';
@@ -120,6 +125,13 @@ async function boot() {
     input, setModal, land: { owned: () => state.owned, plot: plotById }, blips: [], graph } as GameCtx;
   if (net.serverMode) net.attachState(state);
   for (const s of SYSTEMS) await s.init?.(ctx);
+  cityMap = new CityMap({
+    me: () => { const P = sim.local.vehicle !== null ? sim.vehicles[sim.local.vehicle].body.translation() : sim.local.pos; return { x: P.x, z: P.z, heading: Math.PI - view.cam.yaw }; },
+    route: () => route, goal: () => jobGoal(), waypoint: () => waypoints.get(), setWaypoint: (w) => waypoints.set(w),
+    markers: () => mapMarkers(), owned: () => state.owned.map((id) => state.ownedPts[id]).filter(Boolean), store,
+    onOpen: (on) => setModal(on, true), openLand: () => { if (!hud.landmapOn) toggleLandmap(); },
+  });
+  document.getElementById('radarw')?.addEventListener('click', () => { if (started && !cityMap!.isOpen) cityMap!.toggle(true); });
   hud.onBuy = (id) => { buyPlot(id); };
   bindLandmap();
   (window as any).__hl = { sim, view, hud, state, ctx, get stage() { return stage; }, get profile() { return profile; }, gov, perf: perfHud, THREE, graph, guide, store, startJob, get fps() { return fps; }, landmap: () => toggleLandmap(), call: () => offerCall('Conductor Sule', 'delivery', 'Test call'), job: (id: string) => startJob(id), pick: (id: string) => setPlayerModel(id),
@@ -207,6 +219,17 @@ function syncColliders(force = false) {
 // Jobs are content now (public/content/missions.json) and run by systems/missions.ts. startJob keeps the old ids working.
 function startJob(id: string) { (ctx?.systems.get('missions') as any)?.startMission(id); }
 function goalOf() { if (!ctx) return null; for (const s of SYSTEMS) { const g = s.goal?.(ctx); if (g) return g; } return null; }
+/** the job or mission objective, ignoring your own waypoint (the map shows both) */
+function jobGoal() { if (!ctx) return null; for (const s of SYSTEMS) { if (s.id === 'waypoint') continue; const g = s.goal?.(ctx); if (g) return g; } return null; }
+/** live map markers: clubs, the interiors you can walk into, and anything systems add */
+const VENUE_CAT: Record<string, MapCat> = { casino: 'club', club: 'club', joint: 'club', hub: 'jobs', bank: 'bank', power: 'jobs', home: 'home', room: 'home' };
+function mapMarkers(): MapMarker[] {
+  const out: MapMarker[] = [];
+  for (const c of CLUBS as any[]) out.push({ x: c.door?.x ?? c.x, z: c.door?.z ?? c.z, cat: 'club', name: c.name });
+  const life = (window as any).__life; if (life?.venues) for (const v of life.venues.values()) if (v.door) out.push({ x: v.door.x, z: v.door.z, cat: VENUE_CAT[v.id] ?? (String(v.id).startsWith('home') ? 'home' : 'landmark'), name: v.title.charAt(0) + v.title.slice(1).toLowerCase(), sub: v.sub });
+  if (ctx) for (const s of SYSTEMS) { const m = (s as any).mapMarkers?.(ctx); if (m) out.push(...m); }
+  return out;
+}
 
 /** Offline the wage is added here; online the server pays (and its wallet push moves sim.cash). */
 function payJob(id: string, pay: number) {
@@ -225,6 +248,7 @@ function nearbyPlots(): PhoneCtx['plots'] {
 }
 function onPhoneAction(app: string, id: string) {
   if (app === 'Landmap') { if (!hud.landmapOn) toggleLandmap(); if (id) selectPlot(id); return; }
+  if (app === 'CityMap') { cityMap?.toggle(true); return; }
   if (app === 'Land') {
     const p = nearbyPlots().find((x) => x.plot.id === id); if (!p) return;
     if (net.serverMode) { buyPlot(id); return; }
@@ -235,9 +259,11 @@ function onPhoneAction(app: string, id: string) {
     hud.title('LAND IS YOURS', `${Math.round(p.plot.area)} m² · Survey plan and C of O are next.`, 4); persist({ ...state, cash: sim.cash });
   }
   if (app === 'Bank') {
-    if (net.serverMode) { if (id === 'deposit') void net.bank('deposit', Math.min(10000, sim.cash)); if (id === 'withdraw') void net.bank('withdraw', Math.min(10000, state.bank)); setTimeout(() => hud.refreshApp(), 400); return; }
-    if (id === 'deposit') { const a = Math.min(10000, sim.cash); sim.cash -= a; state.bank += a; }
-    if (id === 'withdraw') { const a = Math.min(10000, state.bank); state.bank -= a; sim.cash += Math.round(a * 0.985); }
+    // deposit / withdraw ₦10,000, or `deposit:all`, `withdraw:50000`...
+    const [op, amt] = id.split(':'); const want = (have: number) => Math.min(have, amt === 'all' ? have : Number(amt) || 10000);
+    if (net.serverMode) { if (op === 'deposit') void net.bank('deposit', want(sim.cash)); if (op === 'withdraw') void net.bank('withdraw', want(state.bank)); setTimeout(() => hud.refreshApp(), 400); return; }
+    if (op === 'deposit') { const a = want(sim.cash); sim.cash -= a; state.bank += a; }
+    if (op === 'withdraw') { const a = want(state.bank); state.bank -= a; sim.cash += Math.round(a * 0.985); }
     persist({ ...state, cash: sim.cash });
   }
   if (app === 'Settings') {
@@ -256,6 +282,7 @@ function onPhoneAction(app: string, id: string) {
 // ---------------------------------------------------------------- input
 let firstPersonPressed = false;
 let route: number[] | null = null, parcelT = 0, street = '';
+let cityMap: CityMap | null = null;
 
 // ---------------------------------------------------------------- GPS: A* over the road graph (world/roadgraph.ts), followed by world/routeguide.ts
 const graph = new RoadGraph(); const guide = new RouteGuide(graph); let routeLine: RouteLine | null = null; let graphT = 0;
@@ -413,7 +440,8 @@ function loop(t: number) {
     if (pad) { if (pad.left && !prevPad?.left) hud.phoneNav(-1, 0); if (pad.right && !prevPad?.right) hud.phoneNav(1, 0); if (pad.up && !prevPad?.up) hud.phoneNav(0, -1); if (pad.down && !prevPad?.down) hud.phoneNav(0, 1); if (pad.a && !prevPad?.a) hud.phoneSelect(); if (pad.b && !prevPad?.b) { hud.phoneBack(); view.phoneUp = hud.phoneUp; } }
     if (Math.random() < dt * 2) { hud.ctx = phoneCtx(); if (hud.appOpen === 'Map') drawPhoneMap(); }
   }
-  if (started && (f.map || (pad?.y && hud.landmapOn && !prevPad?.y))) toggleLandmap();
+  if (started && f.map && !cityMap?.isOpen) { if (hud.landmapOn) toggleLandmap(); else cityMap?.toggle(true); }
+  else if (started && pad?.y && hud.landmapOn && !prevPad?.y) toggleLandmap();
   if (hud.landmapOn) landmapInput(dt, k, pad);
   if (hud.ringing) { if (k.has('KeyY') || (pad?.a && !prevPad?.a)) hud.answer(true); else if (k.has('KeyN') || (pad?.b && !prevPad?.b)) hud.answer(false); }
   if (k.has('KeyV') && !firstPersonPressed) view.firstPerson = !view.firstPerson; firstPersonPressed = k.has('KeyV');
@@ -429,8 +457,8 @@ function loop(t: number) {
     if (ctx) for (const s of SYSTEMS) s.filterCommand?.(ctx, cmd);
     acc += Math.min(dt, 0.1); let steps = 0;
     while (acc >= 1 / 60 && steps < 4) {
-      sim.setCommand(0, cmd); sim.step(1 / 60);
-      if (ctx) for (const s of SYSTEMS) s.step?.(ctx, 1 / 60);
+      sim.setCommand(0, cmd); prof.t('sim.step', () => sim.step(1 / 60));
+      if (ctx) for (const s of SYSTEMS) if (s.step) prof.t('step:' + s.id, () => s.step!(ctx!, 1 / 60));
       cmd.interact = false; cmd.reload = false; cmd.heal = false;
       acc -= 1 / 60; steps++;
     }
@@ -440,9 +468,9 @@ function loop(t: number) {
   syncColliders();
   view.phoneUp = hud.phoneUp;
   if (stageOn) { stage!.update(dt); front?.update(dt); }
-  if (ctx && started) for (const s of SYSTEMS) s.preRender?.(ctx, dt);
-  if (!modalFull) view.frame(dt);
-  if (ctx && started) for (const s of SYSTEMS) s.frame?.(ctx, dt);
+  if (ctx && started) for (const s of SYSTEMS) if (s.preRender) prof.t('pre:' + s.id, () => s.preRender!(ctx!, dt));
+  if (!modalFull) prof.t('view.frame', () => view.frame(dt));
+  if (ctx && started) for (const s of SYSTEMS) if (s.frame) prof.t('frame:' + s.id, () => s.frame!(ctx!, dt));
   if (stageOn) stage!.showPlayer(false);
   if (started) {
     const me = sim.local; const w = sim.currentWeapon(me);
@@ -453,7 +481,7 @@ function loop(t: number) {
     const gearN = Math.min(5, 1 + Math.floor(kmh / 30)); const rpm = !veh ? 0 : kmh < 1 ? 0.12 : 0.18 + 0.78 * ((kmh - (gearN - 1) * 30) / 30);
     const wk = !w || w.id === 'fists' ? 'none' : WEAPONS[w.id].slot === 'melee' ? 'melee' : 'gun';
     if (Math.random() < dt * 3) street = streetName(P.x, P.z);
-    hud.update(dt, sim, { time: view.atmo.timeString(), real: view.atmo.realString(), weather: view.atmo.weatherLabel, temp: temperature(), area: areaName(P.x, P.z), street, weapon: w && w.id !== 'fists' ? WEAPONS[w.id].name : '', weaponKind: wk, mag: st ? String(w!.mag) : '', ammo: st ? String(me.inv.count(AMMO_STACK[st.ammo]!)) : '', aiming, inCar: me.vehicle !== null, bank: state.bank, kmh, gear: ms < -0.6 ? 'R' : kmh < 1 ? 'N' : String(gearN), rpm });
+    prof.t('hud.update', () => hud.update(dt, sim, { time: view.atmo.timeString(), real: view.atmo.realString(), weather: view.atmo.weatherLabel, temp: temperature(), area: areaName(P.x, P.z), street, weapon: w && w.id !== 'fists' ? WEAPONS[w.id].name : '', weaponKind: wk, mag: st ? String(w!.mag) : '', ammo: st ? String(me.inv.count(AMMO_STACK[st.ammo]!)) : '', aiming, inCar: me.vehicle !== null, bank: state.bank, kmh, gear: ms < -0.6 ? 'R' : kmh < 1 ? 'N' : String(gearN), rpm }));
     void ammo;
     let note: string | null = null; const jobTg = goalOf();
     if (jobTg) {
@@ -468,8 +496,9 @@ function loop(t: number) {
     if (ctx) for (const sy of SYSTEMS) sy.blips?.(ctx, blips);
     for (const a of sim.actors) if (a.alive && a.role === 'police' && !(a as any)._gone) blips.push({ x: a.pos.x, z: a.pos.z, c: '#3b6cff', r: 6 });
     if (ctx) for (const f of ctx.blips) blips.push(...f());
+    if (cityMap) { for (const m of cityMap.near(P.x, P.z, 420)) blips.push({ x: m.x, z: m.z, c: '', icon: m.cat } as any); cityMap.poke(); }
     plateUpdate();
-    hud.drawRadar(sim.net, P.x, P.z, view.cam.yaw + Math.PI, blips, potholesNear(P.x, P.z, 160), state.owned.map((id) => state.ownedPts[id]).filter(Boolean), route, note);
+    prof.t('radar', () => hud.drawRadar(sim.net, P.x, P.z, view.cam.yaw + Math.PI, blips, potholesNear(P.x, P.z, 160), state.owned.map((id) => state.ownedPts[id]).filter(Boolean), route, note));
     // prompts
     let pr: string | null = null;
     if (me.vehicle === null) for (const v of sim.liveVehicles()) { const p = v.body.translation(); if (Math.hypot(p.x - me.pos.x, p.z - me.pos.z) < 4) { pr = v.seats[0] !== null ? '<kbd>E</kbd>Jack this car' : (v as any).locked ? '<kbd>E</kbd>Break in' : '<kbd>E</kbd>Get in'; break; } }
@@ -479,7 +508,7 @@ function loop(t: number) {
     if (Math.random() < dt * 0.2) persist({ ...state, cash: sim.cash });
   }
   prevPad = pad;
-  (window as any).__w.frames++;
+  (window as any).__w.frames++; prof.frame();
   requestAnimationFrame(loop);
 }
 

@@ -119,6 +119,8 @@ void main(){
   vec3 hz = skyColor(vec3(dir.x, max(dir.y, 0.02), dir.z));
   L = mix(L, hz * (1.0 - T), far * 0.85);
   gl_FragColor = vec4(L, 1.0 - T);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
 }`;
 
 const domeVS = `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`;
@@ -140,6 +142,8 @@ void main(){
   if (uStars > 0.01 && d.y > 0.0) { vec3 q = d * 280.0; float s = step(0.9965, h13(floor(q))); c += vec3(s) * uStars * (0.5 + 0.5 * sin(uTime * 3.0 + h13(floor(q)) * 40.0)) * smoothstep(0.0, 0.2, d.y); }
   if (uUseClouds > 0.5) { vec4 cl = texture2D(uClouds, gl_FragCoord.xy / uRes); c = c * (1.0 - cl.a) + cl.rgb; }
   gl_FragColor = vec4(c, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }`;

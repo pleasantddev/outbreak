@@ -134,7 +134,15 @@ export class LifeView {
     this.world.radius = L.radius;
     this.world.ranges = { lamp: Math.min(L.propRange, 260), util: Math.min(L.propRange, 160), tree: L.propRange, clutter: Math.min(L.propRange, 140) };
     const sim = this.sim as any; sim.maxPeds = L.peds; sim.maxTraffic = L.traffic; sim.maxParked = L.parked;
+    // the cheapest rungs skip the composer: one less full-screen pass and no half-float buffer at native resolution
+    const direct = !!L.direct && !(this.ao && this.ao.enabled);
+    if (direct !== this.direct) { this.direct = direct; this.renderer.toneMapping = direct ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping; this.vig.style.display = direct ? 'block' : 'none'; }
   }
+  /** true when the frame is drawn straight to the canvas (see applyLevel) */
+  direct = false;
+  /** the vignette and the red edge when hurt, for the direct path (the composer draws its own) */
+  private vig: HTMLDivElement = (() => { const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:1;display:none;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(0,0,0,.42) 100%)'; document.body.appendChild(d); return d; })();
+  private vigHurt = -1;
   resize() { const pr = pixelRatioFor(this.mobile); if (Math.abs(pr - this.renderer.getPixelRatio()) > 0.004) this.renderer.setPixelRatio(pr); const w = window.innerWidth, h = window.innerHeight; this.renderer.setSize(w, h, false); this.composer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
 
   private actorVis(a: Actor): ActorVis {
@@ -318,7 +326,11 @@ export class LifeView {
 
     this.hurt = Math.max(0, this.hurt - dt * 0.8);
     this.grade.set('uHurt', this.hurt); this.grade.set('uExposure', 1.0 + env.night * 0.9); this.grade.set('uWarm', env.golden * 0.6 + 0.15); this.grade.set('uSat', 1.14 - this.atmo.cur.haze * 0.15);
-    this.composer.render(dt);
+    if (this.direct) {
+      this.renderer.toneMappingExposure = 1.0 + env.night * 0.9;
+      const h = Math.round(this.hurt * 20) / 20; if (h !== this.vigHurt) { this.vigHurt = h; this.vig.style.boxShadow = h > 0 ? `inset 0 0 ${Math.round(160 * h)}px ${Math.round(60 * h)}px rgba(200,10,20,${(0.55 * h).toFixed(2)})` : ''; }
+      this.renderer.setRenderTarget(null); this.renderer.render(this.scene, this.camera);
+    } else this.composer.render(dt);
   }
 
   openLandmap(x: number, z: number, owned: string[]) { const L = this.landmap; L.on = true; L.x = x; L.z = z; L.h = 320; L.owned = owned; L.builtAt = { x: 1e9, z: 1e9 }; }
