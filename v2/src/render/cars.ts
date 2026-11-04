@@ -51,7 +51,39 @@ function stripeTexture(kind: 'danfo' | 'police') {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
-export async function buildCar(kind: VehicleKind, seed: number): Promise<CarModel> {
+/** Wheels must turn about their hub. Many source models put a wheel's pivot off centre, so a spinning wheel swung in a
+ * circle and the car looked like it was walking. Move each spinning node's pivot to the middle of its geometry, keeping
+ * the wheel exactly where it was drawn. */
+function hubWheels(m: CarModel) {
+  const done = new Set<THREE.Object3D>();
+  // the box of the vertices a mesh actually draws (glTF wheels often index into one buffer shared with the whole car), in `space`
+  const boxOf = (o: THREE.Mesh, space: THREE.Matrix4) => {
+    const g = o.geometry; const pos = g.attributes.position; const b = new THREE.Box3(); if (!pos) return b;
+    const mx = new THREE.Matrix4().multiplyMatrices(space, o.matrixWorld); const v = new THREE.Vector3(); const idx = g.index;
+    const end = Math.min(idx ? idx.count : pos.count, g.drawRange.start + g.drawRange.count);
+    for (let k = g.drawRange.start; k < end; k++) { v.fromBufferAttribute(pos, idx ? idx.getX(k) : k).applyMatrix4(mx); b.expandByPoint(v); }
+    return b;
+  };
+  m.wheels.forEach((w) => {
+    if (!w || done.has(w)) return; done.add(w);
+    m.root.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(w.matrixWorld).invert();
+    // round parts (tyre, rim, disc) are about as tall as they are long, seen along the axle (local x); the rest stays still
+    const cand: { o: THREE.Mesh; c: THREE.Vector3; d: number }[] = [];
+    w.traverse((o) => { if (!(o as THREE.Mesh).isMesh) return; const b = boxOf(o as THREE.Mesh, inv); if (b.isEmpty()) return; const sz = b.getSize(new THREE.Vector3());
+      if (Math.abs(sz.y - sz.z) <= 0.12 * Math.max(sz.y, sz.z) + 0.02 && Math.max(sz.y, sz.z) < 1.3) cand.push({ o: o as THREE.Mesh, c: b.getCenter(new THREE.Vector3()), d: Math.max(sz.y, sz.z) }); });
+    if (!cand.length) return;
+    // the biggest round part is the tyre: its centre is the hub, and only parts centred on the same hub turn with it
+    const tyre = cand.reduce((a, b) => (b.d > a.d ? b : a)); const hubC = tyre.c;
+    const round = cand.filter((k) => Math.hypot(k.c.y - hubC.y, k.c.z - hubC.z) < Math.max(0.05, tyre.d * 0.12)).map((k) => k.o);
+    const spin = new THREE.Group(); spin.name = 'wheel-spin'; spin.position.copy(hubC); w.add(spin); spin.updateMatrixWorld(true);
+    for (const r of round) spin.attach(r); // keeps each part exactly where it was drawn
+    w.userData.spin = spin;
+  });
+  return m;
+}
+
+export async function buildCar(kind: VehicleKind, seed: number): Promise<CarModel> { return hubWheels(await buildCarRaw(kind, seed)); }
+async function buildCarRaw(kind: VehicleKind, seed: number): Promise<CarModel> {
   const files = FILES[kind];
   if (!files) return procedural(kind, seed);
   const name = files[seed % files.length];
@@ -172,9 +204,13 @@ export function poseCar(m: CarModel, spin: number[], steer: number, open: number
       }
       w.position.copy(w.userData.p0).addScaledVector(w.userData.up, lift[i] ?? 0);
     }
-    const sp = FILES[m.kind] ? w : (w.children[0] ?? w);
-    sp.rotation.x = spin[i] ?? 0;
-    if (i < 2) { if (sp === w) { w.rotation.set(spin[i] ?? 0, steer, 0, 'YXZ'); } else w.rotation.y = steer; }
+    const hub = w.userData.spin as THREE.Object3D | undefined;
+    if (hub) { hub.rotation.x = spin[i] ?? 0; if (i < 2) w.rotation.y = steer; }
+    else {
+      const sp = FILES[m.kind] ? w : (w.children[0] ?? w);
+      sp.rotation.x = spin[i] ?? 0;
+      if (i < 2) { if (sp === w) { w.rotation.set(spin[i] ?? 0, steer, 0, 'YXZ'); } else w.rotation.y = steer; }
+    }
   });
   for (const d of m.doors) {
     const ease = (t: number) => (t <= 0 ? 0 : 1 - Math.pow(1 - Math.min(1, t * 1.6), 3));
