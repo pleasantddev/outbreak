@@ -1,0 +1,7 @@
+{
+  "appId": "dev.pleasant.hustlelife",
+  "appName": "HustleLife",
+  "webDir": "www",
+  "android": { "allowMixedContent": true, "webContentsDebuggingEnabled": true },
+  "server": { "androidScheme": "https", "cleartext": true }
+}
