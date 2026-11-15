@@ -82,8 +82,11 @@ export class Engine {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.shadowMap.enabled = quality !== 'low';
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.camera = new THREE.PerspectiveCamera(70, 1, 0.08, 900);
+    // soft filtering only on High; below that the moon's shadow map also refreshes every other frame (see render)
+    this.renderer.shadowMap.type = quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    this.renderer.shadowMap.autoUpdate = quality === 'high';
+    // far stops where the night fog has swallowed everything (the sky and sea draw at the far plane regardless)
+    this.camera = new THREE.PerspectiveCamera(70, 1, 0.08, 260);
     this.composer = new EffectComposer(this.renderer, { frameBufferType: THREE.HalfFloatType });
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.bloom = new BloomEffect({ intensity: 1.35, luminanceThreshold: 0.62, luminanceSmoothing: 0.25, mipmapBlur: true, radius: 0.72 });
@@ -95,7 +98,8 @@ export class Engine {
     const effects: Effect[] = [this.bloom, tone, this.grade, vignette, noise];
     if (quality !== 'low') effects.unshift(new SMAAEffect());
     this.composer.addPass(new EffectPass(this.camera, ...effects));
-    this.composer.addPass(new EffectPass(this.camera, this.chroma));
+    // chromatic aberration needs its own full-screen pass (it cannot share one with SMAA); worth it only on High
+    if (quality === 'high') this.composer.addPass(new EffectPass(this.camera, this.chroma));
     this.resizeObs = () => this.resize();
     window.addEventListener('resize', this.resizeObs);
     this.resize();
@@ -107,7 +111,11 @@ export class Engine {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
-  render(dt: number) { this.composer.render(dt); }
+  private frameNo = 0;
+  render(dt: number) {
+    if (!this.renderer.shadowMap.autoUpdate) this.renderer.shadowMap.needsUpdate = (this.frameNo++ & 1) === 0;
+    this.composer.render(dt);
+  }
   dispose() {
     window.removeEventListener('resize', this.resizeObs);
     this.composer.dispose();

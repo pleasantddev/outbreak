@@ -71,12 +71,21 @@ export class GameView {
     looks.forEach((look, k) => {
       const mesh = bakeCorpse(this.assets, { ...look, vest: false, backpack: false });
       if (!mesh) return;
-      const mine = list.filter((_, i) => i % looks.length === k);
-      const im = new THREE.InstancedMesh(mesh.geometry, mesh.material, mine.length);
+      // one instanced mesh per 64 m chunk, so the camera culls corpses it cannot see; corpses are 12k triangles each,
+      // so they cast no shadow (a second full draw) and only the nearby ones are drawn at all
+      const chunks = new Map<string, typeof list>();
+      list.filter((_, i) => i % looks.length === k).forEach((p) => {
+        const key = `${Math.floor(p.p[0] / 64)},${Math.floor(p.p[2] / 64)}`;
+        (chunks.get(key) ?? chunks.set(key, []).get(key)!).push(p);
+      });
       const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
-      mine.forEach((p, i) => { q.setFromAxisAngle(up, p.ry); m.compose(new THREE.Vector3(p.p[0], p.p[1], p.p[2]), q, new THREE.Vector3(1, 1, 1)); im.setMatrixAt(i, m); });
-      im.castShadow = true; im.receiveShadow = true;
-      this.engine.scene.add(im);
+      for (const mine of chunks.values()) {
+        const im = new THREE.InstancedMesh(mesh.geometry, mesh.material, mine.length);
+        mine.forEach((p, i) => { q.setFromAxisAngle(up, p.ry); m.compose(new THREE.Vector3(p.p[0], p.p[1], p.p[2]), q, new THREE.Vector3(1, 1, 1)); im.setMatrixAt(i, m); });
+        im.castShadow = false; im.receiveShadow = true;
+        im.computeBoundingSphere();
+        this.engine.scene.add(im);
+      }
     });
   }
 

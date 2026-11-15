@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import type { City, Box, Mat, Light as CityLight } from '../world/cityGen';
 import { worldMaterials, TEX_SCALE, shared } from './materials';
-import { buildProps } from './props';
+import { buildProps, PropCuller } from './props';
 import type { Quality } from './engine';
 
 const FACES: { n: [number, number, number]; u: [number, number, number]; v: [number, number, number] }[] = [
@@ -125,6 +125,7 @@ export class WorldView {
   private flickerSeed: number[];
   private blackoutApplied = new Set<string>();
   envMap: THREE.Texture | null = null;
+  props!: PropCuller;
 
   constructor(city: City, scene: THREE.Scene, renderer: THREE.WebGLRenderer, quality: Quality) {
     this.city = city;
@@ -134,7 +135,7 @@ export class WorldView {
     this.flickerSeed = this.lights.map(() => Math.random() * 100);
     scene.add(this.group);
     this.buildGeometry();
-    buildProps(city, this.group, quality);
+    this.props = buildProps(city, this.group, quality).culler;
 
     this.sky = new THREE.Mesh(new THREE.SphereGeometry(800, 32, 16), new THREE.ShaderMaterial({
       vertexShader: skyVert, fragmentShader: skyFrag, side: THREE.BackSide, depthWrite: false, fog: false,
@@ -166,7 +167,10 @@ export class WorldView {
     this.hemi = new THREE.HemisphereLight(0x2a2f48, 0x1a0c08, 0.32);
     scene.add(this.hemi);
 
-    const n = quality === 'high' ? 22 : quality === 'medium' ? 14 : 8;
+    // a few real lights follow the nearest lamps; every pixel pays for every light, so keep the pool small. The ground
+    // light pools and lamp glows carry the rest. Pool lights are dimmed, never hidden: hiding changes the light count,
+    // and three.js then recompiles every shader (a visible hitch).
+    const n = quality === 'high' ? 10 : quality === 'medium' ? 6 : 3;
     for (let i = 0; i < n; i++) { const l = new THREE.PointLight(0xff9a3c, 0, 20, 1.6); l.castShadow = false; this.pool.push(l); scene.add(l); }
 
     // lamp glows: one draw call for every light in the city
@@ -240,6 +244,7 @@ export class WorldView {
 
   update(dt: number, cam: THREE.Vector3, focus: THREE.Vector3, night: number, blackout: Set<string>, heartFlare: number, corrupt: number, time: number) {
     shared.time.value = time;
+    this.props.update(dt, cam);
     this.sky.position.copy(cam);
     this.sky.material.uniforms.uNight.value = night;
     this.sky.material.uniforms.uHeart.value = heartFlare;
@@ -276,9 +281,8 @@ export class WorldView {
     }
     for (const pl of this.pool) {
       const i = (pl as any)._idx as number;
-      if (i === undefined || i < 0) { pl.intensity = 0; pl.visible = false; continue; }
+      if (i === undefined || i < 0) { pl.intensity = 0; continue; }
       const l = this.lights[i];
-      pl.visible = true;
       pl.position.set(l.p[0], l.p[1], l.p[2]);
       pl.color.setHex(l.color);
       pl.distance = l.range;

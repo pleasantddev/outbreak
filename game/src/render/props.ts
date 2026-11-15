@@ -176,22 +176,85 @@ function template(type: PropType, v: number, mats: ReturnType<typeof worldMateri
   return g;
 }
 
-function instance(group: THREE.Group, tmpl: THREE.Group, list: Prop[]) {
+/**
+ * Props are drawn as one BatchedMesh per material. Each template's parts are baked into geometries; every prop is one
+ * instance. Draw calls stay at the number of materials, and three.js culls each instance against every camera (view
+ * and shadow), so props behind the player or past the fog cost nothing. PropCuller hides instances beyond the fog.
+ */
+interface PartBucket { mat: THREE.Material; parts: { geo: THREE.BufferGeometry; props: Prop[]; castShadow: boolean }[] }
+
+function collectParts(buckets: Map<THREE.Material, PartBucket>, tmpl: THREE.Group, list: Prop[]) {
   tmpl.updateMatrixWorld(true);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
   tmpl.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
-    const im = new THREE.InstancedMesh(mesh.geometry, mesh.material, list.length);
-    list.forEach((pr, i) => {
-      p.set(pr.p[0], pr.p[1], pr.p[2]); q.setFromAxisAngle(up, pr.ry);
-      m.compose(p, q, s).multiply(mesh.matrixWorld);
-      im.setMatrixAt(i, m);
-    });
-    im.castShadow = mesh.castShadow; im.receiveShadow = mesh.receiveShadow;
-    im.computeBoundingSphere();
-    group.add(im);
+    const mat = mesh.material as THREE.Material;
+    const geo = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
+    if (!geo.index) { const n = geo.getAttribute('position').count; geo.setIndex([...Array(n).keys()]); }
+    for (const name of Object.keys(geo.attributes)) if (!['position', 'normal', 'uv'].includes(name)) geo.deleteAttribute(name);
+    if (!geo.getAttribute('uv')) geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(geo.getAttribute('position').count * 2), 2));
+    if (!geo.getAttribute('normal')) geo.computeVertexNormals();
+    let b = buckets.get(mat);
+    if (!b) buckets.set(mat, (b = { mat, parts: [] }));
+    b.parts.push({ geo, props: list, castShadow: mesh.castShadow });
   });
+}
+
+export class PropCuller {
+  private entries: { mesh: THREE.BatchedMesh; ids: number[]; xz: Float32Array }[] = [];
+  private t = 0;
+  constructor(public range = 150) {}
+  add(mesh: THREE.BatchedMesh, ids: number[], xz: Float32Array) { this.entries.push({ mesh, ids, xz }); }
+  /** hide instances past the fog; cheap enough to run four times a second */
+  update(dt: number, cam: THREE.Vector3, force = false) {
+    this.t -= dt;
+    if (this.t > 0 && !force) return;
+    this.t = 0.25;
+    const r2 = this.range * this.range;
+    for (const e of this.entries) for (let i = 0; i < e.ids.length; i++) {
+      const dx = e.xz[i * 2] - cam.x, dz = e.xz[i * 2 + 1] - cam.z;
+      e.mesh.setVisibleAt(e.ids[i], dx * dx + dz * dz < r2);
+    }
+  }
+}
+
+function buildBatches(group: THREE.Group, buckets: Map<THREE.Material, PartBucket>, culler: PropCuller) {
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
+  for (const b of buckets.values()) {
+    // materials with custom shader code (flames sway by instanceMatrix) stay on InstancedMesh, which provides it
+    if (b.mat.onBeforeCompile.toString() !== THREE.Material.prototype.onBeforeCompile.toString()) {
+      for (const part of b.parts) {
+        const im = new THREE.InstancedMesh(part.geo, b.mat, part.props.length);
+        part.props.forEach((pr, i) => { p.set(pr.p[0], pr.p[1], pr.p[2]); q.setFromAxisAngle(up, pr.ry); im.setMatrixAt(i, m.compose(p, q, one)); });
+        im.castShadow = part.castShadow; im.receiveShadow = true;
+        im.computeBoundingSphere();
+        group.add(im);
+      }
+      continue;
+    }
+    let inst = 0, verts = 0, idx = 0;
+    for (const part of b.parts) { inst += part.props.length; verts += part.geo.getAttribute('position').count; idx += part.geo.index!.count; }
+    const bm = new THREE.BatchedMesh(inst, verts, idx, b.mat);
+    bm.perObjectFrustumCulled = true;
+    bm.sortObjects = false;
+    bm.castShadow = b.parts.some((x) => x.castShadow);
+    bm.receiveShadow = true;
+    const ids: number[] = [];
+    const xz = new Float32Array(inst * 2);
+    for (const part of b.parts) {
+      const gid = bm.addGeometry(part.geo);
+      for (const pr of part.props) {
+        const id = bm.addInstance(gid);
+        p.set(pr.p[0], pr.p[1], pr.p[2]); q.setFromAxisAngle(up, pr.ry);
+        bm.setMatrixAt(id, m.compose(p, q, one));
+        xz[ids.length * 2] = pr.p[0]; xz[ids.length * 2 + 1] = pr.p[2];
+        ids.push(id);
+      }
+    }
+    bm.computeBoundingSphere();
+    group.add(bm);
+    culler.add(bm, ids, xz);
+  }
 }
 
 // ---------- text atlas for shop signs ----------
@@ -252,7 +315,7 @@ export function bloodTexture() {
   return t;
 }
 
-export interface PropHandles { corpses: Prop[] }
+export interface PropHandles { corpses: Prop[]; culler: PropCuller }
 
 export function buildProps(city: City, group: THREE.Group, quality: Quality): PropHandles {
   const mats = worldMaterials(quality);
@@ -269,10 +332,13 @@ export function buildProps(city: City, group: THREE.Group, quality: Quality): Pr
     const key = `${p.type}:${v}`;
     (byKey.get(key) ?? byKey.set(key, []).get(key)!).push(p);
   }
+  const buckets = new Map<THREE.Material, PartBucket>();
   for (const [key, list] of byKey) {
     const [type, v] = key.split(':');
-    instance(group, template(type as PropType, +v, mats), list);
+    collectParts(buckets, template(type as PropType, +v, mats), list);
   }
+  const culler = new PropCuller(quality === 'high' ? 190 : quality === 'medium' ? 150 : 110);
+  buildBatches(group, buckets, culler);
 
   // shop signs: one merged mesh sampling the atlas
   if (signs.length) {
@@ -335,5 +401,5 @@ export function buildProps(city: City, group: THREE.Group, quality: Quality): Pr
     im.receiveShadow = true;
     group.add(im);
   }
-  return { corpses };
+  return { corpses, culler };
 }
