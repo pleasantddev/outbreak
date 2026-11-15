@@ -96,7 +96,8 @@ func _building(n: String, base: Vector3, size: Vector3, mat: String) -> void:
 			q.size = Vector3(size.x * 0.8, 1.3, 0.05)
 			w.mesh = q
 			w.position = base + Vector3(0, y, side * (size.z * 0.5 + 0.03))
-			w.material_override = _window_material()
+			# about one window band in three is lit (someone has a generator running)
+			w.material_override = _lit_window_material() if (hash(n + str(f) + str(side)) % 3) == 0 else _window_material()
 			add_child(w)
 
 
@@ -145,15 +146,33 @@ func _objective_pad(p: Vector3, r: float) -> void:
 	mi.mesh = cyl
 	mi.position = p
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.95, 0.72, 0.2, 0.35)
+	mat.albedo_color = Color(0.9, 0.15, 0.08, 0.1)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.emission_enabled = true
-	mat.emission = Color(1.0, 0.65, 0.15)
-	mat.emission_energy_multiplier = 0.8
+	mat.emission = Color(0.9, 0.18, 0.08)
+	mat.emission_energy_multiplier = 0.35
 	mi.material_override = mat
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.add_to_group(&"objective_point")
 	add_child(mi)
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = r - 0.12
+	torus.outer_radius = r
+	torus.rings = 64
+	torus.ring_segments = 4
+	ring.mesh = torus
+	ring.scale = Vector3(1, 0.3, 1)
+	ring.position = p + Vector3(0, 0.03, 0)
+	var rm := StandardMaterial3D.new()
+	rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	rm.albedo_color = Color(1.0, 0.25, 0.12)
+	rm.emission_enabled = true
+	rm.emission = Color(1.0, 0.22, 0.1)
+	rm.emission_energy_multiplier = 3.0
+	ring.material_override = rm
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(ring)
 
 
 func _invisible_wall(center: Vector3, size: Vector3) -> void:
@@ -186,6 +205,9 @@ func _material(set_name: String, tile: float) -> Material:
 	m.uv1_world_triplanar = true
 	m.uv1_scale = Vector3.ONE * tile
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	# wet ground after rain: roughness scaled down so lamps smear across the road
+	if set_name in ["road", "sidewalk", "concrete"]:
+		m.roughness = 0.55
 	_mats[key] = m
 	return m
 
@@ -194,48 +216,147 @@ func _window_material() -> Material:
 	if _mats.has("window"):
 		return _mats["window"]
 	var m := StandardMaterial3D.new()
-	m.albedo_color = Color(0.08, 0.1, 0.12)
+	m.albedo_color = Color(0.03, 0.035, 0.04)
 	m.metallic = 0.6
-	m.roughness = 0.15
+	m.roughness = 0.12
 	_mats["window"] = m
 	return m
 
 
+## A warm lit window: someone is home on a generator. Emissive only, no light cost.
+func _lit_window_material() -> Material:
+	if _mats.has("window_lit"):
+		return _mats["window_lit"]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.9, 0.62, 0.3)
+	m.emission_enabled = true
+	m.emission = Color(1.0, 0.62, 0.28)
+	m.emission_energy_multiplier = 2.2
+	_mats["window_lit"] = m
+	return m
+
+
+# Sodium Noir (the outbreak art direction): dusk sliding into night, a blood-red horizon, a cold moon for shape,
+# sodium street lamps carrying the light, fog swallowing distance, wet ground doubling every lamp.
 func _environment() -> void:
 	var env := Environment.new()
 	var sky := Sky.new()
 	var sky_mat := ProceduralSkyMaterial.new()
-	# hazy Lagos late afternoon
-	sky_mat.sky_top_color = Color(0.36, 0.52, 0.72)
-	sky_mat.sky_horizon_color = Color(0.86, 0.74, 0.6)
-	sky_mat.ground_horizon_color = Color(0.6, 0.5, 0.42)
-	sky_mat.ground_bottom_color = Color(0.25, 0.22, 0.2)
-	sky_mat.sun_angle_max = 20.0
+	sky_mat.sky_top_color = Color(0.025, 0.02, 0.035)
+	sky_mat.sky_horizon_color = Color(0.32, 0.06, 0.04)
+	sky_mat.sky_curve = 0.12
+	sky_mat.ground_horizon_color = Color(0.12, 0.03, 0.02)
+	sky_mat.ground_bottom_color = Color(0.01, 0.008, 0.008)
+	sky_mat.sun_angle_max = 6.0
+	sky_mat.sky_energy_multiplier = 1.0
 	sky.sky_material = sky_mat
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.7
-	env.tonemap_mode = Environment.TONE_MAPPER_AGX
-	env.tonemap_exposure = 1.05
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color(0.3, 0.27, 0.36)
+	env.ambient_light_energy = 0.75
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	env.tonemap_exposure = 1.35
+	env.tonemap_white = 6.0
 	env.glow_enabled = true
-	env.glow_intensity = 0.6
-	env.glow_hdr_threshold = 0.95
+	env.glow_intensity = 0.9
+	env.glow_bloom = 0.08
+	env.glow_hdr_threshold = 0.85
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
 	env.ssao_enabled = true
-	env.ssao_radius = 1.2
+	env.ssao_radius = 1.4
+	env.ssao_intensity = 2.5
+	env.ssr_enabled = true
+	env.ssr_max_steps = 48
+	# depth fog for every tier: distance dissolves into dark red-brown haze
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.85, 0.76, 0.65)
-	env.fog_density = 0.004
-	env.fog_aerial_perspective = 0.4
+	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
+	env.fog_light_color = Color(0.15, 0.07, 0.055)
+	env.fog_light_energy = 1.0
+	env.fog_density = 0.014
+	env.fog_sky_affect = 0.6
+	env.fog_height = 3.0
+	env.fog_height_density = 0.04
+	# volumetric fog on PC tiers: the lamps get visible cones in the haze
+	env.volumetric_fog_enabled = true
+	env.volumetric_fog_density = 0.018
+	env.volumetric_fog_albedo = Color(0.75, 0.68, 0.66)
+	env.volumetric_fog_emission = Color(0.02, 0.004, 0.003)
+	env.volumetric_fog_length = 48.0
+	env.volumetric_fog_ambient_inject = 0.25
+	env.volumetric_fog_sky_affect = 0.2
+	# split grade: crushed blacks, a little extra contrast and warmth
+	env.adjustment_enabled = true
+	env.adjustment_contrast = 1.12
+	env.adjustment_saturation = 1.08
+	env.adjustment_brightness = 0.98
 	var we := WorldEnvironment.new()
 	we.name = "WorldEnvironment"
 	we.environment = env
 	add_child(we)
-	var sun := DirectionalLight3D.new()
-	sun.name = "Sun"
-	sun.rotation_degrees = Vector3(-38, -35, 0)
-	sun.light_color = Color(1.0, 0.86, 0.68)
-	sun.light_energy = 1.6
-	sun.shadow_enabled = true
-	add_child(sun)
-	GameSettings.apply_to_environment(env, sun)
+	# cold moon: low, blue, dim; it gives silhouettes and long shadows, the lamps do the rest
+	var moon := DirectionalLight3D.new()
+	moon.name = "Moon"
+	moon.rotation_degrees = Vector3(-24, 140, 0)
+	moon.light_color = Color(0.45, 0.55, 0.85)
+	moon.light_energy = 0.8
+	moon.light_volumetric_fog_energy = 0.5
+	moon.shadow_enabled = true
+	add_child(moon)
+	GameSettings.apply_to_environment(env, moon)
+	_lamps()
+
+
+## Sodium street lamps along the routes and around the plaza. A third are dead; a couple stutter.
+func _lamps() -> void:
+	var spots := [
+		[Vector3(-12.5, 0, -12.5), 1], [Vector3(12.5, 0, 12.5), 1], [Vector3(12.5, 0, -12.5), 2], [Vector3(-12.5, 0, 12.5), 1],
+		[Vector3(-21, 0, -14), 1], [Vector3(-21, 0, 14), 0], [Vector3(21, 0, -6), 1], [Vector3(21, 0, 16), 2],
+		[Vector3(-4, 0, -27), 1], [Vector3(4, 0, 27), 1], [Vector3(27, 0, -26), 0], [Vector3(-27, 0, 26), 1],
+	]
+	var shadowed := 0
+	for entry in spots:
+		var p: Vector3 = entry[0]
+		var mode: int = entry[1]   # 0 dead, 1 on, 2 flickering
+		_box("LampPole", p + Vector3(0, 3.0, 0), Vector3(0.16, 6.0, 0.16), "rust", 1.0)
+		var toward := (Vector3(0, 0, 0) - p)
+		toward.y = 0
+		toward = toward.normalized() if toward.length() > 0.1 else Vector3.FORWARD
+		var head := p + Vector3(0, 6.0, 0) + toward * 1.1
+		_box("LampArm", (p + Vector3(0, 6.0, 0) + head) * 0.5, Vector3(0.1, 0.1, 1.2) if absf(toward.z) > absf(toward.x) else Vector3(1.2, 0.1, 0.1), "rust", 1.0)
+		var bulb := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.5, 0.12, 0.3)
+		bulb.mesh = bm
+		bulb.position = head - Vector3(0, 0.08, 0)
+		var on := mode != 0
+		var bmat := StandardMaterial3D.new()
+		bmat.albedo_color = Color(0.2, 0.15, 0.1)
+		if on:
+			bmat.emission_enabled = true
+			bmat.emission = Color(1.0, 0.55, 0.18)
+			bmat.emission_energy_multiplier = 6.0
+		bulb.material_override = bmat
+		add_child(bulb)
+		if not on:
+			continue
+		var light := SpotLight3D.new()
+		light.position = head - Vector3(0, 0.15, 0)
+		light.rotation_degrees = Vector3(-90, 0, 0)
+		light.light_color = Color(1.0, 0.56, 0.22)
+		light.light_energy = 11.0
+		light.spot_range = 19.0
+		light.spot_angle = 62.0
+		light.spot_attenuation = 0.9
+		light.light_volumetric_fog_energy = 2.5
+		# shadows from a few lamps only: each shadowed light is expensive, especially on phones
+		light.shadow_enabled = shadowed < 3 and GameSettings.tier <= GameSettings.Tier.HIGH
+		if light.shadow_enabled:
+			shadowed += 1
+		add_child(light)
+		if mode == 2:
+			var f := LampFlicker.new()
+			f.light = light
+			f.bulb = bmat
+			add_child(f)

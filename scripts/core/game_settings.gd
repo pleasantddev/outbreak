@@ -48,7 +48,9 @@ func apply_to_environment(env: Environment, sun: DirectionalLight3D = null) -> v
 		return
 	env.ssao_enabled = tier <= Tier.HIGH
 	env.ssil_enabled = tier == Tier.ULTRA
-	env.ssr_enabled = tier == Tier.ULTRA
+	env.ssr_enabled = tier <= Tier.HIGH
+	# volumetric fog is Forward+ only and costly; phones keep the plain depth fog
+	env.volumetric_fog_enabled = tier <= Tier.HIGH and RenderingServer.get_current_rendering_method() == "forward_plus"
 	env.glow_enabled = tier <= Tier.BALANCED and not reduced_effects
 	env.sdfgi_enabled = false
 	if sun:

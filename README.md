@@ -62,7 +62,8 @@ Multiplayer commands (`--server`, `--connect=host:port`) arrive in phase 3 and w
 ## Measured so far
 | Where | Result |
 |---|---|
-| This Mac, Radeon Pro 455, Forward+ (Vulkan), 1280x720, sandbox fight | median 13.6 ms (74 fps), p95 18.2 ms |
+| This Mac, Radeon Pro 455, Forward+ (Vulkan), 1280x720, sandbox fight, day look | median 13.6 ms (74 fps), p95 18.2 ms |
+| Same, night look (volumetric fog, 9 sodium lamps, 3 shadowed, SSR) | median 18.4 ms (54 fps), p95 24.6 ms |
 | First launch on a new machine | about 15 s of shader compiling before the first frame (to be moved behind a loading screen) |
 | Android | not measured yet |
 
