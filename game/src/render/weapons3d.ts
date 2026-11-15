@@ -1,5 +1,6 @@
 // Procedural firearms with skins and visible attachments. Origin is the grip; the barrel points down +z.
 import * as THREE from 'three';
+import { mergeStatic } from './merge';
 import type { WeaponId } from '../data/balance';
 import { WEAPON_SKINS, type WeaponSkin, type WeaponLoadout } from '../data/cosmetics';
 
@@ -146,5 +147,6 @@ export function buildWeapon(id: WeaponId, l: Partial<WeaponLoadout> = {}): Weapo
   if (l.charm) { const ch = new THREE.Mesh(new THREE.OctahedronGeometry(0.018), new THREE.MeshStandardMaterial({ color: 0x8a0b0b, emissive: 0x5a0000, emissiveIntensity: 0.8 })); ch.position.set(0.035, 0.0, -0.05); root.add(ch); }
   const muzzle = new THREE.Object3D(); muzzle.position.set(0, id === 'shotgun' ? 0.07 : 0.06, barrelEnd); root.add(muzzle);
   const flash = new THREE.Object3D(); muzzle.add(flash);
+  mergeStatic(root, [muzzle, flash]);
   return { root, muzzle, flash };
 }

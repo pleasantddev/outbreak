@@ -78,7 +78,9 @@ export class Engine {
   constructor(canvas: HTMLCanvasElement, quality: Quality) {
     this.quality = quality;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false, depth: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === 'high' ? 2 : quality === 'medium' ? 1.5 : 1));
+    // resolution is never the thing that gets cut (founder rule): native up to 2x on High, 1.5x otherwise (the phone cap);
+    // Low saves its cost on shadows, anti-aliasing and lights instead
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === 'high' ? 2 : 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.shadowMap.enabled = quality !== 'low';
@@ -86,7 +88,7 @@ export class Engine {
     this.renderer.shadowMap.type = quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     this.renderer.shadowMap.autoUpdate = quality === 'high';
     // far stops where the night fog has swallowed everything (the sky and sea draw at the far plane regardless)
-    this.camera = new THREE.PerspectiveCamera(70, 1, 0.08, 260);
+    this.camera = new THREE.PerspectiveCamera(70, 1, 0.08, 200);
     this.composer = new EffectComposer(this.renderer, { frameBufferType: THREE.HalfFloatType });
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.bloom = new BloomEffect({ intensity: 1.35, luminanceThreshold: 0.62, luminanceSmoothing: 0.25, mipmapBlur: true, radius: 0.72 });

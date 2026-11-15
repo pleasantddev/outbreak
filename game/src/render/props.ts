@@ -3,9 +3,17 @@ import * as THREE from 'three';
 import type { City, Prop, PropType } from '../world/cityGen';
 import { worldMaterials, shared } from './materials';
 import { buildVehicleModel } from './vehicles3d';
+import { mergeStatic } from './merge';
 import type { Quality } from './engine';
 
-const std = (color: number, rough = 0.8, metal = 0, extra: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, ...extra });
+// identical materials are shared: every distinct material is one draw call for all props that use it
+const stdCache = new Map<string, THREE.MeshStandardMaterial>();
+const std = (color: number, rough = 0.8, metal = 0, extra: THREE.MeshStandardMaterialParameters = {}) => {
+  const key = `${color}|${rough}|${metal}|${Object.entries(extra).map(([k, v]) => `${k}:${(v as { uuid?: string })?.uuid ?? String(v)}`).join(',')}`;
+  let m = stdCache.get(key);
+  if (!m) stdCache.set(key, (m = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, ...extra })));
+  return m;
+};
 const M = {
   pole: std(0x3a3a3c, 0.6, 0.7), darkMetal: std(0x1d1d1f, 0.5, 0.8), rusty: std(0x5a3626, 0.9, 0.4), black: std(0x0c0c0d, 0.7, 0.1),
   wood: std(0x5a4030, 0.9), cloth: std(0x6a2a22, 0.95), tankBlack: std(0x111214, 0.45, 0.05), concrete: std(0x7a756c, 0.95),
@@ -374,6 +382,7 @@ export function buildProps(city: City, group: THREE.Group, quality: Quality): Pr
     g.add(box(0.1, 0.1, 1.2, M.pole, 0, 8.4, 0.5));
     g.position.set(b.p[0], b.p[1], b.p[2]); g.rotation.y = b.ry;
     g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    mergeStatic(g);
     group.add(g);
   }
   // lit windows: generator and candle light behind broken frames

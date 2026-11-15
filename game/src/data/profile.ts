@@ -1,10 +1,13 @@
 // Persistent player profile. Stored per browser; wrapped so a blocked storage never breaks the game.
 import type { ArchetypeId } from './balance';
 import { OPERATORS, defaultArmory, type Armory, type Operator } from './cosmetics';
+import { guessQuality } from '../render/device';
 
 export interface Settings {
   sensitivity: number; invertY: boolean; quality: 'low' | 'medium' | 'high'; volume: number; music: number;
   fov: number; touchControls: 'auto' | 'on' | 'off'; matchMinutes: number; showFps: boolean; gore: boolean;
+  /** true once the player has picked a graphics tier; until then the game guesses from the device on every launch */
+  qualityChosen: boolean;
 }
 export interface Profile {
   version: 3;
@@ -27,11 +30,18 @@ export function defaultProfile(): Profile {
   return {
     version: 3, callsign: 'Survivor', operatorId: OPERATORS[0].id, operators: structuredClone(OPERATORS), armory: defaultArmory(),
     archetype: 'runner', xp: 0, naira: 25000, wins: 0, matches: 0, kills: 0,
-    settings: { sensitivity: 1, invertY: false, quality: 'medium', volume: 0.8, music: 0.5, fov: 70, touchControls: 'auto', matchMinutes: 20, showFps: false, gore: true },
+    settings: { sensitivity: 1, invertY: false, quality: 'medium', volume: 0.8, music: 0.5, fov: 70, touchControls: 'auto', matchMinutes: 20, showFps: false, gore: true, qualityChosen: false },
   };
 }
 
 export function loadProfile(): Profile {
+  const p = readProfile();
+  // until the player picks a tier, start from what this device can run
+  if (!p.settings.qualityChosen && typeof document !== 'undefined') p.settings.quality = guessQuality().quality;
+  return p;
+}
+
+function readProfile(): Profile {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultProfile();

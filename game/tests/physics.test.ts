@@ -43,3 +43,13 @@ test('baked city steps cheaply and rays match the box colliders', async () => {
   expect(sameDist / compared).toBeGreaterThan(0.98);
   expect(sameMat / sameDist).toBeGreaterThan(0.95);
 }, 120000);
+
+import { guessQuality } from '../src/render/device';
+test('graphics tier guesses', () => {
+  const g = (s: string) => guessQuality(s).quality;
+  // the founder's 2016 MacBook Pro and an older Intel laptop start on Low; a modern discrete GPU on High
+  expect(g('ANGLE (AMD, ANGLE Metal Renderer: AMD Radeon Pro 455, Unspecified Version)')).toBe('low');
+  expect(g('ANGLE (Intel, Intel(R) HD Graphics 530 Direct3D11)')).toBe('low');
+  expect(g('ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11)')).toBe('high');
+  expect(g('Google SwiftShader')).toBe('low');
+});

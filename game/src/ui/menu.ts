@@ -217,7 +217,7 @@ export class Menu {
     if (d.skin) this.p.armory[this.weapon].skin = d.skin as any;
     if (d.att) { const [slot, id] = d.att.split(':'); (this.p.armory[this.weapon] as any)[slot] = id || null; }
     if (d.charm !== undefined) this.p.armory[this.weapon].charm = !this.p.armory[this.weapon].charm;
-    if (d.quality) this.p.settings.quality = d.quality as any;
+    if (d.quality) { this.p.settings.quality = d.quality as any; this.p.settings.qualityChosen = true; }
     if (d.touch) this.p.settings.touchControls = d.touch as any;
     if (d.toggle) (this.p.settings as any)[d.toggle] = !(this.p.settings as any)[d.toggle];
     this.save();

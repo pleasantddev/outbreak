@@ -1,6 +1,7 @@
 // Procedural vehicles. The danfo is the hero: yellow, striped, rusted, overloaded and blessed.
 import * as THREE from 'three';
 import { VEHICLES, type VehicleKind } from '../data/balance';
+import { mergeStatic } from './merge';
 
 const SLOGANS = ['GOD DEY', 'NO TELL MY MAMA', 'NO FOOD FOR LAZY MAN', 'EKO FOR SHOW', 'SMALL SMALL', 'JESUS IS THE WAY', 'IF NOT GOD', 'SHINE YA EYE'];
 
@@ -129,5 +130,7 @@ export function buildVehicleModel(kind: VehicleKind, opts: { wrecked?: boolean; 
     });
     root.position.y = -wy + wr - 0.35;
   }
+  // wheels are not kept: their parts merge inside each wheel group, which still spins as one
+  mergeStatic(root, [...headlights, ...brake]);
   return { root, wheels, headlights, brake, body, smoke: new THREE.Vector3(0, wy + 0.9, sz / 2 - 0.5) };
 }

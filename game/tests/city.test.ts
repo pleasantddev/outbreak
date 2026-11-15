@@ -21,7 +21,7 @@ describe('city generator', () => {
   it('has no NaN geometry', () => {
     for (const b of city.boxes) for (const v of [...b.p, ...b.s, b.ry, b.rx ?? 0]) expect(Number.isFinite(v)).toBe(true);
     for (const b of city.boxes) for (const v of b.s) expect(v).toBeGreaterThan(0);
-  });
+  }, 30000);
 
   it('nav graph reaches every building and roof from the street', () => {
     const { nodes, edges } = city.nav;

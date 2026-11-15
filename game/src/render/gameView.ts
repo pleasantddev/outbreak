@@ -62,7 +62,28 @@ export class GameView {
     this.headlight = new THREE.SpotLight(0xfff4d0, 0, 60, 0.6, 0.5, 1.2);
     this.engine.scene.add(this.headlight, this.headlight.target);
     this.buildCorpses();
+    this.warmShaders();
   }
+
+  /**
+   * Compile every shader the match can need while the loading screen is still up. Without this the first crawler,
+   * hollow or stalker to come into view freezes the game for a moment while its shader compiles.
+   */
+  private warmShaders() {
+    const extras: CharacterView[] = [];
+    const kinds = ['crawler', 'hollow', 'stalker'] as const;
+    kinds.forEach((kind, i) => {
+      const v = new CharacterView(this.assets, { ...OPERATORS[i % OPERATORS.length].look, head: 'none' as const }, kind, 1000 + i);
+      v.root.position.set(0, -500, 0);
+      this.engine.scene.add(v.root);
+      extras.push(v);
+    });
+    try { this.engine.renderer.compile(this.engine.scene, this.engine.camera); } catch { /* compiling early is an optimisation only */ }
+    for (const v of extras) v.dispose();
+  }
+
+  /** corpse instance chunks; only those within 45 m of the camera are drawn (the blood stays visible further out) */
+  private corpseChunks: THREE.InstancedMesh[] = [];
 
   private buildCorpses() {
     const list = this.sim.city.props.filter((p) => p.type === 'corpse');
@@ -85,6 +106,7 @@ export class GameView {
         im.castShadow = false; im.receiveShadow = true;
         im.computeBoundingSphere();
         this.engine.scene.add(im);
+        this.corpseChunks.push(im);
       }
     });
   }
@@ -185,6 +207,7 @@ export class GameView {
     const focus = new THREE.Vector3(me.pos.x, me.pos.y, me.pos.z);
     const corrupt = sim.corruption.reduce((m, c) => Math.max(m, 1 - Math.min(1, Math.max(0, Math.hypot(me.pos.x - c.x, me.pos.z - c.z) - c.r * 0.6) / (c.r * 0.6))), 0);
     this.heartFlash = Math.max(0, this.heartFlash - dt * 0.7);
+    for (const im of this.corpseChunks) im.visible = im.boundingSphere!.center.distanceTo(cam.position) < 45 + im.boundingSphere!.radius;
     this.world.update(dt, cam.position, focus, sim.night, sim.blackout, this.heartFlash * 0.6 + (sim.heart.active ? 0.15 : 0), corrupt, this.time);
     this.fx.update(dt, cam.position, { active: sim.heart.active, pos: sim.heart.pos, carried: sim.heart.carrier !== null }, sim.zone, sim.corruption, this.time);
     this.fx.setExtractions(sim.city.extractions, sim.extractionOpen);
