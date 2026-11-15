@@ -1,0 +1,892 @@
+UNiti
+PROJECT: UNTITLED
+Game Design Document & Development Specification
+Working tagline: BO LE KA JA
+Official title: To be determined
+Genre: Third-person multiplayer hero arena brawler
+Primary inspiration: Marvel Rivals, Call of Duty: Mobile and Fortnite
+Game engine: Godot 4.x
+Programming language: GDScript
+Initial match format: 4v4
+Initial arena: Outdoor Nigerian urban environment
+Target platforms: PC and Android
+Development status: Pre-production / MVP execution
+1. GAME OVERVIEW
+1.1 Concept
+An online multiplayer hero arena game inspired by Nigerian mythology, traditional
+spiritual systems, folklore and contemporary Nigerian environments.
+Players enter a multiplayer lobby, select a playable champion, choose a spiritual
+patron, customise their combat loadout and compete against other players in
+team-based arena matches.
+The game combines:
+Nigerian mythology and cultural inspiration.
+Distinctive playable champions.
+UNiti
+1
+Patron-based spiritual progression.
+Fast, ability-driven combat.
+Competitive team gameplay.
+Nigerian-inspired environments.
+Character cosmetics and seasonal progression.
+Online social features and competitive rankings.
+Players do not necessarily play as the gods themselves. They play as champions
+who receive power through their selected spiritual patron.
+1.2 Design pillars
+Combat first: Responsive, readable and rewarding gameplay.
+Nigerian identity: Distinctive Nigerian cultural, environmental, architectural and
+musical influences.
+Meaningful customisation: Different champion, patron and charm combinations.
+Competitive fairness: Skill and teamwork matter more than money spent.
+Expandability: New champions, patrons, arenas and game modes must be
+addable without rewriting existing systems.
+2. CORE GAMEPLAY LOOP
+1. Launch the game.
+2. Enter the main lobby.
+3. Select a champion.
+4. Select a spiritual patron.
+5. Configure charms and combat modifiers.
+6. Join a party or enter matchmaking.
+7. Enter an arena.
+8. Compete against another team.
+UNiti
+2
+9. Receive match rewards and progression.
+10. Develop champions and patron paths.
+11. Customise the account and prepare for another match.
+The experience should make moving from the lobby into a match quick and
+intuitive.
+3. PLAYER LOBBY
+The lobby is the central interface and must feel like a polished multiplayer game.
+Required sections:
+Section Function
+Play Matchmaking and game modes
+Champions Character selection and customisation
+Patrons Patron selection and progression
+Loadout Charms and combat modifiers
+Store Cosmetic purchases
+Battle Pass Seasonal progression
+Social Friends, parties and invitations
+Profile Stats, rankings and achievements
+Settings Controls, graphics, audio and accessibility
+The selected champion should appear in a 3D lobby environment with idle
+animations, outfit changes, emotes, victory animations and patron effects.
+Account system
+Each player requires:
+Unique player ID.
+Username.
+Profile picture or icon.
+Player level.
+UNiti
+3
+Account experience.
+Champion collection.
+Patron progression.
+Cosmetics inventory.
+Match history.
+Statistics.
+Achievements.
+Ranked status.
+Guest access may be used for a tutorial or local prototype. Online progression and
+purchases require a persistent account.
+4. CHAMPION SYSTEM
+Champions are the playable characters.
+Every champion must have a distinct identity, personality, silhouette, movement
+style and gameplay role.
+Each champion requires:
+Name and biography.
+Origin and background.
+Visual design.
+Combat role.
+Base attributes.
+Basic attacks.
+Mobility ability.
+Defensive or utility ability.
+Signature ability.
+Ultimate ability.
+UNiti
+4
+Animation set.
+Sound identity.
+Combat roles
+Role Function
+Vanguard Frontline presence and space control
+Duelist Mobile offensive specialist
+Controller Area denial and battlefield disruption
+Support Team assistance and recovery
+Specialist Utility and objective interaction
+Roles should guide character design without forcing rigid team compositions.
+First four champions
+The initial prototype must contain four distinct champions:
+Champion A — Vanguard: Durable frontline character focused on engagement
+and space control.
+Champion B — Duelist: Mobile offensive character focused on combos and quick
+engagements.
+Champion C — Controller: Ability specialist focused on area control and
+disruption.
+Champion D — Support: Team-oriented character focused on protection and
+assistance.
+These are gameplay placeholders. Final names and designs will be developed
+separately.
+Champion ability structure
+Every champion should have:
+1. Basic attack.
+2. Secondary attack.
+UNiti
+5
+3. Mobility ability.
+4. Utility or defensive ability.
+5. Signature ability.
+6. Ultimate ability.
+Abilities must be reusable, data-driven and visually readable.
+Champion attributes include health, movement speed, attack strength, defence,
+ability power, recovery and utility effectiveness.
+5. PATRONAGE SYSTEM
+Patronage is the game's defining progression feature.
+Players select a spiritual patron from a researched catalogue of Nigerian
+traditional spiritual figures and traditions.
+The champion determines the fighting style. The patron determines the spiritual
+enhancements and build options.
+5.1 Patron selection
+Players can:
+Browse the patron catalogue.
+Read documented cultural background.
+View gameplay identities.
+Preview visual effects.
+Select a patron.
+Unlock patron progression.
+Equip patron-associated boons and charms.
+Patron selection should not be permanently irreversible. Players may change their
+active patron outside matches.
+5.2 Patron structure
+UNiti
+6
+Each patron has:
+Patron Gift: A passive modification.
+Patron Boons: Optional enhancements from which the player selects a limited
+number.
+Patron Charms: Unlockable combat modifiers.
+Patron Progression: Experience and customisation milestones.
+Patrons must produce distinct gameplay options rather than merely different
+colours for the same abilities.
+5.3 Initial research register
+The research catalogue should investigate traditions from across Nigeria.
+Yoruba traditions
+Ṣ àngó
+Ọ̀ gún
+Ọ̀ ṣ un
+Ọ ya
+Ọ bàtálá
+Ọ̀ rúnmìlà
+Ọ̀ sanyìn
+È ṣ ù
+Yem ọ ja
+Olókun
+Ọ balúayé
+Ọ̀ ṣ ọ́ ọ̀ sì
+Ọ̀ ṣ ùmàrè
+Ọ̀ rì ṣ à Oko
+Ajé
+UNiti
+7
+Igbo traditions
+Ala / Ani
+Amadioha
+Anyanw ụ
+Idemili
+Agwu
+Ufieji ọ k ụ
+Ikenga, subject to correct cultural classification.
+Edo traditions
+Osanobua
+Olokun
+Ovia
+Okhuaihe
+Other regionally documented figures.
+Efik and Ibibio traditions
+Abasi
+Ndem and relevant local spiritual beings.
+Northern Nigerian traditions
+Bori spirit traditions.
+Maguzawa and related indigenous traditions.
+Other documented regional spiritual figures.
+Tiv traditions
+Aondo.
+Tsav and its cosmological significance.
+Other documented local concepts.
+Further research
+UNiti
+8
+Ijaw.
+Urhobo.
+Isoko.
+Nupe.
+Gbagyi.
+Idoma.
+Other Nigerian communities.
+This is a research register, not a confirmed exhaustive pantheon or final playable
+character list.
+5.4 Cultural classification
+Every research entry must be categorised as one of:
+Playable patron candidate.
+Lore-only figure.
+Supreme creator or foundational deity.
+Collective spiritual category.
+Sacred or restricted subject.
+Unverified research entry.
+Do not invent traditional gods to fill gaps. Do not collapse distinct Nigerian
+traditions into one generic pantheon.
+Some figures may be represented through lore, environments, blessings or
+guardians rather than playable combat systems.
+5.5 Patron data model
+Each patron record requires:
+Patron ID.
+Display name.
+UNiti
+9
+Alternative names.
+Associated community and tradition.
+Geographic context.
+Documented cultural role.
+Research sources.
+Pronunciation.
+Gameplay identity proposal.
+Passive gift.
+Boons.
+Charms.
+Visual direction.
+Cultural review status.
+Approval status.
+Keep documented cultural source material separate from invented game
+mechanics.
+6. CHARMS AND LOADOUTS
+Players customise their combat builds before entering a match.
+Initial loadout:
+Two minor charm slots.
+One major charm slot.
+One patron boon selection.
+Charm categories:
+Mobility: Movement and traversal modifications.
+Defensive: Protection and defensive ability modifications.
+Ability: Ability behaviour and recovery modifications.
+UNiti
+10
+Utility: Support and objective interactions.
+Patron: Special patron-associated modifications.
+Charms should create trade-offs and alternative playstyles, not unconditional
+power increases.
+Unlocks may come from gameplay, achievements, events, patron progression and
+challenges.
+Paid items must never grant exclusive competitive advantages.
+7. COMBAT SYSTEM
+The game uses third-person, ability-driven arena combat.
+The combat system includes:
+Basic attacks.
+Close-range combat interactions.
+Ranged magical abilities.
+Mobility.
+Defensive actions.
+Team combinations.
+Ultimate abilities.
+Match format
+Initial format: 4v4.
+Match flow
+1. Matchmaking.
+2. Team assignment.
+3. Champion selection.
+4. Patron and loadout confirmation.
+UNiti
+11
+5. Arena loading.
+6. Team spawn.
+7. Objective activation.
+8. Competitive match.
+9. Match result.
+10. Rewards and progression.
+Respawn
+Players respawn after a defined delay. Respawn timing must not create excessive
+downtime.
+Combat feedback
+Implement:
+Health.
+Ability cooldowns.
+Hit feedback.
+Status effects.
+Ultimate charge.
+Objective status.
+Team status.
+Match notifications.
+Keep the interface readable during combat.
+Ability framework
+Build reusable components for:
+Damage effects.
+Healing effects.
+UNiti
+12
+Movement effects.
+Shields and protection.
+Area control.
+Temporary status effects.
+Summoned visual effects.
+Crowd-control effects.
+Avoid implementing every ability as a completely separate system.
+8. GAME MODES
+Convergence — Primary mode
+Two teams compete to control a spiritually significant objective.
+The objective may move or change behaviour during a match.
+Victory is determined through objective score and teamwork.
+Team Clash
+Teams compete to reach a target score through successful match participation.
+Shrine Control
+Teams compete over multiple objectives that activate across the arena.
+Battle Royale
+Do not include Battle Royale in the MVP. Reconsider only after the core arena
+experience is successful.
+9. ARENA DESIGN
+Arenas are compact, optimised multiplayer environments inspired by Nigerian
+locations and architecture.
+UNiti
+13
+First arena: THE CROSSING
+A fictionalised outdoor Nigerian urban district inspired by Lagos.
+Required features:
+Main objective plaza.
+Connected street routes.
+Buildings of different heights.
+Covered passages.
+Side routes.
+Elevated traversal routes where appropriate.
+Team spawn regions.
+Environmental landmarks.
+Clear arena boundaries.
+Multiple forms of cover.
+The first arena must include two spawn areas, one central objective and at least
+two alternative routes.
+Future arenas
+The Mall: Multi-level commercial environment.
+The Coast: Coastal Nigerian environment.
+The Palace: Historical architectural inspiration and courtyard layouts.
+The Market: Dense commercial environment with connected routes.
+The Crossroads: Supernatural environment with changing geometry.
+Geographic source policy
+Do not extract Google Maps 3D geometry to create standalone game models.
+Use appropriately licensed geographical data, OpenStreetMap data subject to its
+licence requirements, original 3D modelling, licensed photogrammetry and
+independently created assets.
+UNiti
+14
+Maintain an asset-source and licence register.
+10. VISUAL AND AUDIO DIRECTION
+Visual style
+High-quality stylised 3D.
+The game must have a consistent identity across champions, arenas, UI,
+animation and effects.
+Avoid generic fantasy characters with Nigerian names attached.
+Character design should draw from researched Nigerian fashion, materials,
+architecture and cultural references where appropriate.
+Audio
+Create an original sound identity through:
+Nigerian instrumental influences.
+Regional percussion and rhythms.
+Character-specific effects.
+Patron-themed sound identities.
+Combat feedback.
+Lobby music.
+Match introductions.
+Victory audio.
+Use original or appropriately licensed recordings.
+11. PROGRESSION AND ECONOMY
+Account progression
+UNiti
+15
+Experience and progression rewards should unlock cosmetics, challenges,
+achievements and customisation.
+Champion mastery
+Reward:
+Champion cosmetics.
+Emotes.
+Profile badges.
+Victory animations.
+Lore entries.
+Mastery titles.
+Patron progression
+Patron experience unlocks alternative build options and visual rewards.
+Currency
+Use an earnable gameplay currency and, if needed, a separate premium currency
+for optional cosmetics.
+Store
+Support:
+Champion skins.
+Cosmetic bundles.
+Emotes.
+Victory animations.
+Profile banners.
+Custom visual effects.
+Seasonal cosmetics.
+UNiti
+16
+Battle Pass
+Include free and optional paid reward tracks with seasonal themes and
+challenges.
+Do not implement paid random loot boxes or paid combat advantages.
+12. SOCIAL SYSTEMS
+Implement progressively:
+Friends list.
+Player invitations.
+Party creation.
+Party leader.
+Match invitations.
+Recent players.
+Public player profiles.
+Basic reporting and blocking.
+Voice chat is a later feature requiring appropriate moderation and safety controls.
+13. GODOT TECHNICAL ARCHITECTURE
+13.1 Game engine
+Mandatory engine: Godot 4.x.
+Use the latest stable Godot 4.x version available and supported in the
+development environment.
+Pin the exact version in the README and development documentation.
+Primary language: GDScript.
+Do not introduce C# unless a specific technical requirement justifies it.
+UNiti
+17
+Do not use Unity, Unreal, Unity Netcode, Unity-specific packages or Unity project
+structures.
+13.2 Rendering
+Use Godot's 3D rendering pipeline.
+Choose the renderer based on actual target-device testing:
+Mobile renderer for a mobile-first performance baseline.
+Compatibility renderer where broader low-end hardware support is necessary.
+Forward+ where desktop visual requirements justify it.
+Start with a practical renderer and test on the intended hardware early.
+Avoid committing to expensive lighting, shadows and effects before Android
+performance has been measured.
+13.3 Godot systems
+Use Godot-native architecture:
+Requirement Godot implementation
+Main scenes PackedScene
+Character controller CharacterBody3D
+Physics Godot physics
+Input InputMap
+Character animation AnimationPlayer / AnimationTree
+Static gameplay definitions Custom Resource classes
+Character instances Reusable scenes
+Scene transitions SceneTree
+Multiplayer High-level MultiplayerAPI
+Network transport ENetMultiplayerPeer
+Spawn synchronisation MultiplayerSpawner
+Property synchronisation MultiplayerSynchronizer
+Dedicated server Headless Godot export
+UNiti
+18
+Requirement Godot implementation
+Automated tests GDScript test framework or custom test runner
+Use signals for communication between independent gameplay systems where
+appropriate.
+Use groups and reusable components where they simplify interactions.
+Avoid creating a single enormous game manager script.
+13.4 Scene architecture
+Create separate scenes for:
+Boot.
+Login.
+Main lobby.
+Champion selection.
+Patron selection.
+Loadout.
+Matchmaking.
+Arena.
+Player champion.
+Individual champion models.
+Champion abilities.
+HUD.
+Match results.
+Keep scenes modular and reusable.
+13.5 Data architecture
+Use custom Godot Resource classes for:
+ChampionDefinition.
+UNiti
+19
+PatronDefinition.
+AbilityDefinition.
+CharmDefinition.
+ArenaDefinition.
+CosmeticDefinition.
+MatchModeDefinition.
+ProgressionRewardDefinition.
+Each champion should reference its abilities through reusable resource
+definitions.
+Do not hardcode champion statistics and patron effects throughout gameplay
+scripts.
+13.6 Networking architecture
+Use Godot's high-level multiplayer system and ENet for the initial real-time
+multiplayer prototype.
+The server must be authoritative.
+The server owns and validates:
+Player health.
+Match state.
+Ability activation.
+Cooldowns.
+Hit validation.
+Objective state.
+Team score.
+Respawn.
+Match completion.
+Clients send validated input requests and receive server-authoritative state.
+UNiti
+20
+Use RPCs carefully, with explicit authority, validation and ownership checks.
+Use MultiplayerSpawner and MultiplayerSynchronizer where appropriate, rather
+than manually synchronising every replicated object without a clear reason.
+Build a small multiplayer proof of concept first.
+Test latency, packet loss, disconnections, reconnection and server performance
+before expanding the player count.
+Client-side prediction and server reconciliation may be introduced after
+authoritative server simulation is working.
+Do not assume that using ENet automatically makes a game cheat-resistant.
+Implement input validation, rate limits and server-side gameplay checks.
+13.7 Dedicated server
+Godot 4 supports running projects in headless mode and exporting dedicated-
+server builds.
+Create a dedicated server export preset.
+The server must run without rendering gameplay graphics or requiring a display.
+Separate the client presentation layer from server gameplay logic so server
+instances do not load unnecessary visual assets.
+Provide documented commands for starting a local server and connecting
+multiple client instances.
+13.8 Backend
+Use a separate backend for persistent account and commercial systems.
+Recommended stack:
+ASP.NET Core.
+PostgreSQL.
+Redis where justified.
+REST API for account and progression operations.
+Secure authentication.
+UNiti
+21
+Server-side validation.
+The backend manages:
+Player accounts.
+Authentication.
+Inventory.
+Currency.
+Cosmetics.
+Purchases.
+Patron progression.
+Champion progression.
+Match history.
+Ranked statistics.
+Battle Pass progression.
+The dedicated match server remains authoritative over live match outcomes.
+Do not trust the client to award currency, match victories or progression.
+13.9 Rendering and performance
+The game must be designed for PC and Android from the beginning.
+Set performance targets only after identifying representative hardware.
+Profile:
+Frame time.
+CPU usage.
+GPU usage.
+Memory.
+Network bandwidth.
+Draw calls.
+UNiti
+22
+Physics performance.
+Animation cost.
+Particle cost.
+Provide scalable graphics settings and a reduced-effects mode.
+Enable Android internet permission in the export configuration.
+14. USER INTERFACE
+Required interfaces:
+1. Startup screen.
+2. Login and registration.
+3. Main lobby.
+4. Champion selection.
+5. Patron selection.
+6. Loadout.
+7. Matchmaking.
+8. Pre-match selection.
+9. In-game HUD.
+10. Pause menu.
+11. Match results.
+12. Player profile.
+13. Store.
+14. Battle Pass.
+15. Settings.
+Support mouse and keyboard initially.
+Design controller and mobile touch layouts as part of the interface architecture
+rather than retrofitting them at the end.
+UNiti
+23
+15. TARGET PLATFORMS
+Initial development
+PC development build.
+Production target
+PC and Android.
+Android must be considered early for rendering, memory, control layout, network
+permissions and performance.
+Test on actual devices before setting minimum requirements.
+Measure network performance from Nigerian test locations, including Lagos,
+Abuja and Port Harcourt, before choosing hosting locations.
+16. INITIAL MVP
+The first playable version must contain:
+Feature Requirement
+Engine Godot 4.x
+Lobby Functional basic lobby
+Champions Four prototypes
+Patrons Three prototype paths
+Loadout Basic charm system
+Arena One outdoor arena
+Combat Functional champion abilities
+Game mode Convergence
+Multiplayer Dedicated server proof of concept
+Results Basic scoreboard
+Progression Basic persistent progression
+HUD Functional combat interface
+UNiti
+24
+MVP acceptance criteria
+1. The project opens and runs in Godot.
+2. A player can enter the lobby.
+3. A player can select a champion.
+4. A player can select a patron.
+5. A player can equip charms.
+6. A player can enter the outdoor arena.
+7. Player movement works.
+8. Combat abilities work.
+9. Two separate clients can connect to a dedicated server.
+10. Clients see synchronised player movement.
+11. Match state and important gameplay decisions are server-authoritative.
+12. Players can participate in an objective.
+13. The match produces an authoritative result.
+14. Players can return to the lobby.
+Do not mark a feature complete until it has been tested.
+17. DEVELOPMENT ROADMAP
+Milestone 0 — Godot project setup
+Inspect the development environment.
+Install or verify Godot 4.x.
+Pin the project version.
+Initialise Git.
+Create the project.
+Configure rendering.
+UNiti
+25
+Configure InputMap.
+Create the folder structure.
+Establish scene architecture.
+Create initial custom Resource definitions.
+Document technical decisions.
+Confirm the project launches.
+Deliverable: Runnable Godot project.
+Milestone 1 — Combat sandbox
+Third-person camera.
+CharacterBody3D movement.
+Camera controls.
+Basic champion scene.
+Test arena.
+Basic attack.
+One mobility ability.
+One defensive or utility ability.
+Health.
+Respawn.
+Basic combat HUD.
+Deliverable: One controllable champion in a functional arena.
+Milestone 2 — Champion framework
+Reusable ChampionDefinition resources.
+Ability framework.
+Animation integration.
+UNiti
+26
+Four prototype champions.
+Champion selection interface.
+Champion-specific visual presentation.
+Deliverable: Four functional champions.
+Milestone 3 — Patron framework
+PatronDefinition resources.
+Patron selection interface.
+Patron gifts.
+Boons.
+Charm system.
+Patron progression.
+Champion and patron compatibility testing.
+Deliverable: Three selectable prototype patrons with functional modifiers.
+Milestone 4 — Multiplayer
+ENet connection.
+Dedicated server mode.
+Player spawning.
+Player synchronisation.
+Server-authoritative combat.
+Team assignment.
+Health synchronisation.
+Respawn synchronisation.
+Match state.
+Disconnect handling.
+UNiti
+27
+Match completion.
+Deliverable: Functional multiplayer test with two teams.
+Milestone 5 — First arena
+Outdoor arena blockout.
+Objective area.
+Spawn regions.
+Alternative routes.
+Environment artwork.
+Props.
+Lighting.
+Boundaries.
+Optimisation.
+Deliverable: Complete playable outdoor arena.
+Milestone 6 — Lobby and progression
+Account integration.
+Player profiles.
+Champion selection.
+Patron progression.
+Inventory.
+Charms.
+Match results.
+Persistent progression.
+Deliverable: Lobby-to-match-to-lobby experience.
+Milestone 7 — Economy and seasonal systems
+UNiti
+28
+Cosmetic inventory.
+Store.
+Purchase integration.
+Battle Pass.
+Cosmetic rewards.
+Seasonal configuration.
+Deliverable: Non-pay-to-win monetisation foundation.
+Milestone 8 — Android preparation
+Android export.
+Touch controls.
+Interface adaptation.
+Graphics settings.
+Device benchmarking.
+Network testing.
+Performance optimisation.
+Deliverable: Android development build.
+18. GODOT PROJECT STRUCTURE
+Use a clean Godot-native directory structure.
+project/
+├── project.godot
+├── addons/
+├── assets/
+│   ├── audio/
+│   ├── characters/
+│   ├── environments/
+│   ├── materials/
+│   ├── textures/
+│   ├── animations/
+│   ├── vfx/
+UNiti
+29
+│   └── ui/
+├── data/
+│   ├── champions/
+│   ├── patrons/
+│   ├── abilities/
+│   ├── charms/
+│   ├── arenas/
+│   ├── cosmetics/
+│   └── progression/
+├── scenes/
+│   ├── boot/
+│   ├── lobby/
+│   ├── champion_select/
+│   ├── patron_select/
+│   ├── loadout/
+│   ├── matchmaking/
+│   ├── arena/
+│   ├── champions/
+│   ├── abilities/
+│   └── ui/
+├── scripts/
+│   ├── core/
+│   ├── player/
+│   ├── champions/
+│   ├── abilities/
+│   ├── patrons/
+│   ├── combat/
+│   ├── networking/
+│   ├── progression/
+│   ├── economy/
+│   └── ui/
+├── server/
+│   ├── export_presets/
+│   └── configuration/
+├── tests/
+├── documentation/
+├── backend/
+└── README.md
+Backend source can remain in a separate repository if that produces a cleaner
+deployment architecture.
+19. DEVELOPMENT STANDARDS
+Godot 4.x only.
+GDScript by default.
+UNiti
+30
+Modular scenes.
+Reusable Resources.
+Server-authoritative multiplayer.
+Reusable ability architecture.
+Data-driven champion and patron definitions.
+No giant monolithic scripts.
+No fake multiplayer.
+No empty placeholder implementations presented as finished features.
+No client-authoritative match rewards.
+Documented API contracts.
+Asset licence records.
+Cultural research records.
+Git version control.
+Automated testing wherever practical.
+Keep the project runnable after every milestone.
+Visual placeholders are acceptable during the prototype. Functional gameplay is
+not optional.
+20. RISKS AND IMPORTANT DECISIONS
+Scope: Prioritise combat before expanding the character catalogue or store.
+Networking: Test ENet and dedicated server performance early. Do not assume
+local multiplayer proves production readiness.
+Cultural representation: Maintain the distinction between Nigerian traditions. Get
+cultural review before final representations.
+Monetisation: Cosmetics and optional seasonal progression only. No paid combat
+advantages or gambling-style loot boxes.
+Mobile performance: Benchmark early on representative Android devices.
+UNiti
+31
+Backend complexity: Do not build an unnecessarily elaborate backend before the
+game loop is functional.
+21. REQUIRED DEVELOPMENT HANDOVER
+The development agent must use this document as the project specification.
+The first deliverable must include:
+1. A runnable Godot 4.x project.
+2. Git repository.
+3. Functional third-person movement.
+4. Initial outdoor arena blockout.
+5. One working champion.
+6. Functional basic combat.
+7. Working ability framework.
+8. Health and respawn.
+9. Basic combat HUD.
+10. Dedicated-server proof of concept.
+11. Two client instances connecting to the server.
+12. Development instructions and technical report.
+The first milestone is the combat sandbox.
+Expand the champion and patron systems only after the fundamental combat
+experience is working.
+FINAL DEVELOPMENT COMMAND
+BUILD THIS GAME IN GODOT 4.x.
+Do not substitute Unity or Unreal.
+UNiti
+32
+Inspect the development environment, initialise the Godot project and begin
+implementation immediately.
+Use GDScript as the primary programming language.
+Use Godot-native scenes, Resources, signals, InputMap, CharacterBody3D and
+MultiplayerAPI.
+Build the actual gameplay, not merely a visual prototype.
+Test the project, fix errors, document implementation decisions and continue
+through the development milestones.
+The immediate priority is simple:
+One champion. One outdoor Nigerian-inspired arena. Functional combat. A
+working dedicated multiplayer server.
+Build that foundation first, then expand the game.
+UNiti
+33

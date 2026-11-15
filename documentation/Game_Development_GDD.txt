@@ -1,0 +1,755 @@
+Game Development::
+PROJECT: UNTITLED
+Game Design Document (GDD) & Development
+Specification
+Working tagline: BO LE KA JA
+Official title: To be determined
+Genre: Third-person multiplayer hero arena brawler
+Primary inspiration: Marvel Rivals, Call of Duty: Mobile and Fortnite
+Engine: Godot
+Primary development language: C#
+Initial match format: 4v4
+Initial arena: Outdoor Nigerian urban environment
+Long-term target: PC and Android, with cross-platform multiplayer subject to
+performance validation
+Development status: Pre-production / MVP execution
+1. GAME OVERVIEW
+1.1 Concept
+This is an online multiplayer hero arena game inspired by Nigerian mythology,
+spiritual traditions, folklore and contemporary Nigerian environments.
+Players enter a multiplayer lobby, select a playable champion, choose a spiritual
+patron, customise their combat loadout and compete against other players in
+team-based arena matches.
+Game Development::
+1
+The game's identity comes from combining:
+Nigerian mythology and cultural inspiration.
+Distinctive playable champions.
+Patron-based spiritual progression.
+Fast, ability-driven combat.
+Competitive team gameplay.
+Nigerian-inspired urban and fantasy environments.
+Character skins, cosmetics and seasonal progression.
+Online social features and competitive rankings.
+The central idea is that players are not controlling the gods themselves. They are
+champions who receive power through a chosen spiritual patron.
+1.2 Design vision
+The experience should feel like a premium multiplayer game, not a small cultural
+demonstration or a collection of Nigerian-themed assets.
+Players should have reasons to return:
+Improving their combat ability.
+Discovering new champions.
+Developing patron relationships.
+Experimenting with charms and loadouts.
+Competing with friends.
+Unlocking cosmetics.
+Climbing competitive rankings.
+Participating in seasonal events.
+1.3 Design pillars
+1. Combat first
+Game Development::
+2
+The combat must feel responsive, readable, exciting and rewarding. Everything
+else supports this experience.
+2. Nigerian identity
+The characters, environments, sound design, mythology, architecture and visual
+direction should be recognisably inspired by Nigeria.
+3. Meaningful customisation
+Players should be able to develop different builds using champion abilities, patron
+boons and charms.
+4. Competitive fairness
+Skill, positioning, teamwork and decision-making should matter more than money
+spent or time spent grinding.
+5. Expandability
+The game must support additional champions, patrons, arenas, game modes and
+seasonal content without requiring the existing systems to be rewritten.
+2. CORE GAMEPLAY LOOP
+The principal gameplay loop is:
+1. Launch the game.
+2. Enter the main lobby.
+3. Select a champion.
+4. Select a spiritual patron.
+5. Configure charms and combat modifiers.
+6. Join a party or enter matchmaking.
+7. Enter an arena.
+8. Compete against another team.
+9. Receive match rewards and progression.
+10. Develop champions and patron paths.
+Game Development::
+3
+11. Customise the account and prepare for another match.
+The game should make moving from the lobby into a match quick and intuitive.
+3. PLAYER LOBBY
+The lobby is the game's central interface.
+It should feel polished, animated and premium.
+Players should be able to see their currently selected champion in a 3D
+presentation environment.
+3.1 Main lobby layout
+The following sections are required:
+Section Function
+Play Matchmaking and game modes
+Champions Character selection and customisation
+Patrons Patron selection and progression
+Loadout Charms and combat modifiers
+Store Cosmetic purchases
+Battle Pass Seasonal progression
+Social Friends, parties and invitations
+Profile Player identity, stats and achievements
+Settings Controls, graphics, audio and accessibility
+3.2 Account system
+Players must have persistent accounts.
+Account features:
+Unique player identifier.
+Username.
+Profile picture or avatar icon.
+Game Development::
+4
+Player level.
+Account experience.
+Champion collection.
+Patron progression.
+Cosmetics inventory.
+Match history.
+Statistics.
+Achievements.
+Ranked status.
+Guest access may be used for a tutorial or local test, but online progression and
+purchases require a persistent account.
+3.3 Character presentation
+The selected champion should be displayed in a 3D lobby environment.
+Include:
+Idle animations.
+Character rotation.
+Outfit changes.
+Emotes.
+Victory animations.
+Patron visual effects.
+Equipped charm presentation.
+The lobby should eventually support inviting friends into a shared party
+environment.
+4. CHAMPION SYSTEM
+Game Development::
+5
+4.1 Champions are playable characters
+Champions are the actual characters players control.
+Each champion must have a unique identity, personality, visual design, movement
+characteristics and combat style.
+Do not make champions interchangeable models with different colours.
+Every champion should have:
+Name.
+Biography.
+Origin.
+Personality.
+Cultural background where relevant.
+Visual design.
+Base attributes.
+Combat role.
+Ability kit.
+Basic attack.
+Mobility ability.
+Defensive or utility ability.
+Signature ability.
+Ultimate ability.
+Animation set.
+Voice and sound identity.
+Champion names and backgrounds are provisional until the character roster is
+developed.
+4.2 Combat roles
+Use five broad combat roles:
+Game Development::
+6
+Role Function
+Vanguard Frontline presence and space control
+Duelist Mobile offensive specialist
+Controller Area denial and battlefield disruption
+Support Team assistance and recovery
+Specialist Utility, objectives and unusual mechanics
+Do not force every team composition into a rigid role requirement.
+A team should be able to experiment with different combinations.
+4.3 Initial playable champions
+The first prototype should contain four champions with distinctly different
+playstyles.
+Champion A — Vanguard
+A close-range frontline champion. Designed for durability, engagement and
+creating space.
+Champion B — Duelist
+A mobile offensive champion. Designed around movement, combos and quick
+engagements.
+Champion C — Controller
+A ranged ability specialist. Designed to control areas and interrupt opposing
+teams.
+Champion D — Support
+A team-oriented champion. Designed around protection, recovery and helping
+teammates remain effective.
+These are gameplay placeholders, not final characters.
+Each must have a unique appearance and functional ability kit.
+4.4 Champion attributes
+Initial attributes:
+Game Development::
+7
+Health.
+Movement speed.
+Attack strength.
+Defence.
+Ability power.
+Ability recovery.
+Mobility.
+Utility effectiveness.
+Avoid building an elaborate RPG stat system before the combat is established.
+Champion attributes should primarily create different playstyles rather than
+enormous numerical advantages.
+4.5 Ability structure
+Each champion should have:
+1. Basic attack.
+2. Secondary attack.
+3. Mobility ability.
+4. Utility or defensive ability.
+5. Signature ability.
+6. Ultimate ability.
+The ultimate ability should charge through normal participation in a match,
+including objective contribution and successful play.
+Abilities must be responsive, clearly telegraphed and understandable to
+opponents.
+Use fictional magical abilities, stylised melee animations and supernatural effects.
+Do not depend on realistic weapon simulation to make combat interesting.
+Game Development::
+8
+5. PATRONAGE SYSTEM
+This is the game's defining progression feature.
+5.1 Concept
+Players choose a spiritual patron from a researched catalogue of Nigerian
+traditional spiritual figures and traditions.
+The patron represents the source of certain enhancements available to the
+champion.
+A champion's combat identity and a player's spiritual patron are separate
+systems.
+This means the same champion can have different gameplay builds depending on
+the selected patron.
+5.2 Patron selection
+Players must be able to:
+Browse the patron catalogue.
+View each patron's background.
+Understand their documented cultural context.
+View their gameplay identity.
+Preview visual effects.
+Select a patron.
+Develop patron progression.
+Unlock patron-associated boons and charms.
+Players may change their active patron outside a match.
+The game should not permanently lock players into their first choice.
+5.3 Patron gameplay structure
+Each patron has:
+Game Development::
+9
+Patron Gift: A passive modification.
+Patron Boons: A selection of optional enhancements. The player chooses one for
+the current match.
+Patron Charm Collection: A collection of unlockable combat modifiers associated
+with that patron.
+Patron Progression: Experience and progression milestones that unlock further
+customisation.
+Patrons must offer different playstyles, not simply different colours for the same
+ability.
+5.4 Patron progression
+Use a progression system with multiple ranks.
+Example:
+Rank Progression
+Initiate First patron gift
+Devoted First additional boon
+Favoured Additional charm options
+Adept Alternative ability modifier
+Ascendant Advanced cosmetic and visual effects
+These names are temporary.
+Important: progression should unlock options and sidegrades, not increasingly
+powerful paid advantages.
+5.5 Patron research catalogue
+The patron database must be built separately from the champion roster.
+The following is an initial research register, not a final playable roster.
+Yoruba traditions
+Research the following candidates:
+Game Development::
+10
+Ṣ àngó
+Ọ̀ gún
+Ọ̀ ṣ un
+Ọ ya
+Ọ bàtálá
+Ọ̀ rúnmìlà
+Ọ̀ ṣ anyìn
+È ṣ ù
+Yem ọ ja
+Olókun
+Ọ balúayé
+Ọ̀ ṣ ọ́ ọ̀ sì
+Ọ̀ ṣ ùmàrè
+Ọ̀ rì ṣ à Oko
+Ajé
+Igbo traditions
+Research:
+Ala / Ani
+Amadioha
+Anyanw ụ
+Idemili
+Agwu
+Ufieji ọ k ụ
+Ikenga, with its classification and cultural meaning verified before inclusion.
+Edo traditions
+Game Development::
+11
+Research:
+Osanobua
+Olokun
+Ovia
+Okhuaihe
+Other locally documented divinities and spiritual figures.
+Efik and Ibibio traditions
+Research:
+Abasi
+Ndem
+Local water and tutelary divinities.
+Abasi is treated in Efik accounts as the Supreme Creator. Ndem refers to a
+category of spiritual beings, not one interchangeable character. These distinctions
+must be preserved.
+Northern Nigerian traditions
+Research:
+Bori traditions and their documented spirit catalogues.
+Maguzawa and related indigenous traditions.
+Regional supernatural figures and narratives.
+Do not treat Bori as a conventional pantheon of gods. Its history and spirit
+practices are distinct.
+Tiv traditions
+Research:
+Aondo.
+Tsav and its cosmological significance.
+Relevant local spiritual concepts.
+Game Development::
+12
+Aondo should not automatically be converted into an ordinary combat patron.
+Additional traditions
+Expand research to include:
+Ijaw.
+Urhobo.
+Isoko.
+Nupe.
+Gbagyi.
+Idoma.
+Other Nigerian communities with documented traditional spiritual systems.
+The list is deliberately expandable.
+Research instruction: Do not invent missing traditional gods to complete a list.
+Search academic research, historical documentation, oral histories and
+recognised cultural sources. Record uncertain or disputed names as unverified
+rather than presenting them as established facts.
+5.6 Cultural classification
+Not every spiritual figure should become a selectable combat patron.
+Classify entries as:
+Playable patron candidate.
+Lore-only figure.
+Supreme creator or foundational deity.
+Collective spiritual category.
+Sacred or restricted subject.
+Unverified research entry.
+Some figures should only appear in lore, architecture, environmental storytelling
+or other approved representations.
+Game Development::
+13
+Consult cultural researchers and knowledgeable community representatives
+before finalising representation.
+5.7 Patron data structure
+Every patron entry must contain:
+Patron ID.
+Display name.
+Alternative names and spellings.
+Associated community and tradition.
+Geographic context.
+Documented cultural role.
+Research sources.
+Pronunciation.
+Gameplay identity proposal.
+Proposed passive gift.
+Proposed boons.
+Proposed charms.
+Visual inspiration.
+Cultural review status.
+Approval status.
+Separate cultural source material from invented game mechanics.
+6. CHARM AND COMBAT LOADOUT
+SYSTEM
+Players can customise their combat build before entering a match.
+Charms and relics provide gameplay modifiers.
+Game Development::
+14
+This is inspired by the attachment and loadout systems found in competitive
+multiplayer games, but the system should be adapted to this game's magical
+identity.
+6.1 Loadout slots
+Initial configuration:
+Two minor charm slots.
+One major charm slot.
+One patron boon selection.
+Each slot should have clear restrictions.
+6.2 Charm categories
+Mobility charms
+Improve a specific movement interaction.
+Modify movement ability behaviour.
+Offer alternative traversal effects.
+Defensive charms
+Improve a limited defensive interaction.
+Modify defensive ability behaviour.
+Provide situational protection.
+Ability charms
+Modify ability recovery.
+Change the behaviour of selected abilities.
+Provide alternative effects.
+Utility charms
+Improve support or objective interactions.
+Modify team utility.
+Game Development::
+15
+Patron charms
+Special modifications associated with a patron.
+6.3 Balance requirements
+Charms must create meaningful choices.
+They must not simply make a player with more unlocks stronger than someone
+who is new to the game.
+Use sidegrades and trade-offs.
+Example:
+A charm might improve mobility ability recovery while reducing its maximum
+duration.
+Another might improve defensive utility while limiting an offensive effect.
+6.4 Inventory and unlocking
+Charms can be unlocked through:
+Gameplay progression.
+Patron progression.
+Achievements.
+Events.
+Challenges.
+Paid items must not grant exclusive competitive advantages.
+7. COMBAT SYSTEM
+7.1 Combat identity
+The combat should be a third-person, ability-driven arena experience.
+It should combine:
+Basic attacks.
+Game Development::
+16
+Close-range combat.
+Ranged magical attacks.
+Character abilities.
+Mobility.
+Defensive actions.
+Team combinations.
+Ultimate abilities.
+The combat must be visually readable. Players should understand when an ability
+is being activated and have a reasonable opportunity to respond.
+7.2 Match format
+Initial format: 4v4.
+The game should eventually support alternative team sizes if testing justifies
+them.
+7.3 Match flow
+1. Players enter matchmaking.
+2. Teams are assembled.
+3. Players enter champion selection.
+4. Players confirm their patron and combat loadout.
+5. Arena loads.
+6. Teams spawn.
+7. Match objectives become active.
+8. The match progresses through objective phases.
+9. The winning team is determined.
+10. Results and rewards are presented.
+Game Development::
+17
+7.4 Respawn
+Players should respawn after a short delay.
+Respawn timing can vary according to match progression, but it should not create
+excessive downtime.
+Provide a clear indication of respawn status.
+7.5 Combat feedback
+Implement:
+Health indicators.
+Ability cooldown indicators.
+Hit confirmation.
+Damage feedback.
+Status-effect indicators.
+Ultimate charge.
+Objective status.
+Team status.
+Elimination and assist notifications.
+Effects must not overwhelm the screen.
+7.6 Ability interaction framework
+The ability system must support:
+Damage effects.
+Healing effects.
+Movement effects.
+Shields and protection.
+Area control.
+Temporary status effects.
+Game Development::
+18
+Summoned visual effects.
+Crowd-control effects.
+Each effect should use reusable gameplay components.
+Avoid writing a completely different system for every champion.
+8. GAME MODES
+8.1 Primary mode: CONVERGENCE
+The first competitive mode.
+Two teams compete to control a spiritually significant objective.
+Players must work together to gain and maintain control.
+The objective may change location or behaviour during the match.
+Victory is determined by objective score, not simply eliminations.
+8.2 Secondary mode: TEAM CLASH
+A team score mode.
+Teams compete to reach a target score through successful combat participation.
+This should be implemented after Convergence is stable.
+8.3 Future mode: SHRINE CONTROL
+Teams compete over multiple objectives.
+Objectives may activate in different areas of the map.
+This creates rotation and teamwork opportunities.
+8.4 Battle Royale
+Do not include Battle Royale in the first release.
+The core game is a team-based arena brawler. A separate large-scale mode
+would add substantial map, networking, balancing and matchmaking complexity.
+Game Development::
+19
+It can be revisited after the main game is successful.
+9. ARENA DESIGN
+Arenas are compact, carefully designed multiplayer environments.
+They should be inspired by Nigerian cities, architecture and public spaces.
+They are not meant to be accurate reproductions of entire cities.
+9.1 Initial arena: THE CROSSING
+Environment: Fictionalised Nigerian urban outdoor district.
+The environment should draw inspiration from a Lagos street intersection, transit
+corridor and nearby commercial district.
+Required elements:
+Main open objective plaza.
+Several connected street routes.
+Buildings of different heights.
+Rooftop or elevated traversal routes where appropriate.
+Covered passages.
+Side routes.
+Clear team spawn areas.
+Distinctive environmental landmarks.
+Visually readable boundaries.
+Areas suitable for different champion roles.
+The arena should be visually rich but optimised for competitive play.
+9.2 Map layout requirements
+The first arena must include:
+Two team spawn regions.
+Game Development::
+20
+One central objective area.
+At least two alternative routes.
+Multiple locations for cover.
+Controlled verticality.
+Clear navigation landmarks.
+No unintended out-of-bounds areas.
+No spawn locations exposed directly to opposing teams.
+Keep navigation and combat readability more important than architectural
+complexity.
+9.3 Future arena concepts
+The Mall: A multi-level commercial environment with an atrium and connected
+walkways.
+The Coast: A coastal Nigerian environment with open areas and distinctive terrain.
+The Palace: A courtyard environment inspired by Nigerian historical architecture.
+The Market: A dense urban commercial environment with several connected
+routes.
+The Crossroads: A supernatural environment where the architecture and world
+geometry can change during a match.
+9.4 Geographic and 3D source data
+Do not extract or convert Google Maps Photorealistic 3D Tiles into standalone
+game models.
+Google's terms restrict extracting, tracing or deriving independent 3D geometry
+from its map content.
+Use permitted alternatives:
+OpenStreetMap data with required attribution and applicable ODbL
+obligations.
+Licensed architectural and geographical data.
+Game Development::
+21
+Original 3D modelling.
+Properly licensed photogrammetry.
+Original environmental concept art.
+Independently created fictionalised building assets.
+Maintain a source and licence record for every external asset.
+Google 3D Maps may be useful for permitted map visualisation, but must not be
+treated as a source from which to extract game geometry.
+10. VISUAL DIRECTION
+10.1 Art style
+The visual direction should be stylised, high-quality 3D.
+The target is a premium hero arena game, with a distinctive Nigerian identity.
+Avoid generic fantasy characters with African names attached.
+10.2 Character art
+Champion designs should use:
+Distinctive silhouettes.
+Modern and traditional visual references where appropriate.
+Nigerian fashion influences.
+Cultural material references.
+Recognisable accessories.
+Strong animation identity.
+Distinct ability effects.
+Characters must not all share the same visual language.
+10.3 Environment art
+Game Development::
+22
+Build environments with:
+Nigerian urban design references.
+Distinctive architecture.
+Road layouts.
+Commercial buildings.
+Local environmental materials.
+Signage inspired by real visual culture.
+Street details.
+Lighting and atmosphere.
+All arena assets should be designed for gameplay performance.
+10.4 Effects and animation
+Ability effects should have a consistent visual language.
+A patron should have recognisable visual motifs, but effects must remain
+understandable during combat.
+Do not use generic particle spam as a substitute for actual animation and visual
+design.
+10.5 Sound
+Create an original sound identity through:
+Nigerian instrumental influences.
+Regional percussion and rhythms.
+Character-specific sound effects.
+Patron-themed sound identities.
+Clear combat audio feedback.
+Lobby and menu music.
+Match intro and victory audio.
+Game Development::
+23
+Use culturally appropriate musical research and licensed or original recordings.
+11. PROGRESSION AND ECONOMY
+11.1 Account progression
+Players earn account experience from normal play.
+Progression should unlock:
+Profile customisation.
+Cosmetic rewards.
+Challenges.
+Additional customisation options.
+Achievements.
+Seasonal progression.
+11.2 Champion progression
+Champion mastery tracks can reward:
+Character cosmetics.
+Emotes.
+Profile badges.
+Victory animations.
+Lore entries.
+Mastery titles.
+Champion progression must not create overwhelming statistical advantages.
+11.3 Patron progression
+Players earn patron experience through matches and challenges.
+Unlocks should primarily provide alternative loadout options and visual rewards.
+Game Development::
+24
+11.4 Currency
+Use separate currencies if necessary:
+Earnable currency: Obtained through normal gameplay and events.
+Premium currency: Used for optional cosmetic purchases.
+Currency values and purchase prices should be configurable from the backend.
+11.5 Store
+The store should support:
+Champion skins.
+Cosmetic bundles.
+Emotes.
+Victory animations.
+Profile banners.
+Custom effects.
+Seasonal cosmetics.
+11.6 Battle Pass
+Provide seasonal progression with:
+Free rewards.
+Optional paid rewards.
+Cosmetic themes.
+Challenges.
+Profile rewards.
+Seasonal titles.
+Do not put essential combat power behind paid progression.
+Do not use paid random loot boxes or gambling-like monetisation.
+Game Development::
+25
+12. SOCIAL SYSTEMS
+Implement progressively:
+Friends list.
+Player invitations.
+Party creation.
+Party leader.
+Party status.
+Match invitations.
+Recent players.
+Player profiles.
+Basic reporting and blocking tools.
+The game should allow friends to play together without requiring them to use
+external voice services.
+Voice chat should be a later feature with appropriate moderation and safety
+controls.
+13. TECHNICAL ARCHITECTURE
+13.1 Game engine
+Recommended: Godot with Universal Render Pipeline.
+Use the current supported Godot LTS release available in the development
+environment.
+The development team should verify the exact installed and supported version
+before implementation.
+Unity is recommended because it provides mature 3D workflows and official
+multiplayer tooling for real-time games with smaller player counts.
+Game Development::
+26
+13.2 Core stack
+Component Technology
+Game engine Godot
+Rendering Universal Render Pipeline
+Programming C#
+Multiplayer Netcode for GameObjects
+Session services Unity Multiplayer Services
+Match servers Dedicated server builds
+Backend API ASP.NET Core
+Database PostgreSQL
+Cache / real-time support Redis, when required
+Admin dashboard Web-based
+Source control Git
+The selected multiplayer architecture must be server-authoritative.
+The official Unity multiplayer documentation distinguishes Netcode for
+GameObjects for smaller GameObject-based games from Netcode for Entities for
+larger, more demanding player counts.
+The initial 4v4 design is an appropriate starting point for evaluating Netcode for
+GameObjects.
+13.3 Server authority
+The server must be authoritative over:
+Match state.
+Player health.
+Ability activation.
+Ability cooldowns.
+Hit validation.
+Objective ownership.
+Game Development::
+27
+Score.
+Respawn.
+Match completion.
+Clients should transmit player input and receive the authoritative game state.
+Do not trust clients to award damage, currency, progression or match victories.
+13.4 Networking
+Implement:
+Dedicated server.
+Client connection.
+Match state synchronisation.
+Player movement synchronisation.
+Ability state synchronisation.
+Matchmaking integration.
+Reconnection handling.
+Disconnect handling.
+Basic latency monitoring.
+Start with a local dedicated server and two client instances.
+Expand to 4v4 once the network architecture is stable.
+Do not rely on a player-hosted match for the final competitive architecture.
+13.5 Backend
+The backend should manage:
+Player accounts.
+Authentication.
+Inventory.
+Currency.
+Game Development::
+28
+Cosmetics.
+Purchases
+Game Development::
+29
