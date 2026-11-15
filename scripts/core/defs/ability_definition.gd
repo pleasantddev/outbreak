@@ -3,12 +3,14 @@ extends GameDefinition
 ## One ability in a champion's six-slot kit. Behaviour comes from the ordered `effects` list.
 
 enum Slot { BASIC, SECONDARY, MOBILITY, UTILITY, SIGNATURE, ULTIMATE }
-enum Targeting { MELEE_ARC, PROJECTILE, HITSCAN_AIM, SELF, GROUND_AIM }
+enum TargetMode { MELEE_ARC, PROJECTILE, HITSCAN_AIM, SELF, GROUND_AIM }
+## what an ability may hit
+enum Affects { ENEMIES, ALLIES, ALL, SELF_AND_ALLIES }
 
 const SLOT_ACTIONS: Array[StringName] = [&"basic", &"secondary", &"mobility", &"utility", &"signature", &"ultimate"]
 
 @export var slot: Slot = Slot.BASIC
-@export var targeting: Targeting = Targeting.MELEE_ARC
+@export var targeting: TargetMode = TargetMode.MELEE_ARC
 ## seconds, before cooldown reduction
 @export var cooldown: float = 0.0
 @export var charges: int = 1
@@ -25,8 +27,8 @@ const SLOT_ACTIONS: Array[StringName] = [&"basic", &"secondary", &"mobility", &"
 ## 0 = stand still while casting, 1 = full speed
 @export var move_speed_while_casting: float = 0.5
 @export var effects: Array[AbilityEffect] = []
-## next ability in a basic-attack chain, and how long the window to continue it stays open
-@export var combo_next: StringName = &""
+## next ability in a basic-attack chain (null ends the chain), and how long the window to continue it stays open
+@export var combo_next: AbilityDefinition
 @export var combo_window: float = 0.6
 @export var animation: StringName = &""
 ## client-only presentation; may be null on a dedicated server

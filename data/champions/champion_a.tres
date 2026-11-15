@@ -1,0 +1,233 @@
+[gd_resource type="Resource" script_class="ChampionDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/defs/ability_definition.gd" id="1_md1jv"]
+[ext_resource type="Script" path="res://scripts/abilities/effects/ability_effect.gd" id="2_txclh"]
+[ext_resource type="Script" path="res://scripts/abilities/effects/damage_effect.gd" id="3_0smay"]
+[ext_resource type="Script" path="res://scripts/abilities/effects/knockback_effect.gd" id="4_u25e8"]
+[ext_resource type="Script" path="res://scripts/abilities/effects/projectile_effect.gd" id="5_oxmhw"]
+[ext_resource type="Script" path="res://scripts/abilities/effects/dash_effect.gd" id="6_pn6te"]
+[ext_resource type="Script" path="res://scripts/abilities/effects/shield_effect.gd" id="7_mrt6s"]
+[ext_resource type="Script" path="res://scripts/abilities/effects/status_apply_effect.gd" id="8_pln0n"]
+[ext_resource type="Script" path="res://scripts/core/defs/stat_modifier.gd" id="9_r7wv7"]
+[ext_resource type="Script" path="res://scripts/core/defs/status_definition.gd" id="10_ys711"]
+[ext_resource type="Script" path="res://scripts/abilities/effects/area_effect.gd" id="11_2x2d4"]
+[ext_resource type="Script" path="res://scripts/core/defs/stat_block.gd" id="12_hoorv"]
+[ext_resource type="Script" path="res://scripts/core/defs/champion_definition.gd" id="13_yhl7e"]
+[ext_resource type="Texture2D" path="res://assets/characters/male_dark.webp" id="14_thkk7"]
+
+[sub_resource type="Resource" id="Resource_v7ci4"]
+script = ExtResource("3_0smay")
+amount = 30.0
+
+[sub_resource type="Resource" id="Resource_thwn5"]
+script = ExtResource("4_u25e8")
+force = 5.0
+lift = 2.0
+
+[sub_resource type="Resource" id="Resource_tp3q7"]
+script = ExtResource("1_md1jv")
+cast_time = 0.12
+recovery = 0.45
+reach = 2.6
+arc = 110.0
+move_speed_while_casting = 0.4
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_v7ci4"), SubResource("Resource_thwn5")])
+animation = &"Melee_Hook"
+id = &"vanguard_hook"
+display_name = "Hook"
+
+[sub_resource type="Resource" id="Resource_uwu55"]
+script = ExtResource("3_0smay")
+amount = 22.0
+
+[sub_resource type="Resource" id="Resource_xpfe3"]
+script = ExtResource("1_md1jv")
+cast_time = 0.08
+recovery = 0.25
+arc = 80.0
+move_speed_while_casting = 0.6
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_uwu55")])
+combo_next = SubResource("Resource_tp3q7")
+animation = &"Punch_Cross"
+id = &"vanguard_cross"
+display_name = "Cross"
+
+[sub_resource type="Resource" id="Resource_7fla1"]
+script = ExtResource("3_0smay")
+amount = 18.0
+
+[sub_resource type="Resource" id="Resource_ovvg0"]
+script = ExtResource("1_md1jv")
+cast_time = 0.06
+recovery = 0.22
+arc = 80.0
+move_speed_while_casting = 0.7
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_7fla1")])
+combo_next = SubResource("Resource_xpfe3")
+animation = &"Punch_Jab"
+id = &"vanguard_jab"
+display_name = "Jab"
+
+[sub_resource type="Resource" id="Resource_jkoqr"]
+script = ExtResource("3_0smay")
+amount = 45.0
+
+[sub_resource type="Resource" id="Resource_5dqes"]
+script = ExtResource("5_oxmhw")
+speed = 34.0
+on_hit = Array[ExtResource("2_txclh")]([SubResource("Resource_jkoqr")])
+color = Color(1, 0.7, 0.25, 1)
+
+[sub_resource type="Resource" id="Resource_r3r3j"]
+script = ExtResource("1_md1jv")
+slot = 1
+targeting = 1
+cooldown = 3.0
+cast_time = 0.15
+recovery = 0.25
+reach = 45.0
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_5dqes")])
+animation = &"Spell_Simple_Shoot"
+id = &"vanguard_spirit_bolt"
+display_name = "Spirit Bolt"
+
+[sub_resource type="Resource" id="Resource_v80lo"]
+script = ExtResource("3_0smay")
+amount = 35.0
+
+[sub_resource type="Resource" id="Resource_dwf22"]
+script = ExtResource("4_u25e8")
+force = 9.0
+
+[sub_resource type="Resource" id="Resource_gfw7q"]
+script = ExtResource("6_pn6te")
+distance = 8.0
+duration = 0.28
+on_hit = Array[ExtResource("2_txclh")]([SubResource("Resource_v80lo"), SubResource("Resource_dwf22")])
+
+[sub_resource type="Resource" id="Resource_pjelc"]
+script = ExtResource("1_md1jv")
+slot = 2
+targeting = 3
+cooldown = 6.0
+recovery = 0.1
+move_speed_while_casting = 1.0
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_gfw7q")])
+animation = &"Shield_Dash"
+id = &"vanguard_shoulder_charge"
+display_name = "Shoulder Charge"
+
+[sub_resource type="Resource" id="Resource_axqh2"]
+script = ExtResource("7_mrt6s")
+amount = 150.0
+
+[sub_resource type="Resource" id="Resource_urq0j"]
+script = ExtResource("1_md1jv")
+slot = 3
+targeting = 3
+cooldown = 10.0
+recovery = 0.2
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_axqh2")])
+animation = &"Shield_OneShot"
+id = &"vanguard_iron_guard"
+display_name = "Iron Guard"
+
+[sub_resource type="Resource" id="Resource_tiqnr"]
+script = ExtResource("3_0smay")
+amount = 60.0
+
+[sub_resource type="Resource" id="Resource_kxxo6"]
+script = ExtResource("9_r7wv7")
+stat = &"move_speed"
+percent = -0.4
+
+[sub_resource type="Resource" id="Resource_g2lb6"]
+script = ExtResource("10_ys711")
+duration = 1.8
+modifiers = Array[ExtResource("9_r7wv7")]([SubResource("Resource_kxxo6")])
+id = &"slowed"
+display_name = "Slowed"
+
+[sub_resource type="Resource" id="Resource_uqeib"]
+script = ExtResource("8_pln0n")
+status = SubResource("Resource_g2lb6")
+
+[sub_resource type="Resource" id="Resource_4yipl"]
+script = ExtResource("11_2x2d4")
+radius = 4.5
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_tiqnr"), SubResource("Resource_uqeib")])
+
+[sub_resource type="Resource" id="Resource_jn6u0"]
+script = ExtResource("1_md1jv")
+slot = 4
+targeting = 3
+cooldown = 9.0
+cast_time = 0.4
+recovery = 0.35
+move_speed_while_casting = 0.0
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_4yipl")])
+animation = &"NinjaJump_Land"
+id = &"vanguard_ground_breaker"
+display_name = "Ground Breaker"
+
+[sub_resource type="Resource" id="Resource_y3s6k"]
+script = ExtResource("10_ys711")
+duration = 1.2
+stun = true
+id = &"stunned"
+display_name = "Stunned"
+
+[sub_resource type="Resource" id="Resource_l1amg"]
+script = ExtResource("8_pln0n")
+status = SubResource("Resource_y3s6k")
+
+[sub_resource type="Resource" id="Resource_36nby"]
+script = ExtResource("11_2x2d4")
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_l1amg")])
+
+[sub_resource type="Resource" id="Resource_swirh"]
+script = ExtResource("3_0smay")
+amount = 110.0
+
+[sub_resource type="Resource" id="Resource_mr3vl"]
+script = ExtResource("4_u25e8")
+force = 6.0
+lift = 4.0
+
+[sub_resource type="Resource" id="Resource_3jl1s"]
+script = ExtResource("11_2x2d4")
+radius = 8.0
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_swirh"), SubResource("Resource_mr3vl")])
+
+[sub_resource type="Resource" id="Resource_nttv3"]
+script = ExtResource("1_md1jv")
+slot = 5
+targeting = 3
+cast_time = 0.6
+recovery = 0.4
+ult_cost = 1.0
+move_speed_while_casting = 0.0
+effects = Array[ExtResource("2_txclh")]([SubResource("Resource_36nby"), SubResource("Resource_3jl1s")])
+animation = &"Spell_Simple_Shoot"
+id = &"vanguard_crossing_quake"
+display_name = "Crossing Quake"
+
+[sub_resource type="Resource" id="Resource_j12mw"]
+script = ExtResource("12_hoorv")
+max_health = 400.0
+move_speed = 5.6
+attack_power = 10.0
+defense = 20.0
+
+[resource]
+script = ExtResource("13_yhl7e")
+biography = "Placeholder. A street-hardened fighter from the junctions of Lagos who stands in front so others can move."
+origin = "Lagos (placeholder)"
+base_stats = SubResource("Resource_j12mw")
+abilities = Array[ExtResource("1_md1jv")]([SubResource("Resource_ovvg0"), SubResource("Resource_r3r3j"), SubResource("Resource_pjelc"), SubResource("Resource_urq0j"), SubResource("Resource_jn6u0"), SubResource("Resource_nttv3")])
+skin = ExtResource("14_thkk7")
+accent_color = Color(0.95, 0.65, 0.2, 1)
+capsule_radius = 0.42
+id = &"champion_a"
+display_name = "Vanguard"
+description = "Prototype frontline champion. Final name and design are still to be developed."

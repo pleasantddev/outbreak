@@ -62,15 +62,15 @@ everything else >= 0). Modifiers are added and removed by `source`, so removing 
 Values are cached and recomputed only when a modifier changes.
 
 **AbilityDefinition**: `slot` (BASIC, SECONDARY, MOBILITY, UTILITY, SIGNATURE, ULTIMATE), `cooldown: float`,
-`charges: int`, `cast_time: float`, `recovery: float`, `reach: float`, `targeting` (MELEE_ARC, PROJECTILE, HITSCAN_AIM,
+`charges: int`, `cast_time: float`, `recovery: float`, `reach: float`, `targeting: TargetMode` (MELEE_ARC, PROJECTILE, HITSCAN_AIM,
 SELF, GROUND_AIM), `ult_cost: float` (ultimate only, 0..1), `effects: Array[AbilityEffect]`, `animation: StringName`,
-`vfx: PackedScene` (client only, may be null), `combo_next: StringName` (basic attack chains).
+`vfx: PackedScene` (client only, may be null), `combo_next: AbilityDefinition` (basic attack chains, direct reference), `combo_window`.
 
 **AbilityEffect** (abstract, `scripts/abilities/effects/`): `func apply(ctx: AbilityContext) -> void`. Shipped components:
 `DamageEffect (amount, scaling_stat, scaling)`, `HealEffect`, `ShieldEffect (amount, duration)`,
-`DashEffect (distance, duration, through_units)`, `AreaEffect (radius, inner: Array[AbilityEffect], affects)`,
-`StatusEffectApply (status: StatusDefinition)`, `KnockbackEffect`, `SpawnProjectileEffect (speed, radius, lifetime,
-on_hit: Array[AbilityEffect])`. `AbilityContext` carries caster, aim origin and direction, targets hit, the server time
+`DashEffect (distance, duration, stop_on_hit, on_hit)`, `AreaEffect (radius, inner: Array[AbilityEffect], affects)`,
+`StatusApplyEffect (status: StatusDefinition)`, `KnockbackEffect`, `ProjectileEffect (speed, radius, max_distance,
+gravity, on_hit, on_impact)`. `AbilityContext` carries caster, aim origin and direction, targets hit, the server time
 and the caster's Attributes.
 
 **StatusDefinition**: `id, duration, modifiers: Array[StatModifier], tick_effects: Array[AbilityEffect],
@@ -119,7 +119,6 @@ scenes/arena/arena_root.tscn     Node3D "Arena"
   └─ HUD (CanvasLayer)           client only, freed on headless
 scenes/champions/champion.tscn   CharacterBody3D "Champion" (champion.gd)
   ├─ Collision (CollisionShape3D capsule)
-  ├─ Hurtbox (Area3D, layer HURTBOX)
   ├─ Visual (Node3D)             client only: model instance, AnimationTree, VFX anchors
   ├─ CameraRig (Node3D)          local player only
   │   └─ Yaw (Node3D) → Pitch (Node3D) → SpringArm3D → Camera3D
@@ -148,13 +147,16 @@ STUNNED, DEAD`. Casting and recovering lock or slow movement as the ability defi
   muzzle to aim point checks for that blocker and moves the impact to it.
 - Melee uses an arc test on the server: targets within `range` whose direction from the caster is within `arc/2` of the
   aim yaw, with line of sight from chest height.
-- The client sends `(aim_origin, aim_dir)` with each ability request; the server re-derives the muzzle from its own
-  authoritative position and rejects an origin more than `1.5 m` from it.
+- The aim ray is rebuilt from the champion's aim yaw and pitch alone (`Champion.aim_camera_origin()` uses the same pivot,
+  shoulder offset and arm length as the CameraRig, ignoring the spring arm's pull-in). So the client only sends yaw and
+  pitch, and the server computes the identical aim point and muzzle itself; there is no client-supplied origin to forge.
+- The champion's capsule on the `champions` layer is its hurt shape; there is no separate hurtbox Area3D yet. Melee,
+  areas and projectiles query that layer.
 
 ## 6. Ability pipeline
 
 ```
-input → AbilityRunner.request(slot, aim) ─(client)→ rpc_id(1, "server_request_ability", slot, aim_origin, aim_dir, seq)
+input → AbilityRunner.request(slot) ─(client, phase 3)→ rpc_id(1, "server_request_ability", slot, aim_yaw, aim_pitch, seq)
 server: validate(peer owns champion, alive, not stunned/silenced, slot ready, charges > 0, rate limit)
       → start cast (cast_time) → resolve: build AbilityContext → for effect in effects: effect.apply(ctx)
       → set cooldown = def.cooldown * (1 - final(cooldown_reduction)) → emit EventBus.ability_cast

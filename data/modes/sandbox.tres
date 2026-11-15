@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="MatchModeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/defs/match_mode_definition.gd" id="1_oaxhr"]
+
+[resource]
+script = ExtResource("1_oaxhr")
+score_to_win = 1000000
+objective_move_interval = 0.0
+respawn_base = 3.0
+respawn_per_minute = 0.0
+respawn_max = 3.0
+time_limit = 0.0
+id = &"sandbox"
+display_name = "Sandbox"
+description = "Practice: no score, quick respawns."

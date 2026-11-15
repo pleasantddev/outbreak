@@ -22,31 +22,39 @@ phase 4 is milestones 5 and 6, phase 5 is milestones 7 and 8.
 - [x] Boot scene opens with the project. Check: `godot --headless --quit-after 60` exits cleanly with no errors.
 
 ### Task 2: Arena blockout (test arena)
-- [ ] Graybox plaza with two spawn areas, a central objective pad, two side routes, cover, one raised walkway.
-- [ ] PBR materials from the Poly Haven sets (road, sidewalk, plaster, concrete, corrugated iron).
-- [ ] WorldEnvironment: sky, ACES or AgX tonemap, glow, SSAO on HIGH only, one shadowed sun.
-- [ ] Out-of-bounds kill volume and invisible walls at the edge.
+- [x] Graybox plaza with two spawn areas, a central objective pad, two side routes, cover, one raised walkway.
+- [x] PBR materials from the Poly Haven sets (road, sidewalk, plaster, concrete, corrugated iron).
+- [x] WorldEnvironment: sky, ACES or AgX tonemap, glow, SSAO on HIGH only, one shadowed sun.
+- [x] Out-of-bounds kill volume and invisible walls at the edge.
 
 ### Task 3: Champion controller
-- [ ] CharacterBody3D champion with the capsule from its definition, gravity, jump, camera-relative movement.
-- [ ] Over-the-shoulder SpringArm3D camera with clamped pitch, wall collision and shoulder offset.
-- [ ] Screen-centre reticle; aim point by camera ray; muzzle-to-aim blocker check.
-- [ ] Quaternius character with animations from the CC0 library: idle, jog, sprint, jump, land, hit, death, punches.
-- [ ] Check: a test drives inputs headless and asserts position change and that the camera never ends inside a wall.
+- [x] CharacterBody3D champion with the capsule from its definition, gravity, jump, camera-relative movement.
+- [x] Over-the-shoulder SpringArm3D camera with clamped pitch, wall collision and shoulder offset.
+- [x] Screen-centre reticle; aim point by camera ray; muzzle-to-aim blocker check.
+- [x] Quaternius character with animations from the CC0 library: idle, jog, sprint, jump, land, hit, death, punches.
+- [x] Check: a test drives inputs headless and asserts position change and that the camera never ends inside a wall.
 
 ### Task 4: Ability framework and the first champion
-- [ ] AbilityRunner with six slots, cooldowns, charges, cast and recovery, ultimate charge.
-- [ ] Effect components: Damage, Heal, Shield, Dash, Area, Projectile, Status, Knockback.
-- [ ] Champion A (Vanguard) data: basic three-hit combo, guard-break secondary, shoulder dash, barrier, ground slam
+- [x] AbilityRunner with six slots, cooldowns, charges, cast and recovery, ultimate charge.
+- [x] Effect components: Damage, Heal, Shield, Dash, Area, Projectile, Status, Knockback.
+- [x] Champion A (Vanguard) data: basic three-hit combo, guard-break secondary, shoulder dash, barrier, ground slam
       signature, ultimate.
-- [ ] Training dummies that take damage and show numbers.
-- [ ] Check: unit tests for cooldown with reduction, combo chaining, shield absorbing before health, dash distance.
+- [x] Training dummies that take damage and show numbers.
+- [x] Check: unit tests for cooldown with reduction, combo chaining, shield absorbing before health, dash distance.
 
 ### Task 5: Health, death, respawn, HUD
-- [ ] Health and shield with signals; death state; respawn after the mode's delay at a team spawn.
-- [ ] Combat HUD: health and shield bar, six ability icons with cooldown sweeps, ult meter, reticle with hit marker,
+- [x] Health and shield with signals; death state; respawn after the mode's delay at a team spawn.
+- [x] Combat HUD: health and shield bar, six ability icons with cooldown sweeps, ult meter, reticle with hit marker,
       damage numbers, kill feed, respawn timer.
-- [ ] Check: a test kills a dummy champion and asserts respawn position, full health and reset cooldowns.
+- [x] Check: a test kills a dummy champion and asserts respawn position, full health and reset cooldowns.
+
+### Phase 1 follow-ups (found while testing)
+- [ ] Champion outfits: the CC0 base bodies are unclothed. Each champion needs its own clothing and silhouette
+      (Blender pipeline or licensed outfit packs) before anyone outside the team sees it.
+- [ ] First-play shader hitch: the first run compiled shaders for about 15 s. Warm every material and particle once
+      behind the loading screen, then measure again.
+- [ ] Hit-stop (2 to 4 frames), camera kick and hit sparks on melee impacts; impact sounds.
+- [ ] Ability VFX for the slam, guard and quake (now only animations, damage numbers and the shield bar show them).
 
 ## Phase 2: Champions and the Covenant (milestones 2 and 3)
 - [ ] Champions B (Duelist), C (Controller), D (Support) as data plus any new effect components they need.

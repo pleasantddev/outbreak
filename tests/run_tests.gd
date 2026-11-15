@@ -23,12 +23,24 @@ func _run() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--only="):
 			only = a.trim_prefix("--only=")
+	# every script in the project must compile; a broken one fails the run even if no test touches it
+	var broken := 0
+	for path in _scripts("res://"):
+		var sc: Script = load(path)
+		if sc == null or not (sc.can_instantiate() or sc.is_abstract()):
+			broken += 1
+			print("  FAIL  compile: %s" % path)
+	if broken == 0:
+		print("  ok    every script compiles")
+	_failed += broken
 	var files := DirAccess.get_files_at("res://tests")
 	files.sort()
 	for f in files:
 		if not (f.begins_with("test_") and f.ends_with(".gd")):
 			continue
 		var script: GDScript = load("res://tests/" + f)
+		if script == null or not script.can_instantiate():
+			continue
 		var suite: GameTest = script.new()
 		suite.tree = self
 		root.add_child(suite)
@@ -52,3 +64,14 @@ func _run() -> void:
 		await process_frame
 	print("\n%d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 or _passed == 0 else 0)
+
+
+func _scripts(dir: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	for f in DirAccess.get_files_at(dir):
+		if f.ends_with(".gd"):
+			out.append(dir.path_join(f))
+	for d in DirAccess.get_directories_at(dir):
+		if not d.begins_with(".") and d != "addons":
+			out.append_array(_scripts(dir.path_join(d)))
+	return out

@@ -27,8 +27,11 @@ export GODOT=~/Downloads/Godot.app/Contents/MacOS/Godot
 # open the editor
 $GODOT --path . -e
 
-# play (boot routes to the combat sandbox)
+# play the combat sandbox: your Vanguard, three training dummies (one still, one strafing, one that hits back)
 $GODOT --path .
+
+# scripted fight with screenshots and frame timings into a folder (opens a window)
+$GODOT --path . --resolution 1280x720 -- --shot=/tmp/bolekaja-shots
 
 # all headless checks: import, every script compiles, test suites. Non-zero exit on failure.
 ./tools/test.sh
@@ -55,6 +58,13 @@ Multiplayer commands (`--server`, `--connect=host:port`) arrive in phase 3 and w
 | Ultimate | F | Y / Triangle |
 | Scoreboard | Tab | Back |
 | Pause | Esc | Start |
+
+## Measured so far
+| Where | Result |
+|---|---|
+| This Mac, Radeon Pro 455, Forward+ (Vulkan), 1280x720, sandbox fight | median 13.6 ms (74 fps), p95 18.2 ms |
+| First launch on a new machine | about 15 s of shader compiling before the first frame (to be moved behind a loading screen) |
+| Android | not measured yet |
 
 ## Git
 Commits are authored as `Pleasant <joylove.rightchoice@gmail.com>` with no AI attribution lines (set in this repo's
