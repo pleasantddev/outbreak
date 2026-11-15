@@ -42,11 +42,15 @@ func _same_skeleton(path: String) -> void:
 	var anims: Node = load(ChampionVisual.LIBS[&"core"]).instantiate()
 	var a: Skeleton3D = body.find_child("Skeleton3D", true, false)
 	var b: Skeleton3D = anims.find_child("Skeleton3D", true, false)
-	eq(a.get_bone_count(), b.get_bone_count(), "bone count")
+	# tracks address bones by name, so the same names are what matters (order may differ between exports)
+	var names_a := {}
 	for i in a.get_bone_count():
-		if a.get_bone_name(i) != b.get_bone_name(i):
-			check(false, "%s bone %d differs: %s vs %s" % [path.get_file(), i, a.get_bone_name(i), b.get_bone_name(i)])
-			break
+		names_a[a.get_bone_name(i)] = true
+	var missing: Array = []
+	for i in b.get_bone_count():
+		if not names_a.has(b.get_bone_name(i)):
+			missing.append(b.get_bone_name(i))
+	check(missing.is_empty(), "%s lacks animated bones %s" % [path.get_file(), str(missing)])
 	eq(body.get_path_to(a), anims.get_path_to(b), "%s: same skeleton path, so tracks resolve" % path.get_file())
 	body.free()
 	anims.free()
