@@ -93,11 +93,11 @@ func _champion_a() -> ChampionDefinition:
 
 	# basic: three-hit combo
 	var hook := _ability("vanguard_hook", "Hook", AbilityDefinition.Slot.BASIC, AbilityDefinition.TargetMode.MELEE_ARC, [_damage(30.0), _knock(5.0, 2.0)])
-	hook.cast_time = 0.12; hook.recovery = 0.45; hook.reach = 2.6; hook.arc = 110.0; hook.animation = &"Melee_Hook"
+	hook.cast_time = 0.12; hook.recovery = 0.45; hook.reach = 2.6; hook.arc = 110.0; hook.animation = &"hook"
 	var cross := _ability("vanguard_cross", "Cross", AbilityDefinition.Slot.BASIC, AbilityDefinition.TargetMode.MELEE_ARC, [_damage(22.0)])
-	cross.cast_time = 0.08; cross.recovery = 0.25; cross.reach = 2.5; cross.arc = 80.0; cross.animation = &"Punch_Cross"; cross.combo_next = hook
+	cross.cast_time = 0.08; cross.recovery = 0.25; cross.reach = 2.5; cross.arc = 80.0; cross.animation = &"cross"; cross.combo_next = hook
 	var jab := _ability("vanguard_jab", "Jab", AbilityDefinition.Slot.BASIC, AbilityDefinition.TargetMode.MELEE_ARC, [_damage(18.0)])
-	jab.cast_time = 0.06; jab.recovery = 0.22; jab.reach = 2.5; jab.arc = 80.0; jab.animation = &"Punch_Jab"; jab.combo_next = cross
+	jab.cast_time = 0.06; jab.recovery = 0.22; jab.reach = 2.5; jab.arc = 80.0; jab.animation = &"jab"; jab.combo_next = cross
 	jab.move_speed_while_casting = 0.7; cross.move_speed_while_casting = 0.6; hook.move_speed_while_casting = 0.4
 
 	# secondary: aimed spirit bolt
@@ -105,7 +105,7 @@ func _champion_a() -> ChampionDefinition:
 	bolt_fx.speed = 34.0; bolt_fx.radius = 0.3; bolt_fx.max_distance = 45.0; bolt_fx.color = Color(1.0, 0.7, 0.25)
 	bolt_fx.on_hit = [_damage(45.0, 1.0)]
 	var bolt := _ability("vanguard_spirit_bolt", "Spirit Bolt", AbilityDefinition.Slot.SECONDARY, AbilityDefinition.TargetMode.PROJECTILE, [bolt_fx])
-	bolt.cooldown = 3.0; bolt.cast_time = 0.15; bolt.recovery = 0.25; bolt.reach = 45.0; bolt.animation = &"Spell_Simple_Shoot"
+	bolt.cooldown = 3.0; bolt.cast_time = 0.15; bolt.recovery = 0.25; bolt.reach = 45.0; bolt.animation = &"cast_forward"
 
 	# mobility: shoulder charge that stops on the first enemy and knocks them back
 	var dash := DashEffect.new()
@@ -118,19 +118,19 @@ func _champion_a() -> ChampionDefinition:
 	var guard_shield := ShieldEffect.new()
 	guard_shield.amount = 150.0; guard_shield.duration = 3.0
 	var guard := _ability("vanguard_iron_guard", "Iron Guard", AbilityDefinition.Slot.UTILITY, AbilityDefinition.TargetMode.SELF, [guard_shield])
-	guard.cooldown = 10.0; guard.recovery = 0.2; guard.animation = &"Shield_OneShot"
+	guard.cooldown = 10.0; guard.recovery = 0.2; guard.animation = &"block"
 
 	# signature: ground slam around you that slows
 	var slow := _status("slowed", "Slowed", 1.8, [StatModifier.make(&"move_speed", 0.0, -0.4)])
 	var slam := _ability("vanguard_ground_breaker", "Ground Breaker", AbilityDefinition.Slot.SIGNATURE, AbilityDefinition.TargetMode.SELF,
 		[_area(4.5, [_damage(60.0), _apply(slow)])])
-	slam.cooldown = 9.0; slam.cast_time = 0.4; slam.recovery = 0.35; slam.animation = &"NinjaJump_Land"; slam.move_speed_while_casting = 0.0
+	slam.cooldown = 9.0; slam.cast_time = 0.4; slam.recovery = 0.35; slam.animation = &"cast_ground"; slam.move_speed_while_casting = 0.0
 
 	# ultimate: a quake that stuns everyone close and hurts everyone in a wider ring
 	var stun := _status("stunned", "Stunned", 1.2, [], true)
 	var quake := _ability("vanguard_crossing_quake", "Crossing Quake", AbilityDefinition.Slot.ULTIMATE, AbilityDefinition.TargetMode.SELF,
 		[_area(4.0, [_apply(stun)]), _area(8.0, [_damage(110.0), _knock(6.0, 4.0)])])
-	quake.ult_cost = 1.0; quake.cast_time = 0.6; quake.recovery = 0.4; quake.animation = &"Spell_Simple_Shoot"; quake.move_speed_while_casting = 0.0
+	quake.ult_cost = 1.0; quake.cast_time = 0.6; quake.recovery = 0.4; quake.animation = &"kick_round"; quake.move_speed_while_casting = 0.0
 
 	c.abilities = [jab, bolt, charge, guard, slam, quake]
 	return c

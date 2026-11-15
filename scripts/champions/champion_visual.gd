@@ -4,9 +4,19 @@ extends Node3D
 ## Locomotion follows the champion's state and speed; abilities play their one-shot clip; hits flinch; death falls.
 
 const LIBS := {&"core": "res://assets/animations/ual_core.glb", &"combat": "res://assets/animations/ual_combat.glb"}
-const BLEND := 0.12
+## Mixamo clips (founder's Adobe account), one per file, named by file. Not in git (licence), so each has a CC0 fallback.
+const MIXAMO_DIR := "res://assets/animations/mixamo"
+const MIXAMO_LOOPS: Array[StringName] = [&"idle_fight", &"idle_bounce", &"run", &"sprint", &"run_back", &"strafe_left", &"strafe_right"]
+const FALLBACK := {
+	&"idle_fight": &"Idle", &"idle_bounce": &"Idle", &"run": &"Jog_Fwd", &"sprint": &"Sprint", &"run_back": &"Jog_Fwd",
+	&"strafe_left": &"Jog_Fwd", &"strafe_right": &"Jog_Fwd", &"jump": &"Jump", &"jab": &"Punch_Jab", &"cross": &"Punch_Cross",
+	&"hook": &"Melee_Hook", &"uppercut": &"Punch_Cross", &"combo4": &"Punch_Jab", &"kick_round": &"NinjaJump_Land",
+	&"cast_forward": &"Spell_Simple_Shoot", &"cast_ground": &"NinjaJump_Land", &"block": &"Shield_OneShot", &"hit": &"Hit_Chest",
+	&"death": &"Death01",
+}
+const BLEND := 0.15
 ## every clip this script asks for by name (checked by tests/test_animations.gd)
-const CLIPS: Array[StringName] = [&"Idle", &"Jog_Fwd", &"Sprint", &"Jump", &"Idle_Shield_Break", &"Hit_Chest", &"Death01"]
+const CLIPS: Array[StringName] = [&"idle_fight", &"run", &"sprint", &"run_back", &"strafe_left", &"strafe_right", &"Jump", &"Idle_Shield_Break", &"hit", &"death"]
 
 var champion: Champion
 var player: AnimationPlayer
@@ -60,6 +70,7 @@ func attach(c: Champion) -> void:
 	player.root_node = NodePath("..")
 	for lib_name in LIBS:
 		player.add_animation_library(lib_name, _library(lib_name))
+	player.add_animation_library(&"mixamo", mixamo_library())
 	_tint_team()
 	if show_overhead:
 		_build_overhead()
@@ -67,7 +78,7 @@ func attach(c: Champion) -> void:
 		_on_health_changed(c.health.health, c.health.max_health, c.health.shield_total())
 	c.state_changed.connect(func(_s: Champion.State) -> void: _update_locomotion(true))
 	c.abilities.cast_started.connect(_on_cast)
-	c.health.died.connect(func(_k: Node, _a: StringName) -> void: _play(&"Death01", 0.1, 1.0, true))
+	c.health.died.connect(func(_k: Node, _a: StringName) -> void: _play(&"death", 0.1, 1.0, true))
 	c.respawned.connect(_on_respawned)
 	EventBus.champion_damaged.connect(_on_damaged)
 	_update_locomotion(true)
@@ -84,6 +95,30 @@ static func _library(lib_name: StringName) -> AnimationLibrary:
 		lib.add_animation(anim_name, ap.get_animation(anim_name))
 	src.free()
 	_libraries[lib_name] = lib
+	return lib
+
+
+## Every Mixamo file present becomes a clip named after the file. Empty if the folder has none (fresh clone).
+static func mixamo_library() -> AnimationLibrary:
+	if _libraries.has(&"mixamo"):
+		return _libraries[&"mixamo"]
+	var lib := AnimationLibrary.new()
+	for f in DirAccess.get_files_at(MIXAMO_DIR):
+		var file := f.trim_suffix(".remap")
+		if not file.ends_with(".fbx"):
+			continue
+		var scene := load(MIXAMO_DIR.path_join(file)) as PackedScene
+		if scene == null:
+			continue
+		var src := scene.instantiate()
+		var ap: AnimationPlayer = src.find_child("AnimationPlayer", true, false)
+		if ap and not ap.get_animation_list().is_empty():
+			var a: Animation = ap.get_animation(ap.get_animation_list()[0]).duplicate()
+			var clip := StringName(file.get_basename())
+			a.loop_mode = Animation.LOOP_LINEAR if clip in MIXAMO_LOOPS else Animation.LOOP_NONE
+			lib.add_animation(clip, a)
+		src.free()
+	_libraries[&"mixamo"] = lib
 	return lib
 
 
@@ -110,23 +145,33 @@ func _process(dt: float) -> void:
 func _update_locomotion(force: bool) -> void:
 	if _one_shot_left > 0.0 or champion.state == Champion.State.DEAD:
 		return
-	var speed := Vector2(champion.velocity.x, champion.velocity.z).length()
-	var clip := &"Idle"
+	var v := Vector3(champion.velocity.x, 0.0, champion.velocity.z)
+	var speed := v.length()
+	var clip := &"idle_fight"
 	var rate := 1.0
 	match champion.state:
 		Champion.State.AIRBORNE:
 			clip = &"Jump"
 		Champion.State.DASHING:
-			clip = &"Sprint"
-			rate = 1.6
+			clip = &"sprint"
+			rate = 1.5
 		Champion.State.STUNNED:
 			clip = &"Idle_Shield_Break"
 		_:
 			if speed > 7.0:
-				clip = &"Sprint"
+				clip = &"sprint"
 			elif speed > 0.6:
-				clip = &"Jog_Fwd"
-				rate = clampf(speed / 5.0, 0.7, 1.4)
+				# movement relative to where the body faces: strafe and backpedal while fighting, run otherwise
+				var local := champion.global_basis.inverse() * v
+				var fwd := -local.z
+				var side := local.x
+				if fwd < -absf(side) * 0.7:
+					clip = &"run_back"
+				elif absf(side) > absf(fwd) * 1.2:
+					clip = &"strafe_right" if side > 0.0 else &"strafe_left"
+				else:
+					clip = &"run"
+				rate = clampf(speed / 5.6, 0.7, 1.3)
 	var full := _resolve(clip)
 	if full != &"" and (force or player.current_animation != full):
 		player.play(full, BLEND, rate)
@@ -156,8 +201,12 @@ func _play(clip: StringName, blend: float, rate: float, hold: bool, seconds: flo
 
 
 func _resolve(clip: StringName) -> StringName:
+	var mx := StringName("mixamo/%s" % clip)
+	if player.has_animation(mx):
+		return mx
+	var name: StringName = FALLBACK.get(clip, clip)
 	for lib_name in LIBS:
-		var full := StringName("%s/%s" % [lib_name, clip])
+		var full := StringName("%s/%s" % [lib_name, name])
 		if player.has_animation(full):
 			return full
 	return &""
@@ -169,7 +218,7 @@ func _on_damaged(target: Node, _source: Node, amount: float, _ability: StringNam
 	_flash_left = 0.08
 	_set_flash(true)
 	if _one_shot_left <= 0.0 and amount > 30.0:
-		_play(&"Hit_Chest", 0.05, 1.4, false)
+		_play(&"hit", 0.05, 1.2, false)
 
 
 func _set_flash(on: bool) -> void:

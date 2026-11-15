@@ -89,7 +89,7 @@ func make_bone_map(table: Dictionary, path: String) -> BoneMap:
 	return load(path)
 
 
-func patch(file: String, skeleton_path: String, bm: BoneMap) -> void:
+func patch(file: String, skeleton_path: String, bm: BoneMap, fix_silhouette := false) -> void:
 	var imp := file + ".import"
 	var cfg := ConfigFile.new()
 	if cfg.load(imp) != OK:
@@ -105,6 +105,8 @@ func patch(file: String, skeleton_path: String, bm: BoneMap) -> void:
 		"retarget/rest_fixer/apply_node_transforms": true,
 		"retarget/rest_fixer/normalize_position_tracks": true,
 		"retarget/rest_fixer/overwrite_axis": true,
+		# A-pose rigs (Rocketbox) are straightened to the T-pose the other rigs use, or arms land in the wrong place
+		"retarget/rest_fixer/fix_silhouette/enable": fix_silhouette,
 	}
 	subs["nodes"] = nodes
 	cfg.set_value("params", "_subresources", subs)
@@ -132,7 +134,7 @@ func _init() -> void:
 		patch(f, "Armature/Skeleton3D", ual)
 	for d in BIP_DIRS:
 		for f in _files(d, ".fbx"):
-			patch(f, "Skeleton3D", bip)
+			patch(f, "Skeleton3D", bip, true)
 	var mix := make_bone_map(mixamo_map(), "res://assets/animations/mixamo/bonemap_mixamo.tres")
 	for d in MIXAMO_DIRS:
 		for f in _files(d, ".fbx"):

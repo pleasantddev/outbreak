@@ -2,8 +2,14 @@ extends GameTest
 ## Every animation the game asks for exists in the imported CC0 libraries (the importer renames "*_Loop" clips).
 
 
+## clip names as the game resolves them: Mixamo files when present, otherwise their CC0 fallbacks
 func _clips() -> Dictionary:
 	var out := {}
+	var mx := ChampionVisual.mixamo_library()
+	for name in ChampionVisual.FALLBACK:
+		out[name] = mx.has_animation(name) and mx.get_animation(name).loop_mode != Animation.LOOP_NONE
+	for name in mx.get_animation_list():
+		out[name] = mx.get_animation(name).loop_mode != Animation.LOOP_NONE
 	for path in ChampionVisual.LIBS.values():
 		var n: Node = load(path).instantiate()
 		var ap: AnimationPlayer = n.find_child("AnimationPlayer", true, false)
@@ -17,8 +23,12 @@ func test_visual_clips_exist_and_locomotion_loops() -> void:
 	var clips := _clips()
 	for c in ChampionVisual.CLIPS:
 		check(clips.has(c), "clip %s missing" % c)
-	for c in [&"Idle", &"Jog_Fwd", &"Sprint", &"Jump"]:
-		check(clips.get(c, false), "%s should loop" % c)
+	var mx := ChampionVisual.mixamo_library()
+	for c in ChampionVisual.MIXAMO_LOOPS:
+		if mx.has_animation(c):
+			check(mx.get_animation(c).loop_mode == Animation.LOOP_LINEAR, "%s should loop" % c)
+	for c in ChampionVisual.FALLBACK.values():
+		check(clips.has(c), "fallback clip %s missing from the CC0 packs" % c)
 
 
 func test_every_ability_animation_exists() -> void:
