@@ -51,6 +51,8 @@ export class Sim {
   cbrains = new Map<number, CreatureBrain>();
   ctrl: any;
   time = 0;
+  /** steps since the match began; staggers work that does not need to run every step */
+  stepNo = 0;
   phase: Phase = 'drop';
   scale = 1;
   night = 0;
@@ -276,6 +278,7 @@ export class Sim {
   step(dt: number) {
     if (this.ended) { this.phys.step(); return; }
     this.time += dt;
+    this.stepNo++;
     this.updateMatch(dt);
     for (const [id, brain] of this.brains) { const a = this.actors[id]; if (a.alive) this.setCommand(id, brain.think(dt)); }
     for (const a of this.actors) if (a.alive) this.updateActor(a, dt);
@@ -446,7 +449,8 @@ export class Sim {
 
     this.moveActor(a, dt);
     this.combat(a, dt, pressed('reload'), pressed('fire'));
-    this.autoPickup(a);
+    // ammo and stacks under your feet: checked every sixth step, staggered per player (a 0.1 s delay nobody sees)
+    if ((this.stepNo + a.id) % 6 === 0) this.autoPickup(a);
   }
 
   private moveActor(a: Actor, dt: number) {
@@ -1091,8 +1095,11 @@ export class Sim {
     }
     for (const c of this.creatures) {
       if (!c.alive) { c.deadT += dt; continue; }
-      const far = players.every((a) => Math.hypot(a.pos.x - c.pos.x, a.pos.z - c.pos.z) > 170);
-      if (far && players.length) { c.alive = false; c.deadT = 99; c.collider.setEnabled(false); continue; }
+      let nearest = Infinity;
+      for (const a of players) nearest = Math.min(nearest, Math.hypot(a.pos.x - c.pos.x, a.pos.z - c.pos.z));
+      if (nearest > 170 && players.length) { c.alive = false; c.deadT = 99; c.collider.setEnabled(false); continue; }
+      // nobody within 60 m: think and move every third step with three steps' worth of time
+      if (nearest > 60) { if ((this.stepNo + c.id) % 3 === 0) this.cbrains.get(c.id)!.update(dt * 3); continue; }
       this.cbrains.get(c.id)!.update(dt);
     }
     // forget long-dead bodies
@@ -1103,13 +1110,21 @@ export class Sim {
 
   moveCreature(c: Creature, dir: { x: number; z: number }, speed: number, dt: number) {
     const push = (c as any)._push as { x: number; z: number } | undefined;
+    // standing still on solid ground: nothing for the character controller to do
+    if ((c as any)._ground && !push && c.vy === 0 && (speed <= 0 || Math.hypot(dir.x, dir.z) * speed < 0.05)) {
+      c.speed = 0;
+      if (Math.hypot(dir.x, dir.z) > 0.1) c.yaw = Math.atan2(dir.x, dir.z);
+      return;
+    }
     c.vy -= PLAYER.gravity * dt;
     const desired = { x: dir.x * speed * dt + (push?.x ?? 0) * dt, y: c.vy * dt, z: dir.z * speed * dt + (push?.z ?? 0) * dt };
     if (push) { push.x *= Math.exp(-5 * dt); push.z *= Math.exp(-5 * dt); if (Math.hypot(push.x, push.z) < 0.3) (c as any)._push = undefined; }
     this.ctrl.computeColliderMovement(c.collider, desired, undefined, groups(G.CREATURE, G.WORLD | G.VEHICLE | G.SHIELD));
     const m = this.ctrl.computedMovement();
     c.pos.x += m.x; c.pos.y += m.y; c.pos.z += m.z;
-    if (this.ctrl.computedGrounded() && c.vy < 0) c.vy = 0;
+    const grounded = this.ctrl.computedGrounded();
+    (c as any)._ground = grounded;
+    if (grounded && c.vy < 0) c.vy = 0;
     if (c.pos.y < -30) { c.alive = false; c.collider.setEnabled(false); }
     c.body.setNextKinematicTranslation({ x: c.pos.x, y: c.pos.y + CAP_HALF + CAP_R, z: c.pos.z });
     c.speed = Math.hypot(m.x, m.z) / dt;
