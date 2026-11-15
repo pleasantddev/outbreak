@@ -34,8 +34,15 @@ func attach(c: Champion) -> void:
 		model = def.model.instantiate()
 	else:
 		model = load("res://assets/characters/male.glb").instantiate()
-	# glTF characters face +Z; champions face -Z
+	var src_path := model_override.resource_path if model_override else (def.model.resource_path if def and def.model else "")
+	if src_path.get_extension() == "fbx":
+		CharacterSkin.apply(model, src_path)
+	# the imported characters face +Z; champions face -Z
 	model.rotation.y = PI
+	model.position.y = -CharacterSkin.ground_offset(model)
+	# models ship their own AnimationPlayer (empty or a rest clip); ours drives the retargeted skeleton instead
+	for old in model.find_children("*", "AnimationPlayer", true, false):
+		old.queue_free()
 	add_child(model)
 	for m in model.find_children("*", "MeshInstance3D", true, false):
 		_meshes.append(m)

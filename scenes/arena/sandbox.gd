@@ -43,9 +43,9 @@ func _ready() -> void:
 
 	# dummies on the plaza: one still, one strafing, one that hits back
 	var spots := [Vector3(-4, 0.3, 4), Vector3(4, 0.3, 6), Vector3(0, 0.3, 10)]
-	var bodies := ["rogue", "trooper", "farah"]
+	var bodies := ["male_adult_12/Male_Adult_12.fbx", "female_party_02/Female_Party_02.fbx", "military_male_06/Military_Male_06.fbx"]
 	for i in spots.size():
-		var d := spawn(def, 1, Transform3D(Basis(Vector3.UP, 0.0), spots[i]), load("res://assets/characters/realistic/%s.glb" % bodies[i]))
+		var d := spawn(def, 1, Transform3D(Basis(Vector3.UP, 0.0), spots[i]), load("res://assets/characters/rocketbox/%s" % bodies[i]))
 		if i > 0:
 			var brain := DummyBrain.new()
 			brain.fights_back = i == 2

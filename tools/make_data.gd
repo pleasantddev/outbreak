@@ -87,8 +87,8 @@ func _champion_a() -> ChampionDefinition:
 	c.base_stats = st
 	c.capsule_height = 1.8
 	c.capsule_radius = 0.42
-	# realistic human (from the HustleLife roster, rigged on the shared UAL skeleton); licence check pending, see ASSET_LICENSES
-	c.model = load("res://assets/characters/realistic/survivor.glb")
+	# realistic human: Microsoft Rocketbox Male_Adult_18 (MIT), retargeted to the shared humanoid skeleton on import
+	c.model = load("res://assets/characters/rocketbox/male_adult_18/Male_Adult_18.fbx")
 	c.accent_color = Color(0.95, 0.65, 0.2)
 
 	# basic: three-hit combo

@@ -4,3 +4,7 @@ export/
 build/
 .DS_Store
 /android/
+
+# Mixamo animations: Adobe terms forbid redistributing the raw files, and this repo is public
+assets/animations/mixamo/*.fbx
+assets/animations/mixamo/*.fbx.import
