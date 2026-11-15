@@ -10,6 +10,8 @@ const CLIPS: Array[StringName] = [&"Idle", &"Jog_Fwd", &"Sprint", &"Jump", &"Idl
 
 var champion: Champion
 var player: AnimationPlayer
+## a different body for this one instance (training dummies, previews); null uses the champion's own model
+var model_override: PackedScene
 ## overhead health bar (off for the local player, whose health is on the HUD)
 var show_overhead := true
 var _bar_back: MeshInstance3D
@@ -26,7 +28,9 @@ static var _libraries: Dictionary = {}
 func attach(c: Champion) -> void:
 	champion = c
 	var def := c.definition
-	if def and def.model:
+	if model_override:
+		model = model_override.instantiate()
+	elif def and def.model:
 		model = def.model.instantiate()
 	else:
 		model = load("res://assets/characters/male.glb").instantiate()
@@ -36,7 +40,7 @@ func attach(c: Champion) -> void:
 	for m in model.find_children("*", "MeshInstance3D", true, false):
 		_meshes.append(m)
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	if def and def.skin:
+	if def and def.skin and model_override == null:
 		for m in _meshes:
 			if m.name.begins_with("SuperHero") or m.mesh.get_surface_count() == 1:
 				var mat := StandardMaterial3D.new()

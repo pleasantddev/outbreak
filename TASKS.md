@@ -49,8 +49,10 @@ phase 4 is milestones 5 and 6, phase 5 is milestones 7 and 8.
 - [x] Check: a test kills a dummy champion and asserts respawn position, full health and reset cooldowns.
 
 ### Phase 1 follow-ups (found while testing)
-- [ ] Champion outfits: the CC0 base bodies are unclothed. Each champion needs its own clothing and silhouette
-      (Blender pipeline or licensed outfit packs) before anyone outside the team sees it.
+- [x] Realistic human bodies (founder, 15 Nov): the Vanguard uses the survivor body; dummies use rogue, trooper, farah.
+- [ ] Find the source page, creator and licence of each realistic body (survivor, rogue, trooper, farah, girl).
+- [ ] Texture the survivor body (face and clothes are flat colours) and give each champion a Nigerian-specific look:
+      needs Blender (not on the founder's Mac; see README).
 - [ ] First-play shader hitch: the first run compiled shaders for about 15 s. Warm every material and particle once
       behind the loading screen, then measure again.
 - [ ] Hit-stop (2 to 4 frames), camera kick and hit sparks on melee impacts; impact sounds.

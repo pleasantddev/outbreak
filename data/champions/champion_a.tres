@@ -12,8 +12,8 @@
 [ext_resource type="Script" path="res://scripts/core/defs/status_definition.gd" id="10_ys711"]
 [ext_resource type="Script" path="res://scripts/abilities/effects/area_effect.gd" id="11_2x2d4"]
 [ext_resource type="Script" path="res://scripts/core/defs/stat_block.gd" id="12_hoorv"]
-[ext_resource type="Script" path="res://scripts/core/defs/champion_definition.gd" id="13_yhl7e"]
-[ext_resource type="Texture2D" path="res://assets/characters/male_dark.webp" id="14_thkk7"]
+[ext_resource type="PackedScene" path="res://assets/characters/realistic/survivor.glb" id="13_yhl7e"]
+[ext_resource type="Script" path="res://scripts/core/defs/champion_definition.gd" id="14_thkk7"]
 
 [sub_resource type="Resource" id="Resource_v7ci4"]
 script = ExtResource("3_0smay")
@@ -220,12 +220,12 @@ attack_power = 10.0
 defense = 20.0
 
 [resource]
-script = ExtResource("13_yhl7e")
+script = ExtResource("14_thkk7")
 biography = "Placeholder. A street-hardened fighter from the junctions of Lagos who stands in front so others can move."
 origin = "Lagos (placeholder)"
 base_stats = SubResource("Resource_j12mw")
 abilities = Array[ExtResource("1_md1jv")]([SubResource("Resource_ovvg0"), SubResource("Resource_r3r3j"), SubResource("Resource_pjelc"), SubResource("Resource_urq0j"), SubResource("Resource_jn6u0"), SubResource("Resource_nttv3")])
-skin = ExtResource("14_thkk7")
+model = ExtResource("13_yhl7e")
 accent_color = Color(0.95, 0.65, 0.2, 1)
 capsule_radius = 0.42
 id = &"champion_a"

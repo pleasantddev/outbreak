@@ -32,15 +32,21 @@ func test_every_ability_animation_exists() -> void:
 
 
 func test_character_and_animation_skeletons_match() -> void:
-	var body: Node = load("res://assets/characters/male.glb").instantiate()
+	for path in ["res://assets/characters/male.glb", "res://assets/characters/realistic/survivor.glb", "res://assets/characters/realistic/rogue.glb",
+			"res://assets/characters/realistic/trooper.glb", "res://assets/characters/realistic/farah.glb", "res://assets/characters/realistic/girl.glb"]:
+		_same_skeleton(path)
+
+
+func _same_skeleton(path: String) -> void:
+	var body: Node = load(path).instantiate()
 	var anims: Node = load(ChampionVisual.LIBS[&"core"]).instantiate()
 	var a: Skeleton3D = body.find_child("Skeleton3D", true, false)
 	var b: Skeleton3D = anims.find_child("Skeleton3D", true, false)
 	eq(a.get_bone_count(), b.get_bone_count(), "bone count")
 	for i in a.get_bone_count():
 		if a.get_bone_name(i) != b.get_bone_name(i):
-			check(false, "bone %d differs: %s vs %s" % [i, a.get_bone_name(i), b.get_bone_name(i)])
+			check(false, "%s bone %d differs: %s vs %s" % [path.get_file(), i, a.get_bone_name(i), b.get_bone_name(i)])
 			break
-	eq(body.get_path_to(a), anims.get_path_to(b), "same skeleton path, so tracks resolve")
+	eq(body.get_path_to(a), anims.get_path_to(b), "%s: same skeleton path, so tracks resolve" % path.get_file())
 	body.free()
 	anims.free()

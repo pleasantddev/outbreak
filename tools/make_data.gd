@@ -87,7 +87,8 @@ func _champion_a() -> ChampionDefinition:
 	c.base_stats = st
 	c.capsule_height = 1.8
 	c.capsule_radius = 0.42
-	c.skin = load("res://assets/characters/male_dark.webp")
+	# realistic human (from the HustleLife roster, rigged on the shared UAL skeleton); licence check pending, see ASSET_LICENSES
+	c.model = load("res://assets/characters/realistic/survivor.glb")
 	c.accent_color = Color(0.95, 0.65, 0.2)
 
 	# basic: three-hit combo

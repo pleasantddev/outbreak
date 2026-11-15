@@ -43,8 +43,9 @@ func _ready() -> void:
 
 	# dummies on the plaza: one still, one strafing, one that hits back
 	var spots := [Vector3(-4, 0.3, 4), Vector3(4, 0.3, 6), Vector3(0, 0.3, 10)]
+	var bodies := ["rogue", "trooper", "farah"]
 	for i in spots.size():
-		var d := spawn(def, 1, Transform3D(Basis(Vector3.UP, 0.0), spots[i]))
+		var d := spawn(def, 1, Transform3D(Basis(Vector3.UP, 0.0), spots[i]), load("res://assets/characters/realistic/%s.glb" % bodies[i]))
 		if i > 0:
 			var brain := DummyBrain.new()
 			brain.fights_back = i == 2
@@ -58,13 +59,17 @@ func _ready() -> void:
 		add_child(hud)
 		hud.attach(player, respawn)
 	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--lineup="):
+			var lineup: Node = load("res://tools/lineup.gd").new()
+			add_child(lineup)
+			lineup.start(self, a.trim_prefix("--lineup="))
 		if a.begins_with("--shot="):
 			var director: Node = load("res://tools/shot.gd").new()
 			add_child(director)
 			director.start(self, a.trim_prefix("--shot="))
 
 
-func spawn(def: ChampionDefinition, team: int, at: Transform3D) -> Champion:
+func spawn(def: ChampionDefinition, team: int, at: Transform3D, body: PackedScene = null) -> Champion:
 	var c := Champion.new()
 	c.definition = def
 	c.team = team
@@ -75,6 +80,7 @@ func spawn(def: ChampionDefinition, team: int, at: Transform3D) -> Champion:
 		var v := ChampionVisual.new()
 		v.name = "Visual"
 		v.show_overhead = player != null
+		v.model_override = body
 		c.add_child(v)
 		v.attach(c)
 	return c
