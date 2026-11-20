@@ -1613,8 +1613,23 @@ var ContentStore = class _ContentStore extends EventEmitter3 {
     let n = 0;
     for (const kind of CONTENT_KINDS) {
       const dst = this.file(kind);
-      if (existsSync3(dst)) continue;
       const src = join(this.cfg.seedContentDir, `${kind}.json`);
+      if (existsSync3(dst)) {
+        try {
+          if (!existsSync3(src)) continue;
+          const have = JSON.parse(readFileSync3(dst, "utf8"));
+          const ship = JSON.parse(readFileSync3(src, "utf8"));
+          const ids = new Set((have.items ?? []).map((i) => i.id));
+          const fresh = (ship.items ?? []).filter((i) => i?.id && !ids.has(i.id));
+          if (fresh.length) {
+            this.write(kind, { ...have, items: [...have.items ?? [], ...fresh] }, { by: "update" });
+            this.log.info(`content ${kind}: ${fresh.length} new item(s) from the game update`);
+          }
+        } catch (e) {
+          this.log.warn(`could not merge ${kind}: ${e}`);
+        }
+        continue;
+      }
       if (existsSync3(src)) {
         try {
           copyFileSync(src, dst);
