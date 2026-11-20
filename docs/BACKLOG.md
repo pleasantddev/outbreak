@@ -5,6 +5,11 @@ unchecked item in their lane, builds it, tests it, ticks it here with the commit
 checkout), SPORTS (worktree hl-sports), IDEAS (worktree hl-look, the Sonnet teammate), SHIFT (scheduled cloud run: any
 unowned item, or finishing touches on a lead item).
 
+## Founder brief 6 (20 Nov 2026): story mode
+- [x] Story mode baked into missions: "Last Stop, Oshodi", 6 chapters, branching choices, 4 endings, Story app.
+- [ ] Voice lines or portraits for Kunle, Mama Titi, Baba Ibeji, Kasumu, Ronke (text only for now).
+- [ ] Act 2: Kunle's shop, the Ayobo build with player construction crews, Baba Ibeji's revenge if you fought him.
+
 ## Founder follow-ups (04 Nov 2026, 05:18 to 05:44)
 Verbatim keys: "screen goes blank when i press play", "the map isn't showing me the way there", "the market app looking
 like an actual trading app and let people be able to buy and sell stocks or something even invest in other player owned

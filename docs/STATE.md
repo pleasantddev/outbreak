@@ -97,3 +97,8 @@
   shift-1104-0459 (clubs part 2) and is not merged.
 - 04 Nov 06:50 WAT (Version 12 published): `play` branch for the founder (orphan; built game, one-file server, launcher,
   double-click files), rebuilt by `node tools/release-play.mjs --push`. Fixed: a brand-new player had no HUD after Play.
+- 20 Nov (story mode): "Last Stop, Oshodi", six chapters written as category "story" missions (tools/gen_story.py writes
+  them into content/missions.json), choices carried as story_* flags, four endings. systems/story.ts adds the Story app,
+  chapter cards, the next chapter's call 45 s after the last and the ending. Servers that already have content now merge
+  newly shipped items (admin edits kept). Chapter 1 played end to end in the engine; content validator clean.
+

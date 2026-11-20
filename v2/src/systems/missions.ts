@@ -181,7 +181,8 @@ export class MissionsSystem implements GameSystem {
     if (this.run) { this.ctx.hud.toast('Hustle already on', `Finish or drop "${this.run.def.title}" first.`, 'var(--red)', 'pin', 3.5); return false; }
     const why = opts.force ? null : this.locked(m); if (why) { this.ctx.hud.toast('Not yet', `${m.title}: ${why}.`, 'var(--red)', 'pin', 3.5); return false; }
     const run = this.makeRun('mission', m, m); this.run = run; this.tracked = null;
-    this.ctx.hud.title(m.title.toUpperCase(), m.blurb.length > 70 ? m.giver : m.blurb, 4);
+    if (m.category === 'story') { const n = this.content.missions.filter((x) => x.category === 'story').sort((a, b) => a.id.localeCompare(b.id)).indexOf(m) + 1; this.ctx.hud.title(`CHAPTER ${n}`, m.title, 4.5); }
+    else this.ctx.hud.title(m.title.toUpperCase(), m.blurb.length > 70 ? m.giver : m.blurb, 4);
     this.enter(run, m.start);
     if (this.ctx.hud.phoneUp) { this.ctx.hud.refreshApp(); }
     return true;

@@ -34,8 +34,18 @@ export class ContentStore extends EventEmitter {
   seed() {
     let n = 0;
     for (const kind of CONTENT_KINDS) {
-      const dst = this.file(kind); if (existsSync(dst)) continue;
-      const src = join(this.cfg.seedContentDir, `${kind}.json`);
+      const dst = this.file(kind); const src = join(this.cfg.seedContentDir, `${kind}.json`);
+      if (existsSync(dst)) {
+        // a game update ships new items (story chapters, missions): add the ids this server has never seen, keep every
+        // edit the admin made to the ones it has
+        try {
+          if (!existsSync(src)) continue;
+          const have = JSON.parse(readFileSync(dst, 'utf8')) as ContentDoc; const ship = JSON.parse(readFileSync(src, 'utf8')) as ContentDoc;
+          const ids = new Set((have.items ?? []).map((i: any) => i.id)); const fresh = (ship.items ?? []).filter((i: any) => i?.id && !ids.has(i.id));
+          if (fresh.length) { this.write(kind, { ...have, items: [...(have.items ?? []), ...fresh] }, { by: 'update' }); this.log.info(`content ${kind}: ${fresh.length} new item(s) from the game update`); }
+        } catch (e) { this.log.warn(`could not merge ${kind}: ${e}`); }
+        continue;
+      }
       if (existsSync(src)) { try { copyFileSync(src, dst); n++; } catch (e) { this.log.warn(`could not seed ${kind}: ${e}`); } }
     }
     if (n) this.log.info(`content seeded: ${n} file(s) from ${this.cfg.seedContentDir}`);
